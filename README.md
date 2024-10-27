@@ -1,6 +1,6 @@
 # neHttpd
 
-Embedded http server for web configuraion
+Embedded HTTP Server for Web Configuraion
 
 # Compile
    make
