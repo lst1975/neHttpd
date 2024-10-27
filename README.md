@@ -6,9 +6,10 @@ Embedded http server for web configuraion
    make
    ./httpd
 
+   ```
    http://localhost:8080
-   
-   ![Uploading index.png…]()
+   ```
+   ![index](https://github.com/user-attachments/assets/f0f44f4e-dd66-4afe-befa-99ee6f6a71e1)
 
 # Upload
    The uploaded file will be stored in the fixed positon in folder of /config as file dev.bin
