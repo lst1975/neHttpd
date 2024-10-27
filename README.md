@@ -8,6 +8,8 @@ Embedded http server for web configuraion
 
    http://localhost:8080
    
+   ![Uploading index.png…]()
+
 # Upload
    The uploaded file will be stored in the fixed positon in folder of /config as file dev.bin
    
@@ -17,6 +19,7 @@ Embedded http server for web configuraion
 # TODO
    1. automatically convert between JSON and C structure
    2. automatically web page configuration elements, use following JSON data:
+   ```
      {
        "Key": {
          "index":"xxxxxxxxxxxxxxx",
@@ -27,7 +30,7 @@ Embedded http server for web configuraion
          "label": "Secret Key"
        }
      }
-   
+   ```
 # Copying
 /*************************************************************************************
  *                       neHttpd For Embedded Product
