@@ -69,6 +69,29 @@
       },
       "label":"CPU"
     },
+    "net":[
+      {
+        "name":{
+          "type":"string",
+          "range":[2,128],
+          "value":"eth0",
+          "writable":true,
+          "label": "Ethernet Port"
+        },
+        {
+          "ip":{
+            "type":"ipv4",
+            "range":[7,17],
+            "value":"192.168.1.10",
+            "writable":true,
+            "label": "Ipv4 Address"
+          }
+        }
+      },
+      {
+        "label":"Network"
+      }
+    ],
     "label":"Device Overview"
   }
 }
