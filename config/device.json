@@ -1,10 +1,74 @@
-     {
-       "Key": {
-         "index":"xxxxxxxxxxxxxxx",
-         "type":"string",
-         "range":[8,128],
-         "value":"****************",
-         "writable":true,
-         "label": "Secret Key"
-       }
-     }
+{
+  "device": {
+    "name": {
+      "type":"string",
+      "range":[8,128],
+      "value":"aaa-To-Be-Filled-By-O-E-M",
+      "writable":true,
+      "label": "Host Name"
+    },
+    "arch": {
+      "type":"string",
+      "range":[3,128],
+      "value":"X86_64",
+      "writable":false,
+      "label": "Architecture"
+    },
+    "os": {
+      "type":"string",
+      "range":[3,128],
+      "value":"Ubuntu 24.04.1 LTS",
+      "writable":false,
+      "label": "Operating System"
+    },
+    "memory"{
+      "total":{
+        "type":"number",
+        "range":[-1,-1],
+        "value":65538652,
+        "writable":false,
+        "label": "Total"
+      },
+      "used":{
+        "type":"number",
+        "range":[-1,-1],
+        "value":5579800,
+        "writable":false,
+        "label": "Used"
+      },
+      "usage":{
+        "type":"float",
+        "range":[0,100],
+        "value":8.56,
+        "writable":false,
+        "label": "Usage"
+      },
+      "label":"Memory"
+   },
+   "cpu":{
+      "count":{
+        "type":"number",
+        "range":[1,100],
+        "value":20,
+        "writable":false,
+        "label": "Cpu quantity"
+      },
+      "vendor":{
+        "type":"string",
+        "range":[1,100],
+        "value":"GenuineIntel",
+        "writable":false,
+        "label": "Vendor"
+      },
+      "model":{
+        "type":"string",
+        "range":[1,100],
+        "value":"Intel(R) Core(TM) i9-9820X CPU @ 3.30GHz",
+        "writable":false,
+        "label": "Model"
+      },
+      "label":"CPU"
+    },
+    "label":"Device Overview"
+  }
+}
