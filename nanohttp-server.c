@@ -538,10 +538,10 @@ _httpd_send_html_message(httpd_conn_t *conn, int reason, const char *phrase, con
     "</html>";
   char buf[4096];
   char slen[5];
-  int len;
+  size_t len;
 
   len = snprintf(buf, 4096, tmpl, phrase, phrase, msg);
-  snprintf(slen, 5, "%d", len);
+  snprintf(slen, 5, "%lu", len);
 
   httpd_set_header(conn, HEADER_CONTENT_LENGTH, slen);
   httpd_send_header(conn, reason, phrase);
@@ -1125,7 +1125,7 @@ unsigned char *
 httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req, long *received, long max)
 {
   char *content_length_str;
-  long content_length = 0;
+  size_t content_length = 0;
   unsigned char *postdata = NULL;
 
   if (req->method == HTTP_REQUEST_POST)
@@ -1164,7 +1164,7 @@ httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req, long *received,
     log_error("malloc failed (%)", strerror(errno));
     return NULL;
   }
-  if (http_input_stream_read(req->in, postdata, (int) content_length) > 0)
+  if (http_input_stream_read(req->in, postdata, content_length) > 0)
   {
     *received = content_length;
     postdata[content_length] = '\0';
@@ -1247,7 +1247,7 @@ httpd_mime_next(httpd_conn_t * conn, const char *content_id,
   herror_t status;
   char buffer[512];
   char boundary[75];
-  int len;
+  size_t len;
 
   /* Get the boundary string */
   _httpd_mime_get_boundary(conn, boundary);
@@ -1324,7 +1324,7 @@ httpd_mime_end(httpd_conn_t * conn)
   herror_t status;
   char buffer[512];
   char boundary[75];
-  int len;
+  size_t len;
 
   /* Get the boundary string */
   _httpd_mime_get_boundary(conn, boundary);

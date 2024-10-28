@@ -381,7 +381,7 @@ hsocket_close(struct hsocket_t * sock)
 }
 
 herror_t
-hsocket_send(struct hsocket_t * sock, const unsigned char * bytes, int n)
+hsocket_send(struct hsocket_t * sock, const unsigned char * bytes, size_t n)
 {
 #ifdef HAVE_SSL
   herror_t status;
@@ -447,7 +447,7 @@ hsocket_select_recv(int sock, char *buf, size_t len)
 }
 
 herror_t
-hsocket_recv(struct hsocket_t * sock, unsigned char * buffer, int total, int force, int *received)
+hsocket_recv(struct hsocket_t * sock, unsigned char * buffer, size_t total, int force, size_t *received)
 {
 #ifdef HAVE_SSL
   herror_t status;

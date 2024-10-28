@@ -557,7 +557,7 @@ httpc_mime_next(httpc_conn_t * conn, const char *content_id, const char *content
   herror_t status;
   char buffer[512];
   char boundary[75];
-  int len;
+  size_t len;
 
   /* Get the boundary string */
   _httpc_mime_get_boundary(conn, boundary);
@@ -582,7 +582,7 @@ httpc_mime_end(httpc_conn_t * conn, hresponse_t ** out)
   herror_t status;
   char buffer[512];
   char boundary[75];
-  int len;
+  size_t len;
 
   /* Get the boundary string */
   _httpc_mime_get_boundary(conn, boundary);

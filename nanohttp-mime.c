@@ -517,7 +517,7 @@ typedef struct _mime_callback_data
 MIME_read_status
 mime_streamreader_function(void *userdata, unsigned char *dest, int *size)
 {
-  int len = 0;
+  size_t len = 0;
   struct http_input_stream_t *in = (struct http_input_stream_t *) userdata;
 
   if (!http_input_stream_is_ready(in))

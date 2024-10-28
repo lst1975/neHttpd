@@ -77,7 +77,7 @@ headers_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   hpair_t *walker;
   char buf[512];
-  int len;
+  size_t len;
 
   httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
   http_output_stream_write_string(conn->out,
@@ -107,7 +107,7 @@ mime_service(httpd_conn_t *conn, struct hrequest_t *req)
   httpd_send_not_implemented(conn, "mime_service");
 }
 
-static int 
+static size_t 
 __multipart_data_cb(multipartparser *p, const char* data, size_t size)
 {
   return nanohttp_file_write(p->arg, data, size) != size;
@@ -146,7 +146,7 @@ post_service(httpd_conn_t *conn, struct hrequest_t *req,
     while (http_input_stream_is_ready(req->in))
     {
       unsigned char buffer[1024];
-      long len = http_input_stream_read(req->in, buffer, 1024);
+      size_t len = http_input_stream_read(req->in, buffer, 1024);
       if (len == -1)
       {
         r = herror_new("post_service", FILE_ERROR_READ, 
@@ -169,6 +169,10 @@ post_service(httpd_conn_t *conn, struct hrequest_t *req,
     r = httpd_send_not_implemented(conn, "post_service");
   }
 
+  if (r != NULL)
+  {
+    log_error("%s", herror_message(r));
+  }
   return r;
 }
 
@@ -189,7 +193,7 @@ post_service_wia(httpd_conn_t *conn, struct hrequest_t *req)
 }
 
 static herror_t
-__root_service_read(void *arg, const char *buf, int length)
+__root_service_read(void *arg, const char *buf, size_t length)
 {
   httpd_conn_t *conn=(httpd_conn_t *)arg;
   return http_output_stream_write(conn->out, (const unsigned char *)buf, length);
@@ -216,7 +220,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       if (r != NULL)
       {
         char buf[1024];
-        int n = snprintf(buf, sizeof buf, "Failed to readfile index.html: %s", herror_message(r));
+        size_t n = snprintf(buf, sizeof buf, "Failed to readfile index.html: %s", herror_message(r));
         log_error("%s", buf);
         herror_release(r);
         r = http_output_stream_write(conn->out, (const unsigned char *)buf, n-1);

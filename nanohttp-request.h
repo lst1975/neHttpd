@@ -24,6 +24,8 @@
 #ifndef __nhttp_request_h
 #define __nhttp_request_h
 
+#include <sys/time.h>
+
 /** @file nanohttp-request.h HTTP request handling
  *
  * @defgroup NANOHTTP_REQUEST HTTP request handling

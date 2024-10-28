@@ -174,7 +174,7 @@ extern herror_t hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest);
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_SEND
  */
-extern herror_t hsocket_send(struct hsocket_t *sock, const unsigned char *bytes, int size);
+extern herror_t hsocket_send(struct hsocket_t *sock, const unsigned char *bytes, size_t size);
 
 /** This function sends a string throught the socket
  *
@@ -201,7 +201,7 @@ extern int hsocket_select_recv(int sock, char *buf, size_t len);
  * @return This function will return -1 if an read error was occured. Otherwise
  *         the return value is the size of bytes readed from the socket.
  */
-extern herror_t hsocket_recv(struct hsocket_t * sock, unsigned char *buffer, int size, int force, int *len);
+extern herror_t hsocket_recv(struct hsocket_t * sock, unsigned char *buffer, size_t size, int force, size_t *len);
 
 /** This function gets the socket read/write timeout.
  *

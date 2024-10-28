@@ -155,7 +155,7 @@ _hresponse_parse_header(const char *buffer)
 herror_t
 hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t ** out)
 {
-  int i = 0, count;
+  size_t i = 0, count;
   herror_t status;
   hresponse_t *res;
   struct attachments_t *mimeMessage;

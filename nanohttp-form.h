@@ -11,8 +11,8 @@ extern "C" {
 typedef struct _multipartparser multipartparser;
 typedef struct _multipartparser_callbacks multipartparser_callbacks;
 
-typedef int (*multipart_cb) (multipartparser*);
-typedef int (*multipart_data_cb) (multipartparser*, const char* data, size_t size);
+typedef size_t (*multipart_cb) (multipartparser*);
+typedef size_t (*multipart_data_cb) (multipartparser*, const char* data, size_t size);
 
 struct _multipartparser {
     /** PRIVATE **/

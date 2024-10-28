@@ -97,7 +97,7 @@ http_input_stream_new(struct hsocket_t *sock, hpair_t * header)
   {
     log_verbose("Stream transfer with 'Content-length'");
     content_length = hpairnode_get_ignore_case(header, HEADER_CONTENT_LENGTH);
-    result->content_length = atoi(content_length);
+    result->content_length = atol(content_length);
     result->received = 0;
     result->type = HTTP_TRANSFER_CONTENT_LENGTH;
   }
@@ -196,10 +196,10 @@ _http_input_stream_is_file_ready(struct http_input_stream_t * stream)
 }
 
 static int
-_http_input_stream_content_length_read(struct http_input_stream_t * stream, unsigned char *dest, int size)
+_http_input_stream_content_length_read(struct http_input_stream_t * stream, unsigned char *dest, size_t size)
 {
   herror_t status;
-  int read;
+  size_t read;
 
   /* check limit */
   if (stream->content_length - stream->received < size)
@@ -220,7 +220,7 @@ static int
 _http_input_stream_chunked_read_chunk_size(struct http_input_stream_t * stream)
 {
   char chunk[25];
-  int status, i = 0;
+  size_t status, i = 0;
   int chunk_size;
   herror_t err;
 
@@ -279,8 +279,8 @@ static int
 _http_input_stream_chunked_read(struct http_input_stream_t * stream, unsigned char *dest,
                                 int size)
 {
-  int status, counter;
-  int remain, read = 0;
+  size_t status, counter;
+  size_t remain, read = 0;
   char ch;
   herror_t err;
 
@@ -380,9 +380,10 @@ _http_input_stream_chunked_read(struct http_input_stream_t * stream, unsigned ch
 
 
 static int
-_http_input_stream_connection_closed_read(struct http_input_stream_t * stream, unsigned char *dest, int size)
+_http_input_stream_connection_closed_read(struct http_input_stream_t * stream, 
+  unsigned char *dest, size_t size)
 {
-  int status;
+  size_t status;
   herror_t err;
 
   /* read from socket */
@@ -448,10 +449,10 @@ http_input_stream_is_ready(struct http_input_stream_t * stream)
   Returns the actual read bytes
   <0 on error
 */
-int
-http_input_stream_read(struct http_input_stream_t * stream, unsigned char *dest, int size)
+size_t
+http_input_stream_read(struct http_input_stream_t * stream, unsigned char *dest, size_t size)
 {
-  int len = 0;
+  size_t len = 0;
 
   /* paranoia check */
   if (stream == NULL)
@@ -515,7 +516,7 @@ http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
   {
     log_verbose("Stream transfer with 'Content-length'");
     content_length = hpairnode_get_ignore_case(header, HEADER_CONTENT_LENGTH);
-    result->content_length = atoi(content_length);
+    result->content_length = atol(content_length);
     result->type = HTTP_TRANSFER_CONTENT_LENGTH;
   }
   /* Check if Chunked */
@@ -551,14 +552,14 @@ http_output_stream_free(struct http_output_stream_t * stream)
 */
 herror_t
 http_output_stream_write(struct http_output_stream_t * stream,
-                         const unsigned char *bytes, int size)
+                         const unsigned char *bytes, size_t size)
 {
   herror_t status;
   char chunked[15];
 
   if (stream->type == HTTP_TRANSFER_CHUNKED)
   {
-    sprintf(chunked, "%x\r\n", size);
+    sprintf(chunked, "%lx\r\n", size);
     if ((status = hsocket_send_string(stream->sock, chunked)) != H_OK)
       return status;
   }

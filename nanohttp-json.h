@@ -32,6 +32,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus
@@ -250,9 +251,9 @@ typedef struct json_pair
 {
   const char * key;     /**< @brief Pointer to the code point sequence for key. */
   const char * value;   /**< @brief Pointer to the code point sequence for value. */
-  u_int64_t keyLength:32;     /**< @brief Length of the code point sequence for key. */
-  u_int64_t valueLength:31;   /**< @brief Length of the code point sequence for value. */
-  u_int64_t isDouble:1;   
+  uint64_t keyLength:32;     /**< @brief Length of the code point sequence for key. */
+  uint64_t valueLength:31;   /**< @brief Length of the code point sequence for value. */
+  uint64_t isDouble:1;   
   JSONTypes_t jsonType; /**< @brief JSON-specific type of the value. */
   struct json_pair *siblings;
   struct json_pair *children;

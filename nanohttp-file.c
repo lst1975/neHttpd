@@ -66,8 +66,8 @@ void nanohttp_file_close(void *file)
   }
 }
 
-int nanohttp_file_write(void *file, 
-  const char *buffer, int length)
+size_t nanohttp_file_write(void *file, 
+  const char *buffer, size_t length)
 {
   FILE *fptr = (FILE *)file;
 

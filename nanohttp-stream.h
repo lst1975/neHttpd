@@ -81,9 +81,9 @@ struct http_input_stream_t
   struct hsocket_t *sock;
   herror_t err;
   http_transfer_type_t type;
-  int received;
-  int content_length;
-  int chunk_size;
+  size_t received;
+  size_t content_length;
+  size_t chunk_size;
   char connection_closed;
 
   /* file handling */
@@ -98,8 +98,8 @@ struct http_output_stream_t
 {
   struct hsocket_t *sock;
   http_transfer_type_t type;
-  int content_length;
-  int sent;
+  size_t content_length;
+  size_t sent;
 };
 
 #ifdef __cplusplus
@@ -168,7 +168,7 @@ extern int http_input_stream_is_ready(struct http_input_stream_t * stream);
  *
  * @return the actual read bytes or -1 on error.
  */
-extern int http_input_stream_read(struct http_input_stream_t * stream, unsigned char *dest, int size);
+extern size_t http_input_stream_read(struct http_input_stream_t * stream, unsigned char *dest, size_t size);
 
 /** Creates a new output stream. Transfer style will be found from the
  * given header.
@@ -202,7 +202,7 @@ extern void http_output_stream_free(struct http_output_stream_t *stream);
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_SEND
  */
-extern herror_t http_output_stream_write(struct http_output_stream_t *stream, const unsigned char *bytes, int size);
+extern herror_t http_output_stream_write(struct http_output_stream_t *stream, const unsigned char *bytes, size_t size);
 
 /** This function writes a null terminated string to the stream.
  *

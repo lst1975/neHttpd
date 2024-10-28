@@ -271,7 +271,7 @@ hrequest_free(struct hrequest_t * req)
 herror_t
 hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t ** out)
 {
-  int i, readed;
+  size_t i, readed;
   herror_t status;
   struct hrequest_t *req;
   char buffer[MAX_HEADER_SIZE + 1];
