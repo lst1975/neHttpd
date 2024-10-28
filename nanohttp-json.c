@@ -2024,6 +2024,17 @@ static void __json_pad_print(int depth, const char *pad)
   }
 }
 
+/* only the first 36 ascii characters need an escape */
+static char const *character_escape[] = {
+	"\\u0000", "\\u0001", "\\u0002", "\\u0003", "\\u0004", "\\u0005", "\\u0006", "\\u0007", /*  0-7  */
+	"\\b"    ,     "\\t",     "\\n", "\\u000b",     "\\f",     "\\r", "\\u000e", "\\u000f", /*  8-f  */
+	"\\u0010", "\\u0011", "\\u0012", "\\u0013", "\\u0014", "\\u0015", "\\u0016", "\\u0017", /* 10-17 */
+	"\\u0018", "\\u0019", "\\u001a", "\\u001b", "\\u001c", "\\u001d", "\\u001e", "\\u001f", /* 18-1f */
+	"\x20"   , "\x21"   , "\\\""   , "\x23"   , "\x24"   , "\x25"   , "\x26"   , "\x27"   , /* 20-27 */
+	"\x28"   , "\x29"   , "\x2a"   , "\x2b"   , "\x2c"   , "\x2d"   , "\x2e"   , "\x2f"   , /* 28-2f */
+	"\x30"   , "\x31"   , "\x32"   , "\x33"   , "\x34"   , "\x35"   , "\x36"   , "\x37"   , /* 30-37 */
+};
+
 static int __json_tostr(JSONPair_t *pair, char *buf,
   size_t length, int depth, const char *pad)
 {
@@ -2039,6 +2050,8 @@ static int __json_tostr(JSONPair_t *pair, char *buf,
       n = snprintf(p,length,"\"%.*s\":",pair->keyLength,pair->key);
       p+=n,length-=n;
     }
+    else if (JSONObject != pair->jsonType && JSONArray != pair->jsonType)
+      goto clean0;
 
     switch (pair->jsonType)
     {
@@ -2046,8 +2059,33 @@ static int __json_tostr(JSONPair_t *pair, char *buf,
       case JSONInvalid:
         goto clean0;
       case JSONString:
-        n = snprintf(p,length,"\"%.*s\"",pair->valueLength,pair->value);
-        p+=n,length-=n;
+        if (pair->valueLength)
+        {
+          n = snprintf(p,length,"%s","\"");
+          p+=n,length-=n;
+          for (int i=0;i<pair->valueLength;i++)
+          {
+            int c = pair->value[i];
+            if (c < 36) {
+              n = snprintf(p,length,"%s",character_escape[c]);
+              p+=n,length-=n;
+            } else if (c == '\\') {
+              n = snprintf(p,length,"%s","\\\\");
+              p+=n,length-=n;
+            }
+            else {
+              n = snprintf(p,length,"%c",c);
+              p+=n,length-=n;
+            }
+          }
+          n = snprintf(p,length,"%s","\"");
+          p+=n,length-=n;
+        }
+        else
+        {
+          n = snprintf(p,length,"\"%s\"","");
+          p+=n,length-=n;
+        }
         break;
       case JSONNumber:
         if (pair->isDouble)
