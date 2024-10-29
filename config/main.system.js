@@ -5,18 +5,19 @@
  */  
 function MAIN_SYSTEM_display(p)
 {
-    p.page_wrapper.css("text-align","center").append("<p>System page Not implemented!</<p>>");
-    if (p.ajax) p.ajax.abort();
-    p.ajax = nanoAjaxGet("config/system.json", "GET", null, 
-      function(data,err){
-        /* TODO*/
-      });
+  if (p.ajax) p.ajax.abort();
+  p.ajax = nanoAjaxGet("config/system.json", "GET", null, 
+    function(data,err){
+      if (!err)
+        load_config(p.container,data);
+    });
 }
 
 var page_SYSTEM = {
   name    : "gmt_SYSTEM",
   page_wrapper: null,
-
+  container: null,
+  
   is_phone : false,
   is_vertical : false,
   load    : function(p){

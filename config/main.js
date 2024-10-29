@@ -152,9 +152,10 @@ function __load_page(p,data){
 	}
 
 	p.page_wrapper = $("<div id='"+p.name+"'/>").appendTo(____wrapper);
-	p.page_wrapper.html((p.css||"")+(p.js||""));
-	p.load(p,data);
+  p.page_wrapper.html((p.css||"")+(p.js||""));
+  p.container = $("<div class='cfg_container'>").appendTo(p.page_wrapper);
 
+	p.load(p,data);
 	p.show(p);
 	__p = p;
 }

@@ -5,6 +5,9 @@
  */  
 function MAIN_UPGRADE_display(p)
 {
+    p.container.remove();
+    p.container = null;
+    
     // https://developer.mozilla.org/zh-CN/docs/Web/Media/Formats/Image_types
     const fileTypes = [
       "image/apng",
@@ -188,6 +191,7 @@ function MAIN_UPGRADE_display(p)
 var page_UPGRADE = {
   name    : "gmt_UPGRADE",
   page_wrapper: null,
+  container: null,
 
   is_phone : false,
   is_vertical : false,

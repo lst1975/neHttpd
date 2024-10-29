@@ -738,3 +738,78 @@ button::-moz-focus-inner {
   width:100%;
   height:100%;
 }
+
+.cfg_container {
+	background-color: white;
+	border-radius: 8px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+	margin-top: 20px;
+	padding: 20px;
+	max-width: 850px;
+	width: 90%;
+	margin: 20px auto 0px auto;
+}
+.cfg_container h1 {
+	font-size: 24px;
+	color: #333;
+}
+.cfg_container .section {
+	margin-bottom: 20px;
+}
+.cfg_container .sub-section {
+	margin-left: 20px;
+}
+.cfg_container .section-title {
+	font-size: 18px;
+	color: #0078D4;
+	margin-bottom: 10px;
+}
+.cfg_container .input-group {
+	margin-bottom: 15px;
+	display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+.cfg_container .input-group:hover {
+  background-color:rgb(230,230,230);
+}
+
+.cfg_container .input-group img.arrow{
+  height: 10px;
+  opacity:.7;
+  margin-top: 12px;
+  cursor:pointer;
+}
+
+.cfg_container .input-group img.arrow:hover{
+  opacity:1;
+}
+
+.cfg_container label {
+	display: block;
+	margin-bottom: 5px;
+	font-weight: 500;
+}
+.cfg_container input[type="text"],
+.cfg_container input[type="password"],
+.cfg_container input[type="number"],
+.cfg_container select {
+	width: 50%;
+    padding: 2px;
+    border: 1px solid #ccc;
+	border-radius: 5px;
+	box-sizing: border-box;
+}
+.cfg_container button {
+	background-color: #0078D4;
+	color: white;
+	border: none;
+	padding: 10px 15px;
+	border-radius: 5px;
+	cursor: pointer;
+	font-size: 16px;
+}
+.cfg_container button:hover {
+	background-color: #005A9E;
+}
+
