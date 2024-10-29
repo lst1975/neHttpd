@@ -32,6 +32,8 @@ Embedded HTTP Server for Web Configuraion
        }
      }
    ```
+![system](https://github.com/user-attachments/assets/776a9285-affa-45b3-963d-c1128d4ffc04)
+
 # Copying
 /*************************************************************************************
  *                       neHttpd For Embedded Product
