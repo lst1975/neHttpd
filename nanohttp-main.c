@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 
 #include "nanohttp-logging.h"
@@ -108,9 +109,84 @@ mime_service(httpd_conn_t *conn, struct hrequest_t *req)
 }
 
 static size_t 
-__multipart_data_cb(multipartparser *p, const char* data, size_t size)
+__multipart_cb_headers_complete(multipartparser *p)
+{
+  if (p->arg == NULL)
+  {
+    char buf[256];
+    char *file = "uploads/gw.bin";
+
+    if (p->value_length)
+    {
+      if (p->field_length == 19 && !strncmp("Content-Disposition",p->field,19))
+      {
+        char *f = strstr(p->value,"filename");
+        char *end = p->value + p->value_length;
+
+        /*"Content-Disposition: form-data; name=\"File\"; filename=\"nanoHttpd-2.10.tar.xz\"\r\nContent-Type: application/x-xz\r\n\r\ny7zXZ"*/
+        if (f != NULL)
+        {
+          for (f += 8;f < end;f++)
+          {
+            if (*f == '"')
+              break;
+          }
+          if (f < end)
+          {
+            char *e;
+            f++;
+            while(f <end && isspace(*f))
+            {
+              f++;
+            }
+            e = f;
+            while (e < end && *e != '"')
+              e++;
+            if (e <= end && e-f < sizeof(buf)-1)
+            {
+              snprintf(buf,sizeof(buf),"%s/%.*s","uploads",(int)(e-f), f);
+              file = buf;
+            }
+          }
+        }
+      }
+    }
+
+    p->arg = nanohttp_file_open(file);
+    if (p->arg == NULL)
+    {
+      log_error("Not able to open the file %s.", file);
+      return -1;
+    }
+  }
+  return 0;
+}
+
+static size_t
+__multipart_cb_data(multipartparser *p, const char* data, size_t size)
 {
   return nanohttp_file_write(p->arg, data, size) != size;
+}
+
+static size_t
+__multipart_cb_header_field(multipartparser *p, const char* data, size_t size)
+{
+  if (p->content_disposition_parsed)
+    return 0;
+
+  p->field_length+=snprintf(p->field+p->field_length, sizeof(p->field)-p->field_length, "%.*s", (int)size, data);
+  return 0;
+}
+
+static size_t
+__multipart_cb_header_value(multipartparser *p, const char* data, size_t size)
+{
+  if (p->field_length == 19 && !strncmp("Content-Disposition",p->field,19))
+  {
+    p->content_disposition_parsed = 1;
+  }
+  p->value_length+=snprintf(p->value+p->value_length, sizeof(p->value)-p->value_length, "%.*s", (int)size, data);
+  return 0;
 }
 
 static herror_t
@@ -120,11 +196,13 @@ post_service(httpd_conn_t *conn, struct hrequest_t *req,
   herror_t r = NULL;
   if (req->method == HTTP_REQUEST_POST)
   {
-    void *arg;
     multipartparser p;
     multipartparser_callbacks settings;
     multipartparser_callbacks_init(&settings);
-    settings.on_data = __multipart_data_cb;
+    settings.on_data = __multipart_cb_data;
+    settings.on_header_field = __multipart_cb_header_field;
+    settings.on_header_value = __multipart_cb_header_value;
+    settings.on_headers_complete = __multipart_cb_headers_complete;
 
     if (!req->content_type || !req->content_type->params
       || strcmp(req->content_type->params->key, "boundary")
@@ -135,14 +213,7 @@ post_service(httpd_conn_t *conn, struct hrequest_t *req,
       return r;
     }
 
-    arg = nanohttp_file_open(file);
-    if (arg == NULL)
-    {
-      return herror_new("nanohttp_file_write", FILE_ERROR_OPEN, 
-        "Not able to open the file %s.", file);
-    }
-    
-    multipartparser_init(&p, arg, req->content_type->params->value);
+    multipartparser_init(&p, NULL, req->content_type->params->value);
     while (http_input_stream_is_ready(req->in))
     {
       unsigned char buffer[1024];
@@ -162,7 +233,7 @@ post_service(httpd_conn_t *conn, struct hrequest_t *req,
       }
     }
 
-    nanohttp_file_close(arg);
+    nanohttp_file_close(p.arg);
   }
   else
   {
