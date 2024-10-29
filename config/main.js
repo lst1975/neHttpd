@@ -28,6 +28,26 @@ function nanoAjaxGet(file,type,data,cb)
 		});
 }
 
+var scrollBarColorCursor = "rgba(198,198,198,0.8)";
+var scrollBarColorBorder = "rgba(198,198,198,0.5)";
+
+function gmtCreateNiceScroll(scroll, div, left)
+{
+  try{
+    return scroll.niceScroll(div, {
+      cursorcolor:scrollBarColorCursor,
+      cursorborder:"1px solid "+scrollBarColorBorder,
+      railhoffset:{left:left,top:0},
+      enableobserver:true,
+      horizrailenabled:false,
+      disablemutationobserver:false});
+  }
+  catch (ex)
+  {
+    console.log(ex.message);    
+  }
+}
+
 function gmtIsArray(obj)
 {
   if (Array.isArray)
@@ -121,23 +141,10 @@ function isTouchDevice() {
 
 var sysConfig = { isTouchDevice: isTouchDevice()};
 
-function gmtToolbarScroll(scroll, left)
-{
-    return scroll.niceScroll({
-      cursorcolor:"rgba(128,128,128,0.8)",
-      cursorborder:"1px solid rgba(128,128,128,0.5)",
-      railhoffset:{left:left,top:0},
-      enableobserver:true,
-
-      horizrailenabled:false,
-      disablemutationobserver:false});
-}
-
 var panel_CONTAINER = null;
 
 var ____wrapper;
 var ____container;
-var ____niceScroll;
 var ____niceScroll_toolbar;
 var __p = null;
 function __load_page(p,data){
@@ -150,6 +157,7 @@ function __load_page(p,data){
     __p.hide(__p);
     __p.close(__p);
     __p.page_wrapper.remove();
+    __p.niceScroll=null;
   }
 
   p.page_wrapper = $("<div id='"+p.name+"'/>").appendTo(____wrapper);
@@ -203,13 +211,7 @@ function __start_icon(____toolbar){
 
 function __start_page(page){
 	__load_page(page);
-
-  ____niceScroll = page.container.niceScroll(page.container,{
-    cursorcolor:"rgba(128,128,128,0.8)",
-    cursorborder:"1px solid rgba(128,128,128,0.5)",
-    railhoffset:{left:0},
-    enableobserver:true,
-    disablemutationobserver:false});
+  page.niceScroll = gmtCreateNiceScroll(page.page_wrapper, page.page_wrapper, 0);
 }
 
 $(document).ready(function(){
@@ -222,7 +224,7 @@ $(document).ready(function(){
     ____wrapper.css({"overflow-x": "hidden"});
     panel_CONTAINER = ____wrapper;
     window_resize();
-    ____niceScroll_toolbar = gmtToolbarScroll(____toolbar, 0);
+    ____niceScroll_toolbar = gmtCreateNiceScroll(____toolbar, false, 0);
 
     var title = gmtLangBuild(["Title"],0);
     $(document).find("html > head > title").text(title);
