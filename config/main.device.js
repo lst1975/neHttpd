@@ -5,7 +5,6 @@
  */  
 function MAIN_DEVICE_display(p)
 {
-  p.page_wrapper.css("text-align","center").append("<p>Device page Not implemented!</p>");
   if (p.ajax) p.ajax.abort();
   p.ajax = nanoAjaxGet("config/device.json", "GET", null, 
     function(data,err){

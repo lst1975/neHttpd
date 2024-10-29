@@ -752,6 +752,7 @@ button::-moz-focus-inner {
 .cfg_container h1 {
 	font-size: 24px;
 	color: #333;
+	text-align: center;
 }
 .cfg_container .section {
 	margin-bottom: 20px;
