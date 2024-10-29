@@ -43,7 +43,8 @@ function MAIN_UPGRADE_display(p)
     ];
 
     function validFileType(file) {
-      return fileTypes.includes(file.type);
+      //return fileTypes.includes(file.type);
+      return 1;
     }
     var form = $('<form action="/post" method="post" enctype="multipart/form-data"></form>').appendTo(p.page_wrapper);
     var __input = "<fieldset>"
