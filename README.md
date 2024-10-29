@@ -4,18 +4,19 @@ Embedded HTTP Server for Web Configuraion
 
 # Compile
    make
-   ./httpd
 
+# Run
    ```
+   ./httpd
    http://localhost:8080
    ```
    ![index](https://github.com/user-attachments/assets/f0f44f4e-dd66-4afe-befa-99ee6f6a71e1)
 
 # Upload
-   The uploaded file will be stored in the fixed positon in folder of /uploads
+   The uploaded file will be stored in the fixed positon of "/uploads"
    
 # Other
-   Only JSON file for configuraion is transmitted between Browser and Backend neHhttpd.
+   Only JSON file for configuraion is transmitted between Browser and Backend neHttpd.
 
 # TODO
    1. automatically convert between JSON and C structure
