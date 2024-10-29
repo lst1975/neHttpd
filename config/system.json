@@ -28,6 +28,13 @@
 	  "writable":true,
 	  "label": "Theme"
     },
+    "firewall":{
+	  "type":"bool",
+	  "range":[0,1],
+	  "value":true,
+	  "writable":true,
+	  "label": "Firewall"
+    },
     "memory":{
       "total":{
         "type":"number",

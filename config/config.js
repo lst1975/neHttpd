@@ -7,7 +7,7 @@ function load_group(section, o)
     {
       var group = $('<div class="input-group'+(n.writable?" writable":"")+'">').appendTo(section);
       var label = n.label || n;
-      group.append("<label for='"+b+"'>"+label+"</label>");
+      group.append("<label class='group' for='"+b+"'>"+label+"</label>");
       switch (n.type)
       {
         case "array":
@@ -31,6 +31,17 @@ function load_group(section, o)
           {
             html += '<div>'+n.value+'</div>';
           }
+          var e = $(html).appendTo(group);
+          if (n.writable) e.addClass("writable");
+          e.attr("id",b);
+          e.attr("cfgType", n.type);
+          break;
+        case "bool":
+          var html=
+                '<label class=switch>'
+                  +'<input id=iosToggle type=checkbox />'
+                  +'<div class=switch-btn></div>'
+                +'</label>';
           var e = $(html).appendTo(group);
           if (n.writable) e.addClass("writable");
           e.attr("id",b);
