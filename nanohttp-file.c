@@ -52,7 +52,7 @@ herror_t nanohttp_file_read(const char *file,
 void *nanohttp_file_open_for_write(const char *file)
 {
   // Open a file in read mode
-  return fopen(file, "w+");
+  return fopen(file, "wb+");
 }
 
 void nanohttp_file_close(void *file)
