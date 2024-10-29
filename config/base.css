@@ -699,7 +699,6 @@ button::-moz-focus-inner {
   width: 140px}
 
 .table-left .left-icon-scroll{
-  height:100%;
   z-index: 10001;
 }
 .table-left .left-icon-scroll .left-icon-wrap{

@@ -138,26 +138,27 @@ var panel_CONTAINER = null;
 var ____wrapper;
 var ____container;
 var ____niceScroll;
+var ____niceScroll_toolbar;
 var __p = null;
 function __load_page(p,data){
-	if (p.isVisible)
-	{
-		return;
-	}
-	if (__p)
-	{
-        __p.hide(__p);
-		__p.close(__p);
-		__p.page_wrapper.remove();
-	}
+  if (p.isVisible)
+  {
+    return;
+  }
+  if (__p)
+  {
+    __p.hide(__p);
+    __p.close(__p);
+    __p.page_wrapper.remove();
+  }
 
-	p.page_wrapper = $("<div id='"+p.name+"'/>").appendTo(____wrapper);
+  p.page_wrapper = $("<div id='"+p.name+"'/>").appendTo(____wrapper);
   p.page_wrapper.html((p.css||"")+(p.js||""));
   p.container = $("<div class='cfg_container'>").appendTo(p.page_wrapper);
 
-	p.load(p,data);
-	p.show(p);
-	__p = p;
+  p.load(p,data);
+  p.show(p);
+  __p = p;
 }
 
 function __start_icon(____toolbar){
@@ -202,28 +203,44 @@ function __start_icon(____toolbar){
 
 function __start_page(page){
 	__load_page(page);
-	____niceScroll = panel_CONTAINER.niceScroll({
-	  cursorcolor:"rgba(128,128,128,0.8)",
-	  cursorborder:"1px solid rgba(128,128,128,0.5)",
-	  railhoffset:{left:0},
-	  enableobserver:true,
-	  disablemutationobserver:false});
+
+  ____niceScroll = page.container.niceScroll(page.container,{
+    cursorcolor:"rgba(128,128,128,0.8)",
+    cursorborder:"1px solid rgba(128,128,128,0.5)",
+    railhoffset:{left:0},
+    enableobserver:true,
+    disablemutationobserver:false});
 }
 
-function window_resize(){
-}
 $(document).ready(function(){
     ____table = $(document.body).find(".main-layout");
+    ____header   = ____table.find(".head");
+    ____main = ____table.find(".main");
     ____container = ____table.find(".table-right");
     ____toolbar   = ____table.find(".table-left .table-left-container");
     ____wrapper = ____container.children(".panel_container");
     ____wrapper.css({"overflow-x": "hidden"});
     panel_CONTAINER = ____wrapper;
-    
+    window_resize();
+    ____niceScroll_toolbar = gmtToolbarScroll(____toolbar, 0);
+
     var title = gmtLangBuild(["Title"],0);
     $(document).find("html > head > title").text(title);
     $(document).find("html > head > meta#MetaDescription").attr("content",title);
     ____table.find(".table-head.right .title").text(title);
+
     __start_icon(____toolbar);
+
+    function window_resize(){
+      ____table.height($(window).height());
+      ____toolbar.height($(window).height());
+      ____main.height($(window).height());
+      ____wrapper.height($(window).height()-____header.outerHeight());
+    }
+    $(window).resize(function() {
+      window_resize();
+      if (__p)
+        __p.resize(__p);
+    });
 })
 
