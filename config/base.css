@@ -796,8 +796,8 @@ button::-moz-focus-inner {
 .cfg_container input[type="number"],
 .cfg_container select {
 	width: 50%;
-    padding: 2px;
-    border: 1px solid #ccc;
+	padding: 2px 8px;
+	border: 1px solid #ccc;
 	border-radius: 5px;
 	box-sizing: border-box;
 }

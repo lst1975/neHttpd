@@ -5,7 +5,7 @@ function load_group(section, o)
     var n = o[b];
     if (gmtIsObject(n))
     {
-      var group = $('<div class="input-group'+(n.writtable?" writable":"")+'">').appendTo(section);
+      var group = $('<div class="input-group'+(n.writable?" writable":"")+'">').appendTo(section);
       var label = n.label || n;
       group.append("<label for='"+b+"'>"+label+"</label>");
       switch (n.type)
@@ -23,16 +23,16 @@ function load_group(section, o)
         case "string":
         case "float":
           var html="";
-          if (n.writtable)
+          if (n.writable)
           {
             html += '<input type="text" value="'+n.value+'" placeholder="">';
           }
           else
           {
-             html += '<div>'+n.value+'</div>';
+            html += '<div>'+n.value+'</div>';
           }
           var e = $(html).appendTo(group);
-          if (n.writtable) e.addClass("writable");
+          if (n.writable) e.addClass("writable");
           e.attr("id",b);
           e.attr("cfgType", n.type);
           break;
@@ -41,24 +41,28 @@ function load_group(section, o)
           var div = $("<div class='sub-section'></div>").appendTo(section);
           sel.data("subSection",div);
           sel.attr("src", "config/arrow-down.png");
-        	sel.AlloyFinger({
-        		"tap":function(e){
-        			if ($(this).hasClass("down"))
+          function toggleArrow(img){
+        			if (img.hasClass("down"))
               {
-                $(this).removeClass("down").addClass("up");
-                $(this).attr("src", "config/arrow-up.png");
-                $(this).data("subSection").show();
+                img.removeClass("down").addClass("up");
+                img.attr("src", "config/arrow-up.png");
+                img.data("subSection").show();
               }
               else
               {
-                $(this).removeClass("up").addClass("down");
-                $(this).attr("src", "config/arrow-down.png");
-                $(this).data("subSection").hide();
+                img.removeClass("up").addClass("down");
+                img.attr("src", "config/arrow-down.png");
+                img.data("subSection").hide();
               }
+          }
+        	group.AlloyFinger({
+        		"tap":function(e){
+              toggleArrow($(this).children("img"));
         		}
         	});
           sel.attr("sub", b);
           div.addClass(b).hide();
+          group.addClass("hasSubsection").css("cursor", "pointer");
           load_group(div,n);
           break;
       }
