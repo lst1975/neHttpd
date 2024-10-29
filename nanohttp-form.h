@@ -16,10 +16,15 @@ typedef size_t (*multipart_data_cb) (multipartparser*, const char* data, size_t 
 
 struct _multipartparser {
     /** PRIVATE **/
-    char        boundary[70];
+    char        boundary[128];
     int         boundary_length;
     int         index;
-    uint16_t    state;
+    uint16_t      state;
+    uint16_t      content_disposition_parsed;
+    uint16_t      value_length;
+    uint16_t      field_length;
+    char field[112];
+    char value[246];
 
     /** PUBLIC **/
     void* data;
