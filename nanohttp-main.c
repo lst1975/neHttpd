@@ -135,7 +135,7 @@ __multipart_cb_headers_complete(multipartparser *p)
           {
             char *e;
             f++;
-            while(f <end && isspace(*f))
+            while(f <end && isspace((int)*f))
             {
               f++;
             }
