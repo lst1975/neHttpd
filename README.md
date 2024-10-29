@@ -32,7 +32,7 @@ Embedded HTTP Server for Web Configuraion
        }
      }
    ```
-![system](https://github.com/user-attachments/assets/776a9285-affa-45b3-963d-c1128d4ffc04)
+![overview](https://github.com/user-attachments/assets/ae72133d-79a7-4045-90bb-174f0c323b4b)
 
 # Copying
 /*************************************************************************************
