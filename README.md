@@ -33,6 +33,8 @@ Embedded HTTP Server for Web Configuraion
        }
      }
    ```
+   3. please refer to /config/system.json
+      
 ![overview](https://github.com/user-attachments/assets/c637dd03-5ec7-4015-b66c-d0f849ce58ac)
 
 # Copying
