@@ -1,11 +1,17 @@
-function load_group(section, o)
+function load_group(section, o, index)
 {
   for (var b in o)
   {
     var n = o[b];
     if (gmtIsObject(n))
     {
-      var group = $('<div class="input-group'+(n.writable?" writable":"")+'">').appendTo(section);
+      if (n.index && section.children("legend").length)
+      {
+        section.children("legend").text(n.value);
+      }
+      var group = $('<div class="input-group">').appendTo(section);
+      if (n.writable) 
+        group.addClass("writable");
       var label = n.label || n;
       group.append("<label class='group' for='"+b+"'>"+label+"</label>");
       switch (n.type)
@@ -17,8 +23,9 @@ function load_group(section, o)
             html += '<option value="'+n.range[i]+'">'+n.range[i]+'</option>';
           }
           html += '</select>';
-          group.append(html);
+          $(html).appendTo(group).attr("index", index+"."+n.id);
           break;
+        case "ipv4":
         case "number":
         case "string":
         case "float":
@@ -35,6 +42,7 @@ function load_group(section, o)
           if (n.writable) e.addClass("writable");
           e.attr("id",b);
           e.attr("cfgType", n.type);
+          e.attr("index", index+"."+n.id);
           break;
         case "bool":
           var html=
@@ -46,6 +54,7 @@ function load_group(section, o)
           if (n.writable) e.addClass("writable");
           e.attr("id",b);
           e.attr("cfgType", n.type);
+          e.attr("index", index+"."+n.id);
           break;
         case "group":
           var sel = $("<img class='arrow down'></img>").appendTo(group);
@@ -53,28 +62,65 @@ function load_group(section, o)
           sel.data("subSection",div);
           sel.attr("src", "config/arrow-down.png");
           function toggleArrow(img){
-        			if (img.hasClass("down"))
-              {
-                img.removeClass("down").addClass("up");
-                img.attr("src", "config/arrow-up.png");
-                img.data("subSection").show();
-              }
-              else
-              {
-                img.removeClass("up").addClass("down");
-                img.attr("src", "config/arrow-down.png");
-                img.data("subSection").hide();
-              }
+            if (img.hasClass("down"))
+            {
+              img.removeClass("down").addClass("up");
+              img.attr("src", "config/arrow-up.png");
+              img.data("subSection").show();
+              img.parent().addClass("active");
+            }
+            else
+            {
+              img.removeClass("up").addClass("down");
+              img.attr("src", "config/arrow-down.png");
+              img.data("subSection").hide();
+              img.parent().removeClass("active");
+            }
           }
-        	group.AlloyFinger({
-        		"tap":function(e){
+          group.AlloyFinger({
+            "tap":function(e){
               toggleArrow($(this).children("img"));
-        		}
-        	});
+            }
+          });
           sel.attr("sub", b);
           div.addClass(b).hide();
           group.addClass("hasSubsection").css("cursor", "pointer");
-          load_group(div,n);
+          load_group(div,n, index+"."+n.id);
+          break;
+        case "list":
+          var sel = $("<img class='arrow down'></img>").appendTo(group);
+          var div = $("<div class='sub-section'></div>").appendTo(section);
+          sel.data("subSection",div);
+          sel.attr("src", "config/more.png");
+          function toggleList(img){
+            if (img.hasClass("down"))
+            {
+              img.removeClass("down").addClass("up");
+              img.data("subSection").show();
+              img.parent().addClass("active");
+            }
+            else
+            {
+              img.removeClass("up").addClass("down");
+              img.data("subSection").hide();
+              img.parent().removeClass("active");
+            }
+          }
+          group.AlloyFinger({
+            "tap":function(e){
+              toggleList($(this).children("img"));
+            }
+          });
+          sel.attr("sub", b);
+          div.addClass(b).hide();
+          group.addClass("hasSubsection").css("cursor", "pointer");
+          if (!gmtIsArray(n.value))
+            break;
+          for (var i=0;i<n.value.length;i++)
+          {
+            var list = $('<fieldset class="list sub-section"><legend/></fieldset>').appendTo(div);
+            load_group(list,n.value[i],index+"."+n.id);
+          }
           break;
       }
     }
@@ -91,7 +137,7 @@ function load_config(div, cfg)
       var label = o.label || a;
       div.append("<h1>"+label+"</h1>");
       var section = $('<div class="section">').appendTo(div);
-      load_group(section, o);
+      load_group(section, o, o.id);
     }
   }
 }

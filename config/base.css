@@ -768,9 +768,18 @@ button::-moz-focus-inner {
 .cfg_container .input-group {
 	margin-bottom: 15px;
 	display: flex;
-    flex-direction: row;
-    justify-content: space-between;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 0px 20px;
 }
+.cfg_container fieldset.list.sub-section {
+  margin: 0 20px 20px 20px;
+  padding-top: 20px;
+}
+.cfg_container fieldset.list.sub-section > legend {
+  padding: 0 6px 0 6px;
+}
+.cfg_container .input-group.active,
 .cfg_container .input-group:hover {
   background-color:rgb(230,230,230);
 }
@@ -824,7 +833,7 @@ button::-moz-focus-inner {
 .cfg_container label.switch > div.switch-btn {
   position: relative;
   width: 48px;
-  height: 25px;
+  height: 24px;
   background: #e5e5e5;
   border-radius: 25.5px;
   box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.15);
@@ -834,11 +843,11 @@ button::-moz-focus-inner {
 .cfg_container label.switch > div.switch-btn:before {
   content: "";
   position: absolute;
-  height: 25px;
+  height: 23px;
   width: 25px;
   background: linear-gradient(white, #f2f2f2);
   left: 2px;
-  top: calc(50% - 1px);
+  top: 50%;
   transition: all 200ms ease-out;
   cursor: pointer;
   border-radius: 50%;
@@ -851,6 +860,6 @@ button::-moz-focus-inner {
 }
 
 .cfg_container label.switch > input[type=checkbox]:checked + div.switch-btn:before {
-  left: 22px;
+  left: 23px;
 }
 
