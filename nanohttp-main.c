@@ -152,7 +152,7 @@ __multipart_cb_headers_complete(multipartparser *p)
       }
     }
 
-    p->arg = nanohttp_file_open(file);
+    p->arg = nanohttp_file_open_for_write(file);
     if (p->arg == NULL)
     {
       log_error("Not able to open the file %s.", file);

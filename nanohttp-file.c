@@ -8,7 +8,7 @@ herror_t nanohttp_file_read(const char *file,
   FILE *fptr;
 
   // Open a file in read mode
-  fptr = fopen(file, "r");
+  fptr = fopen(file, "rb");
   if(fptr == NULL) 
   { 
     // If the file does not exist
@@ -49,7 +49,7 @@ herror_t nanohttp_file_read(const char *file,
   return NULL;
 }
 
-void *nanohttp_file_open(const char *file)
+void *nanohttp_file_open_for_write(const char *file)
 {
   // Open a file in read mode
   return fopen(file, "w+");

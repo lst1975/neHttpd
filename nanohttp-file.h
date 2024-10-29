@@ -31,7 +31,7 @@ typedef herror_t (*rwfile_f)(void *arg, const char *buf, size_t length);
 size_t nanohttp_file_write(void *file, const char *buffer, size_t length);
 herror_t nanohttp_file_read(const char *file, rwfile_f cb, void *arg);
 void nanohttp_file_close(void *file);
-void *nanohttp_file_open(const char *file);
+void *nanohttp_file_open_for_write(const char *file);
 
 #ifdef __cplusplus
 }
