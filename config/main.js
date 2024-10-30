@@ -235,6 +235,7 @@ $(document).ready(function(){
     ____table.find(".table-head.right .title").text(title);
 
     __start_icon(____toolbar);
+    __start_page(page_SYSTEM);
 
     function window_resize(){
       ____table.height($(window).height());

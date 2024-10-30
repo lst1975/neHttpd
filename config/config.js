@@ -6,6 +6,35 @@ function changeSubmitButtonState(button, n)
 {
   n ? button.addClass("active") : button.removeClass("active");
 }
+
+function changeConfigItem(__ev, __getVal)
+{
+  var ov = __ev.data("osrc");
+  var ot = __ev.data("stat");
+  var i = __ev.attr("index");
+  var v = __getVal(__ev);
+  if ((ov.type != "bool" && !ov.value) || ov.value != v)
+  {
+    if (!ot.values.hasOwnProperty(i))
+      ot.c++;
+    ot.values[i] = { 
+      v : v,
+      o : __ev,
+      f : function(z,v){
+          var zv = z.data("osrc");
+          zv.value = v;
+        }
+    };
+  }
+  else
+  {
+    if (ot.values.hasOwnProperty(i))
+      ot.c--;
+    delete ot.values[i];
+  }
+  changeSubmitButtonState(ot.submit, ot.c);
+}
+
 function load_group(stat, section, o, index)
 {
   for (var b in o)
@@ -36,29 +65,7 @@ function load_group(stat, section, o, index)
           val.data("osrc", n);
           val.data("stat", stat);
           val.on("change", function(e){
-              var ov = $(this).data("osrc");
-              var ot = $(this).data("stat");
-              var i = $(this).attr("index");
-              if (!ov.value || ov.value != $(this).val())
-              {
-                if (!ot.values.hasOwnProperty(i))
-                  ot.c++;
-                ot.values[i] = { 
-                  v : $(this).val(),
-                  o : $(this),
-                  f : function(z,v){
-                      var zv = z.data("osrc");
-                      zv.value = v;
-                    }
-                };
-              }
-              else
-              {
-                if (ot.values.hasOwnProperty(i))
-                  ot.c--;
-                delete ot.values[i];
-              }
-              changeSubmitButtonState(ot.submit, ot.c);
+              changeConfigItem($(this), function(__ev){return __ev.val();});
             });
           if (n.writable) stat.w++;
           break;
@@ -83,29 +90,7 @@ function load_group(stat, section, o, index)
           val.data("osrc", n);
           val.data("stat", stat);
           val.on("change", function(e){
-              var ov = $(this).data("osrc");
-              var ot = $(this).data("stat");
-              var i = $(this).attr("index");
-              if (!ov.value || ov.value != $(this).val())
-              {
-                if (!ot.values.hasOwnProperty(i))
-                  ot.c++;
-                ot.values[i] = { 
-                  v : $(this).val(),
-                  o : $(this),
-                  f : function(z,v){
-                      var zv = z.data("osrc");
-                      zv.value = v;
-                    }
-                };
-              }
-              else
-              {
-                if (ot.values.hasOwnProperty(i))
-                  ot.c--;
-                delete ot.values[i];
-              }
-              changeSubmitButtonState(ot.submit, ot.c);
+              changeConfigItem($(this), function(__ev){return __ev.val();});
             });
           break;
         case "bool":
@@ -126,31 +111,8 @@ function load_group(stat, section, o, index)
           val.prop('checked', n.value ? true : false);
           val.prop('disabled', false);
           val.on("change", function(e){
-              var ov = $(this).data("osrc");
-              var ot = $(this).data("stat");
-              var isChecked = $(this).is(':checked');
-              var i = $(this).attr("index");
-              if (ov.value != isChecked)
-              {
-                if (!ot.values.hasOwnProperty(i))
-                  ot.c++;
-                ot.values[i] = { 
-                  v : isChecked,
-                  o : $(this),
-                  f : function(z,v){
-                      var zv = z.data("osrc");
-                      zv.value = v;
-                    }
-                };
-              }
-              else
-              {
-                if (ot.values.hasOwnProperty(i))
-                  ot.c--;
-                delete ot.values[i];
-              }
-              changeSubmitButtonState(ot.submit, ot.c);
-            });
+              changeConfigItem($(this), function(__ev){return __ev.is(':checked');});
+           });
           break;
         case "group":
           var sel = $("<img class='arrow down'></img>").appendTo(group);

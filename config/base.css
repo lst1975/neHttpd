@@ -778,8 +778,10 @@ button::-moz-focus-inner {
 .cfg_container fieldset.list.sub-section > legend {
   padding: 0 6px 0 6px;
 }
-.cfg_container .input-group.active,
 .cfg_container .input-group:hover {
+  background: linear-gradient(90deg, #0ff, #2eb9e3 2px, rgb(230,230,230) 0);
+}
+.cfg_container .input-group.active{
   background-color:rgb(230,230,230);
 }
 
