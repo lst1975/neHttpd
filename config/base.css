@@ -746,7 +746,7 @@ button::-moz-focus-inner {
 	padding: 20px;
 	max-width: 850px;
 	width: 90%;
-	margin: 20px auto 0px auto;
+	margin: 20px auto 20px auto;
 }
 .cfg_container h1 {
 	font-size: 24px;
@@ -810,16 +810,24 @@ button::-moz-focus-inner {
 	box-sizing: border-box;
 }
 .cfg_container button {
-	background-color: #0078D4;
+	background-color: #2eb9e3;
 	color: white;
 	border: none;
-	padding: 10px 15px;
+	padding: 1px 6px 2px 6px;
 	border-radius: 5px;
 	cursor: pointer;
 	font-size: 16px;
+    margin: 0 20px 0 auto;
+    display: block;
+    opacity: 0.5;
+    pointer-events:none;
 }
-.cfg_container button:hover {
-	background-color: #005A9E;
+.cfg_container button.active {
+    opacity: 0.8;
+    pointer-events:all;
+}
+.cfg_container button.active:hover {
+    opacity: 1;
 }
 .cfg_container label.switch{
   padding-top: 2px;

@@ -160,7 +160,7 @@ function __load_page(p,data){
     __p.niceScroll=null;
   }
 
-  p.page_wrapper = $("<div id='"+p.name+"'/>").appendTo(____wrapper);
+  p.page_wrapper = $("<div class='panel_page' id='"+p.name+"'/>").appendTo(____wrapper);
   p.page_wrapper.html((p.css||"")+(p.js||""));
   p.container = $("<div class='cfg_container'>").appendTo(p.page_wrapper);
 

@@ -1,4 +1,4 @@
-function load_group(section, o, index)
+function load_group(stat, section, o, index)
 {
   for (var b in o)
   {
@@ -24,6 +24,7 @@ function load_group(section, o, index)
           }
           html += '</select>';
           $(html).appendTo(group).attr("index", index+"."+n.id);
+          if (n.writable) stat.w++;
           break;
         case "ipv4":
         case "number":
@@ -39,7 +40,7 @@ function load_group(section, o, index)
             html += '<div>'+n.value+'</div>';
           }
           var e = $(html).appendTo(group);
-          if (n.writable) e.addClass("writable");
+          if (n.writable) stat.w++, e.addClass("writable");
           e.attr("id",b);
           e.attr("cfgType", n.type);
           e.attr("index", index+"."+n.id);
@@ -51,7 +52,7 @@ function load_group(section, o, index)
                   +'<div class=switch-btn></div>'
                 +'</label>';
           var e = $(html).appendTo(group);
-          if (n.writable) e.addClass("writable");
+          if (n.writable) stat.w++, e.addClass("writable");
           e.attr("id",b);
           e.attr("cfgType", n.type);
           e.attr("index", index+"."+n.id);
@@ -85,7 +86,7 @@ function load_group(section, o, index)
           sel.attr("sub", b);
           div.addClass(b).hide();
           group.addClass("hasSubsection").css("cursor", "pointer");
-          load_group(div,n, index+"."+n.id);
+          load_group(stat, div,n, index+"."+n.id);
           break;
         case "list":
           var sel = $("<img class='arrow down'></img>").appendTo(group);
@@ -119,7 +120,7 @@ function load_group(section, o, index)
           for (var i=0;i<n.value.length;i++)
           {
             var list = $('<fieldset class="list sub-section"><legend/></fieldset>').appendTo(div);
-            load_group(list,n.value[i],index+"."+n.id);
+            load_group(stat, list,n.value[i],index+"."+n.id);
           }
           break;
       }
@@ -129,6 +130,7 @@ function load_group(section, o, index)
 
 function load_config(div, cfg)
 {
+  var stat = {w:0,c:0};
   for (var a in cfg)
   {
     var o = cfg[a];
@@ -137,7 +139,13 @@ function load_config(div, cfg)
       var label = o.label || a;
       div.append("<h1>"+label+"</h1>");
       var section = $('<div class="section">').appendTo(div);
-      load_group(section, o, o.id);
+      load_group(stat, section, o, o.id);
     }
+  }
+  if (stat.w)
+  {
+    $("<span></span><button class=''>"+gmtLangBuild(["SubmitConfig"],0)+"</button>").appendTo(div);
+    div.data("stat",stat);
+  
   }
 }
