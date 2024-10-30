@@ -2,50 +2,42 @@
 #include <stdio.h>
 #include "nanohttp-file.h"
 
-herror_t nanohttp_file_read(const char *file, 
+void *nanohttp_file_open_for_read(const char *file)
+{
+  // Open a file in read mode
+  return fopen(file, "rb");
+}
+
+herror_t nanohttp_file_read(void *file, 
   rwfile_f cb, void *arg)
 {
-  FILE *fptr;
+  FILE *fptr=(FILE *)file;
 
-  // Open a file in read mode
-  fptr = fopen(file, "rb");
-  if(fptr == NULL) 
-  { 
-    // If the file does not exist
-    return herror_new("nanohttp_file_read", FILE_ERROR_OPEN, 
-      "Not able to open the file %s.", file);
-  }
-  else
-  { // If the file exist
-    // Store the content of the file
-    char buffer[_nanoConfig_HTTPD_FILE_BLOCK];
-    int n;
-    
-    while (!feof(fptr))
+  // If the file exist
+  // Store the content of the file
+  char buffer[_nanoConfig_HTTPD_FILE_BLOCK];
+  int n;
+  
+  while (!feof(fptr))
+  {
+    herror_t r;
+    n = fread(buffer, 1, sizeof(buffer), fptr);
+    if (n != sizeof(buffer))
     {
-      herror_t r;
-      n = fread(buffer, 1, sizeof(buffer), fptr);
-      if (n != sizeof(buffer))
+      if (!feof(fptr))
       {
-        if (!feof(fptr))
-        {
-          fclose(fptr);
-          return herror_new("nanohttp_file_read", FILE_ERROR_READ, 
-            "Failed to read file %s.", file);
-        }
-      }
-
-      r = cb(arg, buffer, n);
-      if (r != NULL)
-      {
-        fclose(fptr);
-        return r;
+        return herror_new("nanohttp_file_read", FILE_ERROR_READ, 
+          "Failed to read file %s.", file);
       }
     }
-  } 
 
-  // Close the file
-  fclose(fptr);
+    r = cb(arg, buffer, n);
+    if (r != NULL)
+    {
+      return r;
+    }
+  }
+
   return NULL;
 }
 

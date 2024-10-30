@@ -10,6 +10,7 @@
 #include "nanohttp-json.h"
 #include "nanohttp-file.h"
 #include "nanohttp-form.h"
+#include "nanohttp-urlencode.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const char *user, const char *password)
@@ -270,10 +271,94 @@ __root_service_read(void *arg, const char *buf, size_t length)
   return http_output_stream_write(conn->out, (const unsigned char *)buf, length);
 }
 
+#define ___CFG_TEST "{\"err\":0}"
+static herror_t
+__root_service_config(httpd_conn_t *conn, struct hrequest_t *req)
+{
+  herror_t r;
+
+  if (req->query->key != NULL)
+  {
+    char buf[128];
+    int n;
+    unsigned char *query = NULL;
+    JSONPair_t *pair,*p;
+
+    query = decode_url((const uint8_t*)req->query->key, 0);
+    if (query == NULL)
+    {
+      log_error("Failed to parse query");
+      return httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+    }
+
+    log_debug("decoded query is : %s", query);
+
+    pair = json_parse((const char *)query, strlen((const char *)query));
+    if (pair == NULL)
+    {
+      free(query);
+      log_error("Failed to parse json");
+      return httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+    }
+
+    p = json_find_bykey(pair, "id", 2);
+    if (p == NULL || p->jsonType != JSONNumber)
+    {
+      free(query);
+      json_pairs_free(pair);
+      log_error("Bad id in json");
+      return httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+    }
+
+    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+    herror_release(r);
+
+    n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":0}", (int)p->vint);
+    r = http_output_stream_write(conn->out, (unsigned char *)buf, n);
+
+    free(query);
+    json_pairs_free(pair);
+    
+    return r;
+  }
+  else
+  {
+    return httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+  }
+}
+
+/*
+"<html>"
+  "<head>"
+    "<title>nanoHTTP server examples</title>"
+  "</head>"
+  "<body>"
+    "<h1>nanoHTTP server examples</h1>"
+    "<ul>"
+      "<li><a href=\"/\">Simple service</a></li>"
+      "<li><a href=\"/secure\">Secure service</a> (try: bob/builder)</li>"
+      "<li><a href=\"/headers\">Request headers</a></li>"
+        "<li><a href=\"/mime\">MIME service</a></li>"
+        "<li>"
+        "<form action=\"/post\" method=\"post\" enctype=\"multipart/form-data\">"
+          "<fieldset>"
+            "<legend>Upload file</legend>"
+            "<input name=\"Text\" type=\"text\" value=\"test-field\"? "
+            "<input name=\"File\" type=\"file\" accept=\"text/\*\"> "
+            "<input value=\"Submit\" type=\"submit\">"
+          "</fieldset>"
+        "</form>"
+        "</li>"
+      "<li><a href=\"/not_existent\">The default service</a></li>"
+      "<li><a href=\"/nhttp\">Admin page</a> (try -NHTTPDadmin on the command line)</li>"
+    "</ul>"
+  "</body>"
+"</html>");
+*/
 static void
 root_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
-  herror_t r;
+  herror_t r = NULL;
 
   if (strstr(req->path, "..") != NULL)
   {
@@ -281,56 +366,44 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
   }
   else
   {
-    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
-    if (r == NULL)
+    const char *path = req->path+1;
+    if (!strcmp("/", req->path))
+      path = "config/index.html";
+    if (strcmp("config/setmib.json", path))
     {
-      const char *path = req->path+1;
-      if (!strcmp("/", req->path))
-        path = "config/index.html";
-      r = nanohttp_file_read(path, __root_service_read, conn);
-      if (r != NULL)
+      void *file = nanohttp_file_open_for_read(path);
+      if (file == NULL)
       {
-        char buf[1024];
-        size_t n = snprintf(buf, sizeof buf, "Failed to readfile index.html: %s", herror_message(r));
-        log_error("%s", buf);
-        herror_release(r);
-        r = http_output_stream_write(conn->out, (const unsigned char *)buf, n-1);
-        herror_release(r);
+        // If the file does not exist
+        log_error("Not able to open the file %s.", path);
+        r = httpd_send_header(conn, 404, HTTP_STATUS_404_REASON_PHRASE);
+      }
+      else
+      {
+        r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+        if (r == NULL)
+        {
+          r = nanohttp_file_read(file, __root_service_read, conn);
+          if (r != NULL)
+          {
+            char buf[1024];
+            size_t n = snprintf(buf, sizeof buf, 
+              "Failed to readfile %s: %s", path, herror_message(r));
+            log_error("%s", buf);
+            herror_release(r);
+            r = http_output_stream_write(conn->out, (const unsigned char *)buf, n-1);
+          }
+        }
+        nanohttp_file_close(file);
       }
     }
     else
     {
-      herror_release(r);
-      r = http_output_stream_write_string(conn->out,
-        "<html>"
-          "<head>"
-            "<title>nanoHTTP server examples</title>"
-          "</head>"
-          "<body>"
-            "<h1>nanoHTTP server examples</h1>"
-            "<ul>"
-              "<li><a href=\"/\">Simple service</a></li>"
-              "<li><a href=\"/secure\">Secure service</a> (try: bob/builder)</li>"
-              "<li><a href=\"/headers\">Request headers</a></li>"
-            	  "<li><a href=\"/mime\">MIME service</a></li>"
-            	  "<li>"
-                "<form action=\"/post\" method=\"post\" enctype=\"multipart/form-data\">"
-                  "<fieldset>"
-                    "<legend>Upload file</legend>"
-                    "<input name=\"Text\" type=\"text\" value=\"test-field\"? "
-                    "<input name=\"File\" type=\"file\" accept=\"text/*\"> "
-                    "<input value=\"Submit\" type=\"submit\">"
-                  "</fieldset>"
-                "</form>"
-                "</li>"
-              "<li><a href=\"/not_existent\">The default service</a></li>"
-              "<li><a href=\"/nhttp\">Admin page</a> (try -NHTTPDadmin on the command line)</li>"
-            "</ul>"
-          "</body>"
-        "</html>");
-      herror_release(r);
+      r = __root_service_config(conn, req);
     }
   }
+  
+  herror_release(r);
 }
 
 static void

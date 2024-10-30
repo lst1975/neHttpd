@@ -16,7 +16,8 @@ objects = \
 	nanohttp-ssl.o \
 	nanohttp-file.o \
 	nanohttp-form.o \
-	nanohttp-url.o
+	nanohttp-url.o \
+	nanohttp-urlencode.o
 
 all: $(objects)
 	$(CC) $^ -o httpd -lpthread -lc
