@@ -1,3 +1,11 @@
+var ___mibid={
+  id:0,
+  e:{}
+};
+function changeSubmitButtonState(button, n)
+{
+  n ? button.addClass("active") : button.removeClass("active");
+}
 function load_group(stat, section, o, index)
 {
   for (var b in o)
@@ -5,6 +13,7 @@ function load_group(stat, section, o, index)
     var n = o[b];
     if (gmtIsObject(n))
     {
+      var val;
       if (n.index && section.children("legend").length)
       {
         section.children("legend").text(n.value);
@@ -23,7 +32,34 @@ function load_group(stat, section, o, index)
             html += '<option value="'+n.range[i]+'">'+n.range[i]+'</option>';
           }
           html += '</select>';
-          $(html).appendTo(group).attr("index", index+"."+n.id);
+          val = $(html).appendTo(group).attr("index", index+"."+n.id);
+          val.data("osrc", n);
+          val.data("stat", stat);
+          val.on("change", function(e){
+              var ov = $(this).data("osrc");
+              var ot = $(this).data("stat");
+              var i = $(this).attr("index");
+              if (!ov.value || ov.value != $(this).val())
+              {
+                if (!ot.values.hasOwnProperty(i))
+                  ot.c++;
+                ot.values[i] = { 
+                  v : $(this).val(),
+                  o : $(this),
+                  f : function(z,v){
+                      var zv = z.data("osrc");
+                      zv.value = v;
+                    }
+                };
+              }
+              else
+              {
+                if (ot.values.hasOwnProperty(i))
+                  ot.c--;
+                delete ot.values[i];
+              }
+              changeSubmitButtonState(ot.submit, ot.c);
+            });
           if (n.writable) stat.w++;
           break;
         case "ipv4":
@@ -39,11 +75,38 @@ function load_group(stat, section, o, index)
           {
             html += '<div>'+n.value+'</div>';
           }
-          var e = $(html).appendTo(group);
-          if (n.writable) stat.w++, e.addClass("writable");
-          e.attr("id",b);
-          e.attr("cfgType", n.type);
-          e.attr("index", index+"."+n.id);
+          val = $(html).appendTo(group);
+          if (n.writable) stat.w++, val.addClass("writable");
+          val.attr("id",b);
+          val.attr("cfgType", n.type);
+          val.attr("index", index+"."+n.id);
+          val.data("osrc", n);
+          val.data("stat", stat);
+          val.on("change", function(e){
+              var ov = $(this).data("osrc");
+              var ot = $(this).data("stat");
+              var i = $(this).attr("index");
+              if (!ov.value || ov.value != $(this).val())
+              {
+                if (!ot.values.hasOwnProperty(i))
+                  ot.c++;
+                ot.values[i] = { 
+                  v : $(this).val(),
+                  o : $(this),
+                  f : function(z,v){
+                      var zv = z.data("osrc");
+                      zv.value = v;
+                    }
+                };
+              }
+              else
+              {
+                if (ot.values.hasOwnProperty(i))
+                  ot.c--;
+                delete ot.values[i];
+              }
+              changeSubmitButtonState(ot.submit, ot.c);
+            });
           break;
         case "bool":
           var html=
@@ -52,10 +115,42 @@ function load_group(stat, section, o, index)
                   +'<div class=switch-btn></div>'
                 +'</label>';
           var e = $(html).appendTo(group);
-          if (n.writable) stat.w++, e.addClass("writable");
-          e.attr("id",b);
-          e.attr("cfgType", n.type);
-          e.attr("index", index+"."+n.id);
+          val = e.children("input");
+          if (n.writable) stat.w++, val.addClass("writable");
+          val.attr("id",b);
+          val.attr("cfgType", n.type);
+          val.attr("index", index+"."+n.id);
+          val.data("osrc", n);
+          val.data("stat", stat);
+          val.prop('disabled', true);
+          val.prop('checked', n.value ? true : false);
+          val.prop('disabled', false);
+          val.on("change", function(e){
+              var ov = $(this).data("osrc");
+              var ot = $(this).data("stat");
+              var isChecked = $(this).is(':checked');
+              var i = $(this).attr("index");
+              if (ov.value != isChecked)
+              {
+                if (!ot.values.hasOwnProperty(i))
+                  ot.c++;
+                ot.values[i] = { 
+                  v : isChecked,
+                  o : $(this),
+                  f : function(z,v){
+                      var zv = z.data("osrc");
+                      zv.value = v;
+                    }
+                };
+              }
+              else
+              {
+                if (ot.values.hasOwnProperty(i))
+                  ot.c--;
+                delete ot.values[i];
+              }
+              changeSubmitButtonState(ot.submit, ot.c);
+            });
           break;
         case "group":
           var sel = $("<img class='arrow down'></img>").appendTo(group);
@@ -130,7 +225,7 @@ function load_group(stat, section, o, index)
 
 function load_config(div, cfg)
 {
-  var stat = {w:0,c:0};
+  var stat = {w:0,c:0,values:{}};
   for (var a in cfg)
   {
     var o = cfg[a];
@@ -144,8 +239,64 @@ function load_config(div, cfg)
   }
   if (stat.w)
   {
-    $("<span></span><button class=''>"+gmtLangBuild(["SubmitConfig"],0)+"</button>").appendTo(div);
+    var button = $("<button class=''>"+gmtLangBuild(["SubmitConfig"],0)+"</button>").appendTo(div);
     div.data("stat",stat);
-  
+    div.data("submit",button);
+    stat.submit = button;
+    button.data("stat",stat);
+
+    button.AlloyFinger({
+      "tap":function(e){
+        var d = $(this).data("stat");
+        if (!d.c) return;
+        var ___id = ___mibid.id++;
+        var k = {
+            id:___id,
+            values:{}
+          };
+        for (m in d.values)
+        {
+          if (d.values.hasOwnProperty(m))
+          {
+            k.values[m] = d.values[m].v;
+          }
+        }
+        var y = JSON.stringify(k);
+        nanoAjaxGet("config/setmib.json", "GET", y, function(data, err){
+            //TODO
+            if (err)
+            {
+              delete ___mibid.e[___id];
+              console.log("Failed to submit your configurations:"+err);
+            }
+            else
+            {
+              var x=data;
+              if (!x.hasOwnProperty("id"))
+              {
+                delete ___mibid.e[___id];
+                return;
+              }
+              if (x.id != ___id || !___mibid.e[x.id])
+              {
+                return;
+              }
+              delete ___mibid.e[___id];
+              d.c = 0;
+              for (m in d.values)
+              {
+                if (d.values.hasOwnProperty(m))
+                {
+                  var p = d.values[m];
+                  p.f(p.o,p.v);
+                }
+              }
+              d.values={};
+              changeSubmitButtonState(button,0);
+            }
+          });
+        ___mibid.e[___id] = 1;
+      }
+    });
   }
 }

@@ -1,22 +1,25 @@
-function nanoAjaxGet(file,type,data,cb)
+function nanoAjaxGet(file,method,data,cb)
 {
   return $.ajax({
-			type: type,
-			url: file,
-			data: data,
-			context: null,
-			async: true,
-			success: function(data) {
-                if ((/\.json$/).test(file) && gmtIsString(data))			
-				{
-				    try{
-					  data = JSON.parse(data);
+      type: method,
+      url: file,
+      data: data,
+      context: null,
+      async: true,
+      success: function(data) {
+        if ((/\.json$/).test(file) && gmtIsString(data))			
+        {
+          try {
+            if (data)
+              data = JSON.parse(data);
+            else
+              data = {};
 					}
 					catch(ex)
 					{
-					  console.log(ex.message);
-				      cb(null, 1);
-				      return;
+            console.log(ex.message);
+            cb(null, 1);
+            return;
 					}
 				}
 				cb(data, 0);
