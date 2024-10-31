@@ -313,7 +313,7 @@ __root_service_config(httpd_conn_t *conn, struct hrequest_t *req)
     r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
     herror_release(r);
 
-    n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":0}", (int)p->vint);
+    n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"0.0\",\"reason\":\"For testing received error message from our product.\"}]}", (int)p->vint);
     r = http_output_stream_write(conn->out, (unsigned char *)buf, n);
 
     free(query);
