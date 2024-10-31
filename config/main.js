@@ -128,6 +128,7 @@ var panel_CONTAINER = null;
 
 var ____wrapper;
 var ____container;
+var ____workingBusy;
 var __p = null;
 function __load_page(p,data){
   if (p.isVisible)
@@ -195,6 +196,7 @@ function __start_page(page){
 }
 
 $(document).ready(function(){
+    ____workingBusy = $(document.body).children(".workingBusy");
     ____table = $(document.body).find(".main-layout");
     ____header   = ____table.find(".head");
     ____main = ____table.find(".main");
@@ -213,6 +215,8 @@ $(document).ready(function(){
     __start_page(page_SYSTEM);
 
     function window_resize(){
+      ____workingBusy.height($(window).height());
+      ____workingBusy.width($(window).width());
       ____table.height($(window).height());
       ____toolbar.height($(window).height());
       ____main.height($(window).height());

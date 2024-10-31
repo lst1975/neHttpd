@@ -7,7 +7,7 @@ function changeSubmitButtonState(button, n)
   n ? button.addClass("active") : button.removeClass("active");
 }
 
-function changeConfigItem(__ev, __getVal)
+function changeConfigItem(__ev, __getVal, __setErr)
 {
   var ov = __ev.data("osrc");
   var ot = __ev.data("stat");
@@ -20,6 +20,7 @@ function changeConfigItem(__ev, __getVal)
     ot.values[i] = { 
       v : v,
       o : __ev,
+      e : __setErr,
       f : function(z,v){
           var zv = z.data("osrc");
           zv.value = v;
@@ -65,7 +66,14 @@ function load_group(stat, section, o, index)
           val.data("osrc", n);
           val.data("stat", stat);
           val.on("change", function(e){
-              changeConfigItem($(this), function(__ev){return __ev.val();});
+              $(this).removeClass("error")
+              $(this).attr("title","");
+              changeConfigItem($(this), 
+                function(__ev){return __ev.val();},
+                function(__ev,__reason){
+                  __ev.addClass("error");
+                  __ev.attr("title",__reason||"");
+                });
             });
           if (n.writable) stat.w++;
           break;
@@ -90,7 +98,14 @@ function load_group(stat, section, o, index)
           val.data("osrc", n);
           val.data("stat", stat);
           val.on("change", function(e){
-              changeConfigItem($(this), function(__ev){return __ev.val();});
+              $(this).removeClass("error")
+              $(this).attr("title","");
+              changeConfigItem($(this), 
+                function(__ev){return __ev.val();},
+                function(__ev,__reason){
+                  __ev.addClass("error");
+                  __ev.attr("title",__reason||"");
+                });
             });
           break;
         case "bool":
@@ -111,7 +126,14 @@ function load_group(stat, section, o, index)
           val.prop('checked', n.value ? true : false);
           val.prop('disabled', false);
           val.on("change", function(e){
-              changeConfigItem($(this), function(__ev){return __ev.is(':checked');});
+              $(this).removeClass("error")
+              $(this).attr("title","");
+              changeConfigItem($(this), 
+                function(__ev){return __ev.is(':checked');},
+                function(__ev,__reason){
+                  __ev.addClass("error");
+                  __ev.attr("title",__reason||"");
+                });
            });
           break;
         case "group":
@@ -163,7 +185,7 @@ function load_group(stat, section, o, index)
               img.data("subSection").hide();
               img.parent().removeClass("active");
             }
-          }
+          };
           group.AlloyFinger({
             "tap":function(e){
               toggleList($(this).children("img"));
@@ -206,9 +228,9 @@ function load_config(div, cfg)
     div.data("submit",button);
     stat.submit = button;
     button.data("stat",stat);
-
     button.AlloyFinger({
       "tap":function(e){
+        ____workingBusy.show();
         var d = $(this).data("stat");
         if (!d.c) return;
         var ___id = ___mibid.id++;
@@ -226,6 +248,7 @@ function load_config(div, cfg)
         var y = JSON.stringify(k);
         nanoAjaxGet("config/setmib.json", "GET", y, function(data, err){
             //TODO
+            ____workingBusy.hide();
             if (err)
             {
               delete ___mibid.e[___id];
@@ -242,6 +265,20 @@ function load_config(div, cfg)
               if (x.id != ___id || !___mibid.e[x.id])
               {
                 return;
+              }
+              if (x.err && gmtIsArray(x.err))
+              {
+                for (var i=0;i<x.err.length;i++)
+                {
+                  var g=x.err[i];
+                  if (!gmtIsObject(g))
+                    continue;
+                  if (g.id && d.values.hasOwnProperty(g.id))
+                  {
+                    var p = d.values[g.id];
+                    p.e(p.o,g.reason);
+                  }
+                }
               }
               delete ___mibid.e[___id];
               d.c = 0;
