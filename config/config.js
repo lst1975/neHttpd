@@ -15,8 +15,51 @@ function changeConfigItem(__ev, __getVal, __setErr)
   var v = __getVal(__ev);
   if ((ov.type != "bool" && !ov.value) || ov.value != v)
   {
+    var isValOk;
     if (!ot.values.hasOwnProperty(i))
       ot.c++;
+    switch (ov.type){
+      case "ipv4":
+        isValOk = function(z,v){
+            v = v.trim();
+            if(gmtIsString(v) && (/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/).test(v))
+              return null;
+            return "Format Error! Example: 192.168.1.1."
+          };
+        break;
+      case "string":
+        isValOk = function(z,v){
+            var zv = z.data("osrc");
+            if (zv.range && gmtIsArray(zv.range))
+            {
+              v = v.trim();
+              if (gmtIsString(v) && v.length >= zv.range[0] && v.length <= zv.range[1])
+                return null;
+              return "Length Error! Length: " + JSON.stringify(zv.range);
+            };
+            return null;
+          };
+        break;
+      case "number":
+      case "float":
+        isValOk = function(z,v){
+            var zv = z.data("osrc");
+            if (zv.range && gmtIsArray(zv.range))
+            {
+              if (Number(v) >= zv.range[0] && Number(v) <= zv.range[1])
+                return null;
+              return "Range Error! Range: " + JSON.stringify(zv.range);
+            };
+            return null;
+          };
+        break;
+      case "bool":
+      default:
+        isValOk = function(){
+           return null;
+          };
+        break;
+    }
     ot.values[i] = { 
       v : v,
       o : __ev,
@@ -24,7 +67,8 @@ function changeConfigItem(__ev, __getVal, __setErr)
       f : function(z,v){
           var zv = z.data("osrc");
           zv.value = v;
-        }
+        },
+      isValOk : isValOk
     };
   }
   else
@@ -238,6 +282,26 @@ function load_config(div, cfg)
             id:___id,
             values:{}
           };
+        
+        var hasError=0;
+        for (m in d.values)
+        {
+          if (d.values.hasOwnProperty(m))
+          {
+            var p = d.values[m];
+            var reason = p.isValOk(p.o,p.v);
+            if (reason)
+            {
+              hasError++;
+              p.e(p.o,reason);
+            }
+          }
+        }
+        if (hasError)
+        {
+          ____workingBusy.hide();
+          return;
+        }
         for (m in d.values)
         {
           if (d.values.hasOwnProperty(m))
