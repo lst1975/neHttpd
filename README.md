@@ -18,7 +18,7 @@ Embedded HTTP Server for Web Configuraion Framwork
 # Other
    Only JSON file for configuraion is transmitted between Browser and Backend neHttpd.
    Nearly all work are create JSON data, neHttpd framework will finished remained job
-   automaticall.
+   automatically.
 
 # TODO
    1. automatically convert between JSON and C structure
@@ -48,8 +48,8 @@ Embedded HTTP Server for Web Configuraion Framwork
    }
    ```
    3. please refer to /config/system.json
-   4. automaticall validate input value
-   5. automaticall generate submitted JSON, id is a.x.b.z, like SNMP mib.
+   4. automatically validate input value
+   5. automatically generate submitted JSON, id is a.x.b.z, like SNMP mib.
    6. if some configuration items are wrong, those relative input items will be marked by red border.
       
    ![overview](https://github.com/user-attachments/assets/a748ba6b-4085-4be5-bcb7-81caa9be568b)
