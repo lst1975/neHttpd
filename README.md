@@ -46,10 +46,13 @@ Embedded HTTP Server for Web Configuraion Framwork
        .
    }
    ```
-   3. please refer to /config/system.json
+   3. please refer to /data/system.json.
    4. automatically validate input value
    5. automatically generate submitted JSON, id is a.x.b.z, like SNMP mib.
    6. if some configuration items are wrong, those relative input items will be marked by red border.
+   7. strict security policy.
+   8. fast and small, meet most ebedded environment.
+   9. simple and easy to use.
       
    ![overview](https://github.com/user-attachments/assets/a748ba6b-4085-4be5-bcb7-81caa9be568b)
 
