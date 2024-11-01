@@ -15,12 +15,11 @@ Embedded HTTP Server for Web Configuraion Framwork
 # Upload
    The uploaded file will be stored in the fixed positon of "/uploads"
    
-# Other
+# Features
    Only JSON file for configuraion is transmitted between Browser and Backend neHttpd.
    Nearly all work are create JSON data, neHttpd framework will finished remained job
    automatically.
 
-# TODO
    1. automatically convert between JSON and C structure
    2. automatically web page configuration elements, use following JSON data:
    ```
