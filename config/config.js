@@ -80,6 +80,25 @@ function changeConfigItem(__ev, __getVal, __setErr)
   changeSubmitButtonState(ot.submit, ot.c);
 }
 
+function toggleArrow(el, up, down){
+  if (el.hasClass("down"))
+  {
+    el.removeClass("down").addClass("up");
+    //img.attr("src", getIconSvg("config/arrow-up.png"));
+    if (up) el.html(up);
+    el.data("subSection").show();
+    el.parent().addClass("active");
+  }
+  else
+  {
+    el.removeClass("up").addClass("down");
+    //img.attr("src", getIconSvg("config/arrow-down.png"));
+    if (down) el.html(down);
+    el.data("subSection").hide();
+    el.parent().removeClass("active");
+  }
+}
+
 function load_group(stat, section, o, index)
 {
   for (var b in o)
@@ -178,29 +197,14 @@ function load_group(stat, section, o, index)
            });
           break;
         case "group":
-          var sel = $("<img class='arrow down'></img>").appendTo(group);
+          var sel = $("<span class='arrow char down'></span>").appendTo(group);
           var div = $("<div class='sub-section'></div>").appendTo(section);
           sel.data("subSection",div);
-          sel.attr("src", getIconSvg("config/arrow-down.png"));
-          function toggleArrow(img){
-            if (img.hasClass("down"))
-            {
-              img.removeClass("down").addClass("up");
-              img.attr("src", getIconSvg("config/arrow-up.png"));
-              img.data("subSection").show();
-              img.parent().addClass("active");
-            }
-            else
-            {
-              img.removeClass("up").addClass("down");
-              img.attr("src", getIconSvg("config/arrow-down.png"));
-              img.data("subSection").hide();
-              img.parent().removeClass("active");
-            }
-          }
+          sel.html("&#11206;");
+          //sel.attr("src", getIconSvg("config/arrow-down.png"));
           group.AlloyFinger({
             "tap":function(e){
-              toggleArrow($(this).children("img"));
+              toggleArrow($(this).children("span.arrow"), "&#11205;", "&#11206;");
             }
           });
           sel.attr("sub", b);
@@ -209,27 +213,13 @@ function load_group(stat, section, o, index)
           load_group(stat, div,n, index+"."+n.id);
           break;
         case "list":
-          var sel = $("<img class='arrow down'></img>").appendTo(group);
-          var div = $("<div class='sub-section'></div>").appendTo(section);
+          var sel = $("<span class='arrow down'>...</span>").appendTo(group);
+          var div = $("<div class='sub-section'/>").appendTo(section);
           sel.data("subSection",div);
-          sel.attr("src", getIconSvg("config/more.png"));
-          function toggleList(img){
-            if (img.hasClass("down"))
-            {
-              img.removeClass("down").addClass("up");
-              img.data("subSection").show();
-              img.parent().addClass("active");
-            }
-            else
-            {
-              img.removeClass("up").addClass("down");
-              img.data("subSection").hide();
-              img.parent().removeClass("active");
-            }
-          };
+          //sel.attr("src", getIconSvg("config/more.png"));
           group.AlloyFinger({
             "tap":function(e){
-              toggleList($(this).children("img"));
+              toggleArrow($(this).children("span.arrow"));
             }
           });
           sel.attr("sub", b);

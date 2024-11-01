@@ -728,14 +728,22 @@ button::-moz-focus-inner {
   background-color:rgb(230,230,230);
 }
 
-.cfg_container .input-group img.arrow{
-  height: 10px;
-  opacity:.7;
-  margin-top: 12px;
-  cursor:pointer;
+.cfg_container .input-group span.arrow.char{
+  height: 100%;
+  opacity: .7;
+  margin-top: 4px;
+  cursor: pointer;
 }
 
-.cfg_container .input-group img.arrow:hover{
+.cfg_container .input-group span.arrow{
+	margin: 0;
+	font-size: 120%;
+	height: 100%;
+	line-height: 100%;
+  cursor:pointer;
+}
+    
+.cfg_container .input-group .arrow:hover{
   opacity:1;
 }
 
@@ -890,18 +898,6 @@ body > .workingBusy{
   width: auto;
   padding: 10px 18px;
   background-color: #f44336;
-}
-
-/* Center the image and position the close button */
-.__login .imgcontainer {
-  text-align: center;
-  margin: 24px 0 12px 0;
-  position: relative;
-}
-
-.__login img.avatar {
-  width: 40%;
-  border-radius: 50%;
 }
 
 .__login .container {
