@@ -96,7 +96,7 @@ function load_group(stat, section, o, index)
       if (n.writable) 
         group.addClass("writable");
       var label = n.label || n;
-      group.append("<label class='group' for='"+b+"'>"+label+"</label>");
+      group.append("<label class='group' for='"+(b+index)+"'>"+label+"</label>");
       switch (n.type)
       {
         case "array":
@@ -107,6 +107,7 @@ function load_group(stat, section, o, index)
           }
           html += '</select>';
           val = $(html).appendTo(group).attr("index", index+"."+n.id);
+          val.attr("id",b+index);
           val.data("osrc", n);
           val.data("stat", stat);
           val.on("change", function(e){
@@ -136,7 +137,7 @@ function load_group(stat, section, o, index)
           }
           val = $(html).appendTo(group);
           if (n.writable) stat.w++, val.addClass("writable");
-          val.attr("id",b);
+          val.attr("id",b+index);
           val.attr("cfgType", n.type);
           val.attr("index", index+"."+n.id);
           val.data("osrc", n);
@@ -161,7 +162,7 @@ function load_group(stat, section, o, index)
           var e = $(html).appendTo(group);
           val = e.children("input");
           if (n.writable) stat.w++, val.addClass("writable");
-          val.attr("id",b);
+          val.attr("id",b+index);
           val.attr("cfgType", n.type);
           val.attr("index", index+"."+n.id);
           val.data("osrc", n);
@@ -184,19 +185,19 @@ function load_group(stat, section, o, index)
           var sel = $("<img class='arrow down'></img>").appendTo(group);
           var div = $("<div class='sub-section'></div>").appendTo(section);
           sel.data("subSection",div);
-          sel.attr("src", "config/arrow-down.png");
+          sel.attr("src", getIconSvg("config/arrow-down.png"));
           function toggleArrow(img){
             if (img.hasClass("down"))
             {
               img.removeClass("down").addClass("up");
-              img.attr("src", "config/arrow-up.png");
+              img.attr("src", getIconSvg("config/arrow-up.png"));
               img.data("subSection").show();
               img.parent().addClass("active");
             }
             else
             {
               img.removeClass("up").addClass("down");
-              img.attr("src", "config/arrow-down.png");
+              img.attr("src", getIconSvg("config/arrow-down.png"));
               img.data("subSection").hide();
               img.parent().removeClass("active");
             }
@@ -215,7 +216,7 @@ function load_group(stat, section, o, index)
           var sel = $("<img class='arrow down'></img>").appendTo(group);
           var div = $("<div class='sub-section'></div>").appendTo(section);
           sel.data("subSection",div);
-          sel.attr("src", "config/more.png");
+          sel.attr("src", getIconSvg("config/more.png"));
           function toggleList(img){
             if (img.hasClass("down"))
             {
@@ -243,7 +244,7 @@ function load_group(stat, section, o, index)
           for (var i=0;i<n.value.length;i++)
           {
             var list = $('<fieldset class="list sub-section"><legend/></fieldset>').appendTo(div);
-            load_group(stat, list,n.value[i],index+"."+n.id);
+            load_group(stat, list,n.value[i],index+"."+n.id+"."+i+(n.index ? ":"+n.value[i][n.index].value:""));
           }
           break;
       }
@@ -310,7 +311,7 @@ function load_config(div, cfg)
           }
         }
         var y = JSON.stringify(k);
-        nanoAjaxGet("config/setmib.json", "GET", y, function(data, err){
+        nanoAjaxGet("data/setmib.json", "GET", y, function(data, err){
             //TODO
             ____workingBusy.hide();
             if (err)

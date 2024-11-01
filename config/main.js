@@ -1,4 +1,27 @@
-function nanoAjaxGet(file,method,data,cb)
+
+var loginWindow = 
+    '<div id="id01" class="__login modal">'
+      +'<div class="modal-content animate" action="config/secure" method="get">'
+        +'<div class="container">'
+          +'<label for="uname"><b>Username</b></label>'
+          +'<input class="name" type="text" value="bob" placeholder="Enter Username" name="uname" required>'
+
+          +'<label for="psw"><b>Password</b></label>'
+          +'<input class="password" type="password" value="builder" placeholder="Enter Password" name="psw" required>'
+            
+          +'<button type="submit">Login</button>'
+          +'<label>'
+            +'<input type="checkbox" checked="checked" name="remember"> Remember me'
+          +'</label>'
+        +'</div>'
+
+        +'<div class="container" style="background-color:#f1f1f1">'
+          +'<button type="button" onclick="$(\'.modal\').hide()" class="cancelbtn">Cancel</button>'
+        +'</div>'
+      +'</div>'
+    +'</div>';
+
+function nanoAjaxGet(file,method,data,cb,headers)
 {
   return $.ajax({
       type: method,
@@ -27,7 +50,17 @@ function nanoAjaxGet(file,method,data,cb)
 
 			error: function(data) {
 				cb(null, 1);
-			}
+			},
+
+      beforeSend: function(xhr) {
+        var hdr = headers || (____auth ? {Authorization:____auth} :{});
+        if (hdr)
+        {
+          for (p in hdr)
+            if (hdr.hasOwnProperty(p))
+              xhr.setRequestHeader(p, hdr[p]);
+        }
+      }
 		});
 }
 
@@ -129,6 +162,8 @@ var panel_CONTAINER = null;
 var ____wrapper;
 var ____container;
 var ____workingBusy;
+var ____login;
+var ____auth=null;
 var __p = null;
 function __load_page(p,data){
   if (p.isVisible)
@@ -165,7 +200,9 @@ function __start_icon(____toolbar){
     for (var i=0; i<leftIcon.length;i++)
     {
         $('<div class="table-left-container '+leftIcon[i].name+'">'
-          +'<table class="main-icon"><tr><td class="left"><img class="'+leftIcon[i].name+'" src="'+leftIcon[i].ln+'"></img></td><td class="right"><div class="text">'+leftIcon[i].lang+'</div></td></tr></table>'
+          +'<table class="main-icon"><tr><td class="left"><img class="'+leftIcon[i].name+'" src="'
+            +getIconSvg(leftIcon[i].ln)+'"></img></td><td class="right"><div class="text">'
+            +leftIcon[i].lang+'</div></td></tr></table>'
           +'</div>').appendTo(container);
     };
 
@@ -195,37 +232,99 @@ function __start_page(page){
 	__load_page(page);
 }
 
-$(document).ready(function(){
-    ____workingBusy = $(document.body).children(".workingBusy");
-    ____table = $(document.body).find(".main-layout");
-    ____header   = ____table.find(".head");
-    ____main = ____table.find(".main");
-    ____container = ____table.find(".table-right");
-    ____toolbar   = ____table.find(".table-left .table-left-container");
-    ____wrapper = ____container.children(".panel_container");
-    panel_CONTAINER = ____wrapper;
-    window_resize();
+function __start_main(){
+  ____login = $(loginWindow).appendTo(document.body);
+  ____workingBusy = $(document.body).children(".workingBusy");
+  ____table = $(document.body).find(".main-layout");
+  ____header   = ____table.find(".head");
+  ____main = ____table.find(".main");
+  ____container = ____table.find(".table-right");
+  ____toolbar   = ____table.find(".table-left .table-left-container");
+  ____wrapper = ____container.children(".panel_container");
+  panel_CONTAINER = ____wrapper;
+  window_resize();
 
-    var title = gmtLangBuild(["Title"],0);
-    $(document).find("html > head > title").text(title);
-    $(document).find("html > head > meta#MetaDescription").attr("content",title);
-    ____table.find(".table-head.right .title").text(title);
+  var title = gmtLangBuild(["Title"],0);
+  $(document).find("html > head > title").text(title);
+  $(document).find("html > head > meta#MetaDescription").attr("content",title);
+  $(document).find("html > head > link[rel=icon]").attr("href",__icons["config/favicon.ico"]);
+  ____table.find(".table-head.right .title").text(title);
 
-    __start_icon(____toolbar);
-    __start_page(page_SYSTEM);
+  ____table.find(".table-head.right .login > img").attr("src", getIconSvg("config/login.png"));
+  ____table.find(".table-head.left .logo").attr("src", __icons["config/logo.png"]);
+  ____header.css("background-image","url("+__icons["bg.jpg"]+")");
 
-    function window_resize(){
-      ____workingBusy.height($(window).height());
-      ____workingBusy.width($(window).width());
-      ____table.height($(window).height());
-      ____toolbar.height($(window).height());
-      ____main.height($(window).height());
-      ____wrapper.height($(window).height()-____header.outerHeight());
+  __start_icon(____toolbar);
+  __start_page(page_SYSTEM);
+
+  ____header.find(".login > img").AlloyFinger({
+    "tap":function(e){
+      ____login.show();
     }
-    $(window).resize(function() {
-      window_resize();
-      if (__p)
-        __p.resize(__p);
-    });
-})
+  });
+
+  ____login.find("button[type=submit]").AlloyFinger({
+    "tap":function(e){
+      var auth = 'Basic ' 
+            + btoa(unescape(encodeURIComponent(____login.find("input.name").val() + ':' 
+            + ____login.find("input.password").val())));
+      nanoAjaxGet("/secure", "GET", null, 
+        function(data, err){
+          if (!err)
+          {
+            ____auth = auth;
+            ____login.hide();
+          }
+        },
+        {
+          'Authorization' : auth
+        });
+    }
+  });
+
+  
+  function window_resize(){
+    ____workingBusy.height($(window).height());
+    ____workingBusy.width($(window).width());
+    ____table.height($(window).height());
+    ____toolbar.height($(window).height());
+    ____main.height($(window).height());
+    ____wrapper.height($(window).height()-____header.outerHeight());
+  }
+  $(window).resize(function() {
+    window_resize();
+    if (__p)
+      __p.resize(__p);
+  });
+}
+
+$(document).ready(function(){
+  $(document).find("html > head > link[rel=icon]").attr("href",__icons["config/favicon.ico"]);
+  var login = $(document.body).children(".__login");
+  login.show();
+  login.find("button[type=submit]").AlloyFinger({
+    "tap":function(e){
+      ____auth = 'Basic ' 
+            + btoa(unescape(encodeURIComponent(login.find("input.name").val() + ':' 
+            + login.find("input.password").val())));
+      nanoAjaxGet("/secure", "GET", null, 
+        function(data, err){
+          if (!err)
+          {
+            $(document.body).html(data);
+            $(document).ready(function(){
+              __start_main();
+            });
+          }
+          else
+          {
+            ____auth = null;
+          }
+        },
+        {
+          'Authorization' : ____auth
+        });
+      }
+  })
+});
 

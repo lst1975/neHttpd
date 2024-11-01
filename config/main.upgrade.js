@@ -183,6 +183,8 @@ function MAIN_UPGRADE_display(p)
           name.text(fileName+" • "+gmtLangBuild(["Uploaded"],0)+" • " +fileSize);
         }
       })
+      if (____auth)
+        setRequestHeader(Authorization, ____auth);
       var formData = new FormData(form[0]); //formData is an object to easily send form data
       xhr.send(formData); //sending form data to php
     }

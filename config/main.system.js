@@ -6,7 +6,7 @@
 function MAIN_SYSTEM_display(p)
 {
   if (p.ajax) p.ajax.abort();
-  p.ajax = nanoAjaxGet("config/system.json", "GET", null, 
+  p.ajax = nanoAjaxGet("data/system.json", "GET", null, 
     function(data,err){
       if (!err)
         load_config(p.container,data);
