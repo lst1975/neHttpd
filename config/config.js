@@ -88,10 +88,6 @@ function load_group(stat, section, o, index)
     if (gmtIsObject(n))
     {
       var val;
-      if (n.index && section.children("legend").length)
-      {
-        section.children("legend").text(n.value);
-      }
       var group = $('<div class="input-group">').appendTo(section);
       if (n.writable) 
         group.addClass("writable");
@@ -244,6 +240,10 @@ function load_group(stat, section, o, index)
           for (var i=0;i<n.value.length;i++)
           {
             var list = $('<fieldset class="list sub-section"><legend/></fieldset>').appendTo(div);
+     	      if (n.index)
+     	      {
+     	        list.children("legend").text(n.value[i][n.index].value);
+     	      }
             load_group(stat, list,n.value[i],index+"."+n.id+"."+i+(n.index ? ":"+n.value[i][n.index].value:""));
           }
           break;
