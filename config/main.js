@@ -252,7 +252,8 @@ function __start_main(){
 
   ____table.find(".table-head.right .login > img").attr("src", getIconSvg("config/login.png"));
   ____table.find(".table-head.left .logo").attr("src", __icons["config/logo.png"]);
-  ____header.css("background-image","url("+__icons["bg.jpg"]+")");
+  //____header.css("background-image","url("+__icons["bg.jpg"]+")");
+  ____header.css("background-image","linear-gradient(90deg, #020024 0%, #090979 35%, #00d4ff 100%)");
 
   __start_icon(____toolbar);
   __start_page(page_SYSTEM);
