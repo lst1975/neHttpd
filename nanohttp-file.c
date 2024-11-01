@@ -8,6 +8,44 @@ void *nanohttp_file_open_for_read(const char *file)
   return fopen(file, "rb");
 }
 
+herror_t nanohttp_file_read_all(const char *file, 
+  rwfile_f cb, void *arg)
+{
+  FILE *fptr=nanohttp_file_open_for_read(file);
+  if (fptr == NULL)
+  {
+    return herror_new("nanohttp_file_read", FILE_ERROR_OPEN, 
+      "Failed to open file %s.", file);
+  }
+
+  // If the file exist
+  // Store the content of the file
+  char buffer[_nanoConfig_HTTPD_FILE_BLOCK];
+  int n;
+  
+  while (!feof(fptr))
+  {
+    herror_t r;
+    n = fread(buffer, 1, sizeof(buffer), fptr);
+    if (n != sizeof(buffer))
+    {
+      if (!feof(fptr))
+      {
+        return herror_new("nanohttp_file_read", FILE_ERROR_READ, 
+          "Failed to read file %s.", file);
+      }
+    }
+
+    r = cb(arg, buffer, n);
+    if (r != NULL)
+    {
+      return r;
+    }
+  }
+
+  return NULL;
+}
+
 herror_t nanohttp_file_read(void *file, 
   rwfile_f cb, void *arg)
 {
@@ -27,7 +65,7 @@ herror_t nanohttp_file_read(void *file,
       if (!feof(fptr))
       {
         return herror_new("nanohttp_file_read", FILE_ERROR_READ, 
-          "Failed to read file %s.", file);
+          "Failed to read file.");
       }
     }
 

@@ -90,6 +90,7 @@
 static inline int hssl_enabled(void) { return 0; }
 #endif
 #include "nanohttp-admin.h"
+#include "nanohttp-file.h"
 
 #ifndef timeradd
 #define timeradd(tvp, uvp, vvp)						\
@@ -452,7 +453,7 @@ httpd_find_service(const char *context)
 
   for (cur = _httpd_services_head; cur; cur = cur->next)
   {
-    if (!strcmp(cur->name, "FILE"))
+    if (!strcmp(cur->name, "FILE") || !strcmp(cur->name, "DATA"))
     {
       if (!strncmp(cur->context, context, strlen(cur->context)))
         return cur;
@@ -525,6 +526,8 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
 static herror_t
 _httpd_send_html_message(httpd_conn_t *conn, int reason, const char *phrase, const char *msg)
 {
+  herror_t r;
+  
   const char *tmpl =
     "<html>"
       "<head>"
@@ -544,8 +547,10 @@ _httpd_send_html_message(httpd_conn_t *conn, int reason, const char *phrase, con
   snprintf(slen, 5, "%lu", len);
 
   httpd_set_header(conn, HEADER_CONTENT_LENGTH, slen);
-  httpd_send_header(conn, reason, phrase);
 
+  r = httpd_send_header(conn, reason, phrase);
+  if (r != H_OK)
+    return r;
   return http_output_stream_write(conn->out, (unsigned char *)buf, len);
 }
 
@@ -555,15 +560,104 @@ httpd_send_bad_request(httpd_conn_t *conn, const char *msg)
   return _httpd_send_html_message(conn, 400, HTTP_STATUS_400_REASON_PHRASE, msg);
 }
 
+const char *nanohttp_index_html_head =
+  "<!DOCTYPE html>"
+  "<html lang=\"en\">"
+    "<head>"
+      "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">"
+      "<meta id=\"MetaDescription\" name=\"DESCRIPTION\" content=\"\">"
+      "<meta id=\"MetaKeywords\" name=\"KEYWORDS\" content=\"\">"
+      "<meta name=\"msapplication-TileColor\" content=\"#000000\">"
+      "<meta name=\"msapplication-TileImage\" content=\"config/logo.png\">"
+      "<meta name=\"viewport\" content=\"initial-scale=1, width=device-width\">"
+      "<meta name='msapplication-tap-highlight' content='no'>"
+      "<meta http-equiv='X-UA-Compatible' content='IE=edge'>"
+      "<meta http-equiv='X-UA-Compatible' content='IE=10'>"
+      "<meta http-equiv='X-UA-Compatible' content='IE=9'>"
+      "<meta http-equiv='cleartype' content='off'>"
+      "<meta name='MobileOptimized' content='320'>"
+      "<meta name='HandheldFriendly' content='True'>"
+      "<meta name='mobile-web-app-capable' content='yes'>"
+      "<link rel=\"apple-touch-icon\" href=\"config/logo.png\">"
+      "<link rel=\"icon\" href=\"\">"
+      "<style>"
+      "	/* following two viewport lines are equivalent to meta viewport statement above, and is needed for Windows */"
+      "	/* see http://www.quirksmode.org/blog/archives/2014/05/html5_dev_conf.html and http://dev.w3.org/csswg/css-device-adapt/ */"
+      "	@-ms-viewport { width: 100vw ; min-zoom: 100% ; zoom: 100% ; } @viewport { width: 100vw ; min-zoom: 100% zoom: 100% ; }"
+      "	@-ms-viewport { user-zoom: fixed ; min-zoom: 100% ; } @viewport { user-zoom: fixed ; min-zoom: 100% ; }"
+      "	/*@-ms-viewport { user-zoom: zoom ; min-zoom: 100% ; max-zoom: 200% ; }   @viewport { user-zoom: zoom ; min-zoom: 100% ; max-zoom: 200% ; }*/"
+      "</style>"
+      "<title></title>"
+      "<!--[if IE]><link rel=\"shortcut icon\" href=\"\"><![endif]-->"
+      "<link rel=\"stylesheet\" type=\"text/css\" href=\"config/base.css\" media=\"screen\">"
+      "<script type=\"text/javascript\" src=\"config/jquery-3.7.1.js\"></script>"
+      "<script type='text/javascript' src='config/lang.js'></script>"
+      "<script type='text/javascript' src='config/data.js'></script>"
+      "<script type='text/javascript' src='config/main.js'></script>"
+      "<script type='text/javascript' src='config/config.js'></script>"
+      "<script type=\"text/javascript\" src=\"config/jquery.mousewheel.js\"></script>"
+      "<script type='text/javascript' src='config/alloy_finger.js'></script>"
+      "<script type='text/javascript' src='config/main.upgrade.js'></script>"
+      "<script type='text/javascript' src='config/main.system.js'></script>"
+      "<script type='text/javascript' src='config/main.device.js'></script>"
+    "</head>";
+
+static const char *nanohttp_index_html_login =
+    "<body>" 
+      "<div id=\"id01\" class=\"__login modal\">" 
+        "<div class=\"modal-content animate\" action=\"config/secure\" method=\"get\">"
+          "<div class=\"container\">" 
+            "<label for=\"uname\"><b>Username</b></label>" 
+            "<input class=\"name\" type=\"text\" value=\"bob\" placeholder=\"Enter Username\" name=\"uname\" required>"
+            "<label for=\"psw\"><b>Password</b></label>" 
+            "<input class=\"password\" type=\"password\" value=\"builder\" placeholder=\"Enter Password\" name=\"psw\" required>"
+            "<button type=\"submit\">Login</button>"
+            "<label>"
+              "<input type=\"checkbox\" checked=\"checked\" name=\"remember\"> Remember me"
+            "</label>" 
+            "</div>" 
+        "</div>" 
+      "</div>" 
+    "</body>" 
+  "</html>";
+
 herror_t
 httpd_send_unauthorized(httpd_conn_t *conn, const char *realm)
 {
-  char buf[128];
+  herror_t r;
 
-  snprintf(buf, 128, "Basic realm=\"%s\"", realm);
-  httpd_set_header(conn, HEADER_WWW_AUTHENTICATE, buf);
+  log_debug("httpd_send_unauthorized: building HTTP_STATUS_401_REASON_PHRASE.");
 
-  return _httpd_send_html_message(conn, 401, HTTP_STATUS_401_REASON_PHRASE, "Unauthorized request logged");
+  if (1)
+  {
+    r = httpd_send_header(conn, 401, HTTP_STATUS_401_REASON_PHRASE);
+    if (r != H_OK)
+    {
+      log_debug("httpd_send_header failed: %s.", herror_message(r));
+      return r;
+    }
+    
+    log_info("secure_service received, redirect to login.html");
+    r = http_output_stream_write_string(conn->out, nanohttp_index_html_head);
+    if (r == H_OK)
+      r = http_output_stream_write_string(conn->out, nanohttp_index_html_login);
+    return r;
+  }
+  else
+  {
+    char buf[128];
+    
+    snprintf(buf, 128, "Basic realm=\"%s\"", realm);
+    httpd_set_header(conn, HEADER_WWW_AUTHENTICATE, buf);
+    
+    r = httpd_send_header(conn, 401, HTTP_STATUS_401_REASON_PHRASE);
+    if (r != H_OK)
+    {
+      log_debug("httpd_send_header failed: %s.", herror_message(r));
+      return r;
+    }
+    return _httpd_send_html_message(conn, 401, HTTP_STATUS_401_REASON_PHRASE, "Unauthorized request logged");
+  }
 }
 
 herror_t

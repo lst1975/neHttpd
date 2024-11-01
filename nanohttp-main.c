@@ -15,38 +15,21 @@
 static int
 simple_authenticator(struct hrequest_t *req, const char *user, const char *password)
 {
-  fprintf(stdout, "logging in user=\"%s\" password=\"%s\"\n", user, password);
+  log_debug("logging in user=\"%s\" password=\"%s\"\n", user, password);
 
   if (strcmp(user, "bob")) {
 
-    fprintf(stderr, "user \"%s\" unkown\n", user);
+    log_error("user \"%s\" unkown\n", user);
     return 0;
   }
 
   if (strcmp(password, "builder")) {
 
-    fprintf(stderr, "wrong password\n");
+    log_error("wrong password\n");
     return 0;
   }
 
   return 1;
-}
-
-static void
-secure_service(httpd_conn_t *conn, struct hrequest_t *req)
-{
-  httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
-  http_output_stream_write_string(conn->out,
-    "<html>"
-      "<head>"
-        "<title>Secure ressource!</title>"
-      "</head>"
-      "<body>"
-        "<h1>Authenticated access!!!</h1>"
-      "</body>"
-    "</html>");
-
-  return;
 }
 
 /**********************************************************************************
@@ -191,7 +174,7 @@ __multipart_cb_header_value(multipartparser *p, const char* data, size_t size)
 }
 
 static herror_t
-post_service(httpd_conn_t *conn, struct hrequest_t *req, 
+__post_service(httpd_conn_t *conn, struct hrequest_t *req, 
   const char *file)
 {
   herror_t r = NULL;
@@ -249,9 +232,9 @@ post_service(httpd_conn_t *conn, struct hrequest_t *req,
 }
 
 static void
-post_service_wia(httpd_conn_t *conn, struct hrequest_t *req)
+post_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
-  herror_t r = post_service(conn, req, "config/gw.bin");
+  herror_t r = __post_service(conn, req, "config/gw.bin");
   if (r == NULL)
   {
     r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
@@ -269,62 +252,6 @@ __root_service_read(void *arg, const char *buf, size_t length)
 {
   httpd_conn_t *conn=(httpd_conn_t *)arg;
   return http_output_stream_write(conn->out, (const unsigned char *)buf, length);
-}
-
-#define ___CFG_TEST "{\"err\":0}"
-static herror_t
-__root_service_config(httpd_conn_t *conn, struct hrequest_t *req)
-{
-  herror_t r;
-
-  if (req->query->key != NULL)
-  {
-    char buf[128];
-    int n;
-    unsigned char *query = NULL;
-    JSONPair_t *pair,*p;
-
-    query = decode_url((const uint8_t*)req->query->key, 0);
-    if (query == NULL)
-    {
-      log_error("Failed to parse query");
-      return httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
-    }
-
-    log_debug("decoded query is : %s", query);
-
-    pair = json_parse((const char *)query, strlen((const char *)query));
-    if (pair == NULL)
-    {
-      free(query);
-      log_error("Failed to parse json");
-      return httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
-    }
-
-    p = json_find_bykey(pair, "id", 2);
-    if (p == NULL || p->jsonType != JSONNumber)
-    {
-      free(query);
-      json_pairs_free(pair);
-      log_error("Bad id in json");
-      return httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
-    }
-
-    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
-    herror_release(r);
-
-    n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"0.0\",\"reason\":\"For testing received error message from our product.\"}]}", (int)p->vint);
-    r = http_output_stream_write(conn->out, (unsigned char *)buf, n);
-
-    free(query);
-    json_pairs_free(pair);
-    
-    return r;
-  }
-  else
-  {
-    return httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
-  }
 }
 
 /*
@@ -355,6 +282,60 @@ __root_service_config(httpd_conn_t *conn, struct hrequest_t *req)
   "</body>"
 "</html>");
 */
+
+static const char *nanohttp_index_html_body =
+    "<div class=\"workingBusy\"></div>"
+    "<table class=\"main-layout\">"
+      "<tr class='head'>"
+        "<td class=\"table-head left\">"
+          "<img class=\"logo\" src=\"\">"
+        "</td>"
+        "<td class=\"table-head right\">"
+          "<span class=\"title\"></span>"
+          "<a class=\"login\"><img src=\"\"></a>"
+        "</td>"
+      "</tr>"
+      "<tr class='main'>"
+        "<td class=\"table-left\">"
+          "<div class=\"table-left-container\">"
+          "</div>"
+        "</td>"
+        "<td class=\"table-right\">"
+          "<div class=\"panel_container\">"
+          "</div>"
+        "</td>"
+    "	</tr>"
+    "</table>";
+
+static void
+secure_service(httpd_conn_t *conn, struct hrequest_t *req)
+{
+  herror_t r;
+
+  r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+  if (r == H_OK)
+  {
+    log_info("secure_service received, redirect to index.html");
+    r = http_output_stream_write_string(conn->out, nanohttp_index_html_body);
+  }
+  else
+  {
+    r = http_output_stream_write_string(conn->out,
+      "<html>"
+        "<head>"
+          "<title>Secure ressource!</title>"
+        "</head>"
+        "<body>"
+          "<h1>Authenticated access!!!</h1>"
+        "</body>"
+      "</html>");
+  }
+
+  herror_release(r);
+  return;
+}
+
+extern const char *nanohttp_index_html_head;
 static void
 root_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
@@ -368,9 +349,23 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
   {
     const char *path = req->path+1;
     if (!strcmp("/", req->path))
-      path = "config/index.html";
-    if (strcmp("config/setmib.json", path))
     {
+      r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+      do
+      {
+        r = http_output_stream_write_string(conn->out, nanohttp_index_html_head);
+        if (r != NULL) break;
+        r = http_output_stream_write_string(conn->out, "<body>");
+        if (r != NULL) break;
+        r = http_output_stream_write_string(conn->out, nanohttp_index_html_body);
+        if (r != NULL) break;
+        r = http_output_stream_write_string(conn->out, "</body></html>");
+      } while(0);
+    }
+    else if (strcmp("data/setmib.json", path))
+    {
+      log_debug("Try to open the file %s.", path);
+
       void *file = nanohttp_file_open_for_read(path);
       if (file == NULL)
       {
@@ -399,11 +394,78 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
     }
     else
     {
-      r = __root_service_config(conn, req);
+      return default_service(conn, req);
     }
   }
   
   herror_release(r);
+}
+
+#define ___CFG_TEST "{\"err\":0}"
+static void
+data_service(httpd_conn_t *conn, struct hrequest_t *req)
+{
+  herror_t r;
+
+  if (strcmp("/data/setmib.json", req->path))
+  {
+    return root_service(conn, req);
+  }
+
+  if (req->query->key != NULL)
+  {
+    char buf[128];
+    int n;
+    unsigned char *query = NULL;
+    JSONPair_t *pair,*p;
+
+    query = decode_url((const uint8_t*)req->query->key, 0);
+    if (query == NULL)
+    {
+      log_error("Failed to parse query");
+      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+      goto finished;
+    }
+
+    log_debug("decoded query is : %s", query);
+
+    pair = json_parse((const char *)query, strlen((const char *)query));
+    if (pair == NULL)
+    {
+      free(query);
+      log_error("Failed to parse json");
+      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+      goto finished;
+    }
+
+    p = json_find_bykey(pair, "id", 2);
+    if (p == NULL || p->jsonType != JSONNumber)
+    {
+      free(query);
+      json_pairs_free(pair);
+      log_error("Bad id in json");
+      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+      goto finished;
+    }
+
+    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+    herror_release(r);
+
+    n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"0.0\",\"reason\":"
+      "\"For testing received error message from our product.\"}]}", (int)p->vint);
+    r = http_output_stream_write(conn->out, (unsigned char *)buf, n);
+
+    free(query);
+    json_pairs_free(pair);
+  }
+  else
+  {
+    r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+  }
+
+finished:  
+  herror_release(r);
+  return;
 }
 
 static void
@@ -516,7 +578,8 @@ main(int argc, char **argv)
     goto error0;
   }
 
-  if ((status = httpd_register("/", root_service, "ROOT")) != H_OK)
+  if ((status = httpd_register_secure("/", root_service, 
+    simple_authenticator, "ROOT")) != H_OK)
   {
     fprintf(stderr, "Cannot register service (%s)\n", 
       herror_message(status));
@@ -542,8 +605,8 @@ main(int argc, char **argv)
     goto error1;
   }
 
-  if ((status = httpd_register("/headers", 
-    headers_service, "HEAD")) != H_OK)
+  if ((status = httpd_register_secure("/headers", headers_service, 
+    simple_authenticator, "HEAD")) != H_OK)
   {
     fprintf(stderr, "Cannot register headers service (%s)\n", 
       herror_message(status));
@@ -551,7 +614,8 @@ main(int argc, char **argv)
     goto error1;
   }
 
-  if ((status = httpd_register("/mime", mime_service, "MIME")) != H_OK)
+  if ((status = httpd_register_secure("/mime", mime_service, 
+    simple_authenticator, "MIME")) != H_OK)
   {
     fprintf(stderr, "Cannot register MIME service (%s)\n", 
       herror_message(status));
@@ -559,7 +623,8 @@ main(int argc, char **argv)
     goto error1;
   }
 
-  if ((status = httpd_register("/post/wia.bin", post_service_wia, "POST-GW")) != H_OK)
+  if ((status = httpd_register_secure("/post/wia.bin", post_service, 
+    simple_authenticator, "POST")) != H_OK)
   {
     fprintf(stderr, "Cannot register POST service (%s)\n", 
       herror_message(status));
@@ -567,7 +632,17 @@ main(int argc, char **argv)
     goto error1;
   }
 
-  if ((status = httpd_register_default("/error", default_service)) != H_OK)
+  if ((status = httpd_register_secure("/data/", data_service, 
+    simple_authenticator, "DATA")) != H_OK)
+  {
+    fprintf(stderr, "Cannot register DATA service (%s)\n", 
+      herror_message(status));
+    herror_release(status);
+    goto error1;
+  }
+
+  if ((status = httpd_register_default_secure("/error", default_service, 
+    simple_authenticator)) != H_OK)
   {
     fprintf(stderr, "Cannot register default service (%s)\n", 
       herror_message(status));

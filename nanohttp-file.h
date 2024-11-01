@@ -33,6 +33,8 @@ herror_t nanohttp_file_read(void *file, rwfile_f cb, void *arg);
 void nanohttp_file_close(void *file);
 void *nanohttp_file_open_for_write(const char *file);
 void *nanohttp_file_open_for_read(const char *file);
+herror_t nanohttp_file_read_all(const char *file, 
+  rwfile_f cb, void *arg);
 
 #ifdef __cplusplus
 }
