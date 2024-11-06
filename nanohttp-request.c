@@ -174,7 +174,7 @@ _hrequest_parse_header(char *data)
 
         /* save path */
         /* req->path = (char *) malloc(strlen(key) + 1); */
-        strncpy(req->path, key, REQUEST_MAX_PATH_SIZE);
+        strncpy(req->path, key, REQUEST_MAX_PATH_SIZE-1);
 
         /* parse options */
         for (;;)

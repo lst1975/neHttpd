@@ -555,11 +555,11 @@ http_output_stream_write(struct http_output_stream_t * stream,
                          const unsigned char *bytes, size_t size)
 {
   herror_t status;
-  char chunked[15];
+  char chunked[24];
 
   if (stream->type == HTTP_TRANSFER_CHUNKED)
   {
-    sprintf(chunked, "%lx\r\n", size);
+    snprintf(chunked, sizeof(chunked)-1, "%lx\r\n", size);
     if ((status = hsocket_send_string(stream->sock, chunked)) != H_OK)
       return status;
   }

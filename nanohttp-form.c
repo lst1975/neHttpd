@@ -93,7 +93,7 @@ void multipartparser_init(multipartparser* parser, void *arg, const char* bounda
 {
     memset(parser, 0, sizeof(*parser));
 
-    strncpy(parser->boundary, boundary, sizeof(parser->boundary));
+    strncpy(parser->boundary, boundary, sizeof(parser->boundary)-1);
     parser->boundary_length = strlen(parser->boundary);
     parser->arg = arg;
     parser->state = s_preamble;

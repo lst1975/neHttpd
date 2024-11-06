@@ -468,7 +468,7 @@ httpd_find_service(const char *context)
 void
 httpd_response_set_content_type(httpd_conn_t * res, const char *content_type)
 {
-  strncpy(res->content_type, content_type, 25);
+  strncpy(res->content_type, content_type, sizeof(res->content_type)-1);
 
   return;
 }
@@ -489,7 +489,7 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
   /* set date */
   nw = time(NULL);
   localtime_r(&nw, &stm);
-  strftime(buffer, 255, "Date: %a, %d %b %Y %H:%M:%S GMT\r\n", &stm);
+  strftime(buffer, sizeof(buffer)-1, "Date: %a, %d %b %Y %H:%M:%S GMT\r\n", &stm);
   strcat(header, buffer);
 
   /* set content-type */

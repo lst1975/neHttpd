@@ -119,7 +119,7 @@ _hresponse_parse_header(const char *buffer)
     return NULL;
   }
 /*	res->desc = (char *) malloc(strlen(str) + 1);*/
-  strncpy(res->desc, str, RESPONSE_MAX_DESC_SIZE);
+  strncpy(res->desc, str, RESPONSE_MAX_DESC_SIZE-1);
   res->desc[strlen(str)] = '\0';
 
   /* *** parse header *** */
