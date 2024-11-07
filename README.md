@@ -14,7 +14,54 @@ Embedded HTTP Server for Web Configuraion Framwork
 
 # Upload
    The uploaded file will be stored in the fixed positon of "/uploads"
-   
+# Get and Set
+  1. Get configuration from server data structure, please refer to /data/system.json
+   ```
+   {
+     "device": {
+       "name": {
+         "type":"string",
+         "range":[8,128],
+         "value":"aaa-To-Be-Filled-By-O-E-M",
+         "writable":true,
+         "label": "Host Name",
+         "id": 0
+       },
+       "arch": {
+         "type":"string",
+         "range":[3,128],
+         "value":"X86_64",
+         "writable":false,
+         "label": "Architecture",
+         "id": 1
+       },
+       .
+       .
+       .
+   }
+   ```
+  2. Set configuration to server data structure
+   ```
+  {
+     "id": 1,
+     "values": {
+       "0.7.1:wifi0.1": "1.1.1.2",
+       "0.3": "Dark"
+     }
+  }
+   ```
+ 3. Returned data structure for setting configuration to server data structure
+   ```
+    {
+       "id":1,
+       "err":[
+          {
+            "id":"0.7.1:wifi0.1",
+            "reason":"For testing received error message from our product."
+          }
+       ]
+    }
+   ```
 # Features
    Only JSON file for configuraion is transmitted between Browser and Backend neHttpd.
    Nearly all work are create JSON data, neHttpd framework will finished remained job
