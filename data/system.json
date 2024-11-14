@@ -53,7 +53,7 @@
       "range":[0,1],
       "value":false,
       "writable":false,
-      "label": "close",
+      "label": "Closed",
       "id": 6
     },
     "memory":{
