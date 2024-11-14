@@ -283,11 +283,58 @@ function load_config(div, cfg)
   }
   if (stat.w)
   {
-    var button = $("<button class=''>"+gmtLangBuild(["SubmitConfig"],0)+"</button>").appendTo(div);
+    var wrap = $("<div/>").appendTo(div);
+    var save = $("<button class='save'>"+gmtLangBuild(["SaveConfig"],0)+"</button>").appendTo(wrap);
+    var button = $("<button class='commit'>"+gmtLangBuild(["SubmitConfig"],0)+"</button>").appendTo(wrap);
+    wrap.css("display","flex").css("justify-content","space-between");
+    save.css("margin","0").css("margin-left","20px");
+    button.css("margin","0").css("margin-right","20px");
     div.data("stat",stat);
     div.data("submit",button);
     stat.submit = button;
     button.data("stat",stat);
+    save.data("stat",stat);
+    changeSubmitButtonState(save,1);
+    save.AlloyFinger({
+      "tap":function(e){
+        ____workingBusy.show();
+        var d = $(this).data("stat");
+        var ___id = ___mibid.id++;
+        var k = {
+            id:___id,
+            values:{"0.9999999":1}
+          };
+        var y = JSON.stringify(k);
+        nanoAjaxGet("data/setmib.json", "GET", y, function(data, err){
+            //TODO
+            ____workingBusy.hide();
+            if (err)
+            {
+              delete ___mibid.e[___id];
+              console.log("Failed to submit your configurations:"+err);
+            }
+            else
+            {
+              var x=data;
+              if (!x.hasOwnProperty("id"))
+              {
+                delete ___mibid.e[___id];
+                return;
+              }
+              if (x.id != ___id || !___mibid.e[x.id])
+              {
+                return;
+              }
+              if (x.err && gmtIsArray(x.err))
+              {
+				alert("Failed");
+              }
+              delete ___mibid.e[___id];
+            }
+          });
+        ___mibid.e[___id] = 1;
+      }
+	});
     button.AlloyFinger({
       "tap":function(e){
         ____workingBusy.show();
