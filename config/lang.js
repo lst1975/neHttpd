@@ -104,6 +104,7 @@ var gmtLangZH = {
   Uploaded: "上传完毕",
   WrongFileType: "错误的文件类型：",
   SubmitConfig: "提交配置",
+  SaveConfig:"保存配置",
 };
 
 var gmtLangEN = {
@@ -123,6 +124,7 @@ var gmtLangEN = {
   Uploaded: "Uploaded",
   WrongFileType: "Wrong File Type:",
   SubmitConfig: "Submit",
+  SaveConfig:"Save",
 };
 
 var gmtLang = gmtBrowser.lang == "zh-cn" ? gmtLangZH : gmtLangEN;
