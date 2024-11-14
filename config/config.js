@@ -80,6 +80,11 @@ function changeConfigItem(__ev, __getVal, __setErr)
   changeSubmitButtonState(ot.submit, ot.c);
 }
 
+var labelConv = {
+  "Memory":"Memory Profile",
+  "Host Name":"Host Name",
+};
+
 function toggleArrow(el, up, down){
   if (el.hasClass("down"))
   {
@@ -110,7 +115,7 @@ function load_group(stat, section, o, index)
       var group = $('<div class="input-group">').appendTo(section);
       if (n.writable) 
         group.addClass("writable");
-      var label = n.label || n;
+      var label = labelConv[n.label || n] || n.label || n;
       group.append("<label class='group' for='"+(b+index)+"'>"+label+"</label>");
       switch (n.type)
       {
@@ -169,32 +174,52 @@ function load_group(stat, section, o, index)
             });
           break;
         case "bool":
-          var html=
-                '<label class=switch>'
-                  +'<input id=iosToggle type=checkbox />'
-                  +'<div class=switch-btn></div>'
-                +'</label>';
-          var e = $(html).appendTo(group);
-          val = e.children("input");
+          var html,e;
+		      if (n.writable)
+		      {
+			      html=
+				    	'<label class=switch>'
+					      +'<input id=iosToggle type=checkbox />'
+					      +'<div class=switch-btn></div>'
+					    +'</label>';
+			      e = $(html).appendTo(group);
+			      val = e.children("input");
+		      }
+		      else
+		      {
+			      html=
+				    	'<label class=switch>'
+				    	+'</label>';
+			      e = $(html).appendTo(group);
+			      val = e;
+		      }
           if (n.writable) stat.w++, val.addClass("writable");
           val.attr("id",b+index);
           val.attr("cfgType", n.type);
           val.attr("index", index+"."+n.id);
           val.data("osrc", n);
           val.data("stat", stat);
-          val.prop('disabled', true);
-          val.prop('checked', n.value ? true : false);
-          val.prop('disabled', false);
-          val.on("change", function(e){
-              $(this).removeClass("error")
-              $(this).attr("title","");
-              changeConfigItem($(this), 
-                function(__ev){return __ev.is(':checked');},
-                function(__ev,__reason){
-                  __ev.addClass("error");
-                  __ev.attr("title",__reason||"");
-                });
-           });
+          if (n.writable) 
+            val.prop('checked', n.value ? true : false);
+          else
+          {
+            val.html(n.value ? "&#10004;" : "&#10008;");
+            val.css("color",n.value ? "green":"#ad5454");
+          }
+          val.prop('disabled', !n.writable);
+		      if (n.writable)
+		      {
+			      val.on("change", function(e){
+				      $(this).removeClass("error")
+				      $(this).attr("title","");
+				      changeConfigItem($(this), 
+				    	function(__ev){return __ev.is(':checked');},
+				    	function(__ev,__reason){
+				    	  __ev.addClass("error");
+				    	  __ev.attr("title",__reason||"");
+				    	});
+			       });
+		      }
           break;
         case "group":
           var sel = $("<span class='arrow char down'></span>").appendTo(group);
@@ -250,7 +275,7 @@ function load_config(div, cfg)
     var o = cfg[a];
     if (gmtIsObject(o))
     {
-      var label = o.label || a;
+      var label = labelConv[o.label || a] || o.label || a;
       div.append("<h1>"+label+"</h1>");
       var section = $('<div class="section">').appendTo(div);
       load_group(stat, section, o, o.id);
