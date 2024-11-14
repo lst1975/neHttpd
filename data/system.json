@@ -40,6 +40,22 @@
       "label": "Firewall",
       "id": 4
     },
+    "status":{
+      "type":"bool",
+      "range":[0,1],
+      "value":true,
+      "writable":false,
+      "label": "Status",
+      "id": 5
+    },
+    "close":{
+      "type":"bool",
+      "range":[0,1],
+      "value":false,
+      "writable":false,
+      "label": "close",
+      "id": 6
+    },
     "memory":{
       "total":{
         "type":"number",
