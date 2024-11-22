@@ -108,6 +108,8 @@ function load_group(stat, section, o, index)
 {
   for (var b in o)
   {
+    if (!o.hasOwnProperty(b))
+      continue;
     var n = o[b];
     if (gmtIsObject(n))
     {
@@ -273,6 +275,8 @@ function load_config(div, cfg)
   var stat = {w:0,c:0,values:{}};
   for (var a in cfg)
   {
+    if (!cfg.hasOwnProperty(a))
+      continue;
     var o = cfg[a];
     if (gmtIsObject(o))
     {
