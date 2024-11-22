@@ -21,36 +21,36 @@ var loginWindow =
       +'</div>'
     +'</div>';
 
-function nanoAjaxGet(file,method,data,cb,headers)
+function nanoAjaxGet(context,file,method,data,cb,headers)
 {
   return $.ajax({
       type: method,
       url: file,
       data: data,
-      context: null,
+      context: context,
       async: true,
       success: function(data) {
-        if ((/\.json$/).test(file) && gmtIsString(data))			
+        if ((/\.json$/).test(file) && gmtIsString(data))      
         {
           try {
             if (data)
               data = JSON.parse(data);
             else
               data = {};
-					}
-					catch(ex)
-					{
+          }
+          catch(ex)
+          {
             console.log(ex.message);
-            cb(null, 1);
+            cb.call(this, null, 1);
             return;
-					}
-				}
-				cb(data, 0);
-			},
+          }
+        }
+        cb.call(this, data, 0);
+      },
 
-			error: function(data) {
-				cb(null, 1);
-			},
+      error: function(data) {
+        cb.call(this, null, 1);
+      },
 
       beforeSend: function(xhr) {
         var hdr = headers || (____auth ? {Authorization:____auth} :{});
@@ -61,7 +61,7 @@ function nanoAjaxGet(file,method,data,cb,headers)
               xhr.setRequestHeader(p, hdr[p]);
         }
       }
-		});
+    });
 }
 
 function gmtIsArray(obj)
@@ -206,30 +206,30 @@ function __start_icon(____toolbar){
           +'</div>').appendTo(container);
     };
 
-	var z = ____toolbar.find(".table-left-container.SystemUpgrade");
-	z.AlloyFinger({
-		"tap":function(e){
-			__start_page(page_UPGRADE);
-		}
-	});
+  var z = ____toolbar.find(".table-left-container.SystemUpgrade");
+  z.AlloyFinger({
+    "tap":function(e){
+      __start_page(page_UPGRADE);
+    }
+  });
 
-	z = ____toolbar.find(".table-left-container.Config");
-	z.AlloyFinger({
-		"tap":function(e){
-			__start_page(page_DEVICE);
-		}
-	});
+  z = ____toolbar.find(".table-left-container.Config");
+  z.AlloyFinger({
+    "tap":function(e){
+      __start_page(page_DEVICE);
+    }
+  });
 
-	z = ____toolbar.find(".table-left-container.DeviceInfo");
-	z.AlloyFinger({
-		"tap":function(e){
-			__start_page(page_SYSTEM);
-		}
-	});
+  z = ____toolbar.find(".table-left-container.DeviceInfo");
+  z.AlloyFinger({
+    "tap":function(e){
+      __start_page(page_SYSTEM);
+    }
+  });
 }
 
 function __start_page(page){
-	__load_page(page);
+  __load_page(page);
 }
 
 function __start_main(){
@@ -269,7 +269,7 @@ function __start_main(){
       var auth = 'Basic ' 
             + btoa(unescape(encodeURIComponent(____login.find("input.name").val() + ':' 
             + ____login.find("input.password").val())));
-      nanoAjaxGet("/secure", "GET", null, 
+      nanoAjaxGet(____login, "/secure", "GET", null, 
         function(data, err){
           if (!err)
           {
@@ -308,7 +308,7 @@ $(document).ready(function(){
       ____auth = 'Basic ' 
             + btoa(unescape(encodeURIComponent(login.find("input.name").val() + ':' 
             + login.find("input.password").val())));
-      nanoAjaxGet("/secure", "GET", null, 
+      nanoAjaxGet(login, "/secure", "GET", null, 
         function(data, err){
           if (!err)
           {

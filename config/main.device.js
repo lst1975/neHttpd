@@ -6,10 +6,10 @@
 function MAIN_DEVICE_display(p)
 {
   if (p.ajax) p.ajax.abort();
-  p.ajax = nanoAjaxGet("data/device.json", "GET", null, 
+  p.ajax = nanoAjaxGet(p, "data/device.json", "GET", null, 
     function(data,err){
       if (!err)
-        load_config(p.container,data);
+        p.loader.load_config(p.container,data);
     });
 }
 
@@ -21,6 +21,7 @@ var page_DEVICE = {
   is_phone : false,
   is_vertical : false,
   load    : function(p){
+              p.loader = new cfgOperation();
               p.display(p);
               p.inited = true;
               p.isVisible = true;
