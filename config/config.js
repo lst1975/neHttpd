@@ -169,7 +169,13 @@ function load_group(stat, section, o, index)
               $(this).removeClass("error")
               $(this).attr("title","");
               changeConfigItem($(this), 
-                function(__ev){return __ev.val();},
+                function(__ev){
+                  var ov = __ev.data("osrc");
+                  if (ov.type == "number" || ov.type == "float")
+                    return Number(__ev.val());
+                  else
+                    return __ev.val();
+                },
                 function(__ev,__reason){
                   __ev.addClass("error");
                   __ev.attr("title",__reason||"");
