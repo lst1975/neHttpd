@@ -27,7 +27,7 @@
     "theme":{
       "type":"array",
       "range":["Dark","Light","Gray"],
-      "value":"Dark",
+      "value":"Light",
       "writable":true,
       "label": "Theme",
       "id": 3
@@ -90,7 +90,7 @@
         "type":"number",
         "range":[1,100],
         "value":20,
-        "writable":false,
+        "writable":true,
         "label": "Cpu quantity",
         "id": 0
       },
