@@ -127,6 +127,7 @@ function load_group(stat, section, o, index)
           }
           html += '</select>';
           val = $(html).appendTo(group).attr("index", index+"."+n.id);
+          if (n.value) val.val(n.value);
           val.attr("id",b+index);
           val.data("osrc", n);
           val.data("stat", stat);
