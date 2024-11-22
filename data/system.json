@@ -114,9 +114,63 @@
       "type":"group",
       "id":6 
     },
-    "net":{
+    "net1":{
       "type":"list",
-      "label":"Network",
+      "label":"Network Fixed",
+      "id":7,
+      "range":[1,100],
+      "writable":true,
+      "index":"name",
+      "value":[
+        {
+          "name":{
+            "type":"string",
+            "range":[2,128],
+            "value":"eth0",
+            "writable":false,
+            "label": "Ethernet Port",
+            "id":0
+          },
+          "ipv4":{
+            "type":"ipv4",
+            "range":[7,17],
+            "value":"192.168.1.10",
+            "writable":true,
+            "label": "Ipv4 Address",
+            "id":1
+          }
+        },
+        {
+          "name":{
+            "type":"string",
+            "range":[2,128],
+            "value":"wifi0",
+            "writable":false,
+            "label": "Wlan Port",
+            "id":0
+          },
+          "ipv4":{
+            "type":"ipv4",
+            "range":[7,17],
+            "value":"10.10.1.10",
+            "writable":true,
+            "label": "Ipv4 Address",
+            "id":1
+          },
+          "signal":{
+            "type":"float",
+            "range":[0,1],
+            "value":0.8,
+            "writable":false,
+            "label": "Signal Strength",
+            "id":1
+          }
+        }
+      ]
+    },
+    "net2":{
+      "type":"list+",
+      "label":"Network Volatile",
       "id":7,
       "range":[1,100],
       "writable":true,
