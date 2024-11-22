@@ -101,7 +101,12 @@ Embedded HTTP Server for Web Configuraion Framwork
    8. fast and small, meet most ebedded environment.
    9. simple and easy to use.
       
-   ![overview](https://github.com/user-attachments/assets/a748ba6b-4085-4be5-bcb7-81caa9be568b)
+   ![cfg1](https://github.com/user-attachments/assets/7cf45960-d231-409a-9a7d-db38280a1f4c)
+
+   add or delete item for list
+
+   ![cfg](https://github.com/user-attachments/assets/87bb6ed9-9e7a-41f6-9ef1-7645cf88e341)
+
 
 # Copying
    ```
