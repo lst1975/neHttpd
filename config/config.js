@@ -253,13 +253,13 @@ function cfgOperation()
             this.load_group(stat, div,n, index+"."+n.id);
             break;
           case "list":
-            var sel = $("<span class='arrow down'>...</span>").appendTo(group);
+            var sel = $("<span class='arrow expand down'>...</span>").appendTo(group);
             var div = $("<div class='sub-section'/>").appendTo(section);
             sel.data("subSection",div);
             //sel.attr("src", getIconSvg("config/more.png"));
             group.AlloyFinger({
               "tap":function(e){
-                toggleArrow($(this).children("span.arrow"));
+                toggleArrow($(this).children("span.arrow.expand"));
               }
             });
             sel.attr("sub", b);
@@ -270,6 +270,36 @@ function cfgOperation()
             for (var i=0;i<n.value.length;i++)
             {
               var list = $('<fieldset class="list sub-section"><legend/></fieldset>').appendTo(div);
+       	      if (n.index)
+       	      {
+       	        list.children("legend").text(n.value[i][n.index].value);
+       	      }
+              this.load_group(stat, list,n.value[i],index+"."+n.id+"."+i+(n.index ? ":"+n.value[i][n.index].value:""));
+            }
+            break;
+          case "list+":
+            var sel = $(
+                 "<div class='list'>"
+                   +"<span class='arrow add' style='margin-right:10px'>&plus;</span>"
+                   +"<span class='arrow expand down'>...</span>"
+                +"</div>"
+              ).appendTo(group);
+            var div = $("<div class='sub-section'/>").appendTo(section);
+            sel.children(".expand").data("subSection",div);
+            //sel.attr("src", getIconSvg("config/more.png"));
+            group.AlloyFinger({
+              "tap":function(e){
+                toggleArrow($(this).find("div > span.arrow.expand"));
+              }
+            });
+            sel.children(".expand").attr("sub", b);
+            div.addClass(b).hide();
+            group.addClass("hasSubsection").css("cursor", "pointer");
+            if (!gmtIsArray(n.value))
+              break;
+            for (var i=0;i<n.value.length;i++)
+            {
+              var list = $('<fieldset class="list sub-section"><legend></legend><div class="delete">&#9746;</div></fieldset>').appendTo(div);
        	      if (n.index)
        	      {
        	        list.children("legend").text(n.value[i][n.index].value);
