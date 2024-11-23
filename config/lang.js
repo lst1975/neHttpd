@@ -115,6 +115,7 @@ var gmtLangZH = {
   No:"否",
   Add:"添加",
   Del:"删除",
+  Detail:"详细配置",
   CfgFailed:"配置发生错误：",
   AddOk:"添加成功。"
 };
@@ -143,6 +144,7 @@ var gmtLangEN = {
   ItemDelMsg:"Are you sure to delete this element?",
   Expand:"Expand",
   Collapse:"Collapse",
+  Detail:"Detail",
   Yes:"Yes",
   No:"No",
   Add:"Add",

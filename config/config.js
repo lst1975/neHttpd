@@ -267,6 +267,69 @@ function cfgOperation(page, alwaysActive, action)
             group.addClass("hasSubsection").css("cursor", "pointer");
             this.load_group(stat, div,n, index+"."+n.id);
             break;
+          case "group+":
+            var sel = $("<span class='arrow char down'></span>").appendTo(group);
+            var div = $("<div class='sub-section'></div>").appendTo(section);
+            sel.data("subSection",div);
+            sel.html("&gt;");
+            sel.attr("title", gmtLangBuild(["Detail"],1));
+            group.data("cfg", this);
+            group.AlloyFinger({
+              "tap":function(e){
+                var loader = $(this).data("cfg");
+                var expand = $(this).children(".arrow");
+                var sub = expand.data("subSection");
+                if (expand.hasClass("down"))
+                {
+                  loader.div.find(".section > .input-group").hide();
+                  sub.show();
+                  expand.html("&lt;");
+                  expand.removeClass("down");
+                  expand.addClass("up");
+                  var nextSibling;
+                  for (nextSibling = $(this).next();
+                    nextSibling.length; 
+                    nextSibling = nextSibling.next())
+                  { 
+                    if (nextSibling.hasClass("input-group"))
+                      break;
+                  };
+
+                  if (!nextSibling.length)
+                    nextSibling = null;
+                  $(this).data("oldPos1", nextSibling);
+                  $(this).data("oldPos2", $(this).parent());
+                  $(this).show();
+                  $(this).prependTo(loader.div.children(".section"));
+                  sub.insertAfter($(this));
+               }
+                else
+                {
+                  loader.div.find(".section > .input-group").show();
+                  expand.html("&gt;");
+                  expand.removeClass("up")
+                  expand.addClass("down")
+                  expand.data("subSection").hide();
+                  var p1 = $(this).data("oldPos1");
+                  if (p1)
+                  {
+                    $(this).insertBefore(p1);
+                    sub.insertAfter($(this));
+                  }
+                  else
+                  {
+                    var p2 = $(this).data("oldPos2");
+                    $(this).appendTo(p2);
+                    sub.appendTo(p2);
+                  }
+                }
+              }
+            });
+            sel.attr("sub", b);
+            div.addClass(b).hide();
+            group.addClass("hasSubsection").css("cursor", "pointer");
+            this.load_group(stat, div,n, index+"."+n.id);
+            break;
           case "list":
             var sel = $("<span class='arrow expand down'>...</span>").appendTo(group);
             var div = $("<div class='sub-section'/>").appendTo(section);
@@ -488,6 +551,7 @@ function cfgOperation(page, alwaysActive, action)
     },
   this.load_config = function(p, div, cfg)
   {
+    this.div = div;
     var stat = this.stat;
     for (var a in cfg)
     {
@@ -504,24 +568,27 @@ function cfgOperation(page, alwaysActive, action)
     }
     if (stat.w)
     {
+      var button = null;
       var wrap = $("<div/>").appendTo(div);
-      var bClass = p.type == "template" ? "return" : "save";
-      var bLabel = p.type == "template" ? "Return" : "SaveConfig";
+      var bClass = p.type == "normal" ? "save" : "return";
+      var bLabel = p.type == "normal" ? "SaveConfig" : "Return";
       var save = $("<button class='"+bClass+"'>"+gmtLangBuild([bLabel],0)+"</button>").appendTo(wrap);
-      var button = $("<button class='commit'>"+gmtLangBuild(["SubmitConfig"],0)+"</button>").appendTo(wrap);
+      save.attr("bClass", bClass)
+      save.attr("bLabel", bLabel)
+      if (p.type != "subgroup")
+        button = $("<button class='commit'>"+gmtLangBuild(["SubmitConfig"],0)+"</button>").appendTo(wrap);
       wrap.css("display","flex").css("justify-content","space-between");
       save.css("margin","0").css("margin-left","20px");
-      button.css("margin","0").css("margin-right","20px");
       div.data("stat",stat);
       div.data("submit",button);
       stat.submit = button;
-      button.data("stat",stat);
       save.data("stat",stat);
       changeSubmitButtonState(save,1);
       if (this.alwaysActive)
         changeSubmitButtonState(button,1);
       save.data("cfg",this);
       save.data("page",p);
+      this.saveButton = button;
       save.AlloyFinger({
         "tap":function(e){
           if ($(this).hasClass("save"))
@@ -544,79 +611,84 @@ function cfgOperation(page, alwaysActive, action)
           }
         }
     	});
-      button.data("cfg",this);
-      button.data("page",p);
-      button.data("obj",cfg);
-      button.AlloyFinger({
-        "tap":function(e){
-          var page = $(this).data("page");
-          ____workingBusy.show();
-          var d = $(this).data("stat");
-          var loader = $(this).data("cfg");
-          var cfg = $(this).data("obj");
-          var ___id = loader.___mibid.id++;
-          if (!loader.alwaysActive && !d.c) 
-          {
-            ____workingBusy.hide();
-            return;
-          }
-          var hasError=0;
-          for (m in d.values)
-          {
-            if (d.values.hasOwnProperty(m))
+      if (button)
+      {
+        button.css("margin","0").css("margin-right","20px");
+        button.data("stat",stat);
+        button.data("cfg",this);
+        button.data("page",p);
+        button.data("obj",cfg);
+        button.AlloyFinger({
+          "tap":function(e){
+            var page = $(this).data("page");
+            ____workingBusy.show();
+            var d = $(this).data("stat");
+            var loader = $(this).data("cfg");
+            var cfg = $(this).data("obj");
+            var ___id = loader.___mibid.id++;
+            if (!loader.alwaysActive && !d.c) 
             {
-              var p = d.values[m];
-              var reason = p.isValOk(p.o,p.v);
-              if (reason)
+              ____workingBusy.hide();
+              return;
+            }
+            var hasError=0;
+            for (m in d.values)
+            {
+              if (d.values.hasOwnProperty(m))
               {
-                hasError++;
-                p.e(p.o,reason);
+                var p = d.values[m];
+                var reason = p.isValOk(p.o,p.v);
+                if (reason)
+                {
+                  hasError++;
+                  p.e(p.o,reason);
+                }
               }
             }
-          }
-          if (hasError)
-          {
-            ____workingBusy.hide();
-            return;
-          }
-          var k = {
-              id:___id,
-              value:{}
-            };
-          if (loader.action == "data/add.json")
-          {
-            k.value[page.data.index] = 1;
-          }
-          for (m in d.values)
-          {
-            if (d.values.hasOwnProperty(m))
+            if (hasError)
             {
-              k.value[m] = d.values[m].v;
+              ____workingBusy.hide();
+              return;
             }
+            var k = {
+                id:___id,
+                value:{}
+              };
+            if (loader.action == "data/add.json")
+            {
+              k.value[page.data.index] = 1;
+            }
+            for (m in d.values)
+            {
+              if (d.values.hasOwnProperty(m))
+              {
+                k.value[m] = d.values[m].v;
+              }
+            }
+            var y = JSON.stringify(k);
+            loader.submit($(this), ___id, loader.action, y, function(arg){
+                if (arg.loader.action == "data/add.json")
+                {
+                  $.MessageBox({
+                      buttonDone  : gmtLangBuild(["Confirm"],1),
+                      buttonFail  : null,
+                      message     : gmtLangBuild(["AddOk"],1),
+                  }).done(function(){
+                  }).fail(function(){
+                  });              
+                }
+                if (!arg.p.data || !arg.p.data.add)
+                  return;
+                
+                if (arg.p.type == "template"
+                  && gmtIsObject(arg.cfg.template))
+                {
+                  arg.p.data.add(arg.p.data, arg.cfg.template);
+                }
+              }, {p:page,cfg:cfg,loader:loader});
           }
-          var y = JSON.stringify(k);
-          loader.submit($(this), ___id, loader.action, y, function(arg){
-              if (arg.loader.action == "data/add.json")
-              {
-                $.MessageBox({
-                    buttonDone  : gmtLangBuild(["Confirm"],1),
-                    buttonFail  : null,
-                    message     : gmtLangBuild(["AddOk"],1),
-                }).done(function(){
-                }).fail(function(){
-                });              
-              }
-              if (!arg.p.data || !arg.p.data.add)
-                return;
-              
-              if (arg.p.type == "template"
-                && gmtIsObject(arg.cfg.template))
-              {
-                arg.p.data.add(arg.p.data, arg.cfg.template);
-              }
-            }, {p:page,cfg:cfg,loader:loader});
-        }
-      });
+        });
+      }
     }
   }
 }
