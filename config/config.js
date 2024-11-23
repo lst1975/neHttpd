@@ -281,7 +281,12 @@ function cfgOperation(page, alwaysActive, action)
                 var sub = expand.data("subSection");
                 if (expand.hasClass("down"))
                 {
-                  loader.div.find(".section > .input-group").hide();
+                  loader.div.find(".section > .input-group").removeClass("show");
+                  loader.div.find(".section > .sub-section").removeClass("show");
+                  loader.div.find(".section > .input-group").addClass("hidden");
+                  loader.div.find(".section > .sub-section").addClass("hidden");
+                  sub.addClass("show");
+                  sub.removeClass("hidden");
                   sub.show();
                   expand.html("&lt;");
                   expand.removeClass("down");
@@ -299,16 +304,22 @@ function cfgOperation(page, alwaysActive, action)
                     nextSibling = null;
                   $(this).data("oldPos1", nextSibling);
                   $(this).data("oldPos2", $(this).parent());
+                  $(this).addClass("show");
+                  $(this).removeClass("hidden");
                   $(this).show();
                   $(this).prependTo(loader.div.children(".section"));
                   sub.insertAfter($(this));
                }
                 else
                 {
-                  loader.div.find(".section > .input-group").show();
+                  loader.div.find(".section > .input-group").removeClass("hidden");
+                  loader.div.find(".section > .sub-section").removeClass("hidden");
+                  loader.div.find(".section > .input-group").addClass("show");
+                  loader.div.find(".section > .sub-section").addClass("show");
                   expand.html("&gt;");
                   expand.removeClass("up")
                   expand.addClass("down")
+                  expand.data("subSection").addClass("hidden");
                   expand.data("subSection").hide();
                   var p1 = $(this).data("oldPos1");
                   if (p1)
@@ -397,9 +408,12 @@ function cfgOperation(page, alwaysActive, action)
                   var del = list.find(".delete");
                   del.attr("title", gmtLangBuild(["Del"],1));
                   del.attr("i", k);
+                  del.data("delDiv", div);
+                  del.data("indexValue", n.index ? n.value[k][n.index].value : "")
                   del.AlloyFinger({
                     "tap":function(e){
                       var self = $(this);
+                      var delDiv = $(this).data("delDiv");
                       $.MessageBox({
                           buttonDone  : gmtLangBuild(["Confirm"],1),
                           buttonFail  : gmtLangBuild(["Cancel"],1),
@@ -418,7 +432,7 @@ function cfgOperation(page, alwaysActive, action)
                         loader.submit($(this), ___id, "data/del.json", y, function(arg){
                             var ot = arg.stat;
                             var kk = Number(self.attr("i"));
-                            var index = arg.index+"."+kk+(n.index ? ":"+n.value[kk][n.index].value:"")
+                            var index = arg.index+"."+kk+(arg.n.index ? ":"+self.data("indexValue"):"");
                             for (var v in ot.values)
                             {
                               if (!ot.values.hasOwnProperty(v))
@@ -428,7 +442,18 @@ function cfgOperation(page, alwaysActive, action)
                               ot.c--;
                               delete ot.values[v];
                             }
-                            arg.n.value.splice(kk, 1);
+                            if (arg.n.index)
+                            {
+                              for (var w=0;w<arg.n.value.length;w++)
+                              {
+                                var we = arg.n.value[w];
+                                if (we[arg.n.index].value == self.data("indexValue"))
+                                {
+                                  arg.n.value.splice(w, 1);
+                                  break;
+                                }
+                              }
+                            }
                             self.parent().remove();
                           }, addListItem);
                       }).fail(function(){

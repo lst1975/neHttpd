@@ -714,6 +714,17 @@ button::-moz-focus-inner {
   padding: 0px 20px;
   height: 29px;
 }
+.cfg_container .sub-section.hidden,
+.cfg_container .input-group.hidden
+{
+  display: none;
+}
+.cfg_container .sub-section.show{
+  display: block;
+}
+.cfg_container .input-group.show{
+  display: flex;
+}
 .cfg_container fieldset.list.sub-section {
   margin: 0 20px 20px 20px;
   padding-top: 20px;
