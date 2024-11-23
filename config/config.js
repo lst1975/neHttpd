@@ -289,6 +289,7 @@ function cfgOperation(page, alwaysActive, action)
                   sub.addClass("show");
                   sub.removeClass("hidden");
                   sub.show();
+                  expand.attr("title", gmtLangBuild(["Return"],1));
                   expand.html("&lt;");
                   expand.removeClass("down");
                   expand.addClass("up");
@@ -318,6 +319,7 @@ function cfgOperation(page, alwaysActive, action)
                   loader.div.find(".section > .input-group").addClass("show");
                   loader.div.find(".section > .sub-section").addClass("show");
                   expand.html("&gt;");
+                  expand.attr("title", gmtLangBuild(["Detail"],1));
                   expand.removeClass("up")
                   expand.addClass("down")
                   expand.data("subSection").addClass("hidden");
