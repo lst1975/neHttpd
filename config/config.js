@@ -9,7 +9,10 @@ function toggleArrow(el, up, down)
   {
     el.removeClass("down").addClass("up");
     //img.attr("src", getIconSvg("config/arrow-up.png"));
-    if (up) el.html(up);
+    if (up) {
+      el.html(up);
+      el.attr("title", gmtLangBuild(["Collapse"],1));
+    }
     el.data("subSection").show();
     el.parent().addClass("active");
   }
@@ -17,7 +20,10 @@ function toggleArrow(el, up, down)
   {
     el.removeClass("up").addClass("down");
     //img.attr("src", getIconSvg("config/arrow-down.png"));
-    if (down) el.html(down);
+    if (down) {
+      el.html(down);
+      el.attr("title", gmtLangBuild(["Expand"],1));
+    }
     el.data("subSection").hide();
     el.parent().removeClass("active");
   }
@@ -213,6 +219,7 @@ function cfgOperation()
             val.attr("index", index+"."+n.id);
             val.data("osrc", n);
             val.data("stat", stat);
+            val.attr("title", gmtLangBuild([n.value ? "Yes" : "No"],1));
             if (n.writable) 
               val.prop('checked', n.value ? true : false);
             else
@@ -241,6 +248,7 @@ function cfgOperation()
             var div = $("<div class='sub-section'></div>").appendTo(section);
             sel.data("subSection",div);
             sel.html("&#11206;");
+            sel.attr("title", gmtLangBuild(["Expand"],1));
             //sel.attr("src", getIconSvg("config/arrow-down.png"));
             group.AlloyFinger({
               "tap":function(e){
@@ -257,9 +265,10 @@ function cfgOperation()
             var div = $("<div class='sub-section'/>").appendTo(section);
             sel.data("subSection",div);
             //sel.attr("src", getIconSvg("config/more.png"));
+            sel.attr("title", gmtLangBuild(["Expand"],1));
             group.AlloyFinger({
               "tap":function(e){
-                toggleArrow($(this).children("span.arrow.expand"));
+                toggleArrow($(this).children("span.arrow.expand"),"...","...");
               }
             });
             sel.attr("sub", b);
@@ -285,16 +294,20 @@ function cfgOperation()
                 +"</div>"
               ).appendTo(group);
             var div = $("<div class='sub-section'/>").appendTo(section);
-            sel.children(".expand").data("subSection",div);
+            var expand = sel.children(".expand");
+            expand.data("subSection",div);
             //sel.attr("src", getIconSvg("config/more.png"));
+            expand.attr("title", gmtLangBuild(["Expand"],1));
             group.AlloyFinger({
               "tap":function(e){
                 if ($(e.target).hasClass("arrow add"))
                   return;
-                toggleArrow($(this).find("div > span.arrow.expand"));
+                toggleArrow($(this).find("div > span.arrow.expand"),"...","...");
               }
             });
-            sel.children(".arrow.add").AlloyFinger({
+            var add = sel.children(".arrow.add");
+            add.attr("title", gmtLangBuild(["Add"],1));
+            add.AlloyFinger({
               "tap":function(e){
                 var p = __load_sub_page("TEMPLATE", MAIN_TEMPLATE_display);
               }
@@ -311,8 +324,9 @@ function cfgOperation()
        	      {
        	        list.children("legend").text(n.value[i][n.index].value);
        	      }
-
-              list.find(".delete").AlloyFinger({
+              var del = list.find(".delete");
+              del.attr("title", gmtLangBuild(["Del"],1));
+              del.AlloyFinger({
                 "tap":function(e){
                   $.MessageBox({
                       buttonDone  : gmtLangBuild(["Confirm"],1),

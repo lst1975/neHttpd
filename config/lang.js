@@ -109,6 +109,12 @@ var gmtLangZH = {
   Confirm:"确定",
   Cancel:"取消",
   ItemDelMsg:"你是否确定删除这元素？",
+  Expand:"展开",
+  Collapse:"缩回",
+  Yes:"是",
+  No:"否",
+  Add:"添加",
+  Del:"删除",
 };
 
 var gmtLangEN = {
@@ -133,6 +139,12 @@ var gmtLangEN = {
   Confirm:"Confirm",
   Cancel:"Cancel",
   ItemDelMsg:"Are you sure to delete this element?",
+  Expand:"Expand",
+  Collapse:"Collapse",
+  Yes:"Yes",
+  No:"No",
+  Add:"Add",
+  Del:"Delete",
 };
 
 var gmtLang = gmtBrowser.lang == "zh-cn" ? gmtLangZH : gmtLangEN;
