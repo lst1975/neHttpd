@@ -115,6 +115,8 @@ var gmtLangZH = {
   No:"否",
   Add:"添加",
   Del:"删除",
+  CfgFailed:"配置发生错误：",
+  AddOk:"添加成功。"
 };
 
 var gmtLangEN = {
@@ -145,6 +147,8 @@ var gmtLangEN = {
   No:"No",
   Add:"Add",
   Del:"Delete",
+  CfgFailed:"Configuration Failed:",
+  AddOk:"Add Successfully."
 };
 
 var gmtLang = gmtBrowser.lang == "zh-cn" ? gmtLangZH : gmtLangEN;

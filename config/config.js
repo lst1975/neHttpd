@@ -33,13 +33,16 @@ function changeSubmitButtonState(button, n)
   n ? button.addClass("active") : button.removeClass("active");
 }
 
-function cfgOperation()
+function cfgOperation(page, alwaysActive, action)
 {
   this.___mibid={
     id:0,
     e:{}
   };
-
+  this.stat = {w:0,c:0,values:{}};
+  this.action = action || "data/setmib.json";
+  this.alwaysActive = alwaysActive;
+  this.page = page;
   this.changeConfigItem = function(__ev, __getVal, __setErr)
   {
     var ov = __ev.data("osrc");
@@ -110,7 +113,8 @@ function cfgOperation()
         ot.c--;
       delete ot.values[i];
     }
-    changeSubmitButtonState(ot.submit, ot.c);
+    if (!this.alwaysActive)
+      changeSubmitButtonState(ot.submit, ot.c);
   }
 
   this.load_group = function(stat, section, o, index)
@@ -146,7 +150,8 @@ function cfgOperation()
             val.on("change", function(e){
                 $(this).removeClass("error")
                 $(this).attr("title","");
-                $(this).data("cfg").changeConfigItem($(this), 
+                var loader = $(this).data("cfg");
+                loader.changeConfigItem($(this), 
                   function(__ev){return __ev.val();},
                   function(__ev,__reason){
                     __ev.addClass("error");
@@ -179,7 +184,8 @@ function cfgOperation()
             val.on("change", function(e){
                 $(this).removeClass("error")
                 $(this).attr("title","");
-                $(this).data("cfg").changeConfigItem($(this), 
+                var loader = $(this).data("cfg");
+                loader.changeConfigItem($(this), 
                   function(__ev){
                     var ov = __ev.data("osrc");
                     if (ov.type == "number" || ov.type == "float")
@@ -234,12 +240,13 @@ function cfgOperation()
   			      val.on("change", function(e){
   				      $(this).removeClass("error")
   				      $(this).attr("title","");
-  				      $(this).data("cfg").changeConfigItem($(this), 
-  				    	function(__ev){return __ev.is(':checked');},
-  				    	function(__ev,__reason){
-  				    	  __ev.addClass("error");
-  				    	  __ev.attr("title",__reason||"");
-  				    	});
+                var loader = $(this).data("cfg");
+  				      loader.changeConfigItem($(this), 
+    				    	function(__ev){return __ev.is(':checked');},
+    				    	function(__ev,__reason){
+    				    	  __ev.addClass("error");
+    				    	  __ev.attr("title",__reason||"");
+    				    	});
   			       });
   		      }
             break;
@@ -307,9 +314,77 @@ function cfgOperation()
             });
             var add = sel.children(".arrow.add");
             add.attr("title", gmtLangBuild(["Add"],1));
+            var addListItem = {
+                section : section,
+                index : index+"."+n.id,
+                stat: stat,
+                n : n,
+                div : div,
+                loader: this,
+                addListOne: function(loader, stat, div, n, k){
+                  var list = $(
+                    '<fieldset class="list sub-section">'
+                      +'<legend></legend>'
+                      +'<div class="delete">&#9746;</div>'
+                    +'</fieldset>').appendTo(div);
+           	      if (n.index)
+           	      {
+           	        list.children("legend").text(n.value[k][n.index].value);
+           	      }
+                  var del = list.find(".delete");
+                  del.attr("title", gmtLangBuild(["Del"],1));
+                  del.attr("i", k);
+                  del.AlloyFinger({
+                    "tap":function(e){
+                      var self = $(this);
+                      $.MessageBox({
+                          buttonDone  : gmtLangBuild(["Confirm"],1),
+                          buttonFail  : gmtLangBuild(["Cancel"],1),
+                          buttonsOrder: "fail done",  // String
+                          message     : gmtLangBuild(["ItemDelMsg"],1)
+                      }).done(function(){
+                        ____workingBusy.show();
+                        var loader = addListItem.loader;
+                        var ___id = loader.___mibid.id++;
+                        var kd = {
+                            id:___id,
+                            value : {}
+                          };
+                        kd.value[addListItem.index]=1;
+                        var y = JSON.stringify(kd);
+                        loader.submit($(this), ___id, "data/del.json", y, function(arg){
+                            var ot = arg.stat;
+                            var kk = Number(self.attr("i"));
+                            var index = arg.index+"."+kk+(n.index ? ":"+n.value[kk][n.index].value:"")
+                            for (var v in ot.values)
+                            {
+                              if (!ot.values.hasOwnProperty(v))
+                                continue;
+                              if (v.search(index) != 0)
+                                continue;
+                              ot.c--;
+                              delete ot.values[v];
+                            }
+                            arg.n.value.splice(kk, 1);
+                            self.parent().remove();
+                          }, addListItem);
+                      }).fail(function(){
+                      });              
+                    }
+                  });
+                  this.loader.load_group(stat, list, n.value[k], 
+                    index+"."+n.id+"."+k+(n.index ? ":"+n.value[k][n.index].value:""));
+                },
+                add: function(d,item){
+                    d.n.value.push(item);
+                    d.addListOne(d.load, d.stat, d.div, d.n, d.n.value.length-1);
+                  },
+              };
+            add.data("pos", addListItem)
             add.AlloyFinger({
               "tap":function(e){
-                var p = __load_sub_page("TEMPLATE", MAIN_TEMPLATE_display);
+                var p = __load_sub_page("TEMPLATE", "template", MAIN_TEMPLATE_display, 
+                                $(this).data("pos"), true, "data/add.json");
               }
             });
             sel.children(".expand").attr("sub", b);
@@ -319,26 +394,7 @@ function cfgOperation()
               break;
             for (var i=0;i<n.value.length;i++)
             {
-              var list = $('<fieldset class="list sub-section"><legend></legend><div class="delete">&#9746;</div></fieldset>').appendTo(div);
-       	      if (n.index)
-       	      {
-       	        list.children("legend").text(n.value[i][n.index].value);
-       	      }
-              var del = list.find(".delete");
-              del.attr("title", gmtLangBuild(["Del"],1));
-              del.AlloyFinger({
-                "tap":function(e){
-                  $.MessageBox({
-                      buttonDone  : gmtLangBuild(["Confirm"],1),
-                      buttonFail  : gmtLangBuild(["Cancel"],1),
-                      buttonsOrder: "fail done",  // String
-                      message     : gmtLangBuild(["ItemDelMsg"],1)
-                  }).done(function(){
-                  }).fail(function(){
-                  });              
-                }
-              });
-              this.load_group(stat, list,n.value[i],index+"."+n.id+"."+i+(n.index ? ":"+n.value[i][n.index].value:""));
+              addListItem.addListOne(this, stat, div, n, i);
             }
             break;
         }
@@ -346,9 +402,93 @@ function cfgOperation()
     }
   }
 
+  this.submit = function(button, ___id, file, data, okCb, arg)
+  {
+    nanoAjaxGet(this, file, "GET", data, 
+      function(response, err){
+        //TODO
+        var d = this.stat;
+        ____workingBusy.hide();
+        if (err || !response)
+        {
+          delete this.___mibid.e[___id];
+          console.log("Failed to submit your configurations:"+err);
+          $.MessageBox({
+              buttonDone  : gmtLangBuild(["Confirm"],1),
+              buttonFail  : null,
+              message     : gmtLangBuild(["CfgFailed"],1),
+          }).done(function(){
+          }).fail(function(){
+          });              
+        }
+        else
+        {
+          var x=response;
+          if (!x.hasOwnProperty("id"))
+          {
+            delete this.___mibid.e[___id];
+            return;
+          }
+          if (x.id != ___id || !this.___mibid.e[x.id])
+          {
+            return;
+          }
+
+          if (x.err && gmtIsArray(x.err))
+          {
+            for (var i=0;i<x.err.length;i++)
+            {
+              var g=x.err[i];
+              if (!gmtIsObject(g))
+                continue;
+              if (g.id && d.values.hasOwnProperty(g.id))
+              {
+                var p = d.values[g.id];
+                p.e(p.o,g.reason);
+              }
+            }
+            var errStr = "";
+            for (var i=0;i<x.err.length;i++)
+            {
+              errStr += "<br/>"+x.err[i].id+":"+x.err[i].reason;
+            }
+            $.MessageBox({
+                buttonDone  : gmtLangBuild(["Confirm"],1),
+                buttonFail  : null,
+                message     : gmtLangBuild(["CfgFailed"],1) + errStr,
+            }).done(function(){
+            }).fail(function(){
+            });              
+          }
+          delete this.___mibid.e[___id];
+
+          if (this.action != "data/del.json")
+          {
+            d.c = 0;
+            for (m in d.values)
+            {
+              if (d.values.hasOwnProperty(m))
+              {
+                var p = d.values[m];
+                p.f(p.o,p.v);
+              }
+            }
+            d.values={};
+          }
+          
+          if (!this.alwaysActive)
+            changeSubmitButtonState(button,0);
+          if (okCb)
+          {
+            okCb(arg);
+          }
+        }
+      });
+      this.___mibid.e[___id] = 1;
+    },
   this.load_config = function(p, div, cfg)
   {
-    var stat = {w:0,c:0,values:{}};
+    var stat = this.stat;
     for (var a in cfg)
     {
       if (!cfg.hasOwnProperty(a))
@@ -365,8 +505,8 @@ function cfgOperation()
     if (stat.w)
     {
       var wrap = $("<div/>").appendTo(div);
-      var bClass = p.type == "sub" ? "return" : "save";
-      var bLabel = p.type == "sub" ? "Return" : "SaveConfig";
+      var bClass = p.type == "template" ? "return" : "save";
+      var bLabel = p.type == "template" ? "Return" : "SaveConfig";
       var save = $("<button class='"+bClass+"'>"+gmtLangBuild([bLabel],0)+"</button>").appendTo(wrap);
       var button = $("<button class='commit'>"+gmtLangBuild(["SubmitConfig"],0)+"</button>").appendTo(wrap);
       wrap.css("display","flex").css("justify-content","space-between");
@@ -378,6 +518,8 @@ function cfgOperation()
       button.data("stat",stat);
       save.data("stat",stat);
       changeSubmitButtonState(save,1);
+      if (this.alwaysActive)
+        changeSubmitButtonState(button,1);
       save.data("cfg",this);
       save.data("page",p);
       save.AlloyFinger({
@@ -386,41 +528,14 @@ function cfgOperation()
           {
             ____workingBusy.show();
             var d = $(this).data("stat");
-            var cfg = $(this).data("cfg");
-            var ___id = cfg.___mibid.id++;
+            var loader = $(this).data("cfg");
+            var ___id = loader.___mibid.id++;
             var k = {
                 id:___id,
-                values:{"0.9999999":1}
+                value:{"0.9999999":1}
               };
             var y = JSON.stringify(k);
-            nanoAjaxGet($(this).data("cfg"), "data/setmib.json", "GET", y, function(data, err){
-                //TODO
-                ____workingBusy.hide();
-                if (err)
-                {
-                  delete this.___mibid.e[___id];
-                  console.log("Failed to submit your configurations:"+err);
-                }
-                else
-                {
-                  var x=data;
-                  if (!x.hasOwnProperty("id"))
-                  {
-                    delete this.___mibid.e[___id];
-                    return;
-                  }
-                  if (x.id != ___id || !this.___mibid.e[x.id])
-                  {
-                    return;
-                  }
-                  if (x.err && gmtIsArray(x.err))
-                  {
-                    alert("Failed");
-                  }
-                  delete this.___mibid.e[___id];
-                }
-              });
-            cfg.___mibid.e[___id] = 1;
+            loader.submit($(this), ___id, loader.action, y);
           }
           else if ($(this).hasClass("return"))
           {
@@ -430,18 +545,21 @@ function cfgOperation()
         }
     	});
       button.data("cfg",this);
+      button.data("page",p);
+      button.data("obj",cfg);
       button.AlloyFinger({
         "tap":function(e){
+          var page = $(this).data("page");
           ____workingBusy.show();
           var d = $(this).data("stat");
-          var cfg = $(this).data("cfg");
-          if (!d.c) return;
-          var ___id = cfg.___mibid.id++;
-          var k = {
-              id:___id,
-              values:{}
-            };
-          
+          var loader = $(this).data("cfg");
+          var cfg = $(this).data("obj");
+          var ___id = loader.___mibid.id++;
+          if (!loader.alwaysActive && !d.c) 
+          {
+            ____workingBusy.hide();
+            return;
+          }
           var hasError=0;
           for (m in d.values)
           {
@@ -461,63 +579,42 @@ function cfgOperation()
             ____workingBusy.hide();
             return;
           }
+          var k = {
+              id:___id,
+              value:{}
+            };
+          if (loader.action == "data/add.json")
+          {
+            k.value[page.data.index] = 1;
+          }
           for (m in d.values)
           {
             if (d.values.hasOwnProperty(m))
             {
-              k.values[m] = d.values[m].v;
+              k.value[m] = d.values[m].v;
             }
           }
           var y = JSON.stringify(k);
-          nanoAjaxGet($(this).data("cfg"), "data/setmib.json", "GET", y, function(data, err){
-              //TODO
-              ____workingBusy.hide();
-              if (err)
+          loader.submit($(this), ___id, loader.action, y, function(arg){
+              if (arg.loader.action == "data/add.json")
               {
-                delete this.___mibid.e[___id];
-                console.log("Failed to submit your configurations:"+err);
+                $.MessageBox({
+                    buttonDone  : gmtLangBuild(["Confirm"],1),
+                    buttonFail  : null,
+                    message     : gmtLangBuild(["AddOk"],1),
+                }).done(function(){
+                }).fail(function(){
+                });              
               }
-              else
+              if (!arg.p.data || !arg.p.data.add)
+                return;
+              
+              if (arg.p.type == "template"
+                && gmtIsObject(arg.cfg.template))
               {
-                var x=data;
-                if (!x.hasOwnProperty("id"))
-                {
-                  delete this.___mibid.e[___id];
-                  return;
-                }
-                if (x.id != ___id || !this.___mibid.e[x.id])
-                {
-                  return;
-                }
-                if (x.err && gmtIsArray(x.err))
-                {
-                  for (var i=0;i<x.err.length;i++)
-                  {
-                    var g=x.err[i];
-                    if (!gmtIsObject(g))
-                      continue;
-                    if (g.id && d.values.hasOwnProperty(g.id))
-                    {
-                      var p = d.values[g.id];
-                      p.e(p.o,g.reason);
-                    }
-                  }
-                }
-                delete this.___mibid.e[___id];
-                d.c = 0;
-                for (m in d.values)
-                {
-                  if (d.values.hasOwnProperty(m))
-                  {
-                    var p = d.values[m];
-                    p.f(p.o,p.v);
-                  }
-                }
-                d.values={};
-                changeSubmitButtonState(button,0);
+                arg.p.data.add(arg.p.data, arg.cfg.template);
               }
-            });
-          cfg.___mibid.e[___id] = 1;
+            }, {p:page,cfg:cfg,loader:loader});
         }
       });
     }

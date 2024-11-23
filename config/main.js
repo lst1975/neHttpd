@@ -1,16 +1,18 @@
-function page_common(name, display)
+function page_common(name, type, display, alwaysActive, action)
 {
   this.name    = name;
+  this.type    = type;
   this.page_wrapper = null;
   this.container    = null;
   
   this.is_phone    = false;
   this.is_vertical = false;
   this.load    = function(data){
-              this.loader = new cfgOperation();
+              this.loader = new cfgOperation(this, alwaysActive, action);
               this.display(this);
               this.inited = true;
               this.isVisible = true;
+              this.data = data;
             };
   this.display = display;
   this.header  = null;
@@ -20,7 +22,6 @@ function page_common(name, display)
   this.inited  = false;
   this.content = null;
   this.page    = null;
-  this.type    = "normal";
   this.resize  = function(){
     if (!this.inited || !this.isVisible)
         return;
@@ -70,9 +71,9 @@ function page_common(name, display)
   this.js=  "";
 };
 
-var page_SYSTEM  = new page_common("gmt_SYSTEM",MAIN_SYSTEM_display);
-var page_DEVICE  = new page_common("gmt_DEVICE",MAIN_DEVICE_display);
-var page_UPGRADE = new page_common("gmt_UPGRADE",MAIN_UPGRADE_display);
+var page_SYSTEM  = new page_common("gmt_SYSTEM","normal",MAIN_SYSTEM_display,false,"data/setmib.json");
+var page_DEVICE  = new page_common("gmt_DEVICE","normal",MAIN_DEVICE_display,false,"data/setmib.json");
+var page_UPGRADE = new page_common("gmt_UPGRADE","normal",MAIN_UPGRADE_display,false);
 
 var loginWindow = 
     '<div id="id01" class="__login modal">'
@@ -105,7 +106,7 @@ function nanoAjaxGet(context,file,method,data,cb,headers)
       context: context,
       async: true,
       success: function(data) {
-        if ((/\.json$/).test(file) && gmtIsString(data))      
+        if ((/\.json$/).test(file))      
         {
           try {
             if (data)
@@ -260,13 +261,12 @@ function __load_page(p,data){
   p.show();
   __p = p;
 }
-function __load_sub_page(name,display){
-  var p = new page_common(name,display);
-  p.type = "sub";
+function __load_sub_page(name,type,display,data,alwaysActive,action){
+  var p = new page_common(name,type,display,alwaysActive,action);
   __p.toggle();
   p.page_wrapper = ____wrapper;
   p.container = $("<div class='cfg_container'>").appendTo(p.page_wrapper);
-  p.load();
+  p.load(data);
   p.show();
   p.parent = __p;
   __p = p;
