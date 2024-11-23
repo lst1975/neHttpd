@@ -632,6 +632,15 @@ main(int argc, char **argv)
     goto error1;
   }
 
+  if ((status = httpd_register("/favicon.ico", root_service, 
+    "FAVICON")) != H_OK)
+  {
+    fprintf(stderr, "Cannot register default service (%s)\n", 
+      herror_message(status));
+    herror_release(status);
+    goto error1;
+  }
+
   if ((status = httpd_register_secure("/data/", data_service, 
     simple_authenticator, "DATA")) != H_OK)
   {
