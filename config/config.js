@@ -476,7 +476,7 @@ function cfgOperation(page, alwaysActive, action)
             d.values={};
           }
           
-          if (!this.alwaysActive)
+          if (!this.alwaysActive && button)
             changeSubmitButtonState(button,0);
           if (okCb)
           {
@@ -535,7 +535,7 @@ function cfgOperation(page, alwaysActive, action)
                 value:{"0.9999999":1}
               };
             var y = JSON.stringify(k);
-            loader.submit($(this), ___id, loader.action, y);
+            loader.submit(null, ___id, loader.action, y);
           }
           else if ($(this).hasClass("return"))
           {
