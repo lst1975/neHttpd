@@ -178,10 +178,7 @@ function MAIN_UPGRADE_display(p)
           "background":"linear-gradient(90deg, #0ff, #2eb9e3 "+fileLoaded+"%, transparent 0)",
         });
         txt.text(fileLoaded+"%");
-        name.text(fileName+" • "+gmtLangBuild(["Uploading"],0)+" • " +fileSize);
-        if (loaded === total) {
-          name.text(fileName+" • "+gmtLangBuild(["Uploaded"],0)+" • " +fileSize);
-        }
+        name.html(fileName+"&nbsp;&#8226;&nbsp;"+gmtLangBuild([loaded === total ? "Uploaded" : "Uploading"],0)+"&nbsp;&#8226;&nbsp;" +fileSize);
       })
       if (____auth)
         xhr.setRequestHeader("Authorization", ____auth);
@@ -189,67 +186,3 @@ function MAIN_UPGRADE_display(p)
       xhr.send(formData); //sending form data to php
     }
 }
-
-var page_UPGRADE = {
-  name    : "gmt_UPGRADE",
-  page_wrapper: null,
-  container: null,
-
-  is_phone : false,
-  is_vertical : false,
-  load    : function(p){
-              p.display(p);
-              p.inited = true;
-              p.isVisible = true;
-            },
-  display : MAIN_UPGRADE_display,
-  header  : null,
-  footer  : null,
-  bgcolor : null,
-  txtcolor: null,
-  inited  : false,
-  content : null,
-  page    : null,
-  wrnode  : null,
-  resize  : function(p){
-    if (!p.inited || !p.isVisible)
-        return;
-  },
-  thumnail_seq  : 0,
-  thumnail_node : function(p){},
-  toggle : function(p){},
-
-  show : function(p){p.isVisible = true},
-  hide : function(p){p.isVisible = false},
-
-  close : function(p){
-      if (p.page_wrapper)
-      {
-        p.page_wrapper.empty();
-      }
-    },
-  initVisible : function(p,b){
-      p.isVisible = b;
-  },
-
-  lang: function(p){},
-  getLang : function(p){return p.lang;},
-  changeLang: function(p, lang){p.lang = lang;},
-  theme: function(p){},
-  changeTheme : function(p,t){},
-
-  getTheme : function(p){return p.theme;},
-  priv: null,
-  click      : null,
-  dblclick   : null,
-  progress:null,
-  parent   : null,
-  children:[],
-
-  finger:[],
-  productFilter:null,
-  isVisible: false,
-
-  css: "",
-  js:  "",
-};

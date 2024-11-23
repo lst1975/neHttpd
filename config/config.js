@@ -289,7 +289,14 @@ function cfgOperation()
             //sel.attr("src", getIconSvg("config/more.png"));
             group.AlloyFinger({
               "tap":function(e){
+                if ($(e.target).hasClass("arrow add"))
+                  return;
                 toggleArrow($(this).find("div > span.arrow.expand"));
+              }
+            });
+            sel.children(".arrow.add").AlloyFinger({
+              "tap":function(e){
+                var p = __load_sub_page("TEMPLATE", MAIN_TEMPLATE_display);
               }
             });
             sel.children(".expand").attr("sub", b);
@@ -304,6 +311,19 @@ function cfgOperation()
        	      {
        	        list.children("legend").text(n.value[i][n.index].value);
        	      }
+
+              list.find(".delete").AlloyFinger({
+                "tap":function(e){
+                  $.MessageBox({
+                      buttonDone  : gmtLangBuild(["Confirm"],1),
+                      buttonFail  : gmtLangBuild(["Cancel"],1),
+                      buttonsOrder: "fail done",  // String
+                      message     : gmtLangBuild(["ItemDelMsg"],1)
+                  }).done(function(){
+                  }).fail(function(){
+                  });              
+                }
+              });
               this.load_group(stat, list,n.value[i],index+"."+n.id+"."+i+(n.index ? ":"+n.value[i][n.index].value:""));
             }
             break;
@@ -312,7 +332,7 @@ function cfgOperation()
     }
   }
 
-  this.load_config = function(div, cfg)
+  this.load_config = function(p, div, cfg)
   {
     var stat = {w:0,c:0,values:{}};
     for (var a in cfg)
@@ -331,7 +351,9 @@ function cfgOperation()
     if (stat.w)
     {
       var wrap = $("<div/>").appendTo(div);
-      var save = $("<button class='save'>"+gmtLangBuild(["SaveConfig"],0)+"</button>").appendTo(wrap);
+      var bClass = p.type == "sub" ? "return" : "save";
+      var bLabel = p.type == "sub" ? "Return" : "SaveConfig";
+      var save = $("<button class='"+bClass+"'>"+gmtLangBuild([bLabel],0)+"</button>").appendTo(wrap);
       var button = $("<button class='commit'>"+gmtLangBuild(["SubmitConfig"],0)+"</button>").appendTo(wrap);
       wrap.css("display","flex").css("justify-content","space-between");
       save.css("margin","0").css("margin-left","20px");
@@ -343,45 +365,54 @@ function cfgOperation()
       save.data("stat",stat);
       changeSubmitButtonState(save,1);
       save.data("cfg",this);
+      save.data("page",p);
       save.AlloyFinger({
         "tap":function(e){
-          ____workingBusy.show();
-          var d = $(this).data("stat");
-          var cfg = $(this).data("cfg");
-          var ___id = cfg.___mibid.id++;
-          var k = {
-              id:___id,
-              values:{"0.9999999":1}
-            };
-          var y = JSON.stringify(k);
-          nanoAjaxGet($(this).data("cfg"), "data/setmib.json", "GET", y, function(data, err){
-              //TODO
-              ____workingBusy.hide();
-              if (err)
-              {
-                delete this.___mibid.e[___id];
-                console.log("Failed to submit your configurations:"+err);
-              }
-              else
-              {
-                var x=data;
-                if (!x.hasOwnProperty("id"))
+          if ($(this).hasClass("save"))
+          {
+            ____workingBusy.show();
+            var d = $(this).data("stat");
+            var cfg = $(this).data("cfg");
+            var ___id = cfg.___mibid.id++;
+            var k = {
+                id:___id,
+                values:{"0.9999999":1}
+              };
+            var y = JSON.stringify(k);
+            nanoAjaxGet($(this).data("cfg"), "data/setmib.json", "GET", y, function(data, err){
+                //TODO
+                ____workingBusy.hide();
+                if (err)
                 {
                   delete this.___mibid.e[___id];
-                  return;
+                  console.log("Failed to submit your configurations:"+err);
                 }
-                if (x.id != ___id || !this.___mibid.e[x.id])
+                else
                 {
-                  return;
+                  var x=data;
+                  if (!x.hasOwnProperty("id"))
+                  {
+                    delete this.___mibid.e[___id];
+                    return;
+                  }
+                  if (x.id != ___id || !this.___mibid.e[x.id])
+                  {
+                    return;
+                  }
+                  if (x.err && gmtIsArray(x.err))
+                  {
+                    alert("Failed");
+                  }
+                  delete this.___mibid.e[___id];
                 }
-                if (x.err && gmtIsArray(x.err))
-                {
-                  alert("Failed");
-                }
-                delete this.___mibid.e[___id];
-              }
-            });
-          cfg.___mibid.e[___id] = 1;
+              });
+            cfg.___mibid.e[___id] = 1;
+          }
+          else if ($(this).hasClass("return"))
+          {
+            var sub = save.data("page");
+            __close_sub_page(sub);
+          }
         }
     	});
       button.data("cfg",this);

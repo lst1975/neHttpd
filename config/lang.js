@@ -105,6 +105,10 @@ var gmtLangZH = {
   WrongFileType: "错误的文件类型：",
   SubmitConfig: "提交配置",
   SaveConfig:"保存配置",
+  Return:"返回",
+  Confirm:"确定",
+  Cancel:"取消",
+  ItemDelMsg:"你是否确定删除这元素？",
 };
 
 var gmtLangEN = {
@@ -125,6 +129,10 @@ var gmtLangEN = {
   WrongFileType: "Wrong File Type:",
   SubmitConfig: "Submit",
   SaveConfig:"Save",
+  Return:"Return",
+  Confirm:"Confirm",
+  Cancel:"Cancel",
+  ItemDelMsg:"Are you sure to delete this element?",
 };
 
 var gmtLang = gmtBrowser.lang == "zh-cn" ? gmtLangZH : gmtLangEN;

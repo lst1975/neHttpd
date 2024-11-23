@@ -1,3 +1,78 @@
+function page_common(name, display)
+{
+  this.name    = name;
+  this.page_wrapper = null;
+  this.container    = null;
+  
+  this.is_phone    = false;
+  this.is_vertical = false;
+  this.load    = function(data){
+              this.loader = new cfgOperation();
+              this.display(this);
+              this.inited = true;
+              this.isVisible = true;
+            };
+  this.display = display;
+  this.header  = null;
+  this.footer  = null;
+  this.bgcolor = null;
+  this.txtcolor= null;
+  this.inited  = false;
+  this.content = null;
+  this.page    = null;
+  this.type    = "normal";
+  this.resize  = function(){
+    if (!this.inited || !this.isVisible)
+        return;
+  };
+  this.toggle = function(){
+      if (!this.inited)
+        return;
+      this.page_wrapper.toggle();
+    };
+
+  this.show = function(){this.isVisible = true};
+  this.hide = function(){this.isVisible = false};
+
+  this.close = function(){
+      if (this.ajax) {
+        this.ajax.abort();
+        this.ajax = null;
+      }
+      if (this.page_wrapper)
+      {
+        this.page_wrapper.empty();
+      }
+    };
+  this.initVisible = function(b){
+      this.isVisible = b;
+  };
+
+  this.lang= function(){};
+  this.getLang = function(){return this.lang;};
+  this.changeLang= function(lang){this.lang = lang;};
+  this.theme= function(){};
+  this.changeTheme = function(p,t){};
+
+  this.getTheme = function(){return this.theme;};
+  this.priv       = null;
+  this.click      = null;
+  this.dblclick   = null;
+  this.progress   = null;
+  this.parent     = null;
+  this.children   = [];
+
+  this.finger=[];
+  this.productFilter=null;
+  this.isVisible= false;
+
+  this.css= "";
+  this.js=  "";
+};
+
+var page_SYSTEM  = new page_common("gmt_SYSTEM",MAIN_SYSTEM_display);
+var page_DEVICE  = new page_common("gmt_DEVICE",MAIN_DEVICE_display);
+var page_UPGRADE = new page_common("gmt_UPGRADE",MAIN_UPGRADE_display);
 
 var loginWindow = 
     '<div id="id01" class="__login modal">'
@@ -172,8 +247,8 @@ function __load_page(p,data){
   }
   if (__p)
   {
-    __p.hide(__p);
-    __p.close(__p);
+    __p.hide();
+    __p.close();
     __p.page_wrapper.remove();
   }
 
@@ -181,11 +256,28 @@ function __load_page(p,data){
   p.page_wrapper.html((p.css||"")+(p.js||""));
   p.container = $("<div class='cfg_container'>").appendTo(p.page_wrapper);
 
-  p.load(p,data);
-  p.show(p);
+  p.load(data);
+  p.show();
   __p = p;
 }
-
+function __load_sub_page(name,display){
+  var p = new page_common(name,display);
+  p.type = "sub";
+  __p.toggle();
+  p.page_wrapper = ____wrapper;
+  p.container = $("<div class='cfg_container'>").appendTo(p.page_wrapper);
+  p.load();
+  p.show();
+  p.parent = __p;
+  __p = p;
+  return p;
+}
+function __close_sub_page(p){
+  p.parent.toggle();
+  p.container.remove();
+  __p = p.parent;
+  delete p;
+}
 function __start_icon(____toolbar){
     var scroll = $('<div class="left-icon-scroll"></div>').appendTo(____toolbar);
     var wrap = $('<div class="left-icon-wrap"></div>').appendTo(scroll);
@@ -220,6 +312,7 @@ function __start_icon(____toolbar){
     }
   });
 
+  
   z = ____toolbar.find(".table-left-container.DeviceInfo");
   z.AlloyFinger({
     "tap":function(e){
