@@ -41,6 +41,7 @@ function cfgOperation(page, alwaysActive, action)
   };
   this.stat = {w:0,c:0,values:{}};
   this.action = action || "data/setmib.json";
+  this.subAction = action || "data/setmib.json";
   this.alwaysActive = alwaysActive;
   this.page = page;
   this.changeConfigItem = function(__ev, __getVal, __setErr)
@@ -52,8 +53,6 @@ function cfgOperation(page, alwaysActive, action)
     if ((ov.type != "bool" && !ov.value) || ov.value != v)
     {
       var isValOk;
-      if (!ot.values.hasOwnProperty(i))
-        ot.c++;
       switch (ov.type){
         case "ipv4":
           isValOk = function(z,v){
@@ -96,6 +95,8 @@ function cfgOperation(page, alwaysActive, action)
             };
           break;
       }
+      if (!ot.values.hasOwnProperty(i))
+        ot.c++;
       ot.values[i] = { 
         v : v,
         o : __ev,
@@ -410,6 +411,7 @@ function cfgOperation(page, alwaysActive, action)
                   del.attr("i", k);
                   del.data("delDiv", div);
                   del.data("indexValue", n.index ? n.value[k][n.index].value : "")
+                  n.value[k]["__$$__del"] = del;
                   del.AlloyFinger({
                     "tap":function(e){
                       var self = $(this);
@@ -430,9 +432,10 @@ function cfgOperation(page, alwaysActive, action)
                         kd.value[addListItem.index]=1;
                         var y = JSON.stringify(kd);
                         loader.submit($(this), ___id, "data/del.json", y, function(arg){
+                            var n = arg.n;
                             var ot = arg.stat;
                             var kk = Number(self.attr("i"));
-                            var index = arg.index+"."+kk+(arg.n.index ? ":"+self.data("indexValue"):"");
+                            var index = arg.index+"."+kk+(n.index ? ":"+self.data("indexValue"):"");
                             for (var v in ot.values)
                             {
                               if (!ot.values.hasOwnProperty(v))
@@ -442,15 +445,38 @@ function cfgOperation(page, alwaysActive, action)
                               ot.c--;
                               delete ot.values[v];
                             }
-                            if (arg.n.index)
+                            if (n.index)
                             {
-                              for (var w=0;w<arg.n.value.length;w++)
+                              for (var w=0;w<n.value.length;w++)
                               {
-                                var we = arg.n.value[w];
-                                if (we[arg.n.index].value == self.data("indexValue"))
+                                var we = n.value[w];
+                                if (we[n.index].value == self.data("indexValue"))
                                 {
-                                  arg.n.value.splice(w, 1);
+                                  n.value.splice(w, 1);
                                   break;
+                                }
+                              }
+                              for (var y=0;y<n.value.length;y++)
+                              {
+                                if (y < w)
+                                  continue;
+                                var we = n.value[y];
+                                var indexValue = ":"+we[n.index].value;
+                                we["__$$__del"].attr("i",y);
+                                for (var v in ot.values)
+                                {
+                                  if (!ot.values.hasOwnProperty(v))
+                                    continue;
+                                  var oldIndex = arg.index+"."+(y+1)+indexValue;
+                                  if (v.search(oldIndex) == 0)
+                                  {
+                                    var tmpN = v;
+                                    var tmpV = ot.values[v];
+                                    tmpN = arg.index+"."+y+indexValue+tmpN.slice(oldIndex.length);
+                                    tmpV.o.attr("index", tmpN)
+                                    delete ot.values[v];
+                                    ot.values[tmpN] = tmpV;
+                                  }
                                 }
                               }
                             }
@@ -492,6 +518,7 @@ function cfgOperation(page, alwaysActive, action)
 
   this.submit = function(button, ___id, file, data, okCb, arg)
   {
+    this.subAction = file;
     nanoAjaxGet(this, file, "GET", data, 
       function(response, err){
         //TODO
@@ -550,7 +577,7 @@ function cfgOperation(page, alwaysActive, action)
           }
           delete this.___mibid.e[___id];
 
-          if (this.action != "data/del.json")
+          if (this.subAction != "data/del.json")
           {
             d.c = 0;
             for (m in d.values)
