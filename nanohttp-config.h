@@ -25,6 +25,8 @@
 
 #define __NHTTP_INTERNAL
 
+#define __NHTTP_TEST 1
+
 #undef WIN32
 #undef HAVE_SSL
 

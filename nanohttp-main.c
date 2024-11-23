@@ -362,7 +362,13 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
         r = http_output_stream_write_string(conn->out, "</body></html>");
       } while(0);
     }
-    else if (strcmp("data/setmib.json", path))
+    else if (strcmp("data/setmib.json", path)
+      || strcmp("data/add.json", req->path)
+      || strcmp("data/del.json", req->path)
+#if !__NHTTP_TEST      
+      || strcmp("data/template.json", req->path)
+#endif      
+      )
     {
       log_debug("Try to open the file %s.", path);
 
@@ -407,7 +413,15 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   herror_t r;
 
-  if (strcmp("/data/setmib.json", req->path))
+  printf("%s&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n",req->path);
+  
+  if (strcmp("/data/add.json", req->path)
+    && strcmp("/data/del.json", req->path)
+    && strcmp("/data/setmib.json", req->path)
+#if !__NHTTP_TEST      
+    && strcmp("/data/template.json", req->path)
+#endif
+    )
   {
     return root_service(conn, req);
   }
@@ -451,8 +465,25 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
     herror_release(r);
 
-    n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"0.0\",\"reason\":"
-      "\"For testing received error message from our product.\"}]}", (int)p->vint);
+    if (!strcmp("/data/setmib.json", req->path))
+    {
+      n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"0.0\",\"reason\":"
+        "\"For testing received error message from our product.\"}]}", (int)p->vint);
+    }
+    else if (!strcmp("/data/add.json", req->path))
+    {
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+    }
+    else if (!strcmp("/data/del.json", req->path))
+    {
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+    }
+#if !__NHTTP_TEST      
+    else if (!strcmp("/data/template.json", req->path))
+    {
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+    }
+#endif    
     r = http_output_stream_write(conn->out, (unsigned char *)buf, n);
 
     free(query);
