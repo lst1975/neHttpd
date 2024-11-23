@@ -311,9 +311,13 @@ function cfgOperation(page, alwaysActive, action)
                   $(this).show();
                   $(this).prependTo(loader.div.children(".section"));
                   sub.insertAfter($(this));
+                  loader.submitButton.hide();
+                  loader.saveButton.hide();
                }
                 else
                 {
+                  loader.submitButton.show();
+                  loader.saveButton.show();
                   loader.div.find(".section > .input-group").removeClass("hidden");
                   loader.div.find(".section > .sub-section").removeClass("hidden");
                   loader.div.find(".section > .input-group").addClass("show");
@@ -642,7 +646,8 @@ function cfgOperation(page, alwaysActive, action)
         changeSubmitButtonState(button,1);
       save.data("cfg",this);
       save.data("page",p);
-      this.saveButton = button;
+      this.submitButton = button;
+      this.saveButton = save;
       save.AlloyFinger({
         "tap":function(e){
           if ($(this).hasClass("save"))
