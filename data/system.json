@@ -82,7 +82,7 @@
         "id": 2
       },
       "label":"Memory",
-      "type":"group",
+      "type":"group+",
       "id": 5 
    },
    "cpu":{
@@ -171,7 +171,7 @@
     "net2":{
       "type":"list+",
       "label":"Network Volatile",
-      "id":7,
+      "id":8,
       "range":[1,100],
       "writable":true,
       "index":"name",
