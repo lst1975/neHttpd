@@ -107,11 +107,12 @@ uint8_t* decode_url(const uint8_t* input, int len) {
         if (charlen <= 1) {
             const uint8_t c = input[in_cursor++];
 
+#if 0
             if (c == '+') {
                 decoded[out_cursor++] = ' ';
                 continue;
             }
-
+#endif
             if (c != '%') {
                 decoded[out_cursor++] = c;
                 continue;
