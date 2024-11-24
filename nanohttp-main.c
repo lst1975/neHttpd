@@ -11,6 +11,7 @@
 #include "nanohttp-file.h"
 #include "nanohttp-form.h"
 #include "nanohttp-urlencode.h"
+#include "nanohttp-base64.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const char *user, const char *password)
@@ -413,8 +414,6 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   herror_t r;
 
-  printf("%s&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n",req->path);
-  
   if (strcmp("/data/add.json", req->path)
     && strcmp("/data/del.json", req->path)
     && strcmp("/data/setmib.json", req->path)
@@ -426,21 +425,43 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     return root_service(conn, req);
   }
 
-  if (req->query->key != NULL)
+  if (req->query != NULL)
   {
-    char buf[128];
-    int n;
-    unsigned char *query = NULL;
+    char buf[126];
+    int n, len;
+    unsigned char *query;
+    unsigned char *data = NULL;
     JSONPair_t *pair,*p;
 
-    query = decode_url((const uint8_t*)req->query->key, 0);
-    if (query == NULL)
+    data = (unsigned char *)hpairnode_get(req->query, "data");
+    if (data == NULL)
+    {
+      log_error("No query data");
+      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+      goto finished;
+    }
+    
+    log_debug("try to decode %s\n",(char *)data);
+    data = decode_url((const uint8_t*)data, strlen((char *)data));
+    if (data == NULL)
     {
       log_error("Failed to parse query");
       r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
       goto finished;
     }
+    log_debug("decoded query is : %s", data);
 
+    len = strlen((char *)data);
+    query = (unsigned char *)malloc(len);
+    if (query == NULL)
+    {
+      log_error("Failed to malloc key");
+      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+      free(data);
+      goto finished;
+    }
+    base64_decode_string(data, query);
+    free(data);
     log_debug("decoded query is : %s", query);
 
     pair = json_parse((const char *)query, strlen((const char *)query));

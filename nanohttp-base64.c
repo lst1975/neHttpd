@@ -26,133 +26,68 @@
 
 #include "nanohttp-base64.h"
 
-static const char cb64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+char base46_map[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+                     'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+                     'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+                     'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
 
-static const char cd64[] = "|$$$}rstuvwxyz{$$$$$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$$$$XYZ[\\]^_`abcdefghijklmnopq";
-
-/**
- *
- * encode 3 8-bit binary bytes as 4 '6-bit' characters
- *
- */
-static void _encodeblock(unsigned char in[3], unsigned char out[4], int len)
-{
-
-  out[0] = cb64[in[0] >> 2];
-  out[1] = cb64[((in[0] & 0x03) << 4) | ((in[1] & 0xf0) >> 4)];
-  out[2] = (unsigned char)(len > 1 ? cb64[((in[1] & 0x0f) << 2) | ((in[2] & 0xc0) >> 6)] : '=');
-  out[3] = (unsigned char)(len > 2 ? cb64[in[2] & 0x3f] : '=');
-
-  return;
-}
 
 void base64_encode_string(const unsigned char *instr, unsigned char *outstr)
 {
-  unsigned char in[3], out[4];
-  int i, len;
 
-  while (*instr)
-  {
-    len = 0;
-    for (i = 0; i < 3; i++)
-    {
-      if ((in[i] = (unsigned char)*instr))
-      {
-        len++;
-        instr++;
-      }
+    char counts = 0;
+    char buffer[3];
+    char* cipher = (char*)outstr; //malloc(strlen(plain) * 4 / 3 + 4);
+    int i = 0, c = 0;
+
+    for(i = 0; instr[i] != '\0'; i++) {
+        buffer[(int)counts++] = (char)instr[i];
+        if(counts == 3) {
+            cipher[c++] = base46_map[buffer[0] >> 2];
+            cipher[c++] = base46_map[((buffer[0] & 0x03) << 4) + (buffer[1] >> 4)];
+            cipher[c++] = base46_map[((buffer[1] & 0x0f) << 2) + (buffer[2] >> 6)];
+            cipher[c++] = base46_map[buffer[2] & 0x3f];
+            counts = 0;
+        }
     }
-    if (len)
-    {
-      _encodeblock(in, out, len);
-      for (i = 0; i < 4; i++)
-        *outstr++ = out[i];
+
+    if(counts > 0) {
+        cipher[c++] = base46_map[buffer[0] >> 2];
+        if(counts == 1) {
+            cipher[c++] = base46_map[(buffer[0] & 0x03) << 4];
+            cipher[c++] = '=';
+        } else {                      // if counts == 2
+            cipher[c++] = base46_map[((buffer[0] & 0x03) << 4) + (buffer[1] >> 4)];
+            cipher[c++] = base46_map[(buffer[1] & 0x0f) << 2];
+        }
+        cipher[c++] = '=';
     }
-  }
+
+    cipher[c] = '\0';   /* string padding character */
 }
 
-/**
- *
- * decode 4 '6-bit' characters into 3 8-bit binary bytes
- *
- */
-static void _decodeblock(unsigned char in[4], unsigned char out[3])
-{
-  out[0] = (unsigned char)(in[0] << 2 | in[1] >> 4);
-  out[1] = (unsigned char)(in[1] << 4 | in[2] >> 2);
-  out[2] = (unsigned char)(((in[2] << 6) & 0xc0) | in[3]);
 
-  return;
-}
-
-/** 
- *
- * decode a base64 encoded string (maybe broken...)
- *
- */
 void base64_decode_string(const unsigned char *instr, unsigned char *outstr)
 {
-  unsigned char in[4], out[3], v;
-  int i, len;
+    char counts = 0;
+    char buffer[4];
+    char* plain = (char*)outstr; //malloc(strlen(cipher) * 3 / 4);
+    int i = 0, p = 0;
 
-  while (*instr)
-  {
-    for (len = 0, i = 0; i < 4 && *instr; i++)
-    {
-      v = 0;
-      while (*instr && v == 0)
-      {
-        v = *instr++;
-        v = (unsigned char)((v < 43 || v > 122) ? 0 : cd64[v - 43]);
-        if (v)
-          v = (unsigned char)((v == '$') ? 0 : v - 61);
-      }
-      if (*instr)
-      {
-        len++;
-        if (v)
-          in[i] = (unsigned char)(v - 1);
-      }
-      else
-      {
-        in[i] = 0;
-      }
+    for(i = 0; instr[i] != '\0'; i++) {
+        char k;
+        for(k = 0 ; k < 64 && base46_map[(int)k] != instr[i]; k++);
+        buffer[(int)counts++] = k;
+        if(counts == 4) {
+            plain[p++] = (buffer[0] << 2) + (buffer[1] >> 4);
+            if(buffer[2] != 64)
+                plain[p++] = (buffer[1] << 4) + (buffer[2] >> 2);
+            if(buffer[3] != 64)
+                plain[p++] = (buffer[2] << 6) + buffer[3];
+            counts = 0;
+        }
     }
-    if (len)
-    {
-      _decodeblock(in, out);
-      for (i = 0; i < len - 1; i++)
-        *outstr++ = out[i];
-    }
-  }
+
+    plain[p] = '\0';    /* string padding character */
 }
 
-#ifdef BASE64_TEST_CASE_FROM_RFC2617
-#include <stdio.h>
-#include <strings.h>
-int main(int argc, char **argv) {
-
-  unsigned char *instr = "QWxhZGRpbjpvcGVuIHNlc2FtZQ==";
-  unsigned char *result = "Aladdin:open sesame";
-  unsigned char instr2[80];
-  unsigned char outstr[80];
-
-  bzero(outstr, 80);
-  base64_decode_string(instr, outstr);
-
-  printf("\"%s\" => \"%s\"\n", instr, outstr);
-  if (strcmp(outstr, result))
-    printf("base64_decode failed\n");
-
-  strcpy(instr2, outstr);
-
-  bzero(outstr, 80);
-  base64_encode_string(instr2, outstr);
-
-  printf("\"%s\" => \"%s\"\n", instr2, outstr);
-  if (strcmp(outstr, instr))
-    printf("base64_encode failed\n");
-
-  return 0;
-}
-#endif
