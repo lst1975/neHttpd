@@ -110,7 +110,7 @@ Embedded HTTP Server for Web Configuraion Framwork
 # Data Type
           "array"  : options: [ *, *, ...]
           "url"    : [http[s]://][<user>:<password>@]<location>[:<port>]  
-          "mac"    : 01-23-45-67-89-AB | 0123456789AB | 01:23:45:67:89:AB  
+          "mac"    : 01-23-45-67-89-AB | 0123456789AB | 01:23:45:67:89:AB | ... 
           "ipv4"   : 192.168.1.1
           "ipv6"   : 2001:db8:0:0:0:0:2:1 | ::1 | ::ffff:192.0.2.128 | 2001:db8::567:1 | ...
           "number" : [-+]?[0-9]*|[-+]?0(x|X)[0-9A-F]+
