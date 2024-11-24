@@ -118,6 +118,14 @@
         "label":"Model",
         "id": 2
       },
+      "freq":{
+        "type":"float",
+        "range":null,
+        "value":"3.20",
+        "writable":true,
+        "label": "Frequency",
+        "id": 3
+      },
       "label":"CPU",
       "type":"group",
       "id":9 
@@ -146,6 +154,14 @@
             "writable":true,
             "label": "Ipv4 Address",
             "id":1
+          },
+          "mac":{
+            "type":"mac",
+            "range":[12,17],
+            "value":"01:23:45:67:89:AB",
+            "writable":true,
+            "label": "Mac Address",
+            "id": 2
           }
         },
         {
