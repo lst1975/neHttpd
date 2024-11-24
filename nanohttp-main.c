@@ -368,6 +368,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       || strcmp("data/del.json", req->path)
 #if !__NHTTP_TEST      
       || strcmp("data/template.json", req->path)
+      || strcmp("data/system.json", req->path)
 #endif      
       )
     {
@@ -419,6 +420,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     && strcmp("/data/setmib.json", req->path)
 #if !__NHTTP_TEST      
     && strcmp("/data/template.json", req->path)
+    && strcmp("/data/system.json", req->path)
 #endif
     )
   {
@@ -503,6 +505,10 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     }
 #if !__NHTTP_TEST      
     else if (!strcmp("/data/template.json", req->path))
+    {
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+    }
+    else if (!strcmp("/data/system.json", req->path))
     {
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
     }
