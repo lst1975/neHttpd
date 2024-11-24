@@ -109,6 +109,7 @@ Embedded HTTP Server for Web Configuraion Framwork
 
 # Data Type
           "array"  :  options
+          "url"   :   
           "ipv4"   :   
           "ipv6"   :   
           "number" :  
