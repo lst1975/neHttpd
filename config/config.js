@@ -115,8 +115,10 @@ function cfgOperation(page, alwaysActive, action)
           break;
         case "string":
           isValOk = function(z,v){
-              if (gmtIsString(v))
+              if (!gmtIsString(v))
                 return "Format Error! Not string";
+              if (!(/^[\x20-\x7E]+$/).test(v))
+                return "Format Error! Non-printable character";
               v = v.trim();
               var zv = z.data("osrc");
               if (zv.range && gmtIsArray(zv.range))
@@ -134,7 +136,7 @@ function cfgOperation(page, alwaysActive, action)
               {
                 v = v.trim();
                 if(!(/^[-+]?[0-9]*$/).test(v) && !(/^[-+]?0(x|X)[0-9A-F]+$/).test(v))
-                  return "Format Error!";
+                  return "Format Error! neither digit nor hex";
               }
               var zv = z.data("osrc");
               if (zv.range && gmtIsArray(zv.range))
