@@ -114,7 +114,7 @@ Embedded HTTP Server for Web Configuraion Framwork
           "ipv4"   : 192.168.1.1
           "ipv6"   : 2001:db8:0:0:0:0:2:1|::1|::ffff:192.0.2.128|2001:db8::567:1  
           "number" : [-+]?[0-9]*|[-+]?0(x|X)[0-9A-F]+
-          "string" : [x20-x7E]
+          "string" : [\x20-\x7E]
           "float"  : [-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?
           "bool"   : true or false
           "group"  : V expand
