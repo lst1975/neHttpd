@@ -399,12 +399,9 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       do
       {
         int len;
-        char buf[18];
         bf = (unsigned char *)malloc((sizeof(favorICON)-1) * 3 / 4);
         if (bf == NULL) break;
         len = base64_decode_string((const unsigned char *)favorICON, bf);
-        snprintf(buf, sizeof buf, "%d", len);
-        if (httpd_set_header(conn, HEADER_CONTENT_LENGTH, buf)) break;
         if (httpd_set_header(conn, HEADER_CONTENT_TYPE, "image/png")) break;
 
         r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
