@@ -56,6 +56,14 @@
       "label": "Closed",
       "id": 6
     },
+    "url":{
+      "type":"url",
+      "range":[7,-1],
+      "value":"http://localhost:8080/",
+      "writable":true,
+      "label": "URL",
+      "id": 7
+    },
     "memory":{
       "total":{
         "type":"number",
@@ -83,7 +91,7 @@
       },
       "label":"Memory",
       "type":"group+",
-      "id": 5 
+      "id": 8 
    },
    "cpu":{
       "count":{
@@ -112,12 +120,12 @@
       },
       "label":"CPU",
       "type":"group",
-      "id":6 
+      "id":9 
     },
     "net1":{
       "type":"list",
       "label":"Network Fixed",
-      "id":7,
+      "id":10,
       "range":[1,100],
       "writable":true,
       "index":"name",
@@ -171,7 +179,7 @@
     "net2":{
       "type":"list+",
       "label":"Network Volatile",
-      "id":8,
+      "id":11,
       "range":[1,100],
       "writable":true,
       "index":"name",
@@ -205,11 +213,19 @@
           },
           "ipv4":{
             "type":"ipv4",
-            "range":[7,17],
+            "range":[7,15],
             "value":"10.10.1.10",
             "writable":true,
             "label": "Ipv4 Address",
             "id":1
+          },
+          "ipv6":{
+            "type":"ipv6",
+            "range":[2,45],
+            "value":"2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+            "writable":true,
+            "label": "Ipv6 Address",
+            "id":2
           },
           "signal":{
             "type":"float",
@@ -217,7 +233,7 @@
             "value":0.8,
             "writable":false,
             "label": "Signal Strength",
-            "id":1
+            "id":3
           }
         }
       ]
