@@ -59,53 +59,87 @@ function cfgOperation(page, alwaysActive, action)
       switch (ov.type){
         case "url":
            isValOk = function(z,v){
-              v = v.trim();
-              if(gmtIsString(v) && (/^|(http(s)?:\/\/)([\w-]+\.)+[\w-]+([\w- ;,.\/?%&=]*)/).test(v))
-                return null;
+              if (gmtIsString(v))
+              {
+                v = v.trim();
+                if((/^|(http(s)?:\/\/)([\w-]+\.)+[\w-]+([\w- ;,.\/?%&=]*)/).test(v))
+                  return null;
+              }
               return "Format Error! Example: [http[s]://][<user>:<password>@]<location>[:<port>]";
             };
           break;
          
         case "ipv6":
           isValOk = function(z,v){
-              v = v.trim();
-              if (v.length < 2 || v.length > 45)
-                return formatErr + exampleV4;
-              if(gmtIsString(v) && (/^([\da-fA-F]{1,4}:){6}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^::([\da-fA-F]{1,4}:){0,4}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:):([\da-fA-F]{1,4}:){0,3}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){2}:([\da-fA-F]{1,4}:){0,2}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){3}:([\da-fA-F]{1,4}:){0,1}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){4}:((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){7}[\da-fA-F]{1,4}$|^:((:[\da-fA-F]{1,4}){1,6}|:)$|^[\da-fA-F]{1,4}:((:[\da-fA-F]{1,4}){1,5}|:)$|^([\da-fA-F]{1,4}:){2}((:[\da-fA-F]{1,4}){1,4}|:)$|^([\da-fA-F]{1,4}:){3}((:[\da-fA-F]{1,4}){1,3}|:)$|^([\da-fA-F]{1,4}:){4}((:[\da-fA-F]{1,4}){1,2}|:)$|^([\da-fA-F]{1,4}:){5}:([\da-fA-F]{1,4})?$|^([\da-fA-F]{1,4}:){6}:$/).test(v))
-                return null;
+              if (gmtIsString(v))
+              {
+                v = v.trim();
+                if (v.length < 2 || v.length > 45)
+                  return formatErr + exampleV4;
+                if((/^([\da-fA-F]{1,4}:){6}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^::([\da-fA-F]{1,4}:){0,4}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:):([\da-fA-F]{1,4}:){0,3}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){2}:([\da-fA-F]{1,4}:){0,2}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){3}:([\da-fA-F]{1,4}:){0,1}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){4}:((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){7}[\da-fA-F]{1,4}$|^:((:[\da-fA-F]{1,4}){1,6}|:)$|^[\da-fA-F]{1,4}:((:[\da-fA-F]{1,4}){1,5}|:)$|^([\da-fA-F]{1,4}:){2}((:[\da-fA-F]{1,4}){1,4}|:)$|^([\da-fA-F]{1,4}:){3}((:[\da-fA-F]{1,4}){1,3}|:)$|^([\da-fA-F]{1,4}:){4}((:[\da-fA-F]{1,4}){1,2}|:)$|^([\da-fA-F]{1,4}:){5}:([\da-fA-F]{1,4})?$|^([\da-fA-F]{1,4}:){6}:$/).test(v))
+                  return null;
+              }
               return formatErr + exampleV6;
             };
           break;
         case "ipv4":
           isValOk = function(z,v){
-              v = v.trim();
-              if (v.length < 7 || v.length > 15)
-                return formatErr + exampleV4;
-              if(gmtIsString(v) && (/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/).test(v))
-                return null;
+              if (gmtIsString(v))
+              {
+                v = v.trim();
+                if (v.length < 7 || v.length > 15)
+                  return formatErr + exampleV4;
+                if((/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/).test(v))
+                  return null;
+              }
               return formatErr + exampleV4;
             };
           break;
         case "string":
           isValOk = function(z,v){
+              if (gmtIsString(v))
+                return "Format Error! Not string";
+              v = v.trim();
               var zv = z.data("osrc");
               if (zv.range && gmtIsArray(zv.range))
               {
                 v = v.trim();
-                if (gmtIsString(v) && v.length >= zv.range[0] && v.length <= zv.range[1])
+                if (v.length >= zv.range[0] && v.length <= zv.range[1])
                   return null;
                 return "Length Error! Length: " + JSON.stringify(zv.range);
+              }
+            };
+          break;
+        case "number":
+           isValOk = function(z,v){
+              if (gmtIsString(v))
+              {
+                v = v.trim();
+                if(!(/^[-+]?[0-9]*$/).test(v) && !(/^[-+]?0(x|X)[0-9A-F]+$/).test(v))
+                  return "Format Error!";
+              }
+              var zv = z.data("osrc");
+              if (zv.range && gmtIsArray(zv.range))
+              {
+                if (Number(v) >= zv.range[0] && Number(v) <= zv.range[1])
+                  return null;
+                return "Range Error! Range: " + JSON.stringify(zv.range);
               };
               return null;
             };
           break;
-        case "number":
         case "float":
           isValOk = function(z,v){
+              if (!gmtIsString(v))
+              {
+                v = v.trim();
+                if(!(/^[-+]?[0-9]*\.?[0-9]+$ or ^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/).test(v))
+                  return "Format Error!";
+              }
               var zv = z.data("osrc");
               if (zv.range && gmtIsArray(zv.range))
               {
-                if (v >= zv.range[0] && v <= zv.range[1])
+                if (Number(v) >= zv.range[0] && Number(v) <= zv.range[1])
                   return null;
                 return "Range Error! Range: " + JSON.stringify(zv.range);
               };
@@ -117,6 +151,21 @@ function cfgOperation(page, alwaysActive, action)
           isValOk = function(){
              return null;
             };
+          break;
+      }
+
+      var reason = isValOk(__ev,v);
+      if (reason)
+      {
+        __setErr(__ev,reason);
+      }
+      
+      switch (ov.type){
+        case "float":
+        case "number":
+          v=Number(v);
+          break;
+        default:
           break;
       }
       if (!ot.values.hasOwnProperty(i))
@@ -213,13 +262,7 @@ function cfgOperation(page, alwaysActive, action)
                 $(this).attr("title","");
                 var loader = $(this).data("cfg");
                 loader.changeConfigItem($(this), 
-                  function(__ev){
-                    var ov = __ev.data("osrc");
-                    if (ov.type == "number" || ov.type == "float")
-                      return Number(__ev.val());
-                    else
-                      return __ev.val();
-                  },
+                  function(__ev){return __ev.val();},
                   function(__ev,__reason){
                     __ev.addClass("error");
                     __ev.attr("title",__reason||"");
