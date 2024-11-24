@@ -130,7 +130,7 @@ function cfgOperation(page, alwaysActive, action)
           break;
         case "float":
           isValOk = function(z,v){
-              if (!gmtIsString(v))
+              if (gmtIsString(v))
               {
                 v = v.trim();
                 if(!(/^[-+]?[0-9]*\.?[0-9]+$ or ^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/).test(v))
