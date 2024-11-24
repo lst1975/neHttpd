@@ -402,7 +402,7 @@ function cfgOperation(page, alwaysActive, action)
                 n : n,
                 div : div,
                 loader: this,
-                addListOne: function(loader, stat, div, n, k){
+                addListOne: function(loader, index, stat, div, n, k){
                   var list = $(
                     '<fieldset class="list sub-section">'
                       +'<legend></legend>'
@@ -414,10 +414,8 @@ function cfgOperation(page, alwaysActive, action)
            	      }
                   var del = list.find(".delete");
                   del.attr("title", gmtLangBuild(["Del"],1));
-                  del.attr("i", k);
                   del.data("delDiv", div);
-                  del.data("indexValue", n.index ? n.value[k][n.index].value : "")
-                  n.value[k]["__$$__del"] = del;
+                  del.data("i", k);
                   del.AlloyFinger({
                     "tap":function(e){
                       var self = $(this);
@@ -440,8 +438,8 @@ function cfgOperation(page, alwaysActive, action)
                         loader.submit($(this), ___id, "data/del.json", y, function(arg){
                             var n = arg.n;
                             var ot = arg.stat;
-                            var kk = Number(self.attr("i"));
-                            var index = arg.index+"."+kk+(n.index ? ":"+self.data("indexValue"):"");
+                            var index = arg.index+".";
+                            
                             for (var v in ot.values)
                             {
                               if (!ot.values.hasOwnProperty(v))
@@ -451,53 +449,25 @@ function cfgOperation(page, alwaysActive, action)
                               ot.c--;
                               delete ot.values[v];
                             }
-                            if (n.index)
+
+                            n.value.splice(self.data("i"), 1);
+ 
+                            arg.div.empty();
+                            for (var y=0;y<n.value.length;y++)
                             {
-                              for (var w=0;w<n.value.length;w++)
-                              {
-                                var we = n.value[w];
-                                if (we[n.index].value == self.data("indexValue"))
-                                {
-                                  n.value.splice(w, 1);
-                                  break;
-                                }
-                              }
-                              for (var y=0;y<n.value.length;y++)
-                              {
-                                if (y < w)
-                                  continue;
-                                var we = n.value[y];
-                                var indexValue = ":"+we[n.index].value;
-                                we["__$$__del"].attr("i",y);
-                                for (var v in ot.values)
-                                {
-                                  if (!ot.values.hasOwnProperty(v))
-                                    continue;
-                                  var oldIndex = arg.index+"."+(y+1)+indexValue;
-                                  if (v.search(oldIndex) == 0)
-                                  {
-                                    var tmpN = v;
-                                    var tmpV = ot.values[v];
-                                    tmpN = arg.index+"."+y+indexValue+tmpN.slice(oldIndex.length);
-                                    tmpV.o.attr("index", tmpN)
-                                    delete ot.values[v];
-                                    ot.values[tmpN] = tmpV;
-                                  }
-                                }
-                              }
+                              arg.addListOne(arg.loader, arg.index, arg.stat, arg.div, n, y);
                             }
-                            self.parent().remove();
                           }, addListItem);
                       }).fail(function(){
                       });              
                     }
                   });
-                  this.loader.load_group(stat, list, n.value[k], 
+                  loader.load_group(stat, list, n.value[k], 
                     index+"."+n.id+"."+k+(n.index ? ":"+n.value[k][n.index].value:""));
                 },
                 add: function(d,item){
                     d.n.value.push(item);
-                    d.addListOne(d.load, d.stat, d.div, d.n, d.n.value.length-1);
+                    d.addListOne(d.loader, d.index, d.stat, d.div, d.n, d.n.value.length-1);
                   },
               };
             add.data("pos", addListItem)
@@ -514,7 +484,7 @@ function cfgOperation(page, alwaysActive, action)
               break;
             for (var i=0;i<n.value.length;i++)
             {
-              addListItem.addListOne(this, stat, div, n, i);
+              addListItem.addListOne(this, index, stat, div, n, i);
             }
             break;
         }
