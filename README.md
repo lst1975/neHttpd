@@ -107,6 +107,18 @@ Embedded HTTP Server for Web Configuraion Framwork
 
    ![cfg](https://github.com/user-attachments/assets/87bb6ed9-9e7a-41f6-9ef1-7645cf88e341)
 
+# Data Type
+          "array"  :  options
+          "ipv4"   :   
+          "ipv6"   :   
+          "number" :  
+          "string" :
+          "float"  :
+          "bool"   :  true or false
+          "group"  :  V expand
+          "group+" :  > 
+          "list"   :  ...
+          "list+"  :  + - ... 
 
 # Copying
    ```
