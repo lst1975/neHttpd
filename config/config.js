@@ -52,9 +52,10 @@ function cfgOperation(page, alwaysActive, action)
     var v  = __getVal(__ev);
     if ((ov.type != "bool" && !ov.value) || ov.value != v)
     {
-      var formatErr = "Format Error! Example: ";
-      var exampleV4 = "192.168.1.1.";
-      var exampleV6 = "2001:db8:0:0:0:0:2:1/::1/::ffff:192.0.2.128/2001:db8::567:1.";
+      var formatErr  = "Format Error! Example: ";
+      var exampleV4  = "192.168.1.1.";
+      var exampleV6  = "2001:db8:0:0:0:0:2:1/::1/::ffff:192.0.2.128/2001:db8::567:1.";
+      var exampleMac = "01-23-45-67-89-AB or 0123456789AB or 01:23:45:67:89:AB";
       var isValOk;
       switch (ov.type){
         case "url":
@@ -66,6 +67,22 @@ function cfgOperation(page, alwaysActive, action)
                   return null;
               }
               return "Format Error! Example: [http[s]://][<user>:<password>@]<location>[:<port>]";
+            };
+          break;
+         
+        case "mac":
+          isValOk = function(z,v){
+              if (gmtIsString(v))
+              {
+                v = v.trim();
+                if (v.length < 12 || v.length > 17)
+                  return formatErr + exampleMac;
+                if((/^([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})$/).test(v)
+                  || (/^([0-9A-Fa-f]{2}-){5}([0-9A-Fa-f]{2})$/).test(v)
+                  || (/^([0-9A-Fa-f]{2}){6}$/).test(v))
+                  return null;
+              }
+              return formatErr + exampleMac;
             };
           break;
          
@@ -82,6 +99,7 @@ function cfgOperation(page, alwaysActive, action)
               return formatErr + exampleV6;
             };
           break;
+
         case "ipv4":
           isValOk = function(z,v){
               if (gmtIsString(v))
@@ -133,7 +151,7 @@ function cfgOperation(page, alwaysActive, action)
               if (gmtIsString(v))
               {
                 v = v.trim();
-                if(!(/^[-+]?[0-9]*\.?[0-9]+$ or ^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/).test(v))
+                if(!(/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/).test(v))
                   return "Format Error!";
               }
               var zv = z.data("osrc");
@@ -237,6 +255,7 @@ function cfgOperation(page, alwaysActive, action)
           case "ipv4":
           case "ipv6":
           case "url":
+          case "mac":
           case "number":
           case "string":
           case "float":
