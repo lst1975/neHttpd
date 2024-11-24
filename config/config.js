@@ -666,6 +666,7 @@ function cfgOperation(page, alwaysActive, action)
                 group : group,
                 expand : expand,
                 index : index+"."+n.id,
+                preindex : index,
                 stat: stat,
                 n : n,
                 div : div,
@@ -724,7 +725,7 @@ function cfgOperation(page, alwaysActive, action)
                             arg.div.empty();
                             for (var y=0;y<n.value.length;y++)
                             {
-                              arg.addListOne(arg.loader, arg.index, arg.stat, arg.div, n, y);
+                              arg.addListOne(arg.loader, arg.preindex, arg.stat, arg.div, n, y);
                             }
                             if (!n.value.length)
                             {
@@ -745,7 +746,7 @@ function cfgOperation(page, alwaysActive, action)
                 },
                 add: function(d,item){
                     d.n.value.push(item);
-                    d.addListOne(d.loader, d.index, d.stat, d.div, d.n, d.n.value.length-1);
+                    d.addListOne(d.loader, d.preindex, d.stat, d.div, d.n, d.n.value.length-1);
                     if (d.n.value.length == 1)
                     {
                       d.expand.show();
