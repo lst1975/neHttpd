@@ -117,10 +117,10 @@ Embedded HTTP Server for Web Configuraion Framwork
           "string" : [\x20-\x7E]
           "float"  : [-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?
           "bool"   : true or false
-          "group"  : V expand
-          "group+" : > 
-          "list"   : ...
-          "list+"  : + - ... 
+          "group"  : V (expand)
+          "group+" : > (expand)
+          "list"   : ... (expand)
+          "list+"  : + - ... (+:add, -:delete, ...:expand) 
 
 # Copying
    ```
