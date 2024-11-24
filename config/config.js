@@ -52,14 +52,38 @@ function cfgOperation(page, alwaysActive, action)
     var v  = __getVal(__ev);
     if ((ov.type != "bool" && !ov.value) || ov.value != v)
     {
+      var formatErr = "Format Error! Example: ";
+      var exampleV4 = "192.168.1.1.";
+      var exampleV6 = "2001:db8:0:0:0:0:2:1/::1/::ffff:192.0.2.128/2001:db8::567:1.";
       var isValOk;
       switch (ov.type){
+        case "url":
+           isValOk = function(z,v){
+              v = v.trim();
+              if(gmtIsString(v) && (/^|(http(s)?:\/\/)([\w-]+\.)+[\w-]+([\w- ;,.\/?%&=]*)/).test(v))
+                return null;
+              return "Format Error! Example: [http[s]://][<user>:<password>@]<location>[:<port>]";
+            };
+          break;
+         
+        case "ipv6":
+          isValOk = function(z,v){
+              v = v.trim();
+              if (v.length < 2 || v.length > 45)
+                return formatErr + exampleV4;
+              if(gmtIsString(v) && (/^([\da-fA-F]{1,4}:){6}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^::([\da-fA-F]{1,4}:){0,4}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:):([\da-fA-F]{1,4}:){0,3}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){2}:([\da-fA-F]{1,4}:){0,2}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){3}:([\da-fA-F]{1,4}:){0,1}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){4}:((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){7}[\da-fA-F]{1,4}$|^:((:[\da-fA-F]{1,4}){1,6}|:)$|^[\da-fA-F]{1,4}:((:[\da-fA-F]{1,4}){1,5}|:)$|^([\da-fA-F]{1,4}:){2}((:[\da-fA-F]{1,4}){1,4}|:)$|^([\da-fA-F]{1,4}:){3}((:[\da-fA-F]{1,4}){1,3}|:)$|^([\da-fA-F]{1,4}:){4}((:[\da-fA-F]{1,4}){1,2}|:)$|^([\da-fA-F]{1,4}:){5}:([\da-fA-F]{1,4})?$|^([\da-fA-F]{1,4}:){6}:$/).test(v))
+                return null;
+              return formatErr + exampleV6;
+            };
+          break;
         case "ipv4":
           isValOk = function(z,v){
               v = v.trim();
-              if(gmtIsString(v) && (/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/).test(v))
+              if (v.length < 7 || v.length > 15)
+                return formatErr + exampleV4;
+              if(gmtIsString(v) && (/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/).test(v))
                 return null;
-              return "Format Error! Example: 192.168.1.1."
+              return formatErr + exampleV4;
             };
           break;
         case "string":
@@ -81,7 +105,7 @@ function cfgOperation(page, alwaysActive, action)
               var zv = z.data("osrc");
               if (zv.range && gmtIsArray(zv.range))
               {
-                if (Number(v) >= zv.range[0] && Number(v) <= zv.range[1])
+                if (v >= zv.range[0] && v <= zv.range[1])
                   return null;
                 return "Range Error! Range: " + JSON.stringify(zv.range);
               };
@@ -162,6 +186,8 @@ function cfgOperation(page, alwaysActive, action)
             if (n.writable) stat.w++;
             break;
           case "ipv4":
+          case "ipv6":
+          case "url":
           case "number":
           case "string":
           case "float":
@@ -495,7 +521,7 @@ function cfgOperation(page, alwaysActive, action)
   this.submit = function(button, ___id, file, data, okCb, arg)
   {
     this.subAction = file;
-    nanoAjaxGet(this, file, "GET", data, 
+    nanoAjaxGet(this, file, "GET", "data="+btoa(data), 
       function(response, err){
         //TODO
         var d = this.stat;
