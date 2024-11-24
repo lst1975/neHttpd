@@ -60,7 +60,7 @@ extern "C" {
  *
  * @see base64_decode_string
  */
-extern void base64_encode_string(const unsigned char *instr, unsigned char *outstr);
+extern int base64_encode_string(const unsigned char *instr, unsigned char *outstr);
 
 /** Base64 decodes a NUL terminated array of characters.
  *
