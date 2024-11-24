@@ -785,8 +785,11 @@ button::-moz-focus-inner {
 .cfg_container .input-group > div.list > .add {
   font-size: 150%;
   line-height: 29px;
+  margin-right:10px;
 }
-
+.cfg_container .input-group > div.list > .add.single {
+  margin-right:0px;
+}
 .cfg_container .input-group > label.group {
   display: block;
   margin-bottom: 5px;

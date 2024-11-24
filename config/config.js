@@ -467,7 +467,7 @@ function cfgOperation(page, alwaysActive, action)
           case "list+":
             var sel = $(
                  "<div class='list'>"
-                   +"<span class='arrow add' style='margin-right:10px'>&plus;</span>"
+                   +"<span class='arrow add'>&plus;</span>"
                    +"<span class='arrow expand down'>...</span>"
                 +"</div>"
               ).appendTo(group);
@@ -487,10 +487,13 @@ function cfgOperation(page, alwaysActive, action)
             add.attr("title", gmtLangBuild(["Add"],1));
             var addListItem = {
                 section : section,
+                group : group,
+                expand : expand,
                 index : index+"."+n.id,
                 stat: stat,
                 n : n,
                 div : div,
+                addButton : add,
                 loader: this,
                 addListOne: function(loader, index, stat, div, n, k){
                   var list = $(
@@ -547,6 +550,15 @@ function cfgOperation(page, alwaysActive, action)
                             {
                               arg.addListOne(arg.loader, arg.index, arg.stat, arg.div, n, y);
                             }
+                            if (!n.value.length)
+                            {
+                              if (arg.div.is(":visible"))
+                              {
+                                arg.group.trigger("tap");
+                              }
+                              arg.expand.hide();
+                              arg.addButton.addClass("single");
+                            }
                           }, addListItem);
                       }).fail(function(){
                       });              
@@ -558,6 +570,11 @@ function cfgOperation(page, alwaysActive, action)
                 add: function(d,item){
                     d.n.value.push(item);
                     d.addListOne(d.loader, d.index, d.stat, d.div, d.n, d.n.value.length-1);
+                    if (d.n.value.length == 1)
+                    {
+                      d.expand.show();
+                      d.addButton.removeClass("single");
+                    }
                   },
               };
             add.data("pos", addListItem)
