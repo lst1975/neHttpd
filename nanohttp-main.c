@@ -442,6 +442,8 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     }
     
     log_debug("try to decode %s\n",(char *)data);
+    
+    /* decode_url malloced new data */
     data = decode_url((const uint8_t*)data, strlen((char *)data));
     if (data == NULL)
     {
@@ -452,7 +454,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     log_debug("decoded query is : %s", data);
 
     len = strlen((char *)data);
-    query = (unsigned char *)malloc(len);
+    query = (unsigned char *)malloc(len * 3 / 4 + 1);
     if (query == NULL)
     {
       log_error("Failed to malloc key");
