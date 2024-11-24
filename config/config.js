@@ -3,6 +3,76 @@ var labelConv = {
   "Host Name":"Host Name",
 };
 
+function valid8_Validation(buffer) 
+{
+  if (gmtIsString(buffer))
+  {
+    const utf8EncodeText = new TextEncoder();
+    buffer = utf8EncodeText.encode(buffer);
+  }
+  /*
+  Maximum length allowed. Can be set to 5 or 6 (or to 1, 2 or 3)
+   */
+
+   var maxBytes = 4;
+
+
+  /*
+  Allow Unicode surrogates (0xD800-0xDFFF)
+   */
+  var surrogates = true;
+
+  var code, i, j, len, mask, mode, n;
+  mode = 0;
+  for (i = j = 0, len = buffer.length; j < len; i = ++j) {
+    n = buffer[i];
+    if (mode) {
+      if (0x80 !== (0xC0 & n)) {
+        return;
+      }
+      code = code << 6 | n & 0x3F;
+      if (--mode) {
+        continue;
+      }
+      if (maxBytes < 5 && code > 0x0010FFFF) {
+        return;
+      }
+      if (!surrogates && (0xD800 <= code && code <= 0xDFFF)) {
+        return;
+      }
+      if (!(code >> mask)) {
+        return;
+      }
+      continue;
+    }
+    if (!(n & 0x80)) {
+      continue;
+    }
+    if (n === 0xFF || n === 0xFE || n === 0xC0 || n === 0xC1) {
+      return;
+    }
+    if (!(n & 0x40)) {
+      return;
+    }
+    mode = 1;
+    mask = 0x20;
+    while (n & mask) {
+      mask >>= 1;
+      mode++;
+    }
+    if (mode >= maxBytes) {
+      return;
+    }
+    code = n & mask - 1;
+    mask = 5 * mode + 1;
+  }
+  
+  if (mode) {
+    return false;
+  }
+  return true;
+};
+
 function toggleArrow(el, up, down)
 {
   if (el.hasClass("down"))
@@ -117,7 +187,8 @@ function cfgOperation(page, alwaysActive, action)
           isValOk = function(z,v){
               if (!gmtIsString(v))
                 return "Format Error! Not string";
-              if (!(/^[\x20-\x7E]+$/).test(v))
+              if (!(/^[\x20-\x7E]+$/).test(v)
+                && !valid8_Validation(v))
                 return "Format Error! Non-printable character";
               v = v.trim();
               var zv = z.data("osrc");
