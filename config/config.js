@@ -293,7 +293,6 @@ function cfgOperation(page, alwaysActive, action)
               if (!(/^[\x20-\x7E]+$/).test(v)
                 && !valid8_Validation(v))
                 return "Format Error! Non-printable character";
-              v = v.trim();
               var zv = z.data("osrc");
               if (zv.range && gmtIsArray(zv.range))
               {
@@ -360,7 +359,8 @@ function cfgOperation(page, alwaysActive, action)
           v=Number(v);
           break;
         case "string":
-          v = Base64.encode(v);
+          //v = Base64.encode(v);
+          break;
         default:
           break;
       }
