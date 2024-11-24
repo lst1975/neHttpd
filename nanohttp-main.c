@@ -464,11 +464,10 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       free(data);
       goto finished;
     }
-    base64_decode_string(data, query);
+    len = base64_decode_string(data, query);
     free(data);
     log_debug("decoded query is : %s", query);
-
-    pair = json_parse((const char *)query, strlen((const char *)query));
+    pair = json_parse((const char *)query, len);
     if (pair == NULL)
     {
       free(query);

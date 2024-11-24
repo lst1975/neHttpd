@@ -69,7 +69,7 @@ extern void base64_encode_string(const unsigned char *instr, unsigned char *outs
  *
  * @see base64_encode_string
  */
-extern void base64_decode_string(const unsigned char *instr, unsigned char *outstr);
+extern int base64_decode_string(const unsigned char *instr, unsigned char *outstr);
 
 #ifdef __cplusplus
 }

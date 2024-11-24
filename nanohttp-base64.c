@@ -67,7 +67,7 @@ void base64_encode_string(const unsigned char *instr, unsigned char *outstr)
 }
 
 
-void base64_decode_string(const unsigned char *instr, unsigned char *outstr)
+int base64_decode_string(const unsigned char *instr, unsigned char *outstr)
 {
     char counts = 0;
     char buffer[4];
@@ -89,5 +89,6 @@ void base64_decode_string(const unsigned char *instr, unsigned char *outstr)
     }
 
     plain[p] = '\0';    /* string padding character */
+    return p;
 }
 
