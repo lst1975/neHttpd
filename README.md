@@ -108,18 +108,19 @@ Embedded HTTP Server for Web Configuraion Framwork
    ![cfg](https://github.com/user-attachments/assets/87bb6ed9-9e7a-41f6-9ef1-7645cf88e341)
 
 # Data Type
-          "array"  :  options
-          "url"    :   
-          "ipv4"   :   
-          "ipv6"   :   
-          "number" :  
-          "string" :
-          "float"  :
-          "bool"   :  true or false
-          "group"  :  V expand
-          "group+" :  > 
-          "list"   :  ...
-          "list+"  :  + - ... 
+          "array"  : options: [ *, *, ...]
+          "url"    : [http[s]://][<user>:<password>@]<location>[:<port>]  
+          "mac"    : 01-23-45-67-89-AB or 0123456789AB or 01:23:45:67:89:AB  
+          "ipv4"   : 192.168.1.1
+          "ipv6"   : 2001:db8:0:0:0:0:2:1|::1|::ffff:192.0.2.128|2001:db8::567:1  
+          "number" : [-+]?[0-9]*|[-+]?0(x|X)[0-9A-F]+
+          "string" : [x20-x7E]
+          "float"  : [-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?
+          "bool"   : true or false
+          "group"  : V expand
+          "group+" : > 
+          "list"   : ...
+          "list+"  : + - ... 
 
 # Copying
    ```
