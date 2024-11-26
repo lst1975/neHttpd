@@ -170,9 +170,14 @@ function MAIN_UPGRADE_display(p)
         var fileSize;
         
         //if file size is less than 1024 then add only KB else convert size into KB to MB
-        fileTotal < 1024
-          ? (fileSize = fileTotal + 'KB')
-          : (fileSize = (loaded / (1024 * 1024)).toFixed(2) + 'MB');
+        if (!fileTotal)
+          fileSize = total + 'B';
+        else 
+        {
+          fileTotal < 1024
+            ? (fileSize = fileTotal + 'KB')
+            : (fileSize = (loaded / (1024 * 1024)).toFixed(2) + 'MB');
+        }
         txt.css({
           "background-color":"#2eb9e3",
           "background":"linear-gradient(90deg, #0ff, #2eb9e3 "+fileLoaded+"%, transparent 0)",
