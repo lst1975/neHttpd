@@ -704,9 +704,9 @@ function cfgOperation(page, alwaysActive, action)
                         var ___id = loader.___mibid.id++;
                         var kd = {
                             id:___id,
-                            value : {}
+                            value : addListItem.index+(addListItem.n.index ? 
+                                ":"+addListItem.n.value[self.data("i")][addListItem.n.index].value:"")
                           };
-                        kd.value[addListItem.index]=1;
                         var y = JSON.stringify(kd);
                         loader.submit($(this), ___id, "data/del.json", y, function(arg){
                             var n = arg.n;
