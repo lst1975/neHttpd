@@ -469,6 +469,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     && strcmp("/data/del.json", req->path)
     && strcmp("/data/setmib.json", req->path)
 #if !__NHTTP_TEST      
+    && strcmp("/data/save.json", req->path)
     && strcmp("/data/template.json", req->path)
     && strcmp("/data/system.json", req->path)
 #endif
@@ -541,24 +542,29 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
 
     if (!strcmp("/data/setmib.json", req->path))
     {
+      // Process set operation
       n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"0.0\",\"reason\":"
         "\"For testing received error message from our product.\"}]}", (int)p->vint);
     }
     else if (!strcmp("/data/add.json", req->path))
     {
+      // Process add operation
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+    }
+    else if (!strcmp("/data/save.json", req->path))
+    {
+      // Process save operation
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
     }
     else if (!strcmp("/data/del.json", req->path))
     {
+      // Process del operation
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
     }
 #if !__NHTTP_TEST      
     else if (!strcmp("/data/template.json", req->path))
     {
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
-    }
-    else if (!strcmp("/data/system.json", req->path))
-    {
+      // Generate template.json
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
     }
 #endif    
@@ -569,7 +575,16 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
   }
   else
   {
-    r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+#if !__NHTTP_TEST      
+    if (!strcmp("/data/system.json", req->path))
+    {
+      // Generate system.json
+    }
+    else
+#endif    
+    {
+      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+    }
   }
 
 finished:  
