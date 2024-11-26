@@ -417,7 +417,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       && strcmp("data/add.json", req->path)
       && strcmp("data/del.json", req->path)
       && strcmp("data/save.json", req->path)
-#if __NHTTP_TEST      
+#if !__NHTTP_TEST      
       && strcmp("data/template.json", req->path)
       && strcmp("data/deivce.json", req->path)
       && strcmp("data/system.json", req->path)
