@@ -8,11 +8,11 @@ function page_common(name, type, display, alwaysActive, action)
   this.is_phone    = false;
   this.is_vertical = false;
   this.load    = function(data){
+              this.data = data;
               this.loader = new cfgOperation(this, alwaysActive, action);
               this.display(this);
               this.inited = true;
               this.isVisible = true;
-              this.data = data;
             };
   this.display = display;
   this.header  = null;
