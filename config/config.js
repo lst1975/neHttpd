@@ -358,6 +358,9 @@ function cfgOperation(page, alwaysActive, action)
         case "number":
           v=Number(v);
           break;
+        case "mac":
+          v=v.replace(/-/g, "").replace(/:/g, "");
+          break;
         case "string":
           //v = Base64.encode(v);
           break;
