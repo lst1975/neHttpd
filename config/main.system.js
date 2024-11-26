@@ -24,7 +24,7 @@ function MAIN_TEMPLATE_display(p)
     };
   var y = JSON.stringify(kd);
   if (p.ajax) p.ajax.abort();
-  p.ajax = nanoAjaxGet(p, "data/template.json", "GET", y, 
+  p.ajax = nanoAjaxGet(p, "data/template.json", "GET", "data="+Base64.encode(y), 
     function(data,err){
       if (!err)
         p.loader.load_config(p,p.container,data);
