@@ -704,7 +704,7 @@ function cfgOperation(page, alwaysActive, action)
                         var ___id = loader.___mibid.id++;
                         var kd = {
                             id:___id,
-                            value : addListItem.index+(addListItem.n.index ? 
+                            value : addListItem.index+"."+self.data("i")+(addListItem.n.index ? 
                                 ":"+addListItem.n.value[self.data("i")][addListItem.n.index].value:"")
                           };
                         var y = JSON.stringify(kd);
