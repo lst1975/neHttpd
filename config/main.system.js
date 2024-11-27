@@ -27,6 +27,17 @@ function MAIN_TEMPLATE_display(p)
   p.ajax = nanoAjaxGet(p, "data/template.json", "GET", "data="+Base64.encode(y), 
     function(data,err){
       if (!err)
+        for (var a in data)
+        {
+          if (!data.hasOwnProperty(a))
+            continue;
+          var o = data[a];
+          if (gmtIsObject(o))
+          {
+            var n = p.data.n;
+            o.id = p.data.index+'.'+n.value.length+(n.index ? ":"+o[n.index].value:"");
+          }
+        }
         p.loader.load_config(p,p.container,data);
     });
 }

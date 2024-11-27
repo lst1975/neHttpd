@@ -178,6 +178,7 @@ function MAIN_UPGRADE_display(p)
             ? (fileSize = fileTotal + 'KB')
             : (fileSize = (loaded / (1024 * 1024)).toFixed(2) + 'MB');
         }
+          
         txt.css({
           "background-color":"#2eb9e3",
           "background":"linear-gradient(90deg, #0ff, #2eb9e3 "+fileLoaded+"%, transparent 0)",
