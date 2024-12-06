@@ -739,6 +739,8 @@ function cfgOperation(page, alwaysActive, action)
                               arg.expand.hide();
                               arg.addButton.addClass("single");
                             }
+                            if (arg.loader.action != "data/add.json")
+                              __load_page(arg.loader.page, null, true);
                           }, addListItem);
                       }).fail(function(){
                       });              
@@ -769,6 +771,15 @@ function cfgOperation(page, alwaysActive, action)
             group.addClass("hasSubsection").css("cursor", "pointer");
             if (!gmtIsArray(n.value))
               break;
+            if (!n.value.length)
+            {
+              if (div.is(":visible"))
+              {
+                group.trigger("tap");
+              }
+              expand.hide();
+              add.addClass("single");
+            }
             for (var i=0;i<n.value.length;i++)
             {
               addListItem.addListOne(this, index, stat, div, n, i);
@@ -812,7 +823,7 @@ function cfgOperation(page, alwaysActive, action)
             return;
           }
 
-          if (x.err && gmtIsArray(x.err))
+          if (x.err && gmtIsArray(x.err) && x.err.length)
           {
             for (var i=0;i<x.err.length;i++)
             {
@@ -918,7 +929,15 @@ function cfgOperation(page, alwaysActive, action)
                 value:{"0.9999999":1}
               };
             var y = JSON.stringify(k);
-            loader.submit(null, ___id, loader.action, y);
+            loader.submit(null, ___id, loader.action, y, function(arg){
+                $.MessageBox({
+                    buttonDone  : gmtLangBuild(["Confirm"],1),
+                    buttonFail  : null,
+                    message     : gmtLangBuild(["SaveOk"],1),
+                }).done(function(){
+                }).fail(function(){
+                });              
+              }, null);
           }
           else if ($(this).hasClass("return"))
           {
@@ -970,10 +989,6 @@ function cfgOperation(page, alwaysActive, action)
                 id:___id,
                 value:{}
               };
-            if (loader.action == "data/add.json")
-            {
-              k.value[page.data.index] = 1;
-            }
             for (m in d.values)
             {
               if (d.values.hasOwnProperty(m))

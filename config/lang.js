@@ -118,6 +118,7 @@ var gmtLangZH = {
   Detail:"详细配置",
   CfgFailed:"配置发生错误：",
   AddOk:"添加成功。"
+  SaveOk:"保存成功。"
 };
 
 var gmtLangEN = {
@@ -150,7 +151,8 @@ var gmtLangEN = {
   Add:"Add",
   Del:"Delete",
   CfgFailed:"Configuration Failed:",
-  AddOk:"Add Successfully."
+  AddOk:"Added Successfully."
+  SaveOk:"Saved Successfully."
 };
 
 var gmtLang = gmtBrowser.lang == "zh-cn" ? gmtLangZH : gmtLangEN;

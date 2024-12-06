@@ -241,8 +241,8 @@ var ____workingBusy;
 var ____login;
 var ____auth=null;
 var __p = null;
-function __load_page(p,data){
-  if (p.isVisible)
+function __load_page(p,data,forced){
+  if (!forced && p.isVisible)
   {
     return;
   }
@@ -276,7 +276,9 @@ function __close_sub_page(p){
   p.parent.toggle();
   p.container.remove();
   __p = p.parent;
+  __p.hide();
   delete p;
+  __load_page(__p);
 }
 function __start_icon(____toolbar){
     var scroll = $('<div class="left-icon-scroll"></div>').appendTo(____toolbar);
