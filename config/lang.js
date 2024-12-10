@@ -117,7 +117,7 @@ var gmtLangZH = {
   Del:"删除",
   Detail:"详细配置",
   CfgFailed:"配置发生错误：",
-  AddOk:"添加成功。"
+  AddOk:"添加成功。",
   SaveOk:"保存成功。"
 };
 
@@ -151,7 +151,7 @@ var gmtLangEN = {
   Add:"Add",
   Del:"Delete",
   CfgFailed:"Configuration Failed:",
-  AddOk:"Added Successfully."
+  AddOk:"Added Successfully.",
   SaveOk:"Saved Successfully."
 };
 
