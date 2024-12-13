@@ -251,6 +251,13 @@ hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
                       "Socket error (%s)", strerror(errno));
 
+  // Set FD_CLOEXEC on the file descriptor
+  int flags = fcntl(dsock->sock, F_GETFD);
+  if (flags == -1 || fcntl(dsock->sock, F_SETFD, flags | FD_CLOEXEC) == -1) {
+    return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
+                      "Socket error (%s)", strerror(errno));
+  }
+
   /* Get host data */
   s = inet_pton(AF_INET, hostname, &address.sin_addr);
   if (s <= 0) {
@@ -300,6 +307,13 @@ hsocket_bind(struct hsocket_t *dsock, unsigned short port)
                       "Socket error (%s)", strerror(errno));
   }
 
+  // Set FD_CLOEXEC on the file descriptor
+  int flags = fcntl(sock.sock, F_GETFD);
+  if (flags == -1 || fcntl(sock.sock, F_SETFD, flags | FD_CLOEXEC) == -1) {
+    return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
+                      "Socket error (%s)", strerror(errno));
+  }
+  
   setsockopt(sock.sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
   /* bind socket */
   addr.sin_family = AF_INET;
