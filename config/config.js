@@ -470,6 +470,7 @@ function cfgOperation(page, alwaysActive, action)
             val.data("cfg", this);
             val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
             val.data("setVal", function(__el, __val){
+                __el.data("osrc").value = __val;
                 __el.val(__val);
               });
             val.on("change", function(e){
@@ -511,6 +512,7 @@ function cfgOperation(page, alwaysActive, action)
             val.data("cfg", this);
             val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
             val.data("setVal", function(__el, __val){
+                __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
                   __el.val(__val);
                 else
@@ -558,6 +560,7 @@ function cfgOperation(page, alwaysActive, action)
             val.prop('disabled', !n.writable);
             val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
             val.data("setVal", function(__el, __val){
+                __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
                   __el.prop('checked', __val ? true : false);
                 else
