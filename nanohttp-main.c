@@ -484,6 +484,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     unsigned char *query;
     unsigned char *data = NULL;
     JSONPair_t *pair,*p;
+    JSONStatus_t result;
 
     data = (unsigned char *)hpairnode_get(req->query, "data");
     if (data == NULL)
@@ -517,8 +518,8 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     len = base64_decode_string(data, query);
     free(data);
     log_debug("decoded query is : %s", query);
-    pair = json_parse((const char *)query, len);
-    if (pair == NULL)
+    result = json_parse(&pair, (const char *)query, len);
+    if (result != JSONSuccess)
     {
       free(query);
       log_error("Failed to parse json");
@@ -657,7 +658,8 @@ int json_test(void)
   json_show(buffer,strlen(buffer));
 
   printf("\n\n");
-  JSONPair_t *p = json_parse(buffer,bufferLength);
+  JSONPair_t *p;
+  result = json_parse(&p, buffer,bufferLength);
 
   //json_print(p,0,"  ");
   //printf("\n\n");

@@ -1886,7 +1886,7 @@ void json_pairs_free(JSONPair_t *pair)
 
 #define json_MIN(a,b) ((a)<(b) ? (a) : (b))
 
-JSONPair_t *json_parse(const char *json, size_t length)
+JSONStatus_t json_parse(JSONPair_t **__pair, const char *json, size_t length)
 {
   size_t start = 0, next = 0;
   JSONStatus_t result;
@@ -1896,15 +1896,18 @@ JSONPair_t *json_parse(const char *json, size_t length)
   result = JSON_Validate(json, length);
   if (result != JSONSuccess)
   {
-    return NULL;
+    *__pair = NULL;
+    return result;
   }
 
   while (result != JSONNotFound)
   {
     JSONPair_t *pair = malloc(sizeof(*pair));
     if (pair == NULL)
+    {
+      result = JSONBadParameter;
       goto clean0;
-
+    }
     memset(pair,0,sizeof(*pair));
 
     result = JSON_Iterate(json, length, &start, &next, pair);
@@ -1912,7 +1915,10 @@ JSONPair_t *json_parse(const char *json, size_t length)
     {
       free(pair);
       if (result == JSONNotFound)
+      {
+        result = JSONSuccess;
         break;
+      }
       goto clean0;
     }
     else
@@ -1921,6 +1927,7 @@ JSONPair_t *json_parse(const char *json, size_t length)
         && (pair->jsonType != JSONArray && pair->jsonType != JSONObject))
       {
         free(pair);
+        result = JSONBadParameter;
         goto clean0;
       }
     }
@@ -1938,6 +1945,7 @@ JSONPair_t *json_parse(const char *json, size_t length)
     {
       default:
       case JSONInvalid:
+        result = JSONBadParameter;
         goto clean0;
       case JSONString:
         break;
@@ -1960,6 +1968,7 @@ JSONPair_t *json_parse(const char *json, size_t length)
           }
           if (p != str + len)
           {
+            result = JSONBadParameter;
             goto clean0;
           }
         }
@@ -1978,22 +1987,25 @@ JSONPair_t *json_parse(const char *json, size_t length)
         {
           JSONPair_t *child;
 
-          child = json_parse(pair->value, pair->valueLength);
-          if (child == NULL)
+          result = json_parse(&child, pair->value, pair->valueLength);
+          if (result != JSONSuccess && result != JSONNotFound)
           {
             goto clean0;
           }
+          result = JSONSuccess;
           pair->children = child;
         }
         break;
     }
   } ;
 
-  return prev;
+  *__pair = prev;
+  return result;
   
 clean0:
   json_pairs_free(prev);
-  return NULL;
+  *__pair = NULL;
+  return result;
 }
 
 static int __json_pad_put(char *buf, int len, int depth, const char *pad)

@@ -270,7 +270,7 @@ JSONStatus_t json_print(JSONPair_t *pair, int depth, const char *pad);
 JSONStatus_t json_tostr(JSONPair_t *pair, char *buf, 
   size_t length, int depth, const char *pad);
 int json_cal_length(JSONPair_t *pair, int depth, const char *pad);
-JSONPair_t *json_parse(const char *json, size_t length);
+JSONStatus_t json_parse(JSONPair_t **pair, const char *json, size_t length);
 JSONPair_t *json_find_bykey(JSONPair_t *pair, const char *key, 
   size_t length);
 
