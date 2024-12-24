@@ -27,10 +27,42 @@
     "theme":{
       "type":"array",
       "range":["Dark","Light","Gray"],
-      "value":"Dark",
+      "value":"Light",
       "writable":true,
       "label": "Theme",
       "id": 3
+    },
+    "firewall":{
+      "type":"bool",
+      "range":[0,1],
+      "value":true,
+      "writable":true,
+      "label": "Firewall",
+      "id": 4
+    },
+    "status":{
+      "type":"bool",
+      "range":[0,1],
+      "value":true,
+      "writable":false,
+      "label": "Status",
+      "id": 5
+    },
+    "close":{
+      "type":"bool",
+      "range":[0,1],
+      "value":false,
+      "writable":false,
+      "label": "Closed",
+      "id": 6
+    },
+    "url":{
+      "type":"url",
+      "range":[7,-1],
+      "value":"http://localhost:8080/",
+      "writable":true,
+      "label": "URL",
+      "id": 7
     },
     "memory":{
       "total":{
@@ -58,15 +90,15 @@
         "id": 2
       },
       "label":"Memory",
-      "type":"group",
-      "id": 5 
+      "type":"group+",
+      "id": 8 
    },
    "cpu":{
       "count":{
         "type":"number",
         "range":[1,100],
         "value":20,
-        "writable":false,
+        "writable":true,
         "label": "Cpu quantity",
         "id": 0
       },
@@ -86,9 +118,141 @@
         "label":"Model",
         "id": 2
       },
+      "freq":{
+        "type":"float",
+        "range":null,
+        "value":"3.20",
+        "writable":true,
+        "label": "Frequency",
+        "id": 3
+      },
       "label":"CPU",
       "type":"group",
-      "id":6 
+      "id":9 
+    },
+    "net1":{
+      "type":"list",
+      "label":"Network Fixed",
+      "id":10,
+      "range":[1,100],
+      "writable":true,
+      "index":"name",
+      "value":[
+        {
+          "name":{
+            "type":"string",
+            "range":[2,128],
+            "value":"eth0",
+            "writable":false,
+            "label": "Ethernet Port",
+            "id":0
+          },
+          "ipv4":{
+            "type":"ipv4",
+            "range":[7,17],
+            "value":"192.168.1.10",
+            "writable":true,
+            "label": "Ipv4 Address",
+            "id":1
+          },
+          "mac":{
+            "type":"mac",
+            "range":[12,17],
+            "value":"01:23:45:67:89:AB",
+            "writable":true,
+            "label": "Mac Address",
+            "id": 2
+          }
+        },
+        {
+          "name":{
+            "type":"string",
+            "range":[2,128],
+            "value":"wifi0",
+            "writable":false,
+            "label": "Wlan Port",
+            "id":0
+          },
+          "ipv4":{
+            "type":"ipv4",
+            "range":[7,17],
+            "value":"10.10.1.10",
+            "writable":true,
+            "label": "Ipv4 Address",
+            "id":1
+          },
+          "signal":{
+            "type":"float",
+            "range":[0,1],
+            "value":0.8,
+            "writable":false,
+            "label": "Signal Strength",
+            "id":1
+          }
+        }
+      ]
+    },
+    "net2":{
+      "type":"list+",
+      "label":"Network Volatile",
+      "id":11,
+      "range":[1,100],
+      "writable":true,
+      "index":"name",
+      "value":[
+        {
+          "name":{
+            "type":"string",
+            "range":[2,128],
+            "value":"eth0",
+            "writable":false,
+            "label": "Ethernet Port",
+            "id":0
+          },
+          "ipv4":{
+            "type":"ipv4",
+            "range":[7,17],
+            "value":"192.168.1.10",
+            "writable":true,
+            "label": "Ipv4 Address",
+            "id":1
+          }
+        },
+        {
+          "name":{
+            "type":"string",
+            "range":[2,128],
+            "value":"wifi0",
+            "writable":false,
+            "label": "Wlan Port",
+            "id":0
+          },
+          "ipv4":{
+            "type":"ipv4",
+            "range":[7,15],
+            "value":"10.10.1.10",
+            "writable":true,
+            "label": "Ipv4 Address",
+            "id":1
+          },
+          "ipv6":{
+            "type":"ipv6",
+            "range":[2,45],
+            "value":"2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+            "writable":true,
+            "label": "Ipv6 Address",
+            "id":2
+          },
+          "signal":{
+            "type":"float",
+            "range":[0,1],
+            "value":0.8,
+            "writable":false,
+            "label": "Signal Strength",
+            "id":3
+          }
+        }
+      ]
     },
     "label":"Device Overview",
     "id": 0
