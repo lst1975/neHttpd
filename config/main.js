@@ -292,28 +292,56 @@ function __close_sub_page(p){
   __load_page(__p);
 }
 function __start_icon(____toolbar){
-    var scroll = $('<div class="left-icon-scroll"></div>').appendTo(____toolbar);
-    var wrap = $('<div class="left-icon-wrap"></div>').appendTo(scroll);
-    var container = $('<div class="left-icon-container"></div>').appendTo(wrap);
-    $('<div class="table-left-gap"/>').appendTo(container);
+  var scroll = $('<div class="left-icon-scroll"></div>').appendTo(____toolbar);
+  var wrap = $('<div class="left-icon-wrap"></div>').appendTo(scroll);
+  var container = $('<div class="left-icon-container"></div>').appendTo(wrap);
+  $('<div class="table-left-gap"/>').appendTo(container);
 
-    var leftIcon=[
-      {name: "DeviceInfo", lang:gmtLangBuild(["DeviceInfo"],1), ln:"config/system.png", isSys: 0},
-      {name: "Config", lang:gmtLangBuild(["Config"],1), ln:"config/config.png", isSys: 0},
-      {name: "SystemUpgrade", lang:gmtLangBuild(["SystemUpgrade"],1), ln:"config/upgrade.png", isSys: 0},
-    ];
-    for (var i=0; i<leftIcon.length;i++)
+  var leftIcon=[
+    {name: "DeviceInfo", lang:gmtLangBuild(["DeviceInfo"],1), ln:"config/system.png", isSys: 0},
+    {name: "Config", lang:gmtLangBuild(["Config"],1), ln:"config/config.png", isSys: 0},
+    {name: "SystemUpgrade", lang:gmtLangBuild(["SystemUpgrade"],1), ln:"config/upgrade.png", isSys: 0},
+  ];
+  for (var i=0; i<leftIcon.length;i++)
+  {
+      $('<div class="table-left-container '+leftIcon[i].name+'">'
+        +'<table class="main-icon"><tr><td class="left"><img class="'+leftIcon[i].name+'" svg="'+leftIcon[i].ln+'" src="'
+          +getIconSvg(leftIcon[i].ln)+'"></img></td><td class="right"><div class="text">'
+          +leftIcon[i].lang+'</div></td></tr></table>'
+        +'</div>').appendTo(container);
+  };
+
+  function getIconSvgWithColor(n, color)
+  {
+    return __icons[n] ? getSvgDataURI(__icons[n].replace(/fill="[^\"]+"/, 'fill="#'+color+'"')) : n;
+  }
+
+  var choosedColor = "0a7ea1";
+  function toolbarChangeICON(el){
+    var img = el.find("img");
+    var svgName = img.attr("svg");
+    var choosed = ____toolbar.find(".table-left-container.choosed");
+    if (choosed.length)
     {
-        $('<div class="table-left-container '+leftIcon[i].name+'">'
-          +'<table class="main-icon"><tr><td class="left"><img class="'+leftIcon[i].name+'" src="'
-            +getIconSvg(leftIcon[i].ln)+'"></img></td><td class="right"><div class="text">'
-            +leftIcon[i].lang+'</div></td></tr></table>'
-          +'</div>').appendTo(container);
-    };
-
+      var _txt = choosed.find(".text");
+      var _img = choosed.find("img");
+      var _svgName = _img.attr("svg");
+      _img.attr("src", getIconSvgWithColor(_svgName, "000000"));
+      _txt.css("color", _txt.attr("oldColor") || "#000000");
+      choosed.removeClass("choosed");
+    }
+    img.attr("src", getIconSvgWithColor(svgName, choosedColor));
+    var txt = el.find(".text");
+    if (!txt.attr("oldColor"))
+      txt.attr("oldColor", txt.css("color"));
+    txt.css("color", "#"+choosedColor);
+    el.addClass("choosed");
+  };
+  
   var z = ____toolbar.find(".table-left-container.SystemUpgrade");
   z.AlloyFinger({
     "tap":function(e){
+      toolbarChangeICON($(this));
       __start_page(page_UPGRADE);
     }
   });
@@ -321,17 +349,20 @@ function __start_icon(____toolbar){
   z = ____toolbar.find(".table-left-container.Config");
   z.AlloyFinger({
     "tap":function(e){
+      toolbarChangeICON($(this));
       __start_page(page_DEVICE);
     }
   });
 
-  
   z = ____toolbar.find(".table-left-container.DeviceInfo");
   z.AlloyFinger({
     "tap":function(e){
+      toolbarChangeICON($(this));
       __start_page(page_SYSTEM);
     }
   });
+
+  toolbarChangeICON(z);
 }
 
 function __start_page(page){
