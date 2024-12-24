@@ -358,9 +358,6 @@ function cfgOperation(page, alwaysActive, action)
         case "number":
           v=Number(v);
           break;
-        case "mac":
-          v=v.replace(/-/g, "").replace(/:/g, "");
-          break;
         case "string":
           //v = Base64.encode(v);
           break;
@@ -390,54 +387,6 @@ function cfgOperation(page, alwaysActive, action)
       changeSubmitButtonState(ot.submit, ot.c);
   }
 
-  this.__eachIndex = function(o, index, cbIdx)
-  {
-    for (var b in o)
-    {
-      if (!o.hasOwnProperty(b))
-        continue;
-      var n = o[b];
-      if (gmtIsObject(n))
-      {
-        switch (n.type)
-        {
-          case "array":
-          case "ipv4":
-          case "ipv6":
-          case "url":
-          case "mac":
-          case "number":
-          case "string":
-          case "float":
-          case "bool":
-            cbIdx(".__elVal_"+(index+"."+n.id).replace(/\./g, "_"), n.value);
-            break;
-          case "group":
-          case "group+":
-          case "list":
-          case "list+":
-            break;
-          default:
-            this.__eachIndex(index+"."+n.id);
-            break;
-        }
-      }
-    }
-  }
-
-  this.eachIndex = function(cfg, cbIdx)
-  {
-    for (var a in cfg)
-    {
-      if (!cfg.hasOwnProperty(a))
-        continue;
-      var o = cfg[a];
-      if (gmtIsObject(o))
-      {
-        this.__eachIndex(o, o.id, cbIdx);
-      }
-    }
-  }
   this.load_group = function(stat, section, o, index)
   {
     for (var b in o)
@@ -452,7 +401,7 @@ function cfgOperation(page, alwaysActive, action)
         if (n.writable) 
           group.addClass("writable");
         var label = labelConv[n.label || n] || n.label || n;
-        group.append("<label class='group' for='"+(index+"."+n.id)+"'>"+label+"</label>");
+        group.append("<label class='group' for='"+(b+index)+"'>"+label+"</label>");
         switch (n.type)
         {
           case "array":
@@ -464,15 +413,10 @@ function cfgOperation(page, alwaysActive, action)
             html += '</select>';
             val = $(html).appendTo(group).attr("index", index+"."+n.id);
             if (n.value) val.val(n.value);
-            val.attr("id",index+"."+n.id);
+            val.attr("id",b+index);
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
-            val.data("setVal", function(__el, __val){
-                __el.data("osrc").value = __val;
-                __el.val(__val);
-              });
             val.on("change", function(e){
                 $(this).removeClass("error")
                 $(this).attr("title","");
@@ -504,20 +448,12 @@ function cfgOperation(page, alwaysActive, action)
             }
             val = $(html).appendTo(group);
             if (n.writable) stat.w++, val.addClass("writable");
-            val.attr("id",index+"."+n.id);
+            val.attr("id",b+index);
             val.attr("cfgType", n.type);
             val.attr("index", index+"."+n.id);
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
-            val.data("setVal", function(__el, __val){
-                __el.data("osrc").value = __val;
-                if (__el.hasClass("writable"))
-                  __el.val(__val);
-                else
-                  __el.text(__val);
-              });
             val.on("change", function(e){
                 $(this).removeClass("error")
                 $(this).attr("title","");
@@ -551,25 +487,20 @@ function cfgOperation(page, alwaysActive, action)
   			      val = e;
   		      }
             if (n.writable) stat.w++, val.addClass("writable");
-            val.attr("id",index+"."+n.id);
+            val.attr("id",b+index);
             val.attr("cfgType", n.type);
             val.attr("index", index+"."+n.id);
             val.data("osrc", n);
             val.data("stat", stat);
             val.attr("title", gmtLangBuild([n.value ? "Yes" : "No"],1));
+            if (n.writable) 
+              val.prop('checked', n.value ? true : false);
+            else
+            {
+              val.html(n.value ? "&#10004;" : "&#10008;");
+              val.css("color",n.value ? "green":"#ad5454");
+            }
             val.prop('disabled', !n.writable);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
-            val.data("setVal", function(__el, __val){
-                __el.data("osrc").value = __val;
-                if (__el.hasClass("writable"))
-                  __el.prop('checked', __val ? true : false);
-                else
-                {
-                  __el.html(__val ? "&#10004;" : "&#10008;");
-                  __el.css("color",__val ? "green":"#ad5454");
-                }
-              });
-            val.data("setVal")(val, n.value);
   		      if (n.writable)
   		      {
               val.data("cfg", this);
@@ -770,9 +701,9 @@ function cfgOperation(page, alwaysActive, action)
                         var ___id = loader.___mibid.id++;
                         var kd = {
                             id:___id,
-                            value : addListItem.index+"."+self.data("i")+(addListItem.n.index ? 
-                                ":"+addListItem.n.value[self.data("i")][addListItem.n.index].value:"")
+                            value : {}
                           };
+                        kd.value[addListItem.index]=1;
                         var y = JSON.stringify(kd);
                         loader.submit($(this), ___id, "data/del.json", y, function(arg){
                             var n = arg.n;
@@ -805,8 +736,6 @@ function cfgOperation(page, alwaysActive, action)
                               arg.expand.hide();
                               arg.addButton.addClass("single");
                             }
-                            if (arg.loader.action != "data/add.json")
-                              __load_page(arg.loader.page, null, true);
                           }, addListItem);
                       }).fail(function(){
                       });              
@@ -837,15 +766,6 @@ function cfgOperation(page, alwaysActive, action)
             group.addClass("hasSubsection").css("cursor", "pointer");
             if (!gmtIsArray(n.value))
               break;
-            if (!n.value.length)
-            {
-              if (div.is(":visible"))
-              {
-                group.trigger("tap");
-              }
-              expand.hide();
-              add.addClass("single");
-            }
             for (var i=0;i<n.value.length;i++)
             {
               addListItem.addListOne(this, index, stat, div, n, i);
@@ -889,7 +809,7 @@ function cfgOperation(page, alwaysActive, action)
             return;
           }
 
-          if (x.err && gmtIsArray(x.err) && x.err.length)
+          if (x.err && gmtIsArray(x.err))
           {
             for (var i=0;i<x.err.length;i++)
             {
@@ -995,15 +915,7 @@ function cfgOperation(page, alwaysActive, action)
                 value:{"0.9999999":1}
               };
             var y = JSON.stringify(k);
-            loader.submit(null, ___id, loader.action, y, function(arg){
-                $.MessageBox({
-                    buttonDone  : gmtLangBuild(["Confirm"],1),
-                    buttonFail  : null,
-                    message     : gmtLangBuild(["SaveOk"],1),
-                }).done(function(){
-                }).fail(function(){
-                });              
-              }, null);
+            loader.submit(null, ___id, loader.action, y);
           }
           else if ($(this).hasClass("return"))
           {
@@ -1055,6 +967,10 @@ function cfgOperation(page, alwaysActive, action)
                 id:___id,
                 value:{}
               };
+            if (loader.action == "data/add.json")
+            {
+              k.value[page.data.index] = 1;
+            }
             for (m in d.values)
             {
               if (d.values.hasOwnProperty(m))
