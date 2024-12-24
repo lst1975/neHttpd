@@ -28,7 +28,7 @@ function MAIN_SYSTEM_display(p)
                       var el = p.container.find(idx);
                       if (el.length)
                       {
-                        el.data("setVal")(val);
+                        el.data("setVal")(el, val);
                       }
                     }
                   });

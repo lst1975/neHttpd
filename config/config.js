@@ -469,8 +469,8 @@ function cfgOperation(page, alwaysActive, action)
             val.data("stat", stat);
             val.data("cfg", this);
             val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
-            val.data("setVal", function(__val){
-                $(this).val(__val);
+            val.data("setVal", function(__el, __val){
+                __el.val(__val);
               });
             val.on("change", function(e){
                 $(this).removeClass("error")
@@ -510,11 +510,11 @@ function cfgOperation(page, alwaysActive, action)
             val.data("stat", stat);
             val.data("cfg", this);
             val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
-            val.data("setVal", function(__val){
-                if ($(this).hasClass("writable"))
-                  $(this).val(__val);
+            val.data("setVal", function(__el, __val){
+                if (__el.hasClass("writable"))
+                  __el.val(__val);
                 else
-                  $(this).text(__val);
+                  __el.text(__val);
               });
             val.on("change", function(e){
                 $(this).removeClass("error")
@@ -557,16 +557,16 @@ function cfgOperation(page, alwaysActive, action)
             val.attr("title", gmtLangBuild([n.value ? "Yes" : "No"],1));
             val.prop('disabled', !n.writable);
             val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
-            val.data("setVal", function(__val){
-                if ($(this).hasClass("writable"))
-                  $(this).prop('checked', __val ? true : false);
+            val.data("setVal", function(__el, __val){
+                if (__el.hasClass("writable"))
+                  __el.prop('checked', __val ? true : false);
                 else
                 {
-                  $(this).html(__val ? "&#10004;" : "&#10008;");
-                  $(this).css("color",__val ? "green":"#ad5454");
+                  __el.html(__val ? "&#10004;" : "&#10008;");
+                  __el.css("color",__val ? "green":"#ad5454");
                 }
               });
-            val.data("setVal")(n.value);
+            val.data("setVal")(val, n.value);
   		      if (n.writable)
   		      {
               val.data("cfg", this);
