@@ -255,6 +255,7 @@ var __p = null;
 function __load_page(p,data,forced){
   if (!forced && p.isVisible)
   {
+    __p = p;
     return;
   }
   if (__p)
