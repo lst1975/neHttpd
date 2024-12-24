@@ -4,7 +4,7 @@ function page_common(name, type, display, alwaysActive, action)
   this.type    = type;
   this.page_wrapper = null;
   this.container    = null;
-  
+  this.intervalID   = -1;
   this.is_phone    = false;
   this.is_vertical = false;
   this.load    = function(data){
@@ -22,6 +22,8 @@ function page_common(name, type, display, alwaysActive, action)
   this.inited  = false;
   this.content = null;
   this.page    = null;
+  this.ajax = null;
+  this.ajaxRefresh = null;
   this.resize  = function(){
     if (!this.inited || !this.isVisible)
         return;
@@ -36,9 +38,18 @@ function page_common(name, type, display, alwaysActive, action)
   this.hide = function(){this.isVisible = false};
 
   this.close = function(){
+      if (this.intervalID != -1)
+      {
+        clearInterval(this.intervalID);
+        this.intervalID = -1;
+      }
       if (this.ajax) {
         this.ajax.abort();
         this.ajax = null;
+      }
+      if (this.ajaxRefresh) {
+        this.ajaxRefresh.abort();
+        this.ajaxRefresh = null;
       }
       if (this.page_wrapper)
       {

@@ -9,7 +9,33 @@ function MAIN_SYSTEM_display(p)
   p.ajax = nanoAjaxGet(p, "data/system.json", "GET", null, 
     function(data,err){
       if (!err)
+      {
         p.loader.load_config(p,p.container,data);
+        if (p.intervalID != -1)
+        {
+          clearInterval(p.intervalID);
+          p.intervalID = -1;
+        }
+        p.intervalID = setInterval(function(){
+          //__load_page(page_SYSTEM, null, true)
+          p.ajaxRefresh = nanoAjaxGet(p, "data/system.json", "GET", null, 
+            function(data,err){
+              if (!err)
+              {
+                p.loader.eachIndex(data, function(idx, val){
+                    if (val)
+                    {
+                      var el = p.container.find(idx);
+                      if (el.length)
+                      {
+                        el.data("setVal")(val);
+                      }
+                    }
+                  });
+              }
+            })
+        }, 10000)
+      }
     });
 }
 

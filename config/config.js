@@ -390,6 +390,54 @@ function cfgOperation(page, alwaysActive, action)
       changeSubmitButtonState(ot.submit, ot.c);
   }
 
+  this.__eachIndex = function(o, index, cbIdx)
+  {
+    for (var b in o)
+    {
+      if (!o.hasOwnProperty(b))
+        continue;
+      var n = o[b];
+      if (gmtIsObject(n))
+      {
+        switch (n.type)
+        {
+          case "array":
+          case "ipv4":
+          case "ipv6":
+          case "url":
+          case "mac":
+          case "number":
+          case "string":
+          case "float":
+          case "bool":
+            cbIdx(".__elVal_"+(index+"."+n.id).replace(/\./g, "_"), n.value);
+            break;
+          case "group":
+          case "group+":
+          case "list":
+          case "list+":
+            break;
+          default:
+            this.__eachIndex(index+"."+n.id);
+            break;
+        }
+      }
+    }
+  }
+
+  this.eachIndex = function(cfg, cbIdx)
+  {
+    for (var a in cfg)
+    {
+      if (!cfg.hasOwnProperty(a))
+        continue;
+      var o = cfg[a];
+      if (gmtIsObject(o))
+      {
+        this.__eachIndex(o, o.id, cbIdx);
+      }
+    }
+  }
   this.load_group = function(stat, section, o, index)
   {
     for (var b in o)
@@ -404,7 +452,7 @@ function cfgOperation(page, alwaysActive, action)
         if (n.writable) 
           group.addClass("writable");
         var label = labelConv[n.label || n] || n.label || n;
-        group.append("<label class='group' for='"+(b+index)+"'>"+label+"</label>");
+        group.append("<label class='group' for='"+(index+"."+n.id)+"'>"+label+"</label>");
         switch (n.type)
         {
           case "array":
@@ -416,10 +464,14 @@ function cfgOperation(page, alwaysActive, action)
             html += '</select>';
             val = $(html).appendTo(group).attr("index", index+"."+n.id);
             if (n.value) val.val(n.value);
-            val.attr("id",b+index);
+            val.attr("id",index+"."+n.id);
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
+            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
+            val.data("setVal", function(__val){
+                $(this).val(__val);
+              });
             val.on("change", function(e){
                 $(this).removeClass("error")
                 $(this).attr("title","");
@@ -451,12 +503,19 @@ function cfgOperation(page, alwaysActive, action)
             }
             val = $(html).appendTo(group);
             if (n.writable) stat.w++, val.addClass("writable");
-            val.attr("id",b+index);
+            val.attr("id",index+"."+n.id);
             val.attr("cfgType", n.type);
             val.attr("index", index+"."+n.id);
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
+            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
+            val.data("setVal", function(__val){
+                if ($(this).hasClass("writable"))
+                  $(this).val(__val);
+                else
+                  $(this).text(__val);
+              });
             val.on("change", function(e){
                 $(this).removeClass("error")
                 $(this).attr("title","");
@@ -490,20 +549,24 @@ function cfgOperation(page, alwaysActive, action)
   			      val = e;
   		      }
             if (n.writable) stat.w++, val.addClass("writable");
-            val.attr("id",b+index);
+            val.attr("id",index+"."+n.id);
             val.attr("cfgType", n.type);
             val.attr("index", index+"."+n.id);
             val.data("osrc", n);
             val.data("stat", stat);
             val.attr("title", gmtLangBuild([n.value ? "Yes" : "No"],1));
-            if (n.writable) 
-              val.prop('checked', n.value ? true : false);
-            else
-            {
-              val.html(n.value ? "&#10004;" : "&#10008;");
-              val.css("color",n.value ? "green":"#ad5454");
-            }
             val.prop('disabled', !n.writable);
+            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
+            val.data("setVal", function(__val){
+                if ($(this).hasClass("writable"))
+                  $(this).prop('checked', __val ? true : false);
+                else
+                {
+                  $(this).html(__val ? "&#10004;" : "&#10008;");
+                  $(this).css("color",__val ? "green":"#ad5454");
+                }
+              });
+            val.data("setVal")(n.value);
   		      if (n.writable)
   		      {
               val.data("cfg", this);
