@@ -4,15 +4,15 @@ function page_common(name, type, display, alwaysActive, action)
   this.type    = type;
   this.page_wrapper = null;
   this.container    = null;
-  
+  this.intervalID   = -1;
   this.is_phone    = false;
   this.is_vertical = false;
   this.load    = function(data){
+              this.data = data;
               this.loader = new cfgOperation(this, alwaysActive, action);
               this.display(this);
               this.inited = true;
               this.isVisible = true;
-              this.data = data;
             };
   this.display = display;
   this.header  = null;
@@ -22,6 +22,8 @@ function page_common(name, type, display, alwaysActive, action)
   this.inited  = false;
   this.content = null;
   this.page    = null;
+  this.ajax = null;
+  this.ajaxRefresh = null;
   this.resize  = function(){
     if (!this.inited || !this.isVisible)
         return;
@@ -36,9 +38,18 @@ function page_common(name, type, display, alwaysActive, action)
   this.hide = function(){this.isVisible = false};
 
   this.close = function(){
+      if (this.intervalID != -1)
+      {
+        clearInterval(this.intervalID);
+        this.intervalID = -1;
+      }
       if (this.ajax) {
         this.ajax.abort();
         this.ajax = null;
+      }
+      if (this.ajaxRefresh) {
+        this.ajaxRefresh.abort();
+        this.ajaxRefresh = null;
       }
       if (this.page_wrapper)
       {
@@ -241,8 +252,8 @@ var ____workingBusy;
 var ____login;
 var ____auth=null;
 var __p = null;
-function __load_page(p,data){
-  if (p.isVisible)
+function __load_page(p,data,forced){
+  if (!forced && p.isVisible)
   {
     return;
   }
@@ -275,32 +286,62 @@ function __load_sub_page(name,type,display,data,alwaysActive,action){
 function __close_sub_page(p){
   p.parent.toggle();
   p.container.remove();
-  __p = p.parent;
+  var p_parent = p.parent;
   delete p;
+  __p = null;
+  __load_page(p_parent);
 }
 function __start_icon(____toolbar){
-    var scroll = $('<div class="left-icon-scroll"></div>').appendTo(____toolbar);
-    var wrap = $('<div class="left-icon-wrap"></div>').appendTo(scroll);
-    var container = $('<div class="left-icon-container"></div>').appendTo(wrap);
-    $('<div class="table-left-gap"/>').appendTo(container);
+  var scroll = $('<div class="left-icon-scroll"></div>').appendTo(____toolbar);
+  var wrap = $('<div class="left-icon-wrap"></div>').appendTo(scroll);
+  var container = $('<div class="left-icon-container"></div>').appendTo(wrap);
+  $('<div class="table-left-gap"/>').appendTo(container);
 
-    var leftIcon=[
-      {name: "DeviceInfo", lang:gmtLangBuild(["DeviceInfo"],1), ln:"config/system.png", isSys: 0},
-      {name: "Config", lang:gmtLangBuild(["Config"],1), ln:"config/config.png", isSys: 0},
-      {name: "SystemUpgrade", lang:gmtLangBuild(["SystemUpgrade"],1), ln:"config/upgrade.png", isSys: 0},
-    ];
-    for (var i=0; i<leftIcon.length;i++)
+  var leftIcon=[
+    {name: "DeviceInfo", lang:gmtLangBuild(["DeviceInfo"],1), ln:"config/system.png", isSys: 0},
+    {name: "Config", lang:gmtLangBuild(["Config"],1), ln:"config/config.png", isSys: 0},
+    {name: "SystemUpgrade", lang:gmtLangBuild(["SystemUpgrade"],1), ln:"config/upgrade.png", isSys: 0},
+  ];
+  for (var i=0; i<leftIcon.length;i++)
+  {
+      $('<div class="table-left-container '+leftIcon[i].name+'">'
+        +'<table class="main-icon"><tr><td class="left"><img class="'+leftIcon[i].name+'" svg="'+leftIcon[i].ln+'" src="'
+          +getIconSvg(leftIcon[i].ln)+'"></img></td><td class="right"><div class="text">'
+          +leftIcon[i].lang+'</div></td></tr></table>'
+        +'</div>').appendTo(container);
+  };
+
+  function getIconSvgWithColor(n, color)
+  {
+    return __icons[n] ? getSvgDataURI(__icons[n].replace(/fill="[^\"]+"/, 'fill="#'+color+'"')) : n;
+  }
+
+  var choosedColor = "0a7ea1";
+  function toolbarChangeICON(el){
+    var img = el.find("img");
+    var svgName = img.attr("svg");
+    var choosed = ____toolbar.find(".table-left-container.choosed");
+    if (choosed.length)
     {
-        $('<div class="table-left-container '+leftIcon[i].name+'">'
-          +'<table class="main-icon"><tr><td class="left"><img class="'+leftIcon[i].name+'" src="'
-            +getIconSvg(leftIcon[i].ln)+'"></img></td><td class="right"><div class="text">'
-            +leftIcon[i].lang+'</div></td></tr></table>'
-          +'</div>').appendTo(container);
-    };
-
+      var _txt = choosed.find(".text");
+      var _img = choosed.find("img");
+      var _svgName = _img.attr("svg");
+      _img.attr("src", getIconSvgWithColor(_svgName, "000000"));
+      _txt.css("color", _txt.attr("oldColor") || "#000000");
+      choosed.removeClass("choosed");
+    }
+    img.attr("src", getIconSvgWithColor(svgName, choosedColor));
+    var txt = el.find(".text");
+    if (!txt.attr("oldColor"))
+      txt.attr("oldColor", txt.css("color"));
+    txt.css("color", "#"+choosedColor);
+    el.addClass("choosed");
+  };
+  
   var z = ____toolbar.find(".table-left-container.SystemUpgrade");
   z.AlloyFinger({
     "tap":function(e){
+      toolbarChangeICON($(this));
       __start_page(page_UPGRADE);
     }
   });
@@ -308,17 +349,20 @@ function __start_icon(____toolbar){
   z = ____toolbar.find(".table-left-container.Config");
   z.AlloyFinger({
     "tap":function(e){
+      toolbarChangeICON($(this));
       __start_page(page_DEVICE);
     }
   });
 
-  
   z = ____toolbar.find(".table-left-container.DeviceInfo");
   z.AlloyFinger({
     "tap":function(e){
+      toolbarChangeICON($(this));
       __start_page(page_SYSTEM);
     }
   });
+
+  toolbarChangeICON(z);
 }
 
 function __start_page(page){
