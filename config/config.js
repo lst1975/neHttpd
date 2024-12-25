@@ -755,10 +755,12 @@ function cfgOperation(page, alwaysActive, action)
                   del.attr("title", gmtLangBuild(["Del"],1));
                   del.data("delDiv", div);
                   del.data("i", k);
+                  del.data("addListItem", __addListItem);
                   del.AlloyFinger({
                     "tap":function(e){
                       var self = $(this);
                       var delDiv = $(this).data("delDiv");
+                      var __addListItem = $(this).data("addListItem");
                       $.MessageBox({
                           buttonDone  : gmtLangBuild(["Confirm"],1),
                           buttonFail  : gmtLangBuild(["Cancel"],1),
