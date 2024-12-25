@@ -186,6 +186,26 @@ function MAIN_UPGRADE_display(p)
         txt.text(fileLoaded+"%");
         name.html(fileName+"&nbsp;&#8226;&nbsp;"+gmtLangBuild([loaded === total ? "Uploaded" : "Uploading"],0)+"&nbsp;&#8226;&nbsp;" +fileSize);
       })
+      // Set up the callback function to handle the response
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          // When the request is complete
+          if (xhr.status === 200) {
+            // Check if the status is 200 OK
+            console.log('Request succeeded:', xhr.responseText);
+          } 
+          else {
+            console.log('Request failed with status:', xhr.status);
+          }
+          $.MessageBox({
+              buttonDone  : gmtLangBuild(["Confirm"],1),
+              buttonFail  : null,
+              message     : gmtLangBuild(["SystemUpgrade", xhr.status === 200 ? "Ok" : "Fail", "FullStop"],1),
+          }).done(function(){
+          }).fail(function(){
+          });              
+        }
+      };
       if (____auth)
         xhr.setRequestHeader("Authorization", ____auth);
       var formData = new FormData(form[0]); //formData is an object to easily send form data
