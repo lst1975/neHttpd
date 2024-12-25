@@ -194,7 +194,7 @@
     },
     "net2":{
       "type":"list+",
-      "label":"Network Volatile",
+      "label":"Network Volatile1",
       "id":11,
       "range":[1,100],
       "writable":true,
@@ -252,6 +252,16 @@
             "id":3
           }
         }
+      ]
+    },
+    "net3":{
+      "type":"list+",
+      "label":"Network Volatile2",
+      "id":12,
+      "range":[1,100],
+      "writable":true,
+      "index":"name",
+      "value":[
       ]
     },
     "label":"Device Overview",
