@@ -599,6 +599,7 @@ const char *nanohttp_index_html_head =
       "<script type='text/javascript' src='config/main.system.js'></script>"
       "<script type='text/javascript' src='config/main.device.js'></script>"
       "<script type='text/javascript' src='config/main.js'></script>"
+      "<script type='text/javascript' src='config/jquery.input-ip-address-control.js'></script>"
       "<script type='text/javascript' src='config/config.js'></script>"
       "<script type='text/javascript' src='config/jquery.mousewheel.js'></script>"
       "<script type='text/javascript' src='config/alloy_finger.js'></script>"
