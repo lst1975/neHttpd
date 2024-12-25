@@ -741,15 +741,15 @@ function cfgOperation(page, alwaysActive, action)
                 div : div,
                 addButton : add,
                 loader: this,
-                addListOne: function(loader, index, stat, div, n, k){
+                addListOne: function(__addListItem, loader, index, stat, div, __n, k){
                   var list = $(
                     '<fieldset class="list sub-section">'
                       +'<legend></legend>'
                       +'<div class="delete">&#9746;</div>'
                     +'</fieldset>').appendTo(div);
-           	      if (n.index)
+           	      if (__n.index)
            	      {
-           	        list.children("legend").text(n.value[k][n.index].value);
+           	        list.children("legend").text(__n.value[k][__n.index].value);
            	      }
                   var del = list.find(".delete");
                   del.attr("title", gmtLangBuild(["Del"],1));
@@ -766,16 +766,16 @@ function cfgOperation(page, alwaysActive, action)
                           message     : gmtLangBuild(["ItemDelMsg"],1)
                       }).done(function(){
                         ____workingBusy.show();
-                        var loader = addListItem.loader;
+                        var loader = __addListItem.loader;
                         var ___id = loader.___mibid.id++;
                         var kd = {
                             id:___id,
-                            value : addListItem.index+"."+self.data("i")+(addListItem.n.index ? 
-                                ":"+addListItem.n.value[self.data("i")][addListItem.n.index].value:"")
+                            value : __addListItem.index+"."+self.data("i")+(__addListItem.n.index ? 
+                                ":"+__addListItem.n.value[self.data("i")][__addListItem.n.index].value:"")
                           };
                         var y = JSON.stringify(kd);
                         loader.submit($(this), ___id, "data/del.json", y, function(arg){
-                            var n = arg.n;
+                            var _nn = arg.n;
                             var ot = arg.stat;
                             var index = arg.index+".";
                             
@@ -789,14 +789,14 @@ function cfgOperation(page, alwaysActive, action)
                               delete ot.values[v];
                             }
 
-                            n.value.splice(self.data("i"), 1);
+                            _nn.value.splice(self.data("i"), 1);
  
                             arg.div.empty();
-                            for (var y=0;y<n.value.length;y++)
+                            for (var y=0;y<_nn.value.length;y++)
                             {
-                              arg.addListOne(arg.loader, arg.preindex, arg.stat, arg.div, n, y);
+                              arg.addListOne(arg, arg.loader, arg.preindex, arg.stat, arg.div, _nn, y);
                             }
-                            if (!n.value.length)
+                            if (!_nn.value.length)
                             {
                               if (arg.div.is(":visible"))
                               {
@@ -807,17 +807,17 @@ function cfgOperation(page, alwaysActive, action)
                             }
                             //if (arg.loader.action != "data/add.json")
                             //  __load_page(arg.loader.page, null, true);
-                          }, addListItem);
+                          }, __addListItem);
                       }).fail(function(){
                       });              
                     }
                   });
-                  loader.load_group(stat, list, n.value[k], 
-                    index+"."+n.id+"."+k+(n.index ? ":"+n.value[k][n.index].value:""));
+                  loader.load_group(stat, list, __n.value[k], 
+                    index+"."+__n.id+"."+k+(__n.index ? ":"+__n.value[k][__n.index].value:""));
                 },
                 add: function(d,item){
                     d.n.value.push(item);
-                    d.addListOne(d.loader, d.preindex, d.stat, d.div, d.n, d.n.value.length-1);
+                    d.addListOne(d, d.loader, d.preindex, d.stat, d.div, d.n, d.n.value.length-1);
                     if (d.n.value.length == 1)
                     {
                       d.expand.show();
@@ -848,7 +848,7 @@ function cfgOperation(page, alwaysActive, action)
             }
             for (var i=0;i<n.value.length;i++)
             {
-              addListItem.addListOne(this, index, stat, div, n, i);
+              addListItem.addListOne(addListItem, this, index, stat, div, n, i);
             }
             break;
         }
