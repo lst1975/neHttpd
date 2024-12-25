@@ -252,6 +252,8 @@ function cfgOperation(page, alwaysActive, action)
                   return formatErr + exampleMac;
                 if((/^([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})$/).test(v)
                   || (/^([0-9A-Fa-f]{2}-){5}([0-9A-Fa-f]{2})$/).test(v)
+                  || (/^([0-9A-Fa-f]{2}\.){5}([0-9A-Fa-f]{2})$/).test(v)
+                  || (/^([0-9A-Fa-f]{2}\ ){5}([0-9A-Fa-f]{2})$/).test(v)
                   || (/^([0-9A-Fa-f]{2}){6}$/).test(v))
                   return null;
               }
@@ -463,6 +465,7 @@ function cfgOperation(page, alwaysActive, action)
             }
             html += '</select>';
             val = $(html).appendTo(group).attr("index", index+"."+n.id);
+            if (n.writable) stat.w++, val.addClass("writable");
             if (n.value) val.val(n.value);
             val.attr("id",index+"."+n.id);
             val.data("osrc", n);
@@ -473,21 +476,62 @@ function cfgOperation(page, alwaysActive, action)
                 __el.data("osrc").value = __val;
                 __el.val(__val);
               });
-            val.on("change", function(e){
-                $(this).removeClass("error")
-                $(this).attr("title","");
-                var loader = $(this).data("cfg");
-                loader.changeConfigItem($(this), 
-                  function(__ev){return __ev.val();},
-                  function(__ev,__reason){
-                    __ev.addClass("error");
-                    __ev.attr("title",__reason||"");
-                  });
-              });
-            if (n.writable) stat.w++;
+            if (n.writable)
+              val.on("change", function(e){
+                  $(this).removeClass("error")
+                  $(this).attr("title","");
+                  var loader = $(this).data("cfg");
+                  loader.changeConfigItem($(this), 
+                    function(__ev){return __ev.val();},
+                    function(__ev,__reason){
+                      __ev.addClass("error");
+                      __ev.attr("title",__reason||"");
+                    });
+                });
             break;
-          case "ipv4":
           case "ipv6":
+          case "ipv4":
+            var html="";
+            if (n.writable)
+            {
+              html += '<input type="text" value="'+n.value+'" placeholder="">';
+            }
+            else
+            {
+              html += '<div>'+n.value+'</div>';
+            }
+            val = $(html).appendTo(group);
+            if (n.writable) stat.w++, val.addClass("writable");
+            val.attr("id",index+"."+n.id);
+            val.attr("cfgType", n.type);
+            val.attr("index", index+"."+n.id);
+            val.data("osrc", n);
+            val.data("stat", stat);
+            val.data("cfg", this);
+            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
+            val.data("setVal", function(__el, __val){
+                __el.data("osrc").value = __val;
+                if (__el.hasClass("writable"))
+                  __el.val(__val);
+                else
+                  __el.text(__val);
+              });
+            if (n.writable)
+            {
+              val.ipAddress({v:n.type=="ipv6" ? 6 : 4});
+              val.on("change", function(e){
+                  $(this).removeClass("error")
+                  $(this).attr("title","");
+                  var loader = $(this).data("cfg");
+                  loader.changeConfigItem($(this), 
+                    function(__ev){return __ev.val().replace(/_/g,"");},
+                    function(__ev,__reason){
+                      __ev.addClass("error");
+                      __ev.attr("title",__reason||"");
+                    });
+                });
+            }
+            break;
           case "url":
           case "mac":
           case "number":
@@ -518,17 +562,18 @@ function cfgOperation(page, alwaysActive, action)
                 else
                   __el.text(__val);
               });
-            val.on("change", function(e){
-                $(this).removeClass("error")
-                $(this).attr("title","");
-                var loader = $(this).data("cfg");
-                loader.changeConfigItem($(this), 
-                  function(__ev){return __ev.val();},
-                  function(__ev,__reason){
-                    __ev.addClass("error");
-                    __ev.attr("title",__reason||"");
-                  });
-              });
+            if (n.writable)
+              val.on("change", function(e){
+                  $(this).removeClass("error")
+                  $(this).attr("title","");
+                  var loader = $(this).data("cfg");
+                  loader.changeConfigItem($(this), 
+                    function(__ev){return __ev.val();},
+                    function(__ev,__reason){
+                      __ev.addClass("error");
+                      __ev.attr("title",__reason||"");
+                    });
+                });
             break;
           case "bool":
             var html,e;
