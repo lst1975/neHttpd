@@ -413,7 +413,7 @@ function cfgOperation(page, alwaysActive, action)
           case "string":
           case "float":
           case "bool":
-            cbIdx(this._makeIndex(".__elVal_"+localIndex), n.value);
+            cbIdx(".__elVal_"+this._makeIndex(localIndex), n.value);
             break;
           case "group":
           case "group+":
