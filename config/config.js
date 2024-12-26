@@ -401,6 +401,7 @@ function cfgOperation(page, alwaysActive, action)
       var n = o[b];
       if (gmtIsObject(n))
       {
+        var localIndex = this.makeIndex(index, n.id, null, null, false);
         switch (n.type)
         {
           case "array":
@@ -412,17 +413,17 @@ function cfgOperation(page, alwaysActive, action)
           case "string":
           case "float":
           case "bool":
-            cbIdx(".__elVal_"+(index+"."+n.id).replace(/\./g, "_").replace(/:/g, "_"), n.value);
+            cbIdx(this._makeIndex(".__elVal_"+localIndex), n.value);
             break;
           case "group":
           case "group+":
-            this.__eachIndex(n, index+"."+n.id, cbIdx);
+            this.__eachIndex(n, localIndex, cbIdx);
             break;
           case "list":
           case "list+":
             for (var i=0;i<n.value.length;i++)
             {
-              this.__eachIndex(n.value[i], index+"."+n.id+"."+i+(n.index ? ":"+n.value[i][n.index].value:""), cbIdx);
+              this.__eachIndex(n.value[i], this.makeIndex(localIndex, i, n, i, false), cbIdx);
             }
             break;
           default:
@@ -445,6 +446,16 @@ function cfgOperation(page, alwaysActive, action)
       }
     }
   }
+
+  this._makeIndex = function(index)
+  {
+    return index.replace(/\./g, "_").replace(/:/g, "_");
+  }
+  this.makeIndex = function(prefix, id, n, i, eVal)
+  {
+    var r = prefix+"."+id+(n && n.index ? ":"+ n.value[i][n.index].value : "");
+    return eVal ? r.replace(/\./g, "_").replace(/:/g, "_") : r;
+  }
   this.load_group = function(stat, section, o, index)
   {
     for (var b in o)
@@ -459,7 +470,8 @@ function cfgOperation(page, alwaysActive, action)
         if (n.writable) 
           group.addClass("writable");
         var label = labelConv[n.label || n] || n.label || n;
-        group.append("<label class='group' for='"+(index+"."+n.id)+"'>"+label+"</label>");
+        var localIndex = this.makeIndex(index,n.id,null,null,false);
+        group.append("<label class='group' for='"+localIndex+"'>"+label+"</label>");
         switch (n.type)
         {
           case "array":
@@ -469,15 +481,15 @@ function cfgOperation(page, alwaysActive, action)
               html += '<option value="'+n.range[i]+'">'+n.range[i]+'</option>';
             }
             html += '</select>';
-            val = $(html).appendTo(group).attr("index", index+"."+n.id);
+            val = $(html).appendTo(group).attr("index", localIndex);
             if (n.writable) stat.w++, val.addClass("writable");
             if (n.value) val.val(n.value);
-            val.attr("id",index+"."+n.id);
+            val.attr("id",localIndex);
             val.attr("cfgType", n.type);
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_").replace(/:/g, "_"));
+            val.addClass(this._makeIndex("__elVal_"+localIndex));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 __el.val(__val);
@@ -508,13 +520,13 @@ function cfgOperation(page, alwaysActive, action)
             }
             val = $(html).appendTo(group);
             if (n.writable) stat.w++, val.addClass("writable");
-            val.attr("id",index+"."+n.id);
+            val.attr("id",localIndex);
             val.attr("cfgType", n.type);
-            val.attr("index", index+"."+n.id);
+            val.attr("index", localIndex);
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_").replace(/:/g, "_"));
+            val.addClass(this._makeIndex("__elVal_"+localIndex));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
@@ -554,13 +566,13 @@ function cfgOperation(page, alwaysActive, action)
             }
             val = $(html).appendTo(group);
             if (n.writable) stat.w++, val.addClass("writable");
-            val.attr("id",index+"."+n.id);
+            val.attr("id",localIndex);
             val.attr("cfgType", n.type);
-            val.attr("index", index+"."+n.id);
+            val.attr("index", localIndex);
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_").replace(/:/g, "_"));
+            val.addClass(this._makeIndex("__elVal_"+localIndex));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
@@ -602,14 +614,14 @@ function cfgOperation(page, alwaysActive, action)
   			      val = e;
   		      }
             if (n.writable) stat.w++, val.addClass("writable");
-            val.attr("id",index+"."+n.id);
+            val.attr("id",localIndex);
             val.attr("cfgType", n.type);
-            val.attr("index", index+"."+n.id);
+            val.attr("index", localIndex);
             val.data("osrc", n);
             val.data("stat", stat);
             val.attr("title", gmtLangBuild([n.value ? "Yes" : "No"],1));
             val.prop('disabled', !n.writable);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_").replace(/:/g, "_"));
+            val.addClass(this._makeIndex("__elVal_"+localIndex));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
@@ -652,7 +664,7 @@ function cfgOperation(page, alwaysActive, action)
             sel.attr("sub", b);
             div.addClass(b).hide();
             group.addClass("hasSubsection").css("cursor", "pointer");
-            this.load_group(stat, div,n, index+"."+n.id);
+            this.load_group(stat, div,n, localIndex);
             break;
           case "group+":
             var sel = $("<span class='arrow char down'></span>").appendTo(group);
@@ -699,7 +711,7 @@ function cfgOperation(page, alwaysActive, action)
                   sub.insertAfter($(this));
                   loader.submitButton.hide();
                   loader.saveButton.hide();
-               }
+                }
                 else
                 {
                   loader.submitButton.show();
@@ -732,7 +744,7 @@ function cfgOperation(page, alwaysActive, action)
             sel.attr("sub", b);
             div.addClass(b).hide();
             group.addClass("hasSubsection").css("cursor", "pointer");
-            this.load_group(stat, div,n, index+"."+n.id);
+            this.load_group(stat, div, n, localIndex);
             break;
           case "list":
             var sel = $("<span class='arrow expand down'>...</span>").appendTo(group);
@@ -757,7 +769,8 @@ function cfgOperation(page, alwaysActive, action)
        	      {
        	        list.children("legend").text(n.value[i][n.index].value);
        	      }
-              this.load_group(stat, list,n.value[i],index+"."+n.id+"."+i+(n.index ? ":"+n.value[i][n.index].value:""));
+             val.addClass(this._makeIndex("__elVal_"+localIndex));
+             this.load_group(stat, list,n.value[i],this.makeIndex(localIndex,i, n, i, false));
             }
             break;
           case "list+":
@@ -785,7 +798,7 @@ function cfgOperation(page, alwaysActive, action)
                 section : section,
                 group : group,
                 expand : expand,
-                index : index+"."+n.id,
+                index : localIndex,
                 preindex : index,
                 stat: stat,
                 n : n,
@@ -823,20 +836,17 @@ function cfgOperation(page, alwaysActive, action)
                         var ___id = loader.___mibid.id++;
                         var kd = {
                             id:___id,
-                            value : __addListItem.index+"."+self.data("i")+(__addListItem.n.index ? 
-                                ":"+__addListItem.n.value[self.data("i")][__addListItem.n.index].value:"")
+                            value : loader.makeIndex(__addListItem.index, self.data("i"), __addListItem.n, self.data("i"), false)
                           };
                         var y = JSON.stringify(kd);
                         loader.submit($(this), ___id, "data/del.json", y, function(arg){
                             var _nn = arg.n;
                             var ot = arg.stat;
-                            var index = arg.index+".";
-                            
                             for (var v in ot.values)
                             {
                               if (!ot.values.hasOwnProperty(v))
                                 continue;
-                              if (v.search(index) != 0)
+                              if (v.search(arg.index+".") != 0)
                                 continue;
                               ot.c--;
                               delete ot.values[v];
@@ -847,7 +857,7 @@ function cfgOperation(page, alwaysActive, action)
                             arg.div.empty();
                             for (var y=0;y<_nn.value.length;y++)
                             {
-                              arg.addListOne(arg, arg.loader, arg.preindex, arg.stat, arg.div, _nn, y);
+                              arg.addListOne(arg, arg.loader, arg.index, arg.stat, arg.div, _nn, y);
                             }
                             if (!_nn.value.length)
                             {
@@ -866,11 +876,11 @@ function cfgOperation(page, alwaysActive, action)
                     }
                   });
                   loader.load_group(stat, list, __n.value[k], 
-                    index+"."+__n.id+"."+k+(__n.index ? ":"+__n.value[k][__n.index].value:""));
+                    loader.makeIndex(index, k, __n, k, false));
                 },
                 add: function(d,item){
                     d.n.value.push(item);
-                    d.addListOne(d, d.loader, d.preindex, d.stat, d.div, d.n, d.n.value.length-1);
+                    d.addListOne(d, d.loader, d.index, d.stat, d.div, d.n, d.n.value.length-1);
                     if (d.n.value.length == 1)
                     {
                       d.expand.show();
@@ -901,7 +911,7 @@ function cfgOperation(page, alwaysActive, action)
             }
             for (var i=0;i<n.value.length;i++)
             {
-              addListItem.addListOne(addListItem, this, index, stat, div, n, i);
+              addListItem.addListOne(addListItem, this, localIndex, stat, div, n, i);
             }
             break;
         }
