@@ -473,6 +473,7 @@ function cfgOperation(page, alwaysActive, action)
             if (n.writable) stat.w++, val.addClass("writable");
             if (n.value) val.val(n.value);
             val.attr("id",index+"."+n.id);
+            val.attr("cfgType", n.type);
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
