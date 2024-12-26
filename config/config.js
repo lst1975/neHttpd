@@ -412,15 +412,20 @@ function cfgOperation(page, alwaysActive, action)
           case "string":
           case "float":
           case "bool":
-            cbIdx(".__elVal_"+(index+"."+n.id).replace(/\./g, "_"), n.value);
+            cbIdx(".__elVal_"+(index+"."+n.id).replace(/\./g, "_").replace(/:/g, "_"), n.value);
             break;
           case "group":
           case "group+":
+            this.__eachIndex(n, index+"."+n.id, cbIdx);
+            break;
           case "list":
           case "list+":
+            for (var i=0;i<n.value.length;i++)
+            {
+              this.__eachIndex(n.value[i], index+"."+n.id+"."+i+(n.index ? ":"+n.value[i][n.index].value:""), cbIdx);
+            }
             break;
           default:
-            this.__eachIndex(index+"."+n.id);
             break;
         }
       }
@@ -471,7 +476,7 @@ function cfgOperation(page, alwaysActive, action)
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
+            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_").replace(/:/g, "_"));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 __el.val(__val);
@@ -508,7 +513,7 @@ function cfgOperation(page, alwaysActive, action)
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
+            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_").replace(/:/g, "_"));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
@@ -554,7 +559,7 @@ function cfgOperation(page, alwaysActive, action)
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
+            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_").replace(/:/g, "_"));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
@@ -603,7 +608,7 @@ function cfgOperation(page, alwaysActive, action)
             val.data("stat", stat);
             val.attr("title", gmtLangBuild([n.value ? "Yes" : "No"],1));
             val.prop('disabled', !n.writable);
-            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_"));
+            val.addClass("__elVal_"+(index+"."+n.id).replace(/\./g, "_").replace(/:/g, "_"));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
@@ -936,7 +941,8 @@ function cfgOperation(page, alwaysActive, action)
             return;
           }
 
-          if (x.err && gmtIsArray(x.err) && x.err.length)
+          var hasError = x.err && gmtIsArray(x.err) && x.err.length;
+          if (hasError)
           {
             for (var i=0;i<x.err.length;i++)
             {
@@ -980,7 +986,7 @@ function cfgOperation(page, alwaysActive, action)
           
           if (!this.alwaysActive && button)
             changeSubmitButtonState(button,0);
-          if (okCb)
+          if (!hasError && okCb)
           {
             okCb(arg);
           }

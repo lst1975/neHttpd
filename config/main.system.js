@@ -30,6 +30,10 @@ function MAIN_SYSTEM_display(p)
                       {
                         el.data("setVal")(el, val);
                       }
+                      else
+                      {
+                        return;
+                      }
                     }
                   });
               }
