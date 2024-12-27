@@ -17,6 +17,7 @@ objects = \
 	nanohttp-file.o \
 	nanohttp-form.o \
 	nanohttp-url.o \
+	nanohttp-user.o \
 	nanohttp-urlencode.o
 
 all: $(objects)

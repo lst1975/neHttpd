@@ -1,5 +1,8 @@
 #include "nanohttp-config.h"
 #include <stdio.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "nanohttp-file.h"
 
 void *nanohttp_file_open_for_read(const char *file)
@@ -31,6 +34,7 @@ herror_t nanohttp_file_read_all(const char *file,
     {
       if (!feof(fptr))
       {
+        nanohttp_file_close(fptr);
         return herror_new("nanohttp_file_read", FILE_ERROR_READ, 
           "Failed to read file %s.", file);
       }
@@ -39,10 +43,12 @@ herror_t nanohttp_file_read_all(const char *file,
     r = cb(arg, buffer, n);
     if (r != NULL)
     {
+      nanohttp_file_close(fptr);
       return r;
     }
   }
 
+  nanohttp_file_close(fptr);
   return NULL;
 }
 
@@ -119,3 +125,21 @@ size_t nanohttp_file_write(void *file,
   } 
 }
 
+size_t nanohttp_file_size(const char *file)
+{
+  int fd;
+  struct stat fileStat;
+
+  fd = open(file, O_RDONLY);
+  if (fd < 0) {
+    return 0;
+  }
+
+  if (fstat(fd, &fileStat) < 0) {
+    close(fd);
+    return 0;
+  }
+
+  close(fd);
+  return fileStat.st_size;
+}

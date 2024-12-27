@@ -267,7 +267,7 @@ typedef struct json_pair
 const char *json_type2str(JSONTypes_t type);
 void json_pairs_free(JSONPair_t *pair);
 JSONStatus_t json_print(JSONPair_t *pair, int depth, const char *pad);
-JSONStatus_t json_tostr(JSONPair_t *pair, char *buf, 
+int json_tostr(JSONPair_t *pair, char *buf, 
   size_t length, int depth, const char *pad);
 int json_cal_length(JSONPair_t *pair, int depth, const char *pad);
 JSONStatus_t json_parse(JSONPair_t **pair, const char *json, size_t length);

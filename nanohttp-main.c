@@ -12,21 +12,15 @@
 #include "nanohttp-form.h"
 #include "nanohttp-urlencode.h"
 #include "nanohttp-base64.h"
+#include "nanohttp-user.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const char *user, const char *password)
 {
   log_debug("logging in user=\"%s\" password=\"%s\"\n", user, password);
 
-  if (strcmp(user, "bob")) {
-
-    log_error("user \"%s\" unkown\n", user);
-    return 0;
-  }
-
-  if (strcmp(password, "builder")) {
-
-    log_error("wrong password\n");
+  if (nanohttp_users_match(user, strlen(user), password, strlen(password)) == NULL) {
+    log_error("authenticate failed\n");
     return 0;
   }
 
@@ -813,6 +807,12 @@ main(int argc, char **argv)
     goto error1;
   }
 
+  if (nanohttp_users_init() < 0)
+  {
+    fprintf(stderr, "Cannot init users.\n");
+    goto error1;
+  }
+  
   if ((status = httpd_run()) != H_OK)
   {
     fprintf(stderr, "Cannot run httpd (%s)\n", herror_message(status));
@@ -820,6 +820,7 @@ main(int argc, char **argv)
     goto error1;
   }
 
+  nanohttp_users_free();
   httpd_destroy();
   return 0;
     

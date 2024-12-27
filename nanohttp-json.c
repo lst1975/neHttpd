@@ -1886,7 +1886,8 @@ void json_pairs_free(JSONPair_t *pair)
 
 #define json_MIN(a,b) ((a)<(b) ? (a) : (b))
 
-JSONStatus_t json_parse(JSONPair_t **__pair, const char *json, size_t length)
+static JSONStatus_t __json_parse(JSONTypes_t parent_jsonType, 
+  JSONPair_t **__pair, const char *json, size_t length)
 {
   size_t start = 0, next = 0;
   JSONStatus_t result;
@@ -1924,7 +1925,9 @@ JSONStatus_t json_parse(JSONPair_t **__pair, const char *json, size_t length)
     else
     {
       if ((pair->key == NULL || pair->keyLength == 0)
-        && (pair->jsonType != JSONArray && pair->jsonType != JSONObject))
+        && (pair->jsonType != JSONArray 
+            && pair->jsonType != JSONObject
+            && parent_jsonType != JSONArray))
       {
         free(pair);
         result = JSONBadParameter;
@@ -1987,7 +1990,7 @@ JSONStatus_t json_parse(JSONPair_t **__pair, const char *json, size_t length)
         {
           JSONPair_t *child;
 
-          result = json_parse(&child, pair->value, pair->valueLength);
+          result = __json_parse(pair->jsonType, &child, pair->value, pair->valueLength);
           if (result != JSONSuccess && result != JSONNotFound)
           {
             goto clean0;
@@ -2006,6 +2009,11 @@ clean0:
   json_pairs_free(prev);
   *__pair = NULL;
   return result;
+}
+
+JSONStatus_t json_parse(JSONPair_t **__pair, const char *json, size_t length)
+{
+  return __json_parse(JSONInvalid, __pair, json, length);
 }
 
 static int __json_pad_put(char *buf, int len, int depth, const char *pad)
@@ -2198,12 +2206,11 @@ clean0:
   return r;
 }
 
-JSONStatus_t json_tostr(JSONPair_t *pair, char *buf,
+int json_tostr(JSONPair_t *pair, char *buf,
   size_t length, int depth, const char *pad)
 {
   char *p = buf;
   int n;
-  JSONStatus_t r = JSONSuccess;
 
   n = snprintf(p,length,"{");
   p+=n,length-=n;
@@ -2220,7 +2227,7 @@ JSONStatus_t json_tostr(JSONPair_t *pair, char *buf,
   n = snprintf(p,length,"}");
   p+=n,length-=n;
 
-  return r;
+  return p - buf;
 }
 
 static JSONStatus_t __json_print(JSONPair_t *pair, int depth, const char *pad)
