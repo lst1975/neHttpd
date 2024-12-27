@@ -414,12 +414,16 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
         free(bf);
     }
     else if (strcmp("data/setmib.json", path)
+      && strcmp("data/addUser.json", req->path)
+      && strcmp("data/delUser.json", req->path)
       && strcmp("data/add.json", req->path)
       && strcmp("data/del.json", req->path)
       && strcmp("data/save.json", req->path)
 #if !__NHTTP_TEST      
       && strcmp("data/template.json", req->path)
+      && strcmp("data/templateUser.json", req->path)
       && strcmp("data/deivce.json", req->path)
+      && strcmp("data/users.json", req->path)
       && strcmp("data/system.json", req->path)
 #endif      
       )
@@ -469,8 +473,10 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
 
 #if __NHTTP_TEST      
   if (!strcmp("/data/template.json", req->path)
+    || !strcmp("/data/templateUser.json", req->path)
     || !strcmp("/data/system.json", req->path)
     || !strcmp("/data/device.json", req->path)
+    || !strcmp("/data/users.json", req->path)
     )
   {
     return root_service(conn, req);
@@ -546,6 +552,16 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"0.0\",\"reason\":"
         "\"For testing received error message from our product.\"}]}", (int)p->vint);
     }
+    else if (!strcmp("/data/addUser.json", req->path))
+    {
+      // Process add operation
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+    }
+    else if (!strcmp("/data/delUser.json", req->path))
+    {
+      // Process add operation
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+    }
     else if (!strcmp("/data/add.json", req->path))
     {
       // Process add operation
@@ -562,6 +578,16 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
     }
     else if (!strcmp("/data/template.json", req->path))
+    {
+      // Generate template.json
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+    }
+    else if (!strcmp("/data/templateUser.json", req->path))
+    {
+      // Generate template.json
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+    }
+    else if (!strcmp("/data/users.json", req->path))
     {
       // Generate template.json
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
