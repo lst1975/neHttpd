@@ -1,0 +1,31 @@
+{
+    "template":{
+	  "name":{
+		"type":"string",
+		"range":[2,128],
+		"value":"wifi0",
+		"writable":false,
+		"label": "Wlan Port",
+		"id":0
+	  },
+	  "ipv4":{
+		"type":"ipv4",
+		"range":[7,17],
+		"value":"10.10.1.10",
+		"writable":true,
+		"label": "Ipv4 Address",
+		"id":1
+	  },
+	  "signal":{
+		"type":"float",
+        "subType":"strength",
+		"range":[0,1],
+		"value":0.8,
+		"writable":false,
+		"label": "Signal Strength",
+		"id":1
+	  }
+    },
+    "label":"Interface Template",
+    "id": 0
+}
