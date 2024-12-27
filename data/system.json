@@ -35,7 +35,7 @@
     "memory":{
       "total":{
         "type":"number",
-        "range":[-1,-1],
+        "range":[0,8865538652],
         "value":65538652,
         "show":"space",
         "writable":false,
