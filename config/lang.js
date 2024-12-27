@@ -122,6 +122,7 @@ var gmtLangZH = {
   Ok:"成功",
   Fail:"失败",
   FullStop:"。",
+  Users:"用户管理",
 };
 
 var gmtLangEN = {
@@ -159,6 +160,7 @@ var gmtLangEN = {
   Ok:"Successfully.",
   Fail:"Failed.",
   FullStop:".",
+  Users:"Accounts",
 };
 
 var gmtLang = gmtBrowser.lang == "zh-cn" ? gmtLangZH : gmtLangEN;

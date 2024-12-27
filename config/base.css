@@ -614,6 +614,9 @@ button::-moz-focus-inner {
 .table-left-container .main-icon img.SystemUpgrade{
   width:22px;
 }
+.table-left-container .main-icon img.Users{
+  width:18px;
+}
 .table-left-container .main-icon .text{
   font-size:12px;
   color:black;

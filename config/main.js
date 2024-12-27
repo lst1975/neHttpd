@@ -85,6 +85,7 @@ function page_common(name, type, display, alwaysActive, action)
 var page_SYSTEM  = new page_common("gmt_SYSTEM","normal",MAIN_SYSTEM_display,false,"data/setmib.json");
 var page_DEVICE  = new page_common("gmt_DEVICE","normal",MAIN_DEVICE_display,false,"data/setmib.json");
 var page_UPGRADE = new page_common("gmt_UPGRADE","normal",MAIN_UPGRADE_display,false);
+var page_USERS = new page_common("gmt_USERS","normal",MAIN_USERS_display,false,"data/users.json");
 
 var loginWindow = 
     '<div id="id01" class="__login modal">'
@@ -292,6 +293,11 @@ function __close_sub_page(p){
   __p = null;
   __load_page(p_parent);
 }
+function getIconSvgWithColor(n, color)
+{
+  return __icons[n] ? getSvgDataURI(__icons[n].replace(/fill="[^\"]+"/, 'fill="#'+color+'"')) : n;
+}
+
 function __start_icon(____toolbar){
   var scroll = $('<div class="left-icon-scroll"></div>').appendTo(____toolbar);
   var wrap = $('<div class="left-icon-wrap"></div>').appendTo(scroll);
@@ -302,20 +308,16 @@ function __start_icon(____toolbar){
     {name: "DeviceInfo", lang:gmtLangBuild(["DeviceInfo"],1), ln:"config/system.png", isSys: 0},
     {name: "Config", lang:gmtLangBuild(["Config"],1), ln:"config/config.png", isSys: 0},
     {name: "SystemUpgrade", lang:gmtLangBuild(["SystemUpgrade"],1), ln:"config/upgrade.png", isSys: 0},
+    {name: "Users", lang:gmtLangBuild(["Users"],1), ln:"config/login.png", isSys: 0},
   ];
   for (var i=0; i<leftIcon.length;i++)
   {
       $('<div class="table-left-container '+leftIcon[i].name+'">'
         +'<table class="main-icon"><tr><td class="left"><img class="'+leftIcon[i].name+'" svg="'+leftIcon[i].ln+'" src="'
-          +getIconSvg(leftIcon[i].ln)+'"></img></td><td class="right"><div class="text">'
+          +getIconSvgWithColor(leftIcon[i].ln, "#ffffff")+'"></img></td><td class="right"><div class="text">'
           +leftIcon[i].lang+'</div></td></tr></table>'
         +'</div>').appendTo(container);
   };
-
-  function getIconSvgWithColor(n, color)
-  {
-    return __icons[n] ? getSvgDataURI(__icons[n].replace(/fill="[^\"]+"/, 'fill="#'+color+'"')) : n;
-  }
 
   var choosedColor = "0a7ea1";
   function toolbarChangeICON(el){
@@ -364,6 +366,15 @@ function __start_icon(____toolbar){
   });
 
   toolbarChangeICON(z);
+
+  z = ____toolbar.find(".table-left-container.Users");
+  z.AlloyFinger({
+    "tap":function(e){
+      toolbarChangeICON($(this));
+      __start_page(page_USERS);
+    }
+  });
+
 }
 
 function __start_page(page){
