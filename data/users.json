@@ -8,7 +8,7 @@
 		  "type":"string",
 		  "range":[8,128],
 		  "value":"bob",
-		  "writable":true,
+		  "writable":false,
 		  "label": "User Name",
 		  "id": 0
 		},
@@ -16,7 +16,7 @@
 		  "type":"string",
 		  "range":[6,32],
 		  "value":"builder",
-		  "writable":true,
+		  "writable":false,
 		  "label": "Password",
 		  "id": 1
 		},
