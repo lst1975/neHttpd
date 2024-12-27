@@ -37,6 +37,7 @@
         "type":"number",
         "range":[-1,-1],
         "value":65538652,
+        "show":"space",
         "writable":false,
         "label": "Total",
         "id": 0
@@ -46,6 +47,7 @@
         "subType":"usage",
         "range":[8,4000000],
         "value":579800,
+        "show":"space",
         "writable":false,
         "label": "Used",
         "id": 1
