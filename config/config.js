@@ -459,10 +459,8 @@ function cfgOperation(page, alwaysActive, action)
         ret = (totaSize/1024).toFixed(2) + 'KB';
       else if (totaSize < 1024*1024*1024)
         ret = (totaSize/(1024*1024)).toFixed(2) + 'MB';
-      else if (totaSize < 1024*1024*1024*1024)
+      else
         ret = (totaSize/(1024*1024*1024)).toFixed(2) + 'GB';
-      else if (totaSize < 1024*1024*1024*1024)
-        ret = totaSize + 'B';
     }
     return ret;
   }
