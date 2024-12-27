@@ -1143,7 +1143,7 @@ function cfgOperation(page, alwaysActive, action)
         this.load_group(stat, section, o, o.id);
       }
     }
-    if (stat.w)
+    if (stat.w && p.name != "gmt_SYSTEM")
     {
       var button = null;
       var wrap = $("<div/>").appendTo(div);
