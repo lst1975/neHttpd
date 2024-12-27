@@ -960,8 +960,7 @@ function cfgOperation(page, alwaysActive, action)
                             value : loader.makeIndex(__addListItem.index, self.data("i"), __addListItem.n, self.data("i"), false)
                           };
                         var y = JSON.stringify(kd);
-                        loader.submit($(this), ___id, loader.page.name == "gmt_USERS" ? 
-                          "data/delUser.json" : "data/del.json", y, function(arg){
+                        loader.submit($(this), ___id, "data/del.json", y, function(arg){
                             var _nn = arg.n;
                             var ot = arg.stat;
                             for (var v in ot.values)
@@ -1013,14 +1012,12 @@ function cfgOperation(page, alwaysActive, action)
             add.data("pos", addListItem)
             add.AlloyFinger({
               "tap":function(e){
-                var p;
-                var __cfg = $(this).data("pos");
-                if (__cfg.loader.page.name == "gmt_USERS")
-                  p = __load_sub_page("TEMPLATE", "template", MAIN_TEMPLATE_USER_display, 
-                                  __cfg, true, "data/addUser.json");
-                else
-                  p = __load_sub_page("TEMPLATE", "template", MAIN_TEMPLATE_display, 
-                                  __cfg, true, "data/add.json");
+                var p = __load_sub_page("TEMPLATE", 
+                                "template", 
+                                MAIN_TEMPLATE_display, 
+                                $(this).data("pos"), 
+                                true, 
+                                "data/add.json");
               }
             });
             sel.children(".expand").attr("sub", b);
