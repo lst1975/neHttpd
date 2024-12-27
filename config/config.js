@@ -446,6 +446,26 @@ function cfgOperation(page, alwaysActive, action)
       }
     }
   }
+  this.spaceByte2Mb = function(totaSize)
+  {
+    var ret;
+    if (!totaSize)
+      ret = '0B';
+    else 
+    {
+      if (totaSize < 1024)
+        ret = totaSize + 'B';
+      else if (totaSize < 1024*1024)
+        ret = (totaSize/1024).toFixed(2) + 'KB';
+      else if (totaSize < 1024*1024*1024)
+        ret = (totaSize/(1024*1024)).toFixed(2) + 'MB';
+      else if (totaSize < 1024*1024*1024*1024)
+        ret = (totaSize/(1024*1024*1024)).toFixed(2) + 'GB';
+      else if (totaSize < 1024*1024*1024*1024)
+        ret = totaSize + 'B';
+    }
+    return ret;
+  }
 
   this._makeIndex = function(index)
   {
@@ -556,13 +576,21 @@ function cfgOperation(page, alwaysActive, action)
           case "string":
           case "float":
             var html="";
+            var localValue = n.value;
+            if (!n.writable)
+            {
+              if (n.type == "number" && n.show == "space")
+              {
+                localValue = this.spaceByte2Mb(n.value);
+              }
+            }
             if (n.writable)
             {
-              html += '<input type="text" value="'+n.value+'" placeholder="">';
+              html += '<input type="text" value="'+localValue+'" placeholder="">';
             }
             else
             {
-              html += '<div>'+n.value+'</div>';
+              html += '<div>'+localValue+'</div>';
             }
             val = $(html).appendTo(group);
             if (n.writable) stat.w++, val.addClass("writable");
@@ -575,9 +603,17 @@ function cfgOperation(page, alwaysActive, action)
             val.addClass(this._makeIndex(localIndex));
 
             val.data("setVal", function(__el, __val){
-                __el.data("osrc").value = __val;
+                var __n = __el.data("osrc");
+
+                __n.value = __val;
                 if (__el.hasClass("writable"))
                   __el.val(__val);
+                else if (__n.type == "number" && __n.show == "space")
+                {
+                  var cfg = val.data("cfg");
+                  var __localValue = cfg.spaceByte2Mb(__val);
+                  __el.text(__localValue);
+                }
                 else
                   __el.text(__val);
               });
@@ -625,7 +661,17 @@ function cfgOperation(page, alwaysActive, action)
               {
                 val.attr("title",n.value).empty();
                 var pie = $('<figure class="chart"></figure>').appendTo(val);
-                var txt = $('<div class="text">'+n.value+'/'+(n.range[1]-n.range[0])+'</div>').appendTo(val);
+                var txt, __t;
+
+                if (n.type == "number" && n.show == "space")
+                {
+                  __t = this.spaceByte2Mb(n.value)+'/'+this.spaceByte2Mb(n.range[1]-n.range[0]);
+                }
+                else
+                {
+                  __t = n.value+'/'+(n.range[1]-n.range[0]);
+                }
+                txt = $('<div class="text">'+__t+'</div>').appendTo(val);
                 var percent = Math.round(Math.abs(100*n.value/(n.range[1]-n.range[0])));
                 pie.css("margin", "5px 0 0 0");
                 pie.csspiechart({
@@ -641,7 +687,8 @@ function cfgOperation(page, alwaysActive, action)
                 val.data("txt", txt);
                 val.data("range", n.range[1]-n.range[0]);
                 val.data("setVal", function(__el, __val){
-                    __el.data("osrc").value = __val;
+                    var __n = __el.data("osrc");
+                    __n.value = __val;
                     var pie = __el.data("pie");
                     var txt = __el.data("txt");
                     var range = __el.data("range");
@@ -653,8 +700,18 @@ function cfgOperation(page, alwaysActive, action)
                       ],
                       size:30
                     });
-                    txt.text(__val+'/'+range);
-                    __el.attr("title",__val);
+                    if (__n.type == "number" && __n.show == "space")
+                    {
+                      var cfg = val.data("cfg");
+                      var __localValue = cfg.spaceByte2Mb(__val)+'/'+cfg.spaceByte2Mb(range);
+                      txt.text(__localValue);
+                      __el.attr("title",__localValue);
+                    }
+                    else
+                    {
+                      txt.text(__val+'/'+range);
+                      __el.attr("title",__val);
+                    }
                   });
               }
             }
