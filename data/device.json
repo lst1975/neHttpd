@@ -183,6 +183,7 @@
           },
           "signal":{
             "type":"float",
+            "subType":"strength",
             "range":[0,1],
             "value":0.8,
             "writable":false,
