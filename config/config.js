@@ -658,7 +658,6 @@ function cfgOperation(page, alwaysActive, action)
                 && n.range.length == 2)
               {
                 val.attr("title",n.value).empty();
-                var pie = $('<figure class="chart"></figure>').appendTo(val);
                 var txt, __t;
 
                 if (n.type == "number" && n.show == "space")
@@ -670,6 +669,7 @@ function cfgOperation(page, alwaysActive, action)
                   __t = n.value+'/'+(n.range[1]-n.range[0]);
                 }
                 txt = $('<div class="text">'+__t+'</div>').appendTo(val);
+                var pie = $('<figure class="chart"></figure>').appendTo(val);
                 var percent = Math.round(Math.abs(100*n.value/(n.range[1]-n.range[0])));
                 pie.css("margin", "5px 0 0 0");
                 pie.csspiechart({
@@ -680,7 +680,7 @@ function cfgOperation(page, alwaysActive, action)
                   size:30
                 });
                 val.css("display", "flex");
-                txt.css("margin-left","10px");
+                pie.css("margin-left","10px");
                 val.data("pie", pie);
                 val.data("txt", txt);
                 val.data("range", n.range[1]-n.range[0]);
