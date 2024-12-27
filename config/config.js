@@ -413,7 +413,7 @@ function cfgOperation(page, alwaysActive, action)
           case "string":
           case "float":
           case "bool":
-            cbIdx(".__elVal_"+this._makeIndex(localIndex), n.value);
+            cbIdx("."+this._makeIndex(localIndex), n.value);
             break;
           case "group":
           case "group+":
@@ -449,7 +449,7 @@ function cfgOperation(page, alwaysActive, action)
 
   this._makeIndex = function(index)
   {
-    return index.replace(/\./g, "_").replace(/:/g, "_");
+    return "__elVal_"+index.replace(/\./g, "_").replace(/:/g, "_");
   }
   this.makeIndex = function(prefix, id, n, i, eVal)
   {
@@ -489,7 +489,7 @@ function cfgOperation(page, alwaysActive, action)
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass(this._makeIndex("__elVal_"+localIndex));
+            val.addClass(this._makeIndex(localIndex));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 __el.val(__val);
@@ -526,7 +526,7 @@ function cfgOperation(page, alwaysActive, action)
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass(this._makeIndex("__elVal_"+localIndex));
+            val.addClass(this._makeIndex(localIndex));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
@@ -572,7 +572,8 @@ function cfgOperation(page, alwaysActive, action)
             val.data("osrc", n);
             val.data("stat", stat);
             val.data("cfg", this);
-            val.addClass(this._makeIndex("__elVal_"+localIndex));
+            val.addClass(this._makeIndex(localIndex));
+
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
@@ -580,7 +581,9 @@ function cfgOperation(page, alwaysActive, action)
                 else
                   __el.text(__val);
               });
+
             if (n.writable)
+            {
               val.on("change", function(e){
                   $(this).removeClass("error")
                   $(this).attr("title","");
@@ -592,6 +595,30 @@ function cfgOperation(page, alwaysActive, action)
                       __ev.attr("title",__reason||"");
                     });
                 });
+            }
+            else
+            {
+              if ((n.type == "float" || n.type == "number") 
+                && n.subType == "strength" 
+                && gmtIsArray(n.range) 
+                && n.range.length == 2)
+              {
+                val.attr("title",n.value).empty();
+                val.addClass("signal_strength").addClass("bar");
+                var signal = val.signal({exponential: false, height: group.height()});
+                signal.Update(Math.abs(100*n.value/(n.range[1]-n.range[0])));
+                val.data("signal", signal);
+                val.data("range", n.range[1]-n.range[0]);
+
+                val.data("setVal", function(__el, __val){
+                    __el.data("osrc").value = __val;
+                    var signal = __el.data("signal");
+                    var range = __el.data("range");
+                    signal.Update(Math.abs(100*__val/range));
+                    __el.attr("title",__val);
+                  });
+              }
+            }
             break;
           case "bool":
             var html,e;
@@ -621,7 +648,7 @@ function cfgOperation(page, alwaysActive, action)
             val.data("stat", stat);
             val.attr("title", gmtLangBuild([n.value ? "Yes" : "No"],1));
             val.prop('disabled', !n.writable);
-            val.addClass(this._makeIndex("__elVal_"+localIndex));
+            val.addClass(this._makeIndex(localIndex));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
                 if (__el.hasClass("writable"))
@@ -769,7 +796,7 @@ function cfgOperation(page, alwaysActive, action)
        	      {
        	        list.children("legend").text(n.value[i][n.index].value);
        	      }
-             val.addClass(this._makeIndex("__elVal_"+localIndex));
+             val.addClass(this._makeIndex(localIndex));
              this.load_group(stat, list,n.value[i],this.makeIndex(localIndex,i, n, i, false));
             }
             break;
@@ -1059,7 +1086,7 @@ function cfgOperation(page, alwaysActive, action)
                 value:{"0.9999999":1}
               };
             var y = JSON.stringify(k);
-            loader.submit(null, ___id, loader.action, y, function(arg){
+            loader.submit(null, ___id, "data/savemib.json", y, function(arg){
                 $.MessageBox({
                     buttonDone  : gmtLangBuild(["Confirm"],1),
                     buttonFail  : null,

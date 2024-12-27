@@ -1,0 +1,12 @@
+.cfg_container .input-group > div.signal_strength.bar{
+  unicode-bidi: isolate;
+  display: block;
+  height:100%;
+}
+
+.cfg_container .input-group > div.signal_strength.bar > div{
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    display: inline-block;
+    border: 1px solid gray;
+}
