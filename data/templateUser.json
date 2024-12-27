@@ -1,0 +1,33 @@
+{
+    "template":{
+		"label":"User Account",
+        "type":"group",
+		"id":0,
+		"username": {
+		  "type":"string",
+		  "range":[8,128],
+		  "value":"bob",
+		  "writable":true,
+		  "label": "User Name",
+		  "id": 0
+		},
+		"password": {
+		  "type":"string",
+		  "range":[6,32],
+		  "value":"builder",
+		  "writable":true,
+		  "label": "Password",
+		  "id": 1
+		},
+		"level": {
+		  "type":"array",
+		  "range":["Administrator", "Normal"],
+		  "value":"Normal",
+		  "writable":true,
+		  "label": "User Level",
+		  "id": 2
+		}
+    },
+    "label":"Account Template",
+    "id": 0
+}
