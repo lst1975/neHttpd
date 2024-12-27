@@ -618,6 +618,45 @@ function cfgOperation(page, alwaysActive, action)
                     __el.attr("title",__val);
                   });
               }
+              else if ((n.type == "float" || n.type == "number") 
+                && n.subType == "usage" 
+                && gmtIsArray(n.range) 
+                && n.range.length == 2)
+              {
+                val.attr("title",n.value).empty();
+                var pie = $('<figure class="chart"></figure>').appendTo(val);
+                var txt = $('<div class="text">'+n.value+'</div>').appendTo(val);
+                var percent = Math.round(Math.abs(100*n.value/(n.range[1]-n.range[0])));
+                pie.css("margin", "5px 0 0 0");
+                pie.csspiechart({
+                  values: [
+                      percent,
+                      100-percent,
+                  ],
+                  size:30
+                });
+                val.css("display", "flex");
+                txt.css("margin-left","10px");
+                val.data("pie", pie);
+                val.data("txt", txt);
+                val.data("range", n.range[1]-n.range[0]);
+                val.data("setVal", function(__el, __val){
+                    __el.data("osrc").value = __val;
+                    var pie = __el.data("pie");
+                    var txt = __el.data("txt");
+                    var range = __el.data("range");
+                    var percent = Math.round(Math.abs(100*__val/range));
+                    pie.csspiechart({
+                      values: [
+                          percent,
+                          100-percent,
+                      ],
+                      size:30
+                    });
+                    txt.text(__val);
+                    __el.attr("title",__val);
+                  });
+              }
             }
             break;
           case "bool":
