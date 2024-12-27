@@ -625,7 +625,7 @@ function cfgOperation(page, alwaysActive, action)
               {
                 val.attr("title",n.value).empty();
                 var pie = $('<figure class="chart"></figure>').appendTo(val);
-                var txt = $('<div class="text">'+n.value+'</div>').appendTo(val);
+                var txt = $('<div class="text">'+n.value+'/'+(n.range[1]-n.range[0])+'</div>').appendTo(val);
                 var percent = Math.round(Math.abs(100*n.value/(n.range[1]-n.range[0])));
                 pie.css("margin", "5px 0 0 0");
                 pie.csspiechart({
@@ -653,7 +653,7 @@ function cfgOperation(page, alwaysActive, action)
                       ],
                       size:30
                     });
-                    txt.text(__val);
+                    txt.text(__val+'/'+range);
                     __el.attr("title",__val);
                   });
               }
