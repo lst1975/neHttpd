@@ -414,14 +414,10 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
         free(bf);
     }
     else if (strcmp("data/setmib.json", path)
-      && strcmp("data/addUser.json", req->path)
-      && strcmp("data/delUser.json", req->path)
       && strcmp("data/add.json", req->path)
       && strcmp("data/del.json", req->path)
       && strcmp("data/save.json", req->path)
 #if !__NHTTP_TEST      
-      && strcmp("data/template.json", req->path)
-      && strcmp("data/templateUser.json", req->path)
       && strcmp("data/deivce.json", req->path)
       && strcmp("data/users.json", req->path)
       && strcmp("data/system.json", req->path)
@@ -472,9 +468,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
   herror_t r;
 
 #if __NHTTP_TEST      
-  if (!strcmp("/data/template.json", req->path)
-    || !strcmp("/data/templateUser.json", req->path)
-    || !strcmp("/data/system.json", req->path)
+  if (!strcmp("/data/system.json", req->path)
     || !strcmp("/data/device.json", req->path)
     || !strcmp("/data/users.json", req->path)
     )
@@ -543,24 +537,11 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       goto finished;
     }
 
-    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
-    herror_release(r);
-
     if (!strcmp("/data/setmib.json", req->path))
     {
       // Process set operation
       n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"0.0\",\"reason\":"
         "\"For testing received error message from our product.\"}]}", (int)p->vint);
-    }
-    else if (!strcmp("/data/addUser.json", req->path))
-    {
-      // Process add operation
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
-    }
-    else if (!strcmp("/data/delUser.json", req->path))
-    {
-      // Process add operation
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
     }
     else if (!strcmp("/data/add.json", req->path))
     {
@@ -580,20 +561,46 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     else if (!strcmp("/data/template.json", req->path))
     {
       // Generate template.json
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
-    }
-    else if (!strcmp("/data/templateUser.json", req->path))
-    {
-      // Generate template.json
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+      p = json_find_bykey(pair, "value", 5);
+      if (p == NULL || p->jsonType != JSONString)
+      {
+        free(query);
+        json_pairs_free(pair);
+        log_error("Bad value in json");
+        r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+        goto finished;
+      }
+      if (p->valueLength == 3 && !strncmp(p->value,"2.0",3))
+      {
+        snprintf(req->path, sizeof(req->path)-1, "/data/templateUser.json");
+      }
+      else if (p->valueLength == 4 && !strncmp(p->value,"1.11",4))
+      {
+        snprintf(req->path, sizeof(req->path)-1, "/data/templateInterface.json");
+      }
+      else
+      {
+        free(query);
+        json_pairs_free(pair);
+        log_error("Bad value in json");
+        r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+        goto finished;
+      }
+      
+      root_service(conn, req);
+      free(query);
+      json_pairs_free(pair);
+      return;
     }
     else if (!strcmp("/data/users.json", req->path))
     {
       // Generate template.json
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
     }
-    r = http_output_stream_write(conn->out, (unsigned char *)buf, n);
 
+    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+    herror_release(r);
+    r = http_output_stream_write(conn->out, (unsigned char *)buf, n);
     free(query);
     json_pairs_free(pair);
   }
