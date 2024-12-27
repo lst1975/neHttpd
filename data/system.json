@@ -32,6 +32,14 @@
       "label": "Theme",
       "id": 3
     },
+    "firewall":{
+      "type":"bool",
+      "range":[0,1],
+      "value":true,
+      "writable":true,
+      "label": "Firewall",
+      "id": 4
+    },
     "memory":{
       "total":{
         "type":"number",
@@ -46,7 +54,7 @@
         "type":"number",
         "subType":"usage",
         "range":[8,4000000],
-        "value":579800,
+        "value":800000,
         "show":"space",
         "writable":false,
         "label": "Used",
