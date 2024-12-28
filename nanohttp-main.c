@@ -582,10 +582,24 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     {
       // Process del operation
       int err, usrLen;
+
+      if (req->userLevel > _N_http_user_type_ADMIN)
+      {
+        // Process set operation
+        n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+          "\"Authorization Failed.\"}]}", 
+          id);
+        goto finished;
+      }
+
       // Process add operation
       p = json_find_bykey(pair, "value", 5);
       if (p != NULL && p->jsonType != JSONObject)
       {
+        // Process set operation
+        n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+          "\"Mailformed Request.\"}]}", 
+          id);
         goto finished;
       }
       
@@ -595,6 +609,15 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           && !memcmp(p->key, ___USER_PFX_STR, ___USER_PFX_LEN))
         {
           const char *colon;
+          
+          if (req->userLevel != _N_http_user_type_SUPER)
+          {
+            // Process set operation
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+              "\"Authorization Failed.\"}]}", 
+              id);
+            goto finished;
+          }
           
           colon = memchr(p->key, ':', p->keyLength);
           if (colon != NULL && colon - p->key > ___USER_PFX_LEN)
@@ -683,6 +706,14 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     }
     else if (!strcmp("/data/save.json", req->path))
     {
+      if (req->userLevel > _N_http_user_type_ADMIN)
+      {
+        // Process set operation
+        n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+          "\"Authorization Failed.\"}]}", 
+          id);
+        goto finished;
+      }
       // Process save operation
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
     }
@@ -702,53 +733,77 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
               ___USER_PFX_STR, ___USER_PFX_LEN, ":.1", 3);
       type = json_find_bykey_head_tail(p->children, 
               ___USER_PFX_STR, ___USER_PFX_LEN, ":.2", 3);
-      if (!usr || !pwd)
+      if (usr != NULL || pwd != NULL)
       {
-        if (usr)
-          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"No password.\"}]}", id, 
-                (int)usr->keyLength, usr->key);
-        else
+        if (req->userLevel != _N_http_user_type_SUPER)
+        {
+          // Process set operation
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
-                "\"No username.\"}]}", id);
-        goto finished;
+            "\"Authorization Failed.\"}]}", 
+            id);
+          goto finished;
+        }
+
+        if (!usr || !pwd)
+        {
+          if (usr)
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"No password.\"}]}", id, 
+                  (int)usr->keyLength, usr->key);
+          else
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+                  "\"No username.\"}]}", id);
+          goto finished;
+        }
+        err = nanohttp_users_add(
+          usr->value, 
+          usr->valueLength,
+          pwd->value, 
+          pwd->valueLength,
+          type ? type->value : NULL,
+          type ? type->valueLength : 0
+          );
+        switch (err)
+        {
+          case _N_http_user_error_NONE:
+            n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
+            break;
+          case _N_http_user_error_EXIST:
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"This user already exists.\"}]}", id, 
+                  (int)usr->keyLength, usr->key);
+            goto finished;
+          case _N_http_user_error_VNAME:
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"The length of username is invalid: [%d,%d].\"}]}", id, 
+                  (int)usr->keyLength, usr->key, 
+                  _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
+            goto finished;
+          case _N_http_user_error_VPSWD:
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"The length of username is invalid: [%d,%d].\"}]}", id, 
+                  (int)usr->keyLength, usr->key, 
+                  _N_http_user_PSWD_MINLEN, _N_http_user_PSWD_MAXLEN);
+            goto finished;
+          case _N_http_user_error_SYS:
+          default:
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"System error.\"}]}", id, 
+                  (int)usr->keyLength, usr->key);
+            goto finished;
+        }
       }
-      err = nanohttp_users_add(
-        usr->value, 
-        usr->valueLength,
-        pwd->value, 
-        pwd->valueLength,
-        type ? type->value : NULL,
-        type ? type->valueLength : 0
-        );
-      switch (err)
+      else
       {
-        case _N_http_user_error_NONE:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
-          break;
-        case _N_http_user_error_EXIST:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"This user already exists.\"}]}", id, 
-                (int)usr->keyLength, usr->key);
+        if (req->userLevel > _N_http_user_type_ADMIN)
+        {
+          // Process set operation
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+            "\"Authorization Failed.\"}]}", 
+            id);
           goto finished;
-        case _N_http_user_error_VNAME:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"The length of username is invalid: [%d,%d].\"}]}", id, 
-                (int)usr->keyLength, usr->key, 
-                _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
-          goto finished;
-        case _N_http_user_error_VPSWD:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"The length of username is invalid: [%d,%d].\"}]}", id, 
-                (int)usr->keyLength, usr->key, 
-                _N_http_user_PSWD_MINLEN, _N_http_user_PSWD_MAXLEN);
-          goto finished;
-        case _N_http_user_error_SYS:
-        default:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"System error.\"}]}", id, 
-                (int)usr->keyLength, usr->key);
-          goto finished;
+        }
+        n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
       }
     }
     else if (!strcmp("/data/del.json", req->path))
@@ -763,52 +818,75 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         goto finished;
       }
 
-      colon = memchr(p->value, ':', p->valueLength);
-      if (colon == NULL || colon-p->value < ___USER_PFX_LEN + 1
-        || memcmp(p->value, ___USER_PFX_STR, ___USER_PFX_LEN))
+      if (!memcmp(p->value, ___USER_PFX_STR, ___USER_PFX_LEN))
       {
-        n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-              "\"This user does not exists.\"}]}", id, 
-              (int)p->valueLength, p->value);
-        goto finished;
-      }
-      usr = colon + 1;
-      usrLen = p->valueLength - (usr - p->value);
-      if ((usrLen < _N_http_user_NAME_MINLEN
-        || usrLen > _N_http_user_NAME_MAXLEN))
-      {
-        if (usrLen != 4 || memcmp(usr, "bob2", 4))
+        if (req->userLevel != _N_http_user_type_SUPER)
+        {
+          // Process set operation
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+            "\"Authorization Failed.\"}]}", 
+            id);
+          goto finished;
+        }
+
+        colon = memchr(p->value, ':', p->valueLength);
+        if (colon == NULL || colon-p->value < ___USER_PFX_LEN + 1)
         {
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
                 "\"This user does not exists.\"}]}", id, 
-                usrLen, usr);
+                (int)p->valueLength, p->value);
           goto finished;
         }
+        usr = colon + 1;
+        usrLen = p->valueLength - (usr - p->value);
+        if ((usrLen < _N_http_user_NAME_MINLEN
+          || usrLen > _N_http_user_NAME_MAXLEN))
+        {
+          if (usrLen != 4 || memcmp(usr, "bob2", 4))
+          {
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"This user does not exists.\"}]}", id, 
+                  usrLen, usr);
+            goto finished;
+          }
+        }
+        
+        err = nanohttp_users_del(usr, usrLen);
+        switch (err)
+        {
+          case _N_http_user_error_NONE:
+            n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
+            break;
+          case _N_http_user_error_EXIST:
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"This user does not exists.\"}]}", id, 
+                  usrLen, usr);
+            goto finished;
+          case _N_http_user_error_VNAME:
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"The length of username is invalid: [%d,%d].\"}]}", id, 
+                  usrLen, usr,
+                  _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
+            goto finished;
+          case _N_http_user_error_SYS:
+          default:
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"System error.\"}]}", id, 
+                  usrLen, usr);
+            goto finished;
+        }
       }
-      
-      err = nanohttp_users_del(usr, usrLen);
-      switch (err)
+      else
       {
-        case _N_http_user_error_NONE:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
-          break;
-        case _N_http_user_error_EXIST:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"This user does not exists.\"}]}", id, 
-                usrLen, usr);
+        if (req->userLevel > _N_http_user_type_ADMIN)
+        {
+          // Process set operation
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+            "\"Authorization Failed.\"}]}", 
+            id);
           goto finished;
-        case _N_http_user_error_VNAME:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"The length of username is invalid: [%d,%d].\"}]}", id, 
-                usrLen, usr,
-                _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
-          goto finished;
-        case _N_http_user_error_SYS:
-        default:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"System error.\"}]}", id, 
-                usrLen, usr);
-          goto finished;
+        }
+        n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
       }
     }
     else if (!strcmp("/data/template.json", req->path))
@@ -821,14 +899,33 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       }
       if (p->valueLength == 3 && !strncmp(p->value,"2.0",3))
       {
+        if (req->userLevel != _N_http_user_type_SUPER)
+        {
+          // Process set operation
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+            "\"Authorization Failed.\"}]}", 
+            id);
+          goto finished;
+        }
         snprintf(req->path, sizeof(req->path)-1, "/data/templateUser.json");
       }
       else if (p->valueLength == 4 && !strncmp(p->value,"1.11",4))
       {
+        if (req->userLevel > _N_http_user_type_ADMIN)
+        {
+          // Process set operation
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+            "\"Authorization Failed.\"}]}", 
+            id);
+          goto finished;
+        }
         snprintf(req->path, sizeof(req->path)-1, "/data/templateInterface.json");
       }
       else
       {
+        n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+          "\"Bad Request.\"}]}", 
+          id);
         goto finished;
       }
       
@@ -839,6 +936,14 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     }
     else if (!strcmp("/data/users.json", req->path))
     {
+      if (req->userLevel != _N_http_user_type_SUPER)
+      {
+        // Process set operation
+        n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+          "\"Authorization Failed.\"}]}", 
+          id);
+        goto finished;
+      }
       // Generate template.json
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
     }

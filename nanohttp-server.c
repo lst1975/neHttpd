@@ -622,9 +622,9 @@ httpd_send_bad_request(httpd_conn_t *conn, const char *msg)
         "<div class='modal-content animate' action='config/secure' method='get'>" \
           "<div class='container'>"  \
             "<label for='uname'><b>Username</b></label>"  \
-            "<input class='name' type='text' value='bob' placeholder='Enter Username' name='uname' required>" \
+            "<input class='name' type='text' value='' placeholder='Enter Username' name='uname' required>" \
             "<label for='psw'><b>Password</b></label>"  \
-            "<input class='password' type='password' value='builder' placeholder='Enter Password' name='psw' required>" \
+            "<input class='password' type='password' value='' placeholder='Enter Password' name='psw' required>" \
             "<button type='submit'>Login</button>" \
             "<label>" \
               "<input type='checkbox' checked='checked' name='remember'> Remember me" \
