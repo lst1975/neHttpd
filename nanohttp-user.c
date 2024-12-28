@@ -111,7 +111,7 @@ int nanohttp_users_init(void)
       goto clean2;
     if (type->valueLength == 13 && !strncmp(type->value, "Administrator", 13))
       entry->type = _N_http_user_type_ADMIN;
-    else if (type->valueLength == 6 && !strncmp(type->value, "Normal", 6))
+    else if (type->valueLength == 5 && !strncmp(type->value, "Guest", 5))
       entry->type = _N_http_user_type_GUEST;
     else
     {
@@ -253,7 +253,7 @@ __nanohttp_user2json(httpd_user_t *entry, char *b, int len, int count)
   		"},"
   		"\"level\": {"
   		"  \"type\":\"array\","
-  		"  \"range\":[\"Administrator\", \"Normal\"],"
+  		"  \"range\":[\"Administrator\", \"Guest\"],"
   		"  \"value\":\"%.*s\","
   		"  \"writable\":true,"
   		"  \"label\": \"User Level\","
