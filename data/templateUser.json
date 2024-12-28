@@ -6,7 +6,7 @@
 		"username": {
 		  "type":"string",
 		  "range":[8,128],
-		  "value":"bob",
+		  "value":"",
 		  "writable":true,
 		  "label": "User Name",
 		  "id": 0
@@ -14,7 +14,7 @@
 		"password": {
 		  "type":"string",
 		  "range":[6,32],
-		  "value":"builder",
+		  "value":"",
 		  "writable":true,
 		  "label": "Password",
 		  "id": 1

@@ -1,71 +1,124 @@
 {
-  "AccountConfiguration": {
-	"supperuser": {
-		"label":"SupperUser",
-        "type":"group",
-		"id":0,
-		"username": {
-		  "type":"string",
-		  "range":[8,128],
-		  "value":"bob",
-		  "writable":false,
-		  "label": "User Name",
-		  "id": 0
-		},
-		"password": {
-		  "type":"string",
-		  "range":[6,32],
-		  "value":"builder",
-		  "writable":false,
-		  "label": "Password",
-		  "id": 1
-		},
-		"level": {
-		  "type":"string",
-		  "range":"[10,10]",
-		  "value":"SupperUser",
-		  "writable":false,
-		  "label": "User Level",
-		  "id": 2
-		}
+  "AccountConfiguration":{
+    "supperuser":{
+      "label":"SupperUser",
+      "type":"group",
+      "id":0,
+      "username":{
+        "type":"string",
+        "range":[
+          8,
+          128
+        ],
+        "value":"bob",
+        "writable":false,
+        "label":"User Name",
+        "id":0
+      },
+      "password":{
+        "type":"string",
+        "range":[
+          6,
+          32
+        ],
+        "value":"builder",
+        "writable":false,
+        "label":"Password",
+        "id":1
+      },
+      "level":{
+        "type":"string",
+        "range":"[10,10]",
+        "value":"SupperUser",
+        "writable":false,
+        "label":"User Level",
+        "id":2
+      }
     },
-	"users": {
-		"type":"list+",
-		"label":"Account",
-		"id":0,
-		"range":[1,100],
-		"writable":true,
-		"index":"username",
-		"value": [
-		  {
-			"username": {
-			  "type":"string",
-			  "range":[8,128],
-			  "value":"bob2",
-			  "writable":true,
-			  "label": "User Name",
-			  "id": 0
-			},
-			"password": {
-			  "type":"string",
-			  "range":[6,32],
-			  "value":"builder2",
-			  "writable":true,
-			  "label": "Password",
-			  "id": 1
-			},
-			"level": {
-			  "type":"array",
-			  "range":["Administrator", "Normal"],
-			  "value":"Normal",
-			  "writable":true,
-			  "label": "User Level",
-			  "id": 2
-			}
-		  }
-		]
-	},
+    "users":{
+      "type":"list+",
+      "label":"Account",
+      "id":0,
+      "range":[
+        1,
+        100
+      ],
+      "writable":true,
+      "index":"username",
+      "value":[
+        {
+          "username":{
+            "type":"string",
+            "range":[
+              8,
+              128
+            ],
+            "value":"bob2",
+            "writable":false,
+            "label":"User Name",
+            "id":0
+          },
+          "password":{
+            "type":"string",
+            "range":[
+              6,
+              32
+            ],
+            "value":"builder2",
+            "writable":true,
+            "label":"Password",
+            "id":1
+          },
+          "level":{
+            "type":"array",
+            "range":[
+              "Administrator",
+              "Normal"
+            ],
+            "value":"Normal",
+            "writable":true,
+            "label":"User Level",
+            "id":2
+          }
+        },
+        {
+          "username":{
+            "type":"string",
+            "range":[
+              8,
+              128
+            ],
+            "value":"aaaaaaaa",
+            "writable":false,
+            "label":"User Name",
+            "id":0
+          },
+          "password":{
+            "type":"string",
+            "range":[
+              6,
+              32
+            ],
+            "value":"aaaaaaaa",
+            "writable":true,
+            "label":"Password",
+            "id":1
+          },
+          "level":{
+            "type":"array",
+            "range":[
+              "Administrator",
+              "Normal"
+            ],
+            "value":"Normal",
+            "writable":true,
+            "label":"User Level",
+            "id":2
+          }
+        }
+      ]
+    },
     "label":"Account Configuration",
-    "id": 2
+    "id":2
   }
 }
