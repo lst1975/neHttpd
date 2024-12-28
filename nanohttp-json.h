@@ -34,6 +34,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "nanohttp-user.h"
+
 /* *INDENT-OFF* */
 #ifdef __cplusplus
     extern "C" {
@@ -264,14 +266,19 @@ typedef struct json_pair
   };
 } JSONPair_t;
 
+typedef int (*JSON_PRINTER_f)(httpd_buf_t *b, const char *fmt, ...);
+
 const char *json_type2str(JSONTypes_t type);
 void json_pairs_free(JSONPair_t *pair);
 JSONStatus_t json_print(JSONPair_t *pair, int depth, const char *pad);
+int json_to_printer(JSON_PRINTER_f printer, httpd_buf_t *b, JSONPair_t *pair, int depth, const char *pad);
 int json_tostr(JSONPair_t *pair, char *buf, 
   size_t length, int depth, const char *pad);
 int json_cal_length(JSONPair_t *pair, int depth, const char *pad);
 JSONStatus_t json_parse(JSONPair_t **pair, const char *json, size_t length);
 JSONPair_t *json_find_bykey(JSONPair_t *pair, const char *key, 
+  size_t length);
+JSONPair_t *json_find_bykey_head(JSONPair_t *pair, const char *key, 
   size_t length);
 
 /**

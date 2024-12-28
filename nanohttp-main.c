@@ -473,8 +473,10 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
 
   if (req->query != NULL)
   {
-    char buf[126];
+    char buf[126]={0};
     int n, len;
+    int httpRetCode = 204;
+    const char *httpRetReason = HTTP_STATUS_204_REASON_PHRASE;
     unsigned char *query;
     unsigned char *data = NULL;
     JSONPair_t *pair,*p;
@@ -484,7 +486,6 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     if (data == NULL)
     {
       log_error("No query data");
-      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
       goto finished;
     }
     
@@ -495,7 +496,6 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     if (data == NULL)
     {
       log_error("Failed to parse query");
-      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
       goto finished;
     }
     log_debug("decoded query is : %s", data);
@@ -505,8 +505,6 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     if (query == NULL)
     {
       log_error("Failed to malloc key");
-      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
-      free(data);
       goto finished;
     }
     len = base64_decode_string(data, query);
@@ -515,19 +513,14 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     result = json_parse(&pair, (const char *)query, len);
     if (result != JSONSuccess)
     {
-      free(query);
       log_error("Failed to parse json");
-      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
       goto finished;
     }
 
     p = json_find_bykey(pair, "id", 2);
     if (p == NULL || p->jsonType != JSONNumber)
     {
-      free(query);
-      json_pairs_free(pair);
       log_error("Bad id in json");
-      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
       goto finished;
     }
 
@@ -537,20 +530,110 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"0.0\",\"reason\":"
         "\"For testing received error message from our product.\"}]}", (int)p->vint);
     }
-    else if (!strcmp("/data/add.json", req->path))
-    {
-      // Process add operation
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
-    }
     else if (!strcmp("/data/save.json", req->path))
     {
       // Process save operation
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
     }
+    else if (!strcmp("/data/add.json", req->path))
+    {
+      int err;
+      JSONPair_t *usr, *pwd, *type;
+      // Process add operation
+      p = json_find_bykey(pair, "value", 5);
+      if (p != NULL && p->jsonType != JSONObject)
+      {
+        goto finished;
+      }
+      usr = json_find_bykey(p->children,  "2.0.1:.0", 8);
+      pwd = json_find_bykey(p->children,  "2.0.1:.1", 8);
+      type = json_find_bykey(p->children, "2.0.1:.2", 8);
+      if (!usr || !pwd)
+      {
+        goto finished;
+      }
+      err = nanohttp_users_add(
+        usr->value, 
+        usr->valueLength,
+        pwd->value, 
+        pwd->valueLength,
+        type ? type->value : NULL,
+        type ? type->valueLength : 0
+        );
+      switch (err)
+      {
+        case _N_http_user_error_NONE:
+          n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+          break;
+        case _N_http_user_error_EXIST:
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                "\"This user already exists.\"}]}", (int)p->vint, 
+                (int)usr->keyLength, usr->key);
+          goto finished;
+        case _N_http_user_error_VNAME:
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                "\"The length of username is invalid: [%d,%d].\"}]}", (int)p->vint, 
+                (int)usr->keyLength, usr->key, 
+                _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
+          goto finished;
+        case _N_http_user_error_VPSWD:
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                "\"The length of username is invalid: [%d,%d].\"}]}", (int)p->vint, 
+                (int)usr->keyLength, usr->key, 
+                _N_http_user_PSWD_MINLEN, _N_http_user_PSWD_MAXLEN);
+          goto finished;
+        case _N_http_user_error_SYS:
+        default:
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                "\"System error.\"}]}", (int)p->vint, 
+                (int)usr->keyLength, usr->key);
+          goto finished;
+      }
+    }
     else if (!strcmp("/data/del.json", req->path))
     {
       // Process del operation
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+      int err;
+      
+      // Process add operation
+      p = json_find_bykey(pair, "value", 5);
+      if (p != NULL && p->jsonType != JSONString)
+      {
+        goto finished;
+      }
+      if (p->valueLength < _N_http_user_NAME_MINLEN + 6
+        || p->valueLength > _N_http_user_NAME_MAXLEN + 6)
+      {
+        n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+              "\"This user does not exists.\"}]}", (int)p->vint, 
+              (int)p->valueLength, p->value);
+        goto finished;
+      }
+      
+      err = nanohttp_users_del(p->value+6, p->valueLength-6);
+      switch (err)
+      {
+        case _N_http_user_error_NONE:
+          n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+          break;
+        case _N_http_user_error_EXIST:
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                "\"This user does not exists.\"}]}", (int)p->vint, 
+                (int)p->valueLength-6, p->value+6);
+          goto finished;
+        case _N_http_user_error_VNAME:
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                "\"The length of username is invalid: [%d,%d].\"}]}", (int)p->vint, 
+                (int)p->valueLength-6, p->value+6,
+                _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
+          goto finished;
+        case _N_http_user_error_SYS:
+        default:
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                "\"System error.\"}]}", (int)p->vint, 
+                (int)p->valueLength-6, p->value+6);
+          goto finished;
+      }
     }
     else if (!strcmp("/data/template.json", req->path))
     {
@@ -558,10 +641,6 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       p = json_find_bykey(pair, "value", 5);
       if (p == NULL || p->jsonType != JSONString)
       {
-        free(query);
-        json_pairs_free(pair);
-        log_error("Bad value in json");
-        r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
         goto finished;
       }
       if (p->valueLength == 3 && !strncmp(p->value,"2.0",3))
@@ -574,16 +653,12 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       }
       else
       {
-        free(query);
-        json_pairs_free(pair);
-        log_error("Bad value in json");
-        r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
         goto finished;
       }
       
-      root_service(conn, req);
       free(query);
       json_pairs_free(pair);
+      root_service(conn, req);
       return;
     }
     else if (!strcmp("/data/users.json", req->path))
@@ -592,11 +667,21 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
     }
 
-    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
-    herror_release(r);
-    r = http_output_stream_write(conn->out, (unsigned char *)buf, n);
+    httpRetCode = 200;
+    httpRetReason = HTTP_STATUS_200_REASON_PHRASE;
+    
+finished:  
     free(query);
     json_pairs_free(pair);
+    r = httpd_send_header(conn, httpRetCode, httpRetReason);
+    herror_release(r);
+    if (*buf)
+    {
+      r = http_output_stream_write(conn->out, (unsigned char *)buf, n);
+      herror_release(r);
+    }
+    herror_release(r);
+    return;
   }
   else
   {
@@ -608,11 +693,9 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     {
       r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
     }
+    herror_release(r);
+    return;
   }
-
-finished:  
-  herror_release(r);
-  return;
 }
 
 static void

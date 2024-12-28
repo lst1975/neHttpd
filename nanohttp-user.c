@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 #include "nanohttp-json.h"
 #include "nanohttp-file.h"
@@ -65,7 +66,7 @@ int nanohttp_users_init(void)
     goto clean1;
   }
   
-  log_debug("%.*s", (int)b->len, b->data);
+  log_debug("%.*s\n", (int)b->len, b->data);
 
   result = json_parse(&pair, (const char *)b->data, b->len);
   if (result != JSONSuccess)
@@ -184,7 +185,7 @@ __nanohttp_string2level(const char *level, int levelLen)
   return _N_http_user_type_NONE;
 }
 static int
-__nanohttp_user2json(httpd_user_t *entry, char *b, int len, int count)
+__nanohttp_user2json_super(httpd_user_t *entry, char *b, int len, int count)
 {
   const httpd_buf_t *lp = __nanohttp_level2string(entry->type);
   if (lp == NULL)
@@ -227,18 +228,75 @@ __nanohttp_user2json(httpd_user_t *entry, char *b, int len, int count)
     return - 1;
   return n;
 }
+static int
+__nanohttp_user2json(httpd_user_t *entry, char *b, int len, int count)
+{
+  const httpd_buf_t *lp = __nanohttp_level2string(entry->type);
+  if (lp == NULL)
+    return -1;
+  int n = snprintf(b, len,
+  		"{\"username\": {"
+  		"  \"type\":\"string\","
+  		"  \"range\":[%u,%u],"
+  		"  \"value\":\"%.*s\","
+  		"  \"writable\":false,"
+  		"  \"label\": \"User Name\","
+  		"  \"id\": 0"
+  		"},"
+  		"\"password\": {"
+  		"  \"type\":\"string\","
+  		"  \"range\":[%u,%u],"
+  		"  \"value\":\"%.*s\","
+  		"  \"writable\":true,"
+  		"  \"label\": \"Password\","
+  		"  \"id\": 1"
+  		"},"
+  		"\"level\": {"
+  		"  \"type\":\"array\","
+  		"  \"range\":[\"Administrator\", \"Normal\"],"
+  		"  \"value\":\"%.*s\","
+  		"  \"writable\":true,"
+  		"  \"label\": \"User Level\","
+  		"  \"id\": 2"
+  		"}}%s",
+  		_N_http_user_NAME_MINLEN,
+  		_N_http_user_NAME_MAXLEN,
+      (int)entry->name.len, entry->name.cptr,
+      _N_http_user_PSWD_MINLEN,
+      _N_http_user_PSWD_MAXLEN,
+      (int)entry->pswd.len, entry->pswd.cptr,
+      (int)lp->len, lp->cptr,
+      count ? ",":""
+    );
+  if (n >= len - 1)
+    return - 1;
+  return n;
+}
+
+static inline int 
+json_printer_file(httpd_buf_t *b, const char *fmt, ...)
+{
+  size_t n;
+  va_list args;
+
+  va_start(args, fmt);
+  n = vfprintf(b->data, fmt, args);
+  va_end(args);
+  return n;
+}
 
 static int
 __nanohttp_users2file(void)
 {
   int n, count=0, err=-1;
   httpd_user_t *entry;
-  char buf[2048];
+  char buf[8192];
   char *p = buf;
   int len = sizeof(buf);
   JSONStatus_t result;
   JSONPair_t *json;
   void *fp;
+  httpd_buf_t b;
 
   n = snprintf(p, len, "%s", "{\"AccountConfiguration\":{");
   p += n, len -= n;
@@ -249,7 +307,7 @@ __nanohttp_users2file(void)
     {
       n = snprintf(p, len, "%s", "\"supperuser\":{\"label\":\"SupperUser\",\"type\":\"group\",\"id\":0,");
       p += n, len -= n;
-      n = __nanohttp_user2json(entry, p, len, 0);
+      n = __nanohttp_user2json_super(entry, p, len, 0);
       if (n == -1)
         goto clean0;
       p += n, len -= n;
@@ -277,6 +335,9 @@ __nanohttp_users2file(void)
   p += n, len -= n;
 
   len = p -buf;
+
+  log_debug("%.*s\n", (int)len, buf);
+  
   result = JSON_Validate(buf, len);
   if( result != JSONSuccess )
   {
@@ -287,17 +348,8 @@ __nanohttp_users2file(void)
   {
     goto clean0;
   }
-  n = json_cal_length(json, 0,"  ");
-  if (n > sizeof(buf))
-  {
-    goto clean1;
-  }
-  
-  len = json_tostr(json,buf,sizeof(buf),0,"  ");
-  if (len >= sizeof(buf)-1)
-  {
-    goto clean1;
-  }
+
+  json_print(json,0,"  ");
   
   fp = nanohttp_file_open_for_write(__USER_FILE);
   if (fp == NULL)
@@ -305,7 +357,9 @@ __nanohttp_users2file(void)
     goto clean1;
   }
 
-  if (nanohttp_file_write(fp, buf,len) != len)
+  b.data = fp;
+  len = json_to_printer(json_printer_file, &b, json, 0, "  ");
+  if (len <= 0)
   {
     goto clean2;
   }
@@ -319,7 +373,7 @@ clean0:
   return err;
 }
 
-httpd_user_t * 
+int 
 nanohttp_users_add(const char *name, int nameLen, 
   const char *pswd, int pswdLen, const char *level, int levelLen)
 {
@@ -327,24 +381,31 @@ nanohttp_users_add(const char *name, int nameLen,
   httpd_user_t *entry;
 
   if (nameLen < _N_http_user_NAME_MINLEN 
-    || nameLen > _N_http_user_NAME_MAXLEN 
-    || pswdLen < _N_http_user_PSWD_MINLEN 
+    || nameLen > _N_http_user_NAME_MAXLEN)
+  {
+    return _N_http_user_error_VNAME;
+  }
+  
+  if (pswdLen < _N_http_user_PSWD_MINLEN 
     || pswdLen > _N_http_user_PSWD_MAXLEN)
   {
-    return NULL;
+    return _N_http_user_error_VPSWD;
   }
+  
   type = __nanohttp_string2level(level, levelLen);
   if (type == _N_http_user_type_NONE)
   {
-    return NULL;
+    level    = __http_user_normal.cptr;
+    levelLen = __http_user_normal.len;
+    type     = _N_http_user_type_NORMAL;
   }
   
   entry = nanohttp_users_match(name, nameLen, NULL, 0);
   if (entry != NULL)
-    return NULL;
+    return _N_http_user_error_EXIST;
   entry = malloc(sizeof(*entry)+nameLen+pswdLen);
   if (entry == NULL)
-    return NULL;
+    return _N_http_user_error_SYS;
 
   entry->type = type;
   
@@ -362,44 +423,45 @@ nanohttp_users_add(const char *name, int nameLen,
   {
     ng_list_del(&entry->link);
     free(entry);
-    return NULL;
+    return _N_http_user_error_SYS;
   }
   
-  return entry;
+  return _N_http_user_error_NONE;
 }
 
-httpd_user_t * 
+int 
 nanohttp_users_update(const char *name, int nameLen, 
   const char *pswd, int pswdLen, const char *level, int levelLen)
 {
   int type;
   httpd_user_t *entry, *old;
 
-  if (!nameLen || (!pswdLen && !levelLen))
+  if (!pswdLen && !levelLen)
   {
-    return NULL;
+    return _N_http_user_type_INVAl;
   }
   if (nameLen < _N_http_user_NAME_MINLEN 
     || nameLen > _N_http_user_NAME_MAXLEN)
   {
-    return NULL;
+    return _N_http_user_error_VNAME;
   }
+  
   if (pswdLen && (pswdLen < _N_http_user_PSWD_MINLEN 
     || pswdLen > _N_http_user_PSWD_MAXLEN))
   {
-    return NULL;
+    return _N_http_user_error_VPSWD;
   }
   
   old = nanohttp_users_match(name, nameLen, NULL, 0);
   if (old == NULL)
-    return NULL;
+    return _N_http_user_error_EXIST;
 
   if (levelLen)
   {
     type = __nanohttp_string2level(level, levelLen);
     if (type == _N_http_user_type_NONE)
     {
-      return NULL;
+      return _N_http_user_type_INVAl;
     }
   }
   else
@@ -409,7 +471,7 @@ nanohttp_users_update(const char *name, int nameLen,
 
   entry = malloc(sizeof(*entry)+nameLen+pswdLen);
   if (entry == NULL)
-    return NULL;
+    return _N_http_user_error_SYS;
 
   entry->type = type;
 
@@ -429,10 +491,10 @@ nanohttp_users_update(const char *name, int nameLen,
   {
     ng_list_del(&entry->link);
     free(entry);
-    return NULL;
+    return _N_http_user_error_SYS;
   }
   
-  return entry;
+  return _N_http_user_type_NONE;
 }
 
 int 
@@ -443,14 +505,18 @@ nanohttp_users_del(const char *name, int nameLen)
   if (nameLen < _N_http_user_NAME_MINLEN 
     || nameLen > _N_http_user_NAME_MAXLEN)
   {
-    return -1;
+    return _N_http_user_error_VNAME;
   }
   
   entry = nanohttp_users_match(name, nameLen, NULL, 0);
   if (entry == NULL)
-    return -1;
+    return _N_http_user_error_EXIST;
 
   ng_list_del(&entry->link);
-  return __nanohttp_users2file();
+  
+  if (__nanohttp_users2file() < 0)
+    return _N_http_user_error_SYS;
+  else
+    return _N_http_user_type_NONE;
 }
 

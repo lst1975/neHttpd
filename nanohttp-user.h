@@ -7,7 +7,9 @@ typedef struct {
   union{
     void *data;
     const char *cptr;
+    char *buf;
   };
+  char *p;
   size_t len;
 } httpd_buf_t;
 
@@ -15,6 +17,7 @@ typedef struct {
 #define _N_http_user_type_SUPER  1
 #define _N_http_user_type_ADMIN  2
 #define _N_http_user_type_NORMAL 3
+#define _N_http_user_type_INVAl  4
 
 #define _N_http_user_NAME_MINLEN 8
 #define _N_http_user_NAME_MAXLEN 128
@@ -28,13 +31,20 @@ typedef struct {
   ng_list_head_s link;
 } httpd_user_t;
 
+#define _N_http_user_error_NONE  0
+#define _N_http_user_error_EXIST 1
+#define _N_http_user_error_SYS   2
+#define _N_http_user_error_VNAME 4
+#define _N_http_user_error_VPSWD 5
+
 void nanohttp_users_free(void);
 int nanohttp_users_init(void);
 httpd_user_t *nanohttp_users_match(const char *name, int nameLen, 
   const char *pswd, int pswdLen);
-httpd_user_t *nanohttp_users_add(const char *name, int nameLen, 
+int nanohttp_users_add(const char *name, int nameLen, 
   const char *pswd, int pswdLen, const char *level, int levelLen);
-httpd_user_t *nanohttp_users_update(const char *name, int nameLen, 
+int nanohttp_users_update(const char *name, int nameLen, 
   const char *pswd, int pswdLen, const char *level, int levelLen);
+int nanohttp_users_del(const char *name, int nameLen);
 
 #endif

@@ -34,8 +34,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <limits.h>
+#include <stdarg.h>
 
 #include "nanohttp-json.h"
+#include "nanohttp-user.h"
 
 /** @cond DO_NOT_DOCUMENT */
 
@@ -2016,34 +2019,6 @@ JSONStatus_t json_parse(JSONPair_t **__pair, const char *json, size_t length)
   return __json_parse(JSONInvalid, __pair, json, length);
 }
 
-static int __json_pad_put(char *buf, int len, int depth, const char *pad)
-{
-  char *p = buf;
-
-  if (depth == -1)
-    return 0;
-  
-  while (depth--)
-  {
-    int n = snprintf(p, len, "%s", pad);
-    p += n;
-    len -= n;
-  }
-
-  return p - buf;
-}
-
-static void __json_pad_print(int depth, const char *pad)
-{
-  if (depth == -1)
-    return;
-
-  while (depth--)
-  {
-    printf("%s", pad);
-  }
-}
-
 /* only the first 36 ascii characters need an escape */
 static char const *character_escape[] = {
 	"\\u0000", "\\u0001", "\\u0002", "\\u0003", "\\u0004", "\\u0005", "\\u0006", "\\u0007", /*  0-7  */
@@ -2080,253 +2055,284 @@ static char const *character_escape[] = {
 	"\\u00f8", "\\u00f9", "\\u00fa", "\\u00fb", "\\u00fc", "\\u00fd", "\\u00fe", "\\u00ff", /* f8-ff */
 };
 
-static int __json_tostr(JSONPair_t *pair, char *buf,
-  size_t length, int depth, const char *pad)
+static int __json_pad_print(JSON_PRINTER_f printer, 
+  httpd_buf_t *b, int depth, const char *pad)
 {
-  char *p = buf;
-  int n, r=-1;
+  int k=0;
+  
+  if (depth == -1)
+    return 0;
+
+  while (depth--)
+  {
+    int n = printer(b, "%s", pad);
+    if (n < 0) return n;
+    k += n;
+  }
+
+  return k;
+}
+
+static inline int json_printer_default(httpd_buf_t *b, const char *fmt, ...)
+{
+  size_t n;
+  va_list args;
+
+  (void)(b);
+
+  va_start(args, fmt);
+  n = vprintf(fmt, args);
+  va_end(args);
+  return n;
+}
+
+static int 
+__json_print(JSON_PRINTER_f printer, httpd_buf_t *b, 
+  JSONPair_t *pair, int depth, const char *pad)
+{
+  size_t n, k=0;
   
   while (pair != NULL)
   {
-    n = __json_pad_put(p,length,depth,pad);
-    p+=n,length-=n;
+    n = __json_pad_print(printer, b, depth,pad);
+    if (n < 0) return n;
+    k += n;
+
     if (pair->keyLength)
     {
-      n = snprintf(p,length,"\"%.*s\":",pair->keyLength,pair->key);
-      p+=n,length-=n;
+      n = printer(b, "\"%.*s\":",pair->keyLength,pair->key);
+      if (n < 0) return n;
+      k += n;
     }
-    else if (JSONObject != pair->jsonType && JSONArray != pair->jsonType)
-      goto clean0;
 
     switch (pair->jsonType)
     {
       default:
       case JSONInvalid:
-        goto clean0;
+        return -1;
+        
       case JSONString:
         if (pair->valueLength)
         {
-          n = snprintf(p,length,"%s","\"");
-          p+=n,length-=n;
+          n = printer(b,"%s","\"");
+          if (n < 0) return n;
+          k += n;
+
           for (int i=0;i<pair->valueLength;i++)
           {
-            n = snprintf(p,length,"%s",character_escape[(int)pair->value[i]]);
-            p+=n,length-=n;
+            n = printer(b,"%s",character_escape[(int)pair->value[i]]);
+            if (n < 0) return n;
+            k += n;
           }
-          n = snprintf(p,length,"%s","\"");
-          p+=n,length-=n;
+
+          n = printer(b,"%s","\"");
+          if (n < 0) return n;
+          k += n;
         }
         else
         {
-          n = snprintf(p,length,"\"%s\"","");
-          p+=n,length-=n;
+          n = printer(b,"\"%s\"","");
+          if (n < 0) return n;
+          k += n;
         }
         break;
+        
       case JSONNumber:
         if (pair->isDouble)
         {
-          n = snprintf(p,length,"%lf",pair->vdouble);
-          p+=n,length-=n;
+          n = printer(b, "%lf",pair->vdouble);
+          if (n < 0) return n;
+          k += n;
         }
         else
         {
-          n = snprintf(p,length,"%lld",pair->vint);
-          p+=n,length-=n;
+          n = printer(b, "%lld",pair->vint);
+          if (n < 0) return n;
+          k += n;
         }
         break;
+        
       case JSONTrue:
-        n = snprintf(p,length,"true");
-        p+=n,length-=n;
+        n = printer(b, "%s", "true");
+        if (n < 0) return n;
+        k += n;
         break;
+        
       case JSONFalse:
-        n = snprintf(p,length,"false");
-        p+=n,length-=n;
+        n = printer(b, "%s", "false");
+        if (n < 0) return n;
+        k += n;
         break;
+        
       case JSONNull:
-        n = snprintf(p,length,"null");
-        p+=n,length-=n;
+        n = printer(b, "%s", "null");
+        if (n < 0) return n;
+        k += n;
         break;
+        
       case JSONArray:
-        n = snprintf(p,length,"[");
-        p+=n,length-=n;
+        n = printer(b, "%s", "[");
+        if (n < 0) return n;
+        k += n;
+
         if (depth != -1)
         {
-          n = snprintf(p,length,"\n");
-          p+=n,length-=n;
+          n = printer(b, "%s", "\n");
+          if (n < 0) return n;
+          k += n;
         }
 
-        n = __json_tostr(pair->children, p, length, depth != -1 ? depth+1 : -1, pad);
-        if (n == -1)
-          goto clean0;
-        p+=n,length-=n;
+        n = __json_print(printer, b, pair->children, 
+          depth != -1 ? depth+1 : -1, pad);
+        if (n < 0) return n;
+        k += n;
         
-        n = __json_pad_put(p,length,depth,pad);
-        p+=n,length-=n;
-        n = snprintf(p,length,"]");
-        p+=n,length-=n;
+        n = __json_pad_print(printer, b, depth,pad);
+        if (n < 0) return n;
+        k += n;
+
+        n = printer(b, "%s", "]");
+        if (n < 0) return n;
+        k += n;
         break;
+        
       case JSONObject:
-        n = snprintf(p,length,"{");
-        p+=n,length-=n;
+        n = printer(b,"%s","{");
+        if (n < 0) return n;
+        k += n;
+
         if (depth != -1)
         {
-          n = snprintf(p,length,"\n");
-          p+=n,length-=n;
+          n = printer(b, "%s", "\n");
+          if (n < 0) return n;
+          k += n;
         }
 
-        n = __json_tostr(pair->children, p, length, depth != -1 ? depth+1 : -1, pad);
-        if (n == -1)
-          goto clean0;
-        p+=n,length-=n;
+        n = __json_print(printer, b, pair->children, 
+          depth != -1 ? depth+1 : -1, pad);
+        if (n < 0) return n;
+        k += n;
         
-        n = __json_pad_put(p,length,depth,pad);
-        p+=n,length-=n;
-        n = snprintf(p,length,"}");
-        p+=n,length-=n;
+        n = __json_pad_print(printer, b, depth,pad);
+        if (n < 0) return n;
+        k += n;
+
+        n = printer(b, "%s", "}");
+        if (n < 0) return n;
+        k += n;
         break;
     }
 
     if (pair->siblings != NULL)
     {
-      n = snprintf(p,length,",");
-      p+=n,length-=n;
+      n = printer(b, "%s", ",");
+      if (n < 0) return n;
+      k += n;
     }
     if (depth != -1)
     {
-      n = snprintf(p,length,"\n");
-      p+=n,length-=n;
-    }
-
-    pair = pair->siblings;
-  }
-
-  r = p - buf;
-
-clean0:
-  return r;
-}
-
-int json_tostr(JSONPair_t *pair, char *buf,
-  size_t length, int depth, const char *pad)
-{
-  char *p = buf;
-  int n;
-
-  n = snprintf(p,length,"{");
-  p+=n,length-=n;
-  if (depth != -1)
-  {
-    n = snprintf(p,length,"\n");
-    p+=n,length-=n;
-  }
-
-  n = __json_tostr(pair, p, length, depth != -1 ? depth+1 : -1, pad);
-  if (n != -1)
-    p+=n,length-=n;
-
-  n = snprintf(p,length,"}");
-  p+=n,length-=n;
-
-  return p - buf;
-}
-
-static JSONStatus_t __json_print(JSONPair_t *pair, int depth, const char *pad)
-{
-  JSONStatus_t r = JSONSuccess;
-  
-  while (pair != NULL)
-  {
-    __json_pad_print(depth,pad);
-    if (pair->keyLength)
-    {
-      printf("\"%.*s\":",pair->keyLength,pair->key);
-    }
-
-    switch (pair->jsonType)
-    {
-      default:
-      case JSONInvalid:
-        goto clean0;
-      case JSONString:
-        printf("\"%.*s\"",pair->valueLength,pair->value);
-        break;
-      case JSONNumber:
-        if (pair->isDouble)
-        {
-          printf("%lf",pair->vdouble);
-        }
-        else
-        {
-          printf("%lld",pair->vint);
-        }
-        break;
-      case JSONTrue:
-        printf("true");
-        break;
-      case JSONFalse:
-        printf("false");
-        break;
-      case JSONNull:
-        printf("null");
-        break;
-      case JSONArray:
-        printf("[");
-        if (depth != -1)
-        {
-          printf("\n");
-        }
-
-        r = __json_print(pair->children, depth != -1 ? depth+1 : -1, pad);
-        if (r != JSONSuccess)
-          goto clean0;
-        
-        __json_pad_print(depth,pad);
-        printf("]");
-        break;
-      case JSONObject:
-        printf("{");
-        if (depth != -1)
-        {
-          printf("\n");
-        }
-
-        r = __json_print(pair->children, depth != -1 ? depth+1 : -1, pad);
-        if (r != JSONSuccess)
-          goto clean0;
-        
-        __json_pad_print(depth,pad);
-        printf("}");
-        break;
-    }
-
-    if (pair->siblings != NULL)
-    {
-      printf(",");
-    }
-    if (depth != -1)
-    {
-      printf("\n");
+      n = printer(b, "%s", "\n");
+      if (n < 0) return n;
+      k += n;
     }
 
     pair = pair->siblings;
   }
  
-clean0:
-  return r;
+  return k;
 }
 
 JSONStatus_t json_print(JSONPair_t *pair, int depth, const char *pad)
 {
-  JSONStatus_t r;
-  printf("{");
+  int n;
+  httpd_buf_t b;
+  
+  n = json_printer_default(&b, "%s", "{");
+  if (n < 0) return JSONPartial;
   if (depth != -1)
   {
-    printf("\n");
+    n = json_printer_default(&b, "%s", "\n");
+    if (n < 0) return JSONPartial;
   }
-  r = __json_print(pair, depth != -1 ? depth+1 : -1, pad);
+  n = __json_print(json_printer_default, &b,  
+    pair, depth != -1 ? depth+1 : -1, pad);
+  if (n < 0) return JSONPartial;
 
-  printf("}");
-  return r;
+  n = json_printer_default(&b, "%s", "}");
+  if (n < 0) return JSONPartial;
+  
+  return JSONSuccess;
+}
+
+static inline int 
+json_printer_buffer(httpd_buf_t *b, const char *fmt, ...)
+{
+  size_t n;
+  va_list args;
+
+  va_start(args, fmt);
+  n = vsnprintf(b->p, b->len, fmt, args);
+  va_end(args);
+  b->p += n, b->len -= n;
+  return n;
+}
+
+int json_tostr(JSONPair_t *pair, char *buf,
+  size_t length, int depth, const char *pad)
+{
+  int k=0;
+  httpd_buf_t b = {.buf = buf, .len = length, .p = buf};
+  int n;
+
+  n = json_printer_buffer(&b, "%s", "{");
+  if (n <= 0) return -1;
+  k += n;
+
+  if (depth != -1)
+  {
+    n = json_printer_buffer(&b, "%s", "\n");
+    if (n <= 0) return -1;
+    k += n;
+  }
+
+  n = __json_print(json_printer_buffer, &b, 
+        pair, depth != -1 ? depth+1 : -1, pad);
+  if (n <= 0) return -1;
+  k += n;
+
+  n = json_printer_buffer(&b, "%s", "}");
+  if (n <= 0) return -1;
+  k += n;
+
+  return k;
+}
+
+int json_to_printer(JSON_PRINTER_f printer, httpd_buf_t *b, 
+  JSONPair_t *pair, int depth, const char *pad)
+{
+  int n, k=0;
+
+  n = printer(b, "%s", "{");
+  if (n < 0) return -1;
+  k += n;
+  
+  if (depth != -1)
+  {
+    n = printer(b, "%s", "\n");
+    if (n < 0) return -1;
+    k += n;
+  }
+
+  n = __json_print(printer, b,
+        pair, depth != -1 ? depth+1 : -1, pad);
+  if (n < 0) return -1;
+  k += n;
+
+  n = printer(b, "%s", "}");
+  if (n < 0) return -1;
+  k += n;
+
+  return k;
 }
 
 static int __json_pad_length(int depth, const char *pad)
@@ -2452,4 +2458,16 @@ JSONPair_t *json_find_bykey(JSONPair_t *pair, const char *key,
   return NULL;
 }
 
+JSONPair_t *json_find_bykey_head(JSONPair_t *pair, const char *key, 
+  size_t length)
+{
+  while (pair != NULL)
+  {
+    if (pair->keyLength >= length
+      && !memcmp(pair->key, key, length))
+      return pair;
+    pair = pair->siblings;
+  }
+  return NULL;
+}
 
