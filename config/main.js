@@ -85,7 +85,7 @@ function page_common(name, type, display, alwaysActive, action)
 var page_SYSTEM  = new page_common("gmt_SYSTEM","normal",MAIN_SYSTEM_display,false,"data/setmib.json");
 var page_DEVICE  = new page_common("gmt_DEVICE","normal",MAIN_DEVICE_display,false,"data/setmib.json");
 var page_UPGRADE = new page_common("gmt_UPGRADE","normal",MAIN_UPGRADE_display,false);
-var page_USERS = new page_common("gmt_USERS","normal",MAIN_USERS_display,false,"data/users.json");
+var page_USERS = new page_common("gmt_USERS","normal",MAIN_USERS_display,false,"data/setmib.json");
 
 var loginWindow = 
     '<div id="id01" class="__login modal">'
