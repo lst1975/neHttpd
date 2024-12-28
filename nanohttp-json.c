@@ -2471,3 +2471,19 @@ JSONPair_t *json_find_bykey_head(JSONPair_t *pair, const char *key,
   return NULL;
 }
 
+JSONPair_t *json_find_bykey_head_tail(JSONPair_t *pair, const char *key, 
+  size_t head, const char *tailKey, size_t tailLen)
+{
+  while (pair != NULL)
+  {
+    if (pair->keyLength >= head + tailLen
+      && !memcmp(pair->key, key, head)
+      && !memcmp(pair->key+pair->keyLength-tailLen, tailKey, tailLen))
+    {
+      return pair;
+    }
+    pair = pair->siblings;
+  }
+  return NULL;
+}
+

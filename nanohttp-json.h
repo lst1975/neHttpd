@@ -280,6 +280,8 @@ JSONPair_t *json_find_bykey(JSONPair_t *pair, const char *key,
   size_t length);
 JSONPair_t *json_find_bykey_head(JSONPair_t *pair, const char *key, 
   size_t length);
+JSONPair_t *json_find_bykey_head_tail(JSONPair_t *pair, const char *key, 
+  size_t head, const char *tailKey, size_t tailLen);
 
 /**
  * @brief Output the next key-value pair or value from a collection.

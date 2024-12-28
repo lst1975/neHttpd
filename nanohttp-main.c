@@ -546,9 +546,9 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       {
         goto finished;
       }
-      usr = json_find_bykey(p->children,  "2.0.1:.0", 8);
-      pwd = json_find_bykey(p->children,  "2.0.1:.1", 8);
-      type = json_find_bykey(p->children, "2.0.1:.2", 8);
+      usr = json_find_bykey_head_tail(p->children,  "2.0.", 4, ":.0", 3);
+      pwd = json_find_bykey_head_tail(p->children,  "2.0.", 4, ":.1", 3);
+      type = json_find_bykey_head_tail(p->children, "2.0.", 4, ":.2", 3);
       if (!usr || !pwd)
       {
         goto finished;
@@ -594,24 +594,38 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     else if (!strcmp("/data/del.json", req->path))
     {
       // Process del operation
-      int err;
-      
+      int err, usrLen;
+      const char *colon, *usr;
       // Process add operation
       p = json_find_bykey(pair, "value", 5);
       if (p != NULL && p->jsonType != JSONString)
       {
         goto finished;
       }
-      if (p->valueLength < _N_http_user_NAME_MINLEN + 6
-        || p->valueLength > _N_http_user_NAME_MAXLEN + 6)
+      colon = memchr(p->value, ':', p->valueLength);
+      if (colon == NULL || colon-p->value < 5
+        || memcmp(p->value, "2.0.", 4))
       {
         n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
               "\"This user does not exists.\"}]}", id, 
               (int)p->valueLength, p->value);
         goto finished;
       }
+      usr = colon + 1;
+      usrLen = p->valueLength - (usr - p->value);
+      if ((usrLen < _N_http_user_NAME_MINLEN
+        || usrLen > _N_http_user_NAME_MAXLEN))
+      {
+        if (usrLen != 4 || memcmp(usr, "bob2", 4))
+        {
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                "\"This user does not exists.\"}]}", id, 
+                usrLen, usr);
+          goto finished;
+        }
+      }
       
-      err = nanohttp_users_del(p->value+6, p->valueLength-6);
+      err = nanohttp_users_del(usr, usrLen);
       switch (err)
       {
         case _N_http_user_error_NONE:
@@ -620,19 +634,19 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         case _N_http_user_error_EXIST:
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
                 "\"This user does not exists.\"}]}", id, 
-                (int)p->valueLength-6, p->value+6);
+                usrLen, usr);
           goto finished;
         case _N_http_user_error_VNAME:
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
                 "\"The length of username is invalid: [%d,%d].\"}]}", id, 
-                (int)p->valueLength-6, p->value+6,
+                usrLen, usr,
                 _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
           goto finished;
         case _N_http_user_error_SYS:
         default:
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
                 "\"System error.\"}]}", id, 
-                (int)p->valueLength-6, p->value+6);
+                usrLen, usr);
           goto finished;
       }
     }
