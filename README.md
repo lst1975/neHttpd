@@ -105,7 +105,6 @@ Embedded HTTP Server for Web Configuraion Framwork
 
    ![cfg1](https://github.com/user-attachments/assets/7cf45960-d231-409a-9a7d-db38280a1f4c)
 
-   add or delete item for list
    ![image](https://github.com/user-attachments/assets/eecc02f0-21d7-49c3-b705-ad9b9177b6c3)
    
 # Data Type
