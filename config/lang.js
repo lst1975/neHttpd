@@ -123,6 +123,7 @@ var gmtLangZH = {
   Fail:"失败",
   FullStop:"。",
   Users:"用户管理",
+  AuthFailed:"认证失败",
 };
 
 var gmtLangEN = {
@@ -161,6 +162,7 @@ var gmtLangEN = {
   Fail:"Failed.",
   FullStop:".",
   Users:"Accounts",
+  AuthFailed:"Authentication Failed.",
 };
 
 var gmtLang = gmtBrowser.lang == "zh-cn" ? gmtLangZH : gmtLangEN;

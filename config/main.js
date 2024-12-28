@@ -87,15 +87,28 @@ var page_DEVICE  = new page_common("gmt_DEVICE","normal",MAIN_DEVICE_display,fal
 var page_UPGRADE = new page_common("gmt_UPGRADE","normal",MAIN_UPGRADE_display,false);
 var page_USERS = new page_common("gmt_USERS","normal",MAIN_USERS_display,false,"data/setmib.json");
 
+function pagesClose()
+{
+  __p = null;
+  page_SYSTEM.hide();
+  page_DEVICE.hide();
+  page_UPGRADE.hide();
+  page_USERS.hide();
+  page_SYSTEM.close();
+  page_DEVICE.close();
+  page_UPGRADE.close();
+  page_USERS.close();
+}
+
 var loginWindow = 
     '<div id="id01" class="__login modal">'
       +'<div class="modal-content animate" action="config/secure" method="get">'
         +'<div class="container">'
           +'<label for="uname"><b>Username</b></label>'
-          +'<input class="name" type="text" value="bob" placeholder="Enter Username" name="uname" required>'
+          +'<input class="name" type="text" value="" placeholder="Enter Username" name="uname" required>'
 
           +'<label for="psw"><b>Password</b></label>'
-          +'<input class="password" type="password" value="builder" placeholder="Enter Password" name="psw" required>'
+          +'<input class="password" type="password" value="" placeholder="Enter Password" name="psw" required>'
             
           +'<button type="submit">Login</button>'
           +'<label>'
@@ -329,12 +342,21 @@ function __start_main(){
           {
             ____auth = auth;
             ____login.hide();
-            page_SYSTEM.hide();
-            __p = null;
+            pagesClose();
             $(document.body).html(data);
             $(document).ready(function(){
               __start_main();
             });
+          }
+          else
+          {
+            $.MessageBox({
+                buttonDone  : gmtLangBuild(["Confirm"],1),
+                buttonFail  : null,
+                message     : gmtLangBuild(["AuthFailed"],1),
+            }).done(function(){
+            }).fail(function(){
+            });              
           }
         },
         {
@@ -372,6 +394,7 @@ $(document).ready(function(){
         function(data, err){
           if (!err)
           {
+            pagesClose();
             $(document.body).html(data);
             $(document).ready(function(){
               __start_main();
