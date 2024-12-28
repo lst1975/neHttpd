@@ -329,6 +329,12 @@ function __start_main(){
           {
             ____auth = auth;
             ____login.hide();
+            page_SYSTEM.hide();
+            __p = null;
+            $(document.body).html(data);
+            $(document).ready(function(){
+              __start_main();
+            });
           }
         },
         {
