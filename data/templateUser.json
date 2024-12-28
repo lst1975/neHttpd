@@ -1,6 +1,6 @@
 {
     "template":{
-		"label":"User Account",
+	"label":"User Account",
         "type":"group",
 		"id":0,
 		"username": {
@@ -21,8 +21,8 @@
 		},
 		"level": {
 		  "type":"array",
-		  "range":["Administrator", "Normal"],
-		  "value":"Normal",
+		  "range":["Administrator", "Guest"],
+		  "value":"Guest",
 		  "writable":true,
 		  "label": "User Level",
 		  "id": 2

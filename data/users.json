@@ -73,9 +73,9 @@
             "type":"array",
             "range":[
               "Administrator",
-              "Normal"
+              "Guest"
             ],
-            "value":"Normal",
+            "value":"Guest",
             "writable":true,
             "label":"User Level",
             "id":2
@@ -108,9 +108,9 @@
             "type":"array",
             "range":[
               "Administrator",
-              "Normal"
+              "Guest"
             ],
-            "value":"Normal",
+            "value":"Guest",
             "writable":true,
             "label":"User Level",
             "id":2
