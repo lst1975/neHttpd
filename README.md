@@ -100,13 +100,14 @@ Embedded HTTP Server for Web Configuraion Framwork
    7. strict security policy.
    8. fast and small, meet most ebedded environment.
    9. simple and easy to use.
-      
+
+   ![image](https://github.com/user-attachments/assets/246afe52-9ccb-430e-a6e1-21dfe12f9ab7)
+
    ![cfg1](https://github.com/user-attachments/assets/7cf45960-d231-409a-9a7d-db38280a1f4c)
 
    add or delete item for list
-
-   ![cfg](https://github.com/user-attachments/assets/87bb6ed9-9e7a-41f6-9ef1-7645cf88e341)
-
+   ![image](https://github.com/user-attachments/assets/eecc02f0-21d7-49c3-b705-ad9b9177b6c3)
+   
 # Data Type
           "array"  : options: [ *, *, ...]
           "url"    : [http[s]://][<user>:<password>@]<location>[:<port>]  
