@@ -109,6 +109,15 @@ var loginWindow =
       +'</div>'
     +'</div>';
 
+var panel_CONTAINER = null;
+
+var ____wrapper;
+var ____container;
+var ____workingBusy;
+var ____login;
+var ____auth=null;
+var __p = null;
+
 function nanoAjaxGet(context,file,method,data,cb,headers)
 {
   return $.ajax({
@@ -152,107 +161,6 @@ function nanoAjaxGet(context,file,method,data,cb,headers)
     });
 }
 
-function gmtIsArray(obj)
-{
-  if (Array.isArray)
-    return Array.isArray(obj);
-  else
-    return typeof(obj) === "array";
-}
-function gmtIsString(obj)
-{
-  return typeof(obj) === "string";
-}
-function gmtIsUndefined(obj)
-{
-  return typeof(obj) === "undefined";
-
-}
-function gmtIsFunction(obj)
-{
-  return typeof(obj) === "function";
-
-}
-function gmtIsObject(obj)
-{
-  return typeof(obj) === "object";
-
-}
-function gmtHasClass(ele,c)
-{
-  for (var i=0;i<c.length;i++)
-
-  {
-    if (!ele.hasClass(c[i]))
-      return false;
-
-  }
-  return true;
-}
-function gmtHasClassAny(ele,c)
-{
-  for (var i=0;i<c.length;i++)
-  {
-    if (ele.hasClass(c[i]))
-      return true;
-  }
-  return false;
-}
-function gmtSetClass(eles,c)
-{
-  for (var i=0;i<eles.length;i++)
-  {
-    if (eles[i])
-      eles[i].css(c);
-  }
-}
-function gmtTime()
-{
-  var d = new Date();
-  return d.getTime();
-}
-function gmtSetIcon(img,icon,color)
-{
-  img.attr("saveColor", color);
-  img.attr("src", getIconInline(icon+(img.hasClass("fill")?"Fill":""), color));
-}
-function gmtToggleIcon(img,icon)
-{
-  img.toggleClass("fill");
-  gmtSetIcon(img,icon,img.attr("saveColor"));
-}
-function gmtEventStop(evt)
-{
-  evt.preventDefault();
-  evt.stopPropagation();
-
-  evt.___finished = true;
-}
-function gmtHoverOpacity(ele, op1, op2)
-{
-  ele.hover(
-    function(){
-      $(this).css("opacity", op1);
-    },
-    function(){
-      $(this).css("opacity", op2);
-    });
-}
-
-function isTouchDevice() {
-  return 'ontouchstart' in document.documentElement;
-}
-
-var sysConfig = { isTouchDevice: isTouchDevice()};
-
-var panel_CONTAINER = null;
-
-var ____wrapper;
-var ____container;
-var ____workingBusy;
-var ____login;
-var ____auth=null;
-var __p = null;
 function __load_page(p,data,forced){
   if (!forced && p.isVisible)
   {
@@ -304,18 +212,12 @@ function __start_icon(____toolbar){
   var container = $('<div class="left-icon-container"></div>').appendTo(wrap);
   $('<div class="table-left-gap"/>').appendTo(container);
 
-  var leftIcon=[
-    {name: "DeviceInfo", lang:gmtLangBuild(["DeviceInfo"],1), ln:"config/system.png", isSys: 0},
-    {name: "Config", lang:gmtLangBuild(["Config"],1), ln:"config/config.png", isSys: 0},
-    {name: "SystemUpgrade", lang:gmtLangBuild(["SystemUpgrade"],1), ln:"config/upgrade.png", isSys: 0},
-    {name: "Users", lang:gmtLangBuild(["Users"],1), ln:"config/login.png", isSys: 0},
-  ];
-  for (var i=0; i<leftIcon.length;i++)
+  for (var i=0; i<___leftIcon.length;i++)
   {
-      $('<div class="table-left-container '+leftIcon[i].name+'">'
-        +'<table class="main-icon"><tr><td class="left"><img class="'+leftIcon[i].name+'" svg="'+leftIcon[i].ln+'" src="'
-          +getIconSvgWithColor(leftIcon[i].ln, "#ffffff")+'"></img></td><td class="right"><div class="text">'
-          +leftIcon[i].lang+'</div></td></tr></table>'
+      $('<div class="table-left-container '+___leftIcon[i].name+'">'
+        +'<table class="main-icon"><tr><td class="left"><img class="'+___leftIcon[i].name+'" svg="'+___leftIcon[i].ln+'" src="'
+          +getIconSvgWithColor(___leftIcon[i].ln, "#ffffff")+'"></img></td><td class="right"><div class="text">'
+          +___leftIcon[i].lang+'</div></td></tr></table>'
         +'</div>').appendTo(container);
   };
 
@@ -342,28 +244,31 @@ function __start_icon(____toolbar){
   };
   
   var z = ____toolbar.find(".table-left-container.SystemUpgrade");
-  z.AlloyFinger({
-    "tap":function(e){
-      toolbarChangeICON($(this));
-      __start_page(page_UPGRADE);
-    }
-  });
+  if (z.length)
+    z.AlloyFinger({
+      "tap":function(e){
+        toolbarChangeICON($(this));
+        __start_page(page_UPGRADE);
+      }
+    });
 
   z = ____toolbar.find(".table-left-container.Config");
-  z.AlloyFinger({
-    "tap":function(e){
-      toolbarChangeICON($(this));
-      __start_page(page_DEVICE);
-    }
-  });
+  if (z.length)
+    z.AlloyFinger({
+      "tap":function(e){
+        toolbarChangeICON($(this));
+        __start_page(page_DEVICE);
+      }
+    });
 
   z = ____toolbar.find(".table-left-container.DeviceInfo");
-  z.AlloyFinger({
-    "tap":function(e){
-      toolbarChangeICON($(this));
-      __start_page(page_SYSTEM);
-    }
-  });
+  if (z.length)
+    z.AlloyFinger({
+      "tap":function(e){
+        toolbarChangeICON($(this));
+        __start_page(page_SYSTEM);
+      }
+    });
 
   toolbarChangeICON(z);
 
