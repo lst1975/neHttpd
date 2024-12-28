@@ -474,7 +474,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
   if (req->query != NULL)
   {
     char buf[126]={0};
-    int n, len;
+    int n, len, id;
     int httpRetCode = 204;
     const char *httpRetReason = HTTP_STATUS_204_REASON_PHRASE;
     unsigned char *query;
@@ -523,7 +523,8 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       log_error("Bad id in json");
       goto finished;
     }
-
+    id = (int)p->vint;
+    
     if (!strcmp("/data/setmib.json", req->path))
     {
       // Process set operation
@@ -533,7 +534,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     else if (!strcmp("/data/save.json", req->path))
     {
       // Process save operation
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
     }
     else if (!strcmp("/data/add.json", req->path))
     {
@@ -563,29 +564,29 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       switch (err)
       {
         case _N_http_user_error_NONE:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+          n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
           break;
         case _N_http_user_error_EXIST:
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"This user already exists.\"}]}", (int)p->vint, 
+                "\"This user already exists.\"}]}", id, 
                 (int)usr->keyLength, usr->key);
           goto finished;
         case _N_http_user_error_VNAME:
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"The length of username is invalid: [%d,%d].\"}]}", (int)p->vint, 
+                "\"The length of username is invalid: [%d,%d].\"}]}", id, 
                 (int)usr->keyLength, usr->key, 
                 _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
           goto finished;
         case _N_http_user_error_VPSWD:
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"The length of username is invalid: [%d,%d].\"}]}", (int)p->vint, 
+                "\"The length of username is invalid: [%d,%d].\"}]}", id, 
                 (int)usr->keyLength, usr->key, 
                 _N_http_user_PSWD_MINLEN, _N_http_user_PSWD_MAXLEN);
           goto finished;
         case _N_http_user_error_SYS:
         default:
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"System error.\"}]}", (int)p->vint, 
+                "\"System error.\"}]}", id, 
                 (int)usr->keyLength, usr->key);
           goto finished;
       }
@@ -605,7 +606,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         || p->valueLength > _N_http_user_NAME_MAXLEN + 6)
       {
         n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-              "\"This user does not exists.\"}]}", (int)p->vint, 
+              "\"This user does not exists.\"}]}", id, 
               (int)p->valueLength, p->value);
         goto finished;
       }
@@ -614,23 +615,23 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       switch (err)
       {
         case _N_http_user_error_NONE:
-          n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+          n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
           break;
         case _N_http_user_error_EXIST:
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"This user does not exists.\"}]}", (int)p->vint, 
+                "\"This user does not exists.\"}]}", id, 
                 (int)p->valueLength-6, p->value+6);
           goto finished;
         case _N_http_user_error_VNAME:
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"The length of username is invalid: [%d,%d].\"}]}", (int)p->vint, 
+                "\"The length of username is invalid: [%d,%d].\"}]}", id, 
                 (int)p->valueLength-6, p->value+6,
                 _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
           goto finished;
         case _N_http_user_error_SYS:
         default:
           n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                "\"System error.\"}]}", (int)p->vint, 
+                "\"System error.\"}]}", id, 
                 (int)p->valueLength-6, p->value+6);
           goto finished;
       }
@@ -664,7 +665,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     else if (!strcmp("/data/users.json", req->path))
     {
       // Generate template.json
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", (int)p->vint);
+      n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
     }
 
     httpRetCode = 200;
