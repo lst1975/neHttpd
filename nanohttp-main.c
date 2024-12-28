@@ -475,8 +475,6 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
   {
     char buf[126]={0};
     int n, len, id;
-    int httpRetCode = 204;
-    const char *httpRetReason = HTTP_STATUS_204_REASON_PHRASE;
     unsigned char *query;
     unsigned char *data = NULL;
     JSONPair_t *pair,*p;
@@ -551,6 +549,13 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       type = json_find_bykey_head_tail(p->children, "2.0.", 4, ":.2", 3);
       if (!usr || !pwd)
       {
+        if (usr)
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                "\"No password.\"}]}", id, 
+                (int)usr->keyLength, usr->key);
+        else
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
+                "\"No username.\"}]}", id);
         goto finished;
       }
       err = nanohttp_users_add(
@@ -682,20 +687,16 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
     }
 
-    httpRetCode = 200;
-    httpRetReason = HTTP_STATUS_200_REASON_PHRASE;
-    
 finished:  
     free(query);
     json_pairs_free(pair);
-    r = httpd_send_header(conn, httpRetCode, httpRetReason);
+    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
     herror_release(r);
     if (*buf)
     {
       r = http_output_stream_write(conn->out, (unsigned char *)buf, n);
       herror_release(r);
     }
-    herror_release(r);
     return;
   }
   else

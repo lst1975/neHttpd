@@ -2472,13 +2472,30 @@ JSONPair_t *json_find_bykey_head(JSONPair_t *pair, const char *key,
 }
 
 JSONPair_t *json_find_bykey_head_tail(JSONPair_t *pair, const char *key, 
-  size_t head, const char *tailKey, size_t tailLen)
+  size_t headLen, const char *tailKey, size_t tailKeyLen)
 {
   while (pair != NULL)
   {
-    if (pair->keyLength >= head + tailLen
-      && !memcmp(pair->key, key, head)
-      && !memcmp(pair->key+pair->keyLength-tailLen, tailKey, tailLen))
+    if (pair->keyLength >= headLen + tailKeyLen
+      && !memcmp(pair->key, key, headLen)
+      && !memcmp(pair->key+pair->keyLength-tailKeyLen, tailKey, tailKeyLen))
+    {
+      return pair;
+    }
+    pair = pair->siblings;
+  }
+  return NULL;
+}
+
+JSONPair_t *json_find_bykey_head_offset(JSONPair_t *pair, const char *key, 
+  size_t headLen, size_t startOffset, const char *startKey, size_t startKeyLen)
+{
+  while (pair != NULL)
+  {
+    if (pair->keyLength >= headLen + startKeyLen
+      && pair->keyLength >= startOffset + startKeyLen
+      && !memcmp(pair->key, key, headLen)
+      && !memcmp(pair->key+startOffset, startKey, startKeyLen))
     {
       return pair;
     }
