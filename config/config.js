@@ -1106,25 +1106,28 @@ function cfgOperation(page, alwaysActive, action)
           }
           delete this.___mibid.e[___id];
 
-          if (this.subAction != "data/del.json")
+          if (!hasError)
           {
-            d.c = 0;
-            for (m in d.values)
+            if (this.subAction != "data/del.json")
             {
-              if (d.values.hasOwnProperty(m))
+              d.c = 0;
+              for (m in d.values)
               {
-                var p = d.values[m];
-                p.f(p.o,p.v);
+                if (d.values.hasOwnProperty(m))
+                {
+                  var p = d.values[m];
+                  p.f(p.o,p.v);
+                }
               }
+              d.values={};
             }
-            d.values={};
-          }
-          
-          if (!this.alwaysActive && button)
-            changeSubmitButtonState(button,0);
-          if (!hasError && okCb)
-          {
-            okCb(arg);
+            
+            if (!this.alwaysActive && button)
+              changeSubmitButtonState(button,0);
+            if (okCb)
+            {
+              okCb(arg);
+            }
           }
         }
       });
