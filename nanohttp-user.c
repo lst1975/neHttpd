@@ -438,7 +438,7 @@ nanohttp_users_update(const char *name, int nameLen,
 
   if (!pswdLen && !levelLen)
   {
-    return _N_http_user_type_INVAl;
+    return _N_http_user_error_INVAL;
   }
   if (nameLen < _N_http_user_NAME_MINLEN 
     || nameLen > _N_http_user_NAME_MAXLEN)
@@ -461,7 +461,7 @@ nanohttp_users_update(const char *name, int nameLen,
     type = __nanohttp_string2level(level, levelLen);
     if (type == _N_http_user_type_NONE)
     {
-      return _N_http_user_type_INVAl;
+      return _N_http_user_error_INVAL;
     }
   }
   else

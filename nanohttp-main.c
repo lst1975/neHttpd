@@ -456,6 +456,10 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
 }
 
 #define ___CFG_TEST "{\"err\":0}"
+
+#define ___USER_PFX_STR "2.0."
+#define ___USER_PFX_LEN 4 
+
 static void
 data_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
@@ -525,9 +529,106 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     
     if (!strcmp("/data/setmib.json", req->path))
     {
-      // Process set operation
-      n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"0.0\",\"reason\":"
-        "\"For testing received error message from our product.\"}]}", (int)p->vint);
+      // Process del operation
+      int err, usrLen;
+      // Process add operation
+      p = json_find_bykey(pair, "value", 5);
+      if (p != NULL && p->jsonType != JSONObject)
+      {
+        goto finished;
+      }
+      
+      for (p=p->children; p != NULL; p = p->siblings)
+      {
+        if (p->keyLength >= ___USER_PFX_LEN 
+          && !memcmp(p->key, ___USER_PFX_STR, ___USER_PFX_LEN))
+        {
+          const char *colon;
+          
+          colon = memchr(p->key, ':', p->keyLength);
+          if (colon != NULL && colon - p->key > ___USER_PFX_LEN)
+          {
+            const char *usr;
+            
+            usr = colon + 1;
+            usrLen = p->keyLength - (usr - p->key) - 2;
+            if ((usrLen < _N_http_user_NAME_MINLEN
+              || usrLen > _N_http_user_NAME_MAXLEN))
+            {
+              if (usrLen != 4 || memcmp(usr, "bob2", 4))
+              {
+                n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                      "\"This user does not exists.\"}]}", id, 
+                      p->keyLength, p->key);
+                goto finished;
+              }
+            }
+            if (!memcmp(p->key+p->keyLength-2, ".0", 2))
+            {
+              n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                    "\"This user does not exists.\"}]}", id, 
+                    p->keyLength, p->key);
+            }
+            else 
+            {
+              if (!memcmp(p->key+p->keyLength-2, ".1", 2))
+              {
+                err = nanohttp_users_update(usr, usrLen, p->value, p->valueLength, NULL, 0);
+              }
+              else if (!memcmp(p->key+p->keyLength-2, ".2", 2))
+              {
+                err = nanohttp_users_update(usr, usrLen, NULL, 0, p->value, p->valueLength);
+              }
+              else
+              {
+                err = _N_http_user_error_SYS;
+              }
+              switch (err)
+              {
+                case _N_http_user_error_NONE:
+                  n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
+                  break;
+                case _N_http_user_error_EXIST:
+                  n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                        "\"This user does not exists.\"}]}", id, 
+                        p->keyLength, p->key);
+                  goto finished;
+                case _N_http_user_error_VNAME:
+                  n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                        "\"The length of username is invalid: [%d,%d].\"}]}", id, 
+                        p->keyLength, p->key,
+                        _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
+                  goto finished;
+                case _N_http_user_error_INVAL:
+                  n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                        "\"Invalid account type.\"}]}", id, 
+                        p->keyLength, p->key);
+                  goto finished;
+                case _N_http_user_error_SYS:
+                default:
+                  n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                        "\"System error.\"}]}", id, 
+                        p->keyLength, p->key);
+                  goto finished;
+              }
+            }
+          }
+          else
+          {
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"Invalid parameter.\"}]}", id, 
+                  p->keyLength, p->key);
+            goto finished;
+          }
+        }
+        else
+        {
+          // Process set operation
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+            "\"For testing received error message from our product.\"}]}", 
+            id, p->keyLength, p->key);
+        }
+      }
     }
     else if (!strcmp("/data/save.json", req->path))
     {
@@ -544,9 +645,12 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       {
         goto finished;
       }
-      usr = json_find_bykey_head_tail(p->children,  "2.0.", 4, ":.0", 3);
-      pwd = json_find_bykey_head_tail(p->children,  "2.0.", 4, ":.1", 3);
-      type = json_find_bykey_head_tail(p->children, "2.0.", 4, ":.2", 3);
+      usr = json_find_bykey_head_tail(p->children,  
+              ___USER_PFX_STR, ___USER_PFX_LEN, ":.0", 3);
+      pwd = json_find_bykey_head_tail(p->children,  
+              ___USER_PFX_STR, ___USER_PFX_LEN, ":.1", 3);
+      type = json_find_bykey_head_tail(p->children, 
+              ___USER_PFX_STR, ___USER_PFX_LEN, ":.2", 3);
       if (!usr || !pwd)
       {
         if (usr)
@@ -607,9 +711,10 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       {
         goto finished;
       }
+
       colon = memchr(p->value, ':', p->valueLength);
-      if (colon == NULL || colon-p->value < 5
-        || memcmp(p->value, "2.0.", 4))
+      if (colon == NULL || colon-p->value < ___USER_PFX_LEN + 1
+        || memcmp(p->value, ___USER_PFX_STR, ___USER_PFX_LEN))
       {
         n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
               "\"This user does not exists.\"}]}", id, 

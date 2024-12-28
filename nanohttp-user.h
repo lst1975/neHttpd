@@ -17,7 +17,6 @@ typedef struct {
 #define _N_http_user_type_SUPER  1
 #define _N_http_user_type_ADMIN  2
 #define _N_http_user_type_NORMAL 3
-#define _N_http_user_type_INVAl  4
 
 #define _N_http_user_NAME_MINLEN 8
 #define _N_http_user_NAME_MAXLEN 128
@@ -36,6 +35,7 @@ typedef struct {
 #define _N_http_user_error_SYS   2
 #define _N_http_user_error_VNAME 4
 #define _N_http_user_error_VPSWD 5
+#define _N_http_user_error_INVAL 6
 
 void nanohttp_users_free(void);
 int nanohttp_users_init(void);
