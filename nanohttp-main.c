@@ -17,13 +17,16 @@
 static int
 simple_authenticator(struct hrequest_t *req, const char *user, const char *password)
 {
+  httpd_user_t *auth_user;
   log_debug("logging in user=\"%s\" password=\"%s\"\n", user, password);
 
-  if (nanohttp_users_match(user, strlen(user), password, strlen(password)) == NULL) {
+  auth_user = nanohttp_users_match(user, strlen(user), password, strlen(password));
+  if (auth_user == NULL) {
     log_error("authenticate failed\n");
     return 0;
   }
 
+  req->userLevel = auth_user->type;
   return 1;
 }
 
@@ -300,7 +303,59 @@ static const char *nanohttp_index_html_body =
           "</div>"
         "</td>"
     "	</tr>"
-    "</table>";
+    "</table>"
+    "<script>\n"
+      "var userjs = $('html > head > script.userjs');\n"
+      "if (userjs.length) userjs.remove();\n"
+    "</script>";
+
+static herror_t
+__send_menu_js(httpd_conn_t *conn, struct hrequest_t *req)
+{
+  herror_t r = H_OK;
+  do
+  {
+    if (req->userLevel == _N_http_user_type_ADMIN)
+      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_JS_MENU_ADMIN);
+    else if (req->userLevel == _N_http_user_type_SUPER)
+      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_JS_MENU_SUPER);
+    else
+      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_JS_MENU_GUEST);
+    if (r != H_OK) break;
+  } 
+  while(0);
+  
+  return r;
+}
+static herror_t
+__send_root_html(httpd_conn_t *conn, struct hrequest_t *req)
+{
+  herror_t r = H_OK;
+
+  do
+  {
+    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+    if (r != H_OK) break;
+
+    r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_DECL1);
+    if (r != H_OK) break;
+
+    r = __send_menu_js(conn, req);
+    if (r != H_OK) break;
+    
+    r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_DECL2);
+    if (r != H_OK) break;
+
+    r = http_output_stream_write_string(conn->out, "<body>");
+    if (r != H_OK) break;
+    r = http_output_stream_write_string(conn->out, nanohttp_index_html_body);
+    if (r != H_OK) break;
+    r = http_output_stream_write_string(conn->out, "</body></html>");
+  } 
+  while(0);
+
+  return r;
+}
 
 static void
 secure_service(httpd_conn_t *conn, struct hrequest_t *req)
@@ -311,7 +366,13 @@ secure_service(httpd_conn_t *conn, struct hrequest_t *req)
   if (r == H_OK)
   {
     log_info("secure_service received, redirect to index.html");
-    r = http_output_stream_write_string(conn->out, nanohttp_index_html_body);
+    do {
+      r = http_output_stream_write_string(conn->out, nanohttp_index_html_body);
+      if (r != H_OK) break;
+      r = __send_menu_js(conn, req);
+      if (r != H_OK) break;
+    }
+    while (0);
   }
   else
   {
@@ -375,17 +436,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
     const char *path = req->path+1;
     if (!strcmp("/", req->path))
     {
-      r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
-      do
-      {
-        r = http_output_stream_write_string(conn->out, nanohttp_index_html_head);
-        if (r != NULL) break;
-        r = http_output_stream_write_string(conn->out, "<body>");
-        if (r != NULL) break;
-        r = http_output_stream_write_string(conn->out, nanohttp_index_html_body);
-        if (r != NULL) break;
-        r = http_output_stream_write_string(conn->out, "</body></html>");
-      } while(0);
+      r = __send_root_html(conn, req);
     }
     else if (!strcmp("favicon.ico", path))
     {

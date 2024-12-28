@@ -204,6 +204,17 @@ extern void http_output_stream_free(struct http_output_stream_t *stream);
  */
 extern herror_t http_output_stream_write(struct http_output_stream_t *stream, const unsigned char *bytes, size_t size);
 
+/**
+  Writes 'size' bytes of 'bytes' into stream.
+  Returns socket error flags or H_OK.
+*/
+static inline herror_t
+http_output_stream_write_buffer(struct http_output_stream_t * stream,
+                         httpd_buf_t *b)
+{
+  return http_output_stream_write(stream, (const unsigned char *)b->cptr, b->len);
+}
+
 /** This function writes a null terminated string to the stream.
  *
  * @param stream the stream to use to send data

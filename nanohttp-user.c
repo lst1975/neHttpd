@@ -112,7 +112,7 @@ int nanohttp_users_init(void)
     if (type->valueLength == 13 && !strncmp(type->value, "Administrator", 13))
       entry->type = _N_http_user_type_ADMIN;
     else if (type->valueLength == 6 && !strncmp(type->value, "Normal", 6))
-      entry->type = _N_http_user_type_NORMAL;
+      entry->type = _N_http_user_type_GUEST;
     else
     {
       free(entry);
@@ -156,8 +156,8 @@ nanohttp_users_match(const char *name, int nameLen,
 
 static const httpd_buf_t __http_user_super={.cptr="SupperUser",.len=10};
 static const httpd_buf_t __http_user_admin={.cptr="Administrator",.len=13};
-static const httpd_buf_t __http_user_normal={.cptr="Normal",.len=6};
-static const httpd_buf_t *
+static const httpd_buf_t __http_user_guest={.cptr="Guest",.len=5};
+const httpd_buf_t *
 __nanohttp_level2string(int level)
 {
   switch (level)
@@ -166,8 +166,8 @@ __nanohttp_level2string(int level)
       return &__http_user_super;
     case _N_http_user_type_ADMIN:
       return &__http_user_admin;
-    case _N_http_user_type_NORMAL:
-      return &__http_user_normal;
+    case _N_http_user_type_GUEST:
+      return &__http_user_guest;
     default:
       return NULL;
   }
@@ -179,8 +179,8 @@ __nanohttp_string2level(const char *level, int levelLen)
     return _N_http_user_type_SUPER;
   if (levelLen == __http_user_admin.len && !memcmp(level, __http_user_admin.data, levelLen))
     return _N_http_user_type_ADMIN;
-  if (levelLen == __http_user_normal.len && !memcmp(level, __http_user_normal.data, levelLen))
-    return _N_http_user_type_NORMAL;
+  if (levelLen == __http_user_guest.len && !memcmp(level, __http_user_guest.data, levelLen))
+    return _N_http_user_type_GUEST;
 
   return _N_http_user_type_NONE;
 }
@@ -395,9 +395,9 @@ nanohttp_users_add(const char *name, int nameLen,
   type = __nanohttp_string2level(level, levelLen);
   if (type == _N_http_user_type_NONE)
   {
-    level    = __http_user_normal.cptr;
-    levelLen = __http_user_normal.len;
-    type     = _N_http_user_type_NORMAL;
+    level    = __http_user_guest.cptr;
+    levelLen = __http_user_guest.len;
+    type     = _N_http_user_type_GUEST;
   }
   
   entry = nanohttp_users_match(name, nameLen, NULL, 0);

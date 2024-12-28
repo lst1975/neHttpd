@@ -411,6 +411,14 @@ extern herror_t httpd_send_internal_error(httpd_conn_t * conn, const char *msg);
  */
 extern herror_t httpd_send_not_implemented(httpd_conn_t *conn, const char *msg);
 
+extern httpd_buf_t __nanohttp_html[];
+#define nanohttp_index_html_head_JS_MENU_GUEST &__nanohttp_html[0]
+#define nanohttp_index_html_head_JS_MENU_ADMIN &__nanohttp_html[1]
+#define nanohttp_index_html_head_JS_MENU_SUPER &__nanohttp_html[2]
+#define nanohttp_index_html_head_DECL1         &__nanohttp_html[3]
+#define nanohttp_index_html_head_DECL2         &__nanohttp_html[4]
+#define nanohttp_index_html_head_LOGIN         &__nanohttp_html[5]
+
 #ifdef __cplusplus
 }
 #endif

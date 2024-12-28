@@ -91,6 +91,7 @@ static inline int hssl_enabled(void) { return 0; }
 #endif
 #include "nanohttp-admin.h"
 #include "nanohttp-file.h"
+#include "nanohttp-user.h"
 
 #ifndef timeradd
 #define timeradd(tvp, uvp, vvp)						\
@@ -560,73 +561,90 @@ httpd_send_bad_request(httpd_conn_t *conn, const char *msg)
   return _httpd_send_html_message(conn, 400, HTTP_STATUS_400_REASON_PHRASE, msg);
 }
 
-const char *nanohttp_index_html_head =
-  "<!DOCTYPE html>"
-  "<html lang='en'>"
-    "<head>"
-      "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>"
-      "<meta id='MetaDescription' name='DESCRIPTION' content=''>"
-      "<meta id='MetaKeywords' name='KEYWORDS' content=''>"
-      "<meta name='msapplication-TileColor' content='#000000'>"
-      "<meta name='msapplication-TileImage' content='config/logo.png'>"
-      "<meta name='viewport' content='initial-scale=1, width=device-width'>"
-      "<meta name='msapplication-tap-highlight' content='no'>"
-      "<meta http-equiv='X-UA-Compatible' content='IE=edge'>"
-      "<meta http-equiv='X-UA-Compatible' content='IE=10'>"
-      "<meta http-equiv='X-UA-Compatible' content='IE=9'>"
-      "<meta http-equiv='cleartype' content='off'>"
-      "<meta name='MobileOptimized' content='320'>"
-      "<meta name='HandheldFriendly' content='True'>"
-      "<meta name='mobile-web-app-capable' content='yes'>"
-      "<link rel='apple-touch-icon' href='config/logo.png'>"
-      "<link rel='icon' href=''>"
-      "<style>"
-      "	/* following two viewport lines are equivalent to meta viewport statement above, and is needed for Windows */"
-      "	/* see http://www.quirksmode.org/blog/archives/2014/05/html5_dev_conf.html and http://dev.w3.org/csswg/css-device-adapt/ */"
-      "	@-ms-viewport { width: 100vw ; min-zoom: 100% ; zoom: 100% ; } @viewport { width: 100vw ; min-zoom: 100% zoom: 100% ; }"
-      "	@-ms-viewport { user-zoom: fixed ; min-zoom: 100% ; } @viewport { user-zoom: fixed ; min-zoom: 100% ; }"
-      "	/*@-ms-viewport { user-zoom: zoom ; min-zoom: 100% ; max-zoom: 200% ; }   @viewport { user-zoom: zoom ; min-zoom: 100% ; max-zoom: 200% ; }*/"
-      "</style>"
-      "<title></title>"
-      "<!--[if IE]><link rel='shortcut icon' href=''><![endif]-->"
-      "<link rel='stylesheet' type='text/css' href='config/messagebox.min.css' media='screen'>"
-      "<link rel='stylesheet' type='text/css' href='config/base.css' media='screen'>"
-      "<link rel='stylesheet' type='text/css' href='config/signal.css' media='screen'>"
-      "<link rel='stylesheet' type='text/css' href='config/jquery.csspiechart.css' media='screen'>"
-      "<script type='text/javascript' src='config/jquery-3.7.1.js'></script>"
-      "<script type='text/javascript' src='config/messagebox.min.js'></script>"
-      "<script type='text/javascript' src='config/lang.js'></script>"
-      "<script type='text/javascript' src='config/data.js'></script>"
-      "<script type='text/javascript' src='config/main.upgrade.js'></script>"
-      "<script type='text/javascript' src='config/main.system.js'></script>"
+#define __nanohttp_index_html_head_JS_MENU_GUEST "<script class='userjs' type='text/javascript' src='config/menu-guest.js'></script>"
+#define __nanohttp_index_html_head_JS_MENU_ADMIN "<script class='userjs' type='text/javascript' src='config/menu-admin.js'></script>"
+#define __nanohttp_index_html_head_JS_MENU_SUPER "<script class='userjs' type='text/javascript' src='config/menu-super.js'></script>"
+#define __nanohttp_index_html_head_DECL1 \
+  "<!DOCTYPE html>" \
+  "<html lang='en'>" \
+    "<head>" \
+      "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>" \
+      "<meta id='MetaDescription' name='DESCRIPTION' content=''>" \
+      "<meta id='MetaKeywords' name='KEYWORDS' content=''>" \
+      "<meta name='msapplication-TileColor' content='#000000'>" \
+      "<meta name='msapplication-TileImage' content='config/logo.png'>" \
+      "<meta name='viewport' content='initial-scale=1, width=device-width'>" \
+      "<meta name='msapplication-tap-highlight' content='no'>" \
+      "<meta http-equiv='X-UA-Compatible' content='IE=edge'>" \
+      "<meta http-equiv='X-UA-Compatible' content='IE=10'>" \
+      "<meta http-equiv='X-UA-Compatible' content='IE=9'>" \
+      "<meta http-equiv='cleartype' content='off'>" \
+      "<meta name='MobileOptimized' content='320'>" \
+      "<meta name='HandheldFriendly' content='True'>" \
+      "<meta name='mobile-web-app-capable' content='yes'>" \
+      "<link rel='apple-touch-icon' href='config/logo.png'>" \
+      "<link rel='icon' href=''>" \
+      "<style>" \
+      " /* following two viewport lines are equivalent to meta viewport statement above, and is needed for Windows */" \
+      " /* see http://www.quirksmode.org/blog/archives/2014/05/html5_dev_conf.html and http://dev.w3.org/csswg/css-device-adapt/ */" \
+      " @-ms-viewport { width: 100vw ; min-zoom: 100% ; zoom: 100% ; } @viewport { width: 100vw ; min-zoom: 100% zoom: 100% ; }" \
+      " @-ms-viewport { user-zoom: fixed ; min-zoom: 100% ; } @viewport { user-zoom: fixed ; min-zoom: 100% ; }" \
+      " /*@-ms-viewport { user-zoom: zoom ; min-zoom: 100% ; max-zoom: 200% ; }   @viewport { user-zoom: zoom ; min-zoom: 100% ; max-zoom: 200% ; }*/" \
+      "</style>" \
+      "<title></title>" \
+      "<!--[if IE]><link rel='shortcut icon' href=''><![endif]-->" \
+      "<link rel='stylesheet' type='text/css' href='config/messagebox.min.css' media='screen'>" \
+      "<link rel='stylesheet' type='text/css' href='config/base.css' media='screen'>" \
+      "<link rel='stylesheet' type='text/css' href='config/signal.css' media='screen'>" \
+      "<link rel='stylesheet' type='text/css' href='config/jquery.csspiechart.css' media='screen'>" \
+      "<script type='text/javascript' src='config/jquery-3.7.1.js'></script>" \
+      "<script type='text/javascript' src='config/messagebox.min.js'></script>" \
+      "<script type='text/javascript' src='config/lang.js'></script>" \
+      "<script type='text/javascript' src='config/data.js'></script>" \
+      "<script type='text/javascript' src='config/utils.js'></script>" \
+      "<script type='text/javascript' src='config/main.upgrade.js'></script>" \
+      "<script type='text/javascript' src='config/main.system.js'></script>" \
       "<script type='text/javascript' src='config/main.device.js'></script>"
-      "<script type='text/javascript' src='config/main.js'></script>"
-      "<script type='text/javascript' src='config/jquery.input-ip-address-control.js'></script>"
-      "<script type='text/javascript' src='config/signal.js'></script>"
-      "<script type='text/javascript' src='config/jquery.csspiechart.js'></script>"
-      "<script type='text/javascript' src='config/config.js'></script>"
-      "<script type='text/javascript' src='config/jquery.mousewheel.js'></script>"
-      "<script type='text/javascript' src='config/alloy_finger.js'></script>"
-    "</head>";
 
-static const char *nanohttp_index_html_login =
-    "<body>" 
-      "<div id='id01' class='__login modal'>" 
-        "<div class='modal-content animate' action='config/secure' method='get'>"
-          "<div class='container'>" 
-            "<label for='uname'><b>Username</b></label>" 
-            "<input class='name' type='text' value='bob' placeholder='Enter Username' name='uname' required>"
-            "<label for='psw'><b>Password</b></label>" 
-            "<input class='password' type='password' value='builder' placeholder='Enter Password' name='psw' required>"
-            "<button type='submit'>Login</button>"
-            "<label>"
-              "<input type='checkbox' checked='checked' name='remember'> Remember me"
-            "</label>" 
-            "</div>" 
-        "</div>" 
-      "</div>" 
-    "</body>" 
-  "</html>";
+#define __nanohttp_index_html_head_DECL2 \
+      "<script type='text/javascript' src='config/main.js'></script>" \
+      "<script type='text/javascript' src='config/jquery.input-ip-address-control.js'></script>" \
+      "<script type='text/javascript' src='config/signal.js'></script>" \
+      "<script type='text/javascript' src='config/jquery.csspiechart.js'></script>" \
+      "<script type='text/javascript' src='config/config.js'></script>" \
+      "<script type='text/javascript' src='config/jquery.mousewheel.js'></script>" \
+      "<script type='text/javascript' src='config/alloy_finger.js'></script>" \
+    "</head>"
+
+#define __nanohttp_index_html_head_LOGIN \
+    "<body>"  \
+      "<div id='id01' class='__login modal'>"  \
+        "<div class='modal-content animate' action='config/secure' method='get'>" \
+          "<div class='container'>"  \
+            "<label for='uname'><b>Username</b></label>"  \
+            "<input class='name' type='text' value='bob' placeholder='Enter Username' name='uname' required>" \
+            "<label for='psw'><b>Password</b></label>"  \
+            "<input class='password' type='password' value='builder' placeholder='Enter Password' name='psw' required>" \
+            "<button type='submit'>Login</button>" \
+            "<label>" \
+              "<input type='checkbox' checked='checked' name='remember'> Remember me" \
+            "</label>"  \
+            "</div>"  \
+        "</div>"  \
+      "</div>"  \
+    "</body>"  \
+  "</html>"
+
+#define _(x) { .cptr = x, .len = sizeof(x) -1}
+httpd_buf_t __nanohttp_html[]={
+  _(__nanohttp_index_html_head_JS_MENU_GUEST), 
+  _(__nanohttp_index_html_head_JS_MENU_ADMIN), 
+  _(__nanohttp_index_html_head_JS_MENU_SUPER), 
+  _(__nanohttp_index_html_head_DECL1), 
+  _(__nanohttp_index_html_head_DECL2), 
+  _(__nanohttp_index_html_head_LOGIN), 
+};
+#undef _
 
 herror_t
 httpd_send_unauthorized(httpd_conn_t *conn, const char *realm)
@@ -645,9 +663,18 @@ httpd_send_unauthorized(httpd_conn_t *conn, const char *realm)
     }
     
     log_info("secure_service received, redirect to login.html");
-    r = http_output_stream_write_string(conn->out, nanohttp_index_html_head);
-    if (r == H_OK)
-      r = http_output_stream_write_string(conn->out, nanohttp_index_html_login);
+
+    do {
+      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_DECL1);
+      if (r != H_OK) break;
+      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_JS_MENU_GUEST);
+      if (r != H_OK) break;
+      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_DECL2);
+      if (r != H_OK) break;
+      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_LOGIN);
+    } 
+    while (0);
+    
     return r;
   }
   else
@@ -689,6 +716,7 @@ static void
 _httpd_request_print(struct hrequest_t * req)
 {
   hpair_t *pair;
+  const httpd_buf_t *level;
 
   log_verbose("++++++ Request +++++++++");
   log_verbose(" Method : '%s'",
@@ -705,6 +733,13 @@ _httpd_request_print(struct hrequest_t * req)
   for (pair = req->header; pair; pair = pair->next)
     log_verbose(" %s = '%s'", pair->key, pair->value);
 
+  if (req->content_type != NULL)
+    log_verbose(" ContentType : %s", req->content_type->type);
+
+  level = __nanohttp_level2string(req->userLevel);
+  if (level != NULL)
+    log_verbose(" User Level : %.*s", (int)level->len, level->cptr);
+  log_verbose(" Connection : %p", req->conn);
   log_verbose("++++++++++++++++++++++++");
 
   return;
@@ -871,8 +906,10 @@ httpd_session_main(void *data)
       char buffer[REQUEST_MAX_PATH_SIZE+256+1];
       char *conn_str;
 
+      req->conn = conn;
+      req->userLevel = _N_http_user_type_NONE;
       _httpd_request_print(req);
-
+      
       conn_str = hpairnode_get_ignore_case(req->header, HEADER_CONNECTION);
       if (conn_str && strncasecmp(conn_str, "close", 6) == 0)
         done = 1;
@@ -890,7 +927,7 @@ httpd_session_main(void *data)
           service->statistics->requests++;
           pthread_rwlock_unlock(&(service->statistics->lock));
 
-          if (_httpd_authenticate_request(req, service->auth))
+          if (service->auth == NULL || _httpd_authenticate_request(req, service->auth))
           {
             if (service->func != NULL)
             {

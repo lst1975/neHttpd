@@ -1084,6 +1084,16 @@ typedef enum _hreq_method
 
 /*@}*/
 
+typedef struct {
+  union{
+    void *data;
+    const char *cptr;
+    char *buf;
+  };
+  char *p;
+  size_t len;
+} httpd_buf_t;
+
 /**
  *
  * part. Attachment

@@ -2,21 +2,12 @@
 #define __nanohttp_user_h
 
 #include "nanohttp-list.h"
-
-typedef struct {
-  union{
-    void *data;
-    const char *cptr;
-    char *buf;
-  };
-  char *p;
-  size_t len;
-} httpd_buf_t;
+#include "nanohttp-common.h"
 
 #define _N_http_user_type_NONE   0
 #define _N_http_user_type_SUPER  1
 #define _N_http_user_type_ADMIN  2
-#define _N_http_user_type_NORMAL 3
+#define _N_http_user_type_GUEST  3
 
 #define _N_http_user_NAME_MINLEN 8
 #define _N_http_user_NAME_MAXLEN 128
@@ -46,5 +37,6 @@ int nanohttp_users_add(const char *name, int nameLen,
 int nanohttp_users_update(const char *name, int nameLen, 
   const char *pswd, int pswdLen, const char *level, int levelLen);
 int nanohttp_users_del(const char *name, int nameLen);
+const httpd_buf_t *__nanohttp_level2string(int level);
 
 #endif

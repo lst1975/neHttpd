@@ -287,7 +287,8 @@ struct hrequest_t
 
   hpair_t *query;
   hpair_t *header;
-
+  void    *conn;
+  int     userLevel;
   struct request_statistics *statistics;
 
   struct http_input_stream_t *in;
