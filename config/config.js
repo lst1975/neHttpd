@@ -1243,8 +1243,9 @@ function cfgOperation(page, alwaysActive, action)
             loader.submit($(this), ___id, loader.action, y, function(arg){
                 if (arg.loader.action == "data/add.json")
                   gmMessageBox("Confirm", null, gmtLangBuild(["AddOk"],1));
-                else
-                  gmMessageBox("Confirm", null, gmtLangBuild(["CfgOk"],1));
+                else //if (arg.loader.action == "data/setmib.json")
+                  gmMessageBox("Confirm", null, gmtLangBuild(["CfgOk"],1)); 
+
                 if (!arg.p.data || !arg.p.data.add)
                   return;
                 
