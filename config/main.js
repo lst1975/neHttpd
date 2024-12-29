@@ -111,10 +111,7 @@ var loginWindow =
           +'<label for="psw"><b>Password</b></label>'
           +'<input class="password" type="password" value="" placeholder="Enter Password" name="psw" required>'
             
-          +'<button type="submit">Login</button>'
-          +'<label>'
-            +'<input type="checkbox" checked="checked" name="remember"> Remember me'
-          +'</label>'
+          +'<button class="login" type="submit">Login</button>'
         +'</div>'
 
         +'<div class="container" style="background-color:#f1f1f1">'
@@ -122,6 +119,17 @@ var loginWindow =
         +'</div>'
       +'</div>'
     +'</div>';
+
+
+function __changeLoginLang(login)
+{
+  login.find("input.name").attr("placeholder", gmtLangBuild(["EnterUsername"],0));
+  login.find("input.password").attr("placeholder", gmtLangBuild(["EnterPassword"],0));
+  login.find("button.login").text(gmtLangBuild(["Login"],0));
+  login.find("button.cancelbtn").text(gmtLangBuild(["Cancel"],0));
+  login.find("label[for=uname]").text(gmtLangBuild(["Username"],0));
+  login.find("label[for=psw]").text(gmtLangBuild(["Password"],0));
+}
 
 var panel_CONTAINER = null;
 
@@ -253,11 +261,11 @@ function __start_icon(____toolbar){
 
   for (var i=0; i<___leftIcon.length;i++)
   {
-      $('<div class="table-left-container '+___leftIcon[i].name+'">'
-        +'<table class="main-icon"><tr><td class="left"><img class="'+___leftIcon[i].name+'" svg="'+___leftIcon[i].ln+'" src="'
-          +getIconSvgWithColor(___leftIcon[i].ln, "#ffffff")+'"></img></td><td class="right"><div class="text">'
-          +___leftIcon[i].lang+'</div></td></tr></table>'
-        +'</div>').appendTo(container);
+    $('<div class="table-left-container '+___leftIcon[i].name+'">'
+      +'<table class="main-icon"><tr><td class="left"><img class="'+___leftIcon[i].name+'" svg="'+___leftIcon[i].ln+'" src="'
+        +getIconSvgWithColor(___leftIcon[i].ln, "#ffffff")+'"></img></td><td class="right"><div class="text">'
+        +___leftIcon[i].lang+'</div></td></tr></table>'
+      +'</div>').appendTo(container);
   };
 
   var choosedColor = "0a7ea1";
@@ -327,6 +335,8 @@ function __start_page(page){
 
 function __start_main(){
   ____login = $(loginWindow).appendTo(document.body);
+  __changeLoginLang(____login);
+
   ____workingBusy = $(document.body).children(".workingBusy");
   ____table = $(document.body).find(".main-layout");
   ____header   = ____table.find(".head");
@@ -353,6 +363,8 @@ function __start_main(){
 
   ____header.find(".login > img").AlloyFinger({
     "tap":function(e){
+      ____login.find("input.name").val("");
+      ____login.find("input.password").val("");
       ____login.show();
     }
   });
@@ -404,6 +416,7 @@ function __start_main(){
 $(document).ready(function(){
   $(document).find("html > head > link[rel=icon]").attr("href",__icons["config/favicon.ico"]);
   var login = $(document.body).children(".__login");
+  __changeLoginLang(login);
   login.show();
   login.find("button[type=submit]").AlloyFinger({
     "tap":function(e){

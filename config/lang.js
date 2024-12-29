@@ -126,6 +126,11 @@ var gmtLangZH = {
   Users:"用户管理",
   AuthFailed:"认证失败。",
   TemplateFailed:"获取模板失败。",
+  EnterUsername:"输入用户名",
+  EnterPassword:"输入密码",
+  Login:"登录",
+  Username:"用户名",
+  Password:"密码",
 };
 
 var gmtLangEN = {
@@ -167,6 +172,11 @@ var gmtLangEN = {
   Users:"Accounts",
   AuthFailed:"Authentication Failed.",
   TemplateFailed:"Failed Get Template Configuration.",
+  EnterUsername:"Enter Username",
+  EnterPassword:"Enter Password",
+  Login:"Login",
+  Username:"Username",
+  Password:"Password",
 };
 
 var gmtLang = gmtBrowser.lang == "zh-cn" ? gmtLangZH : gmtLangEN;

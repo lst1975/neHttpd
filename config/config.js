@@ -464,7 +464,11 @@ function cfgOperation(page, alwaysActive, action)
     }
     return ret;
   }
-
+  this.setErr = function(__ev,__reason)
+  {
+	  __ev.addClass("error");
+	  __ev.attr("title",__reason||"");
+  }
   this._makeIndex = function(index)
   {
     return "__elVal_"+index.replace(/\./g, "_").replace(/:/g, "_");
@@ -519,10 +523,7 @@ function cfgOperation(page, alwaysActive, action)
                   var loader = $(this).data("cfg");
                   loader.changeConfigItem($(this), 
                     function(__ev){return __ev.val();},
-                    function(__ev,__reason){
-                      __ev.addClass("error");
-                      __ev.attr("title",__reason||"");
-                    });
+                    this.setErr);
                 });
             break;
           case "ipv6":
@@ -561,10 +562,7 @@ function cfgOperation(page, alwaysActive, action)
                   var loader = $(this).data("cfg");
                   loader.changeConfigItem($(this), 
                     function(__ev){return __ev.val().replace(/_/g,"");},
-                    function(__ev,__reason){
-                      __ev.addClass("error");
-                      __ev.attr("title",__reason||"");
-                    });
+                    this.setErr);
                 });
             }
             break;
@@ -624,10 +622,7 @@ function cfgOperation(page, alwaysActive, action)
                   var loader = $(this).data("cfg");
                   loader.changeConfigItem($(this), 
                     function(__ev){return __ev.val();},
-                    function(__ev,__reason){
-                      __ev.addClass("error");
-                      __ev.attr("title",__reason||"");
-                    });
+                    this.setErr);
                 });
             }
             else
@@ -754,6 +749,7 @@ function cfgOperation(page, alwaysActive, action)
                 }
               });
             val.data("setVal")(val, n.value);
+
   		      if (n.writable)
   		      {
               val.data("cfg", this);
@@ -763,10 +759,7 @@ function cfgOperation(page, alwaysActive, action)
                 var loader = $(this).data("cfg");
   				      loader.changeConfigItem($(this), 
     				    	function(__ev){return __ev.is(':checked');},
-    				    	function(__ev,__reason){
-    				    	  __ev.addClass("error");
-    				    	  __ev.attr("title",__reason||"");
-    				    	});
+    				    	this.setErr);
   			       });
   		      }
             break;
@@ -1019,7 +1012,7 @@ function cfgOperation(page, alwaysActive, action)
                                 "template", 
                                 MAIN_TEMPLATE_display, 
                                 $(this).data("pos"), 
-                                true, 
+                                false, 
                                 "data/add.json");
               }
             });
@@ -1082,10 +1075,18 @@ function cfgOperation(page, alwaysActive, action)
               var g=x.err[i];
               if (!gmtIsObject(g))
                 continue;
-              if (g.id && d.values.hasOwnProperty(g.id))
+              if (g.id)
               {
-                var p = d.values[g.id];
-                p.e(p.o,g.reason);
+                if (d.values.hasOwnProperty(g.id))
+                {
+                  var p = d.values[g.id];
+                  p.e(p.o,g.reason);
+                }
+                else
+                {
+                  this.setErr(this.page.container.find("."+this._makeIndex(g.id)), 
+                    g.reason);
+                }
               }
             }
             var errStr = "";
