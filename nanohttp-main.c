@@ -909,7 +909,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         }
         snprintf(req->path, sizeof(req->path)-1, "/data/templateUser.json");
       }
-      else if (p->valueLength == 4 && !strncmp(p->value,"1.11",4))
+      else if (p->valueLength > 2 && !memcmp(p->value,"1.",2))
       {
         if (req->userLevel > _N_http_user_type_ADMIN)
         {
