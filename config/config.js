@@ -946,11 +946,10 @@ function cfgOperation(page, alwaysActive, action)
                       var self = $(this);
                       var delDiv = $(this).data("delDiv");
                       var __addListItem = $(this).data("addListItem");
-                      __gmMessageBox(
-                        "fail done", 
+                      gmMessageBox(
                         "Confirm", 
                         "Cancel", 
-                        gmtLangBuild(["AuthFailed"],1), 
+                        gmtLangBuild(["ItemDelMsg"],1), 
                         function(err, __addListItem){
                           if (err) return;
                           ____workingBusy.show();
