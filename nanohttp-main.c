@@ -444,16 +444,30 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       do
       {
         int len;
-        bf = (unsigned char *)malloc((sizeof(favorICON)-1) * 3 / 4);
+        bf = (unsigned char *)malloc(B64_DECLEN(sizeof(favorICON)-1)+1);
         if (bf == NULL) break;
+#if __configUseStreamBase64
+        ng_buffer_s in, out;
+        in.cptr = favorICON;
+        in.len  = sizeof(favorICON)-1;
+        out.ptr = bf;
+        len = b64Decode(&in, &out);
+        if (len < 0)
+        {
+          log_error("b64Decode failed");
+          break;
+        }
+#else      
         len = base64_decode_string((const unsigned char *)favorICON, bf);
+#endif
         if (httpd_set_header(conn, HEADER_CONTENT_TYPE, "image/png")) break;
 
         r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
         if (r != NULL) break;
         r = http_output_stream_write(conn->out, bf, len);
         if (r != NULL) break;
-      } while(0);
+      } 
+      while(0);
       
       if (bf != NULL)
         free(bf);
@@ -534,6 +548,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     unsigned char *data = NULL;
     JSONPair_t *pair,*p;
     JSONStatus_t result;
+    httpd_buf_t in;
 
     data = (unsigned char *)hpairnode_get(req->query, "data");
     if (data == NULL)
@@ -545,24 +560,39 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     log_debug("try to decode %s\n",(char *)data);
     
     /* decode_url malloced new data */
-    data = decode_url((const uint8_t*)data, strlen((char *)data));
-    if (data == NULL)
+    if (0 > decode_url(&in, (const uint8_t*)data, strlen((char *)data)))
     {
       log_error("Failed to parse query");
       goto finished;
     }
-    log_debug("decoded query is : %s", data);
+    
+    log_debug("decoded query is : %.*s", in.len, in.cptr);
 
-    len = strlen((char *)data);
-    query = (unsigned char *)malloc(len * 3 / 4 + 1);
+    query = (unsigned char *)malloc(B64_DECLEN(in.len) + 1);
     if (query == NULL)
     {
       log_error("Failed to malloc key");
       goto finished;
     }
-    len = base64_decode_string(data, query);
-    free(data);
-    log_debug("decoded query is : %s", query);
+    
+    {
+#if __configUseStreamBase64
+      ng_buffer_s out;
+      out.ptr = query;
+      len = b64Decode(&in, &out);
+      if (len < 0)
+      {
+        free(in.ptr);
+        log_error("b64Decode failed");
+        goto finished;
+      }
+#else      
+      len = base64_decode_string(in.ptr, query);
+#endif
+      free(in.ptr);
+      log_debug("decoded query is : %s", query);
+    }
+
     result = json_parse(&pair, (const char *)query, len);
     if (result != JSONSuccess)
     {

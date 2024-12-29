@@ -238,11 +238,13 @@ httpc_set_header(httpc_conn_t *conn, const char *key, const char *value)
   return 0;
 }
 
+#if !__configUseStreamBase64
 static int
-_httpc_set_basic_authorization_header(httpc_conn_t *conn, const char *key, const char *user, const char *password)
+_httpc_set_basic_authorization_header(httpc_conn_t *conn, 
+  const char *key, const char *user, const char *password)
 {
-  /* XXX: use malloc/free */
-  char in[64+64], out[64];
+  int ulen, plen, inlen, outlen, len;
+  unsigned char *p, *o;
 
   if (!user)
     user = "";
@@ -251,17 +253,78 @@ _httpc_set_basic_authorization_header(httpc_conn_t *conn, const char *key, const
     password = "";
 
   /* XXX: do we need this really? */
-  memset(in, 0, 64);
-  memset(out, 0, 64);
+  ulen = strlen(user);
+  plen = strlen(password);
+  inlen  = ulen + plen + 1;
+  outlen = B64_ENCLEN(inlen);
 
-  snprintf(in, sizeof in, "%s:%s", user, password);
-
-  base64_encode_string((unsigned char *)in, (unsigned char *)out);
-
-  snprintf(in, sizeof in, "Basic %s", out);
-
-  return httpc_set_header(conn, key, in);
+  p = (unsigned char *)malloc(6+inlen+1+outlen);
+  if (p == NULL)
+  {
+    log_fatal("Malloc failed.");
+    return 0;
+  }
+  memcpy(p, user, ulen);
+  p[ulen]=':';
+  memcpy(p+ulen+1, password, plen);
+  p[inlen]='\0';
+  
+  o = p + inlen + 7;
+  len = base64_encode_string(p, o);
+  memcpy(p, "Basic ", 6);
+  memcpy(p+6, o, len);
+  p[6+len]='\0';
+  
+  len = httpc_set_header(conn, key, (char *)p);
+  free(p);
+  return len;
 }
+#else
+static int
+_httpc_set_basic_authorization_header(httpc_conn_t *conn, 
+  const char *key, const char *user, const char *password)
+{
+  int ulen, plen, inlen, outlen, len;
+  unsigned char *p, *o;
+  ng_buffer_s in, out;
+
+  if (!user)
+    user = "";
+
+  if (!password)
+    password = "";
+
+  /* XXX: do we need this really? */
+  ulen = strlen(user);
+  plen = strlen(password);
+  inlen  = ulen + plen + 1;
+  outlen = B64_ENCLEN(inlen);
+
+  p = (unsigned char *)malloc(6+inlen+1+outlen);
+  if (p == NULL)
+  {
+    log_fatal("Malloc failed.");
+    return 0;
+  }
+  memcpy(p, user, ulen);
+  p[ulen]=':';
+  memcpy(p+ulen+1, password, plen);
+  p[inlen]='\0';
+  
+  o = p + inlen + 7;
+   in.ptr = p;
+   in.len = inlen;
+  out.ptr = o;
+  len = b64Encode(&in, &out);
+  memcpy(p, "Basic ", 6);
+  memcpy(p+6, o, len);
+  p[6+len]='\0';
+  
+  len = httpc_set_header(conn, key, (char *)p);
+  free(p);
+  return len;
+}
+#endif
 
 int
 httpc_set_basic_authorization(httpc_conn_t *conn, const char *user, const char *password)

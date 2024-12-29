@@ -781,23 +781,38 @@ httpd_free(httpd_conn_t * conn)
 }
 
 static int
-_httpd_decode_authorization(const char *value, char **user, char **pass)
+_httpd_decode_authorization(const char *_value, char **user, char **pass)
 {
   unsigned char *tmp, *tmp2;
-  size_t len;
+  size_t len, inlen;
+  const char *value = _value;
 
-  len = strlen(value) * 2;
+  inlen = strlen(value);
+  len = inlen * 2;
   if (!(tmp = (unsigned char *)calloc(1, len)))
   {
     log_error("calloc failed (%s)", strerror(errno));
     return -1;
   }
 
-  value = strstr(value, " ") + 1;
+  value = strstr(_value, " ") + 1;
 
   log_verbose("Authorization (base64) = \"%s\"", value);
 
+#if __configUseStreamBase64
+  ng_buffer_s in, out;
+  in.cptr = value;
+  in.len  = inlen - (value - _value);
+  out.ptr = tmp;
+  if (b64Decode(&in, &out) < 0)
+  {
+    log_error("b64Decode failed");
+    free(tmp);
+    return -1;
+  }
+#else
   base64_decode_string((const unsigned char *)value, tmp);
+#endif
 
   log_verbose("Authorization (ascii) = \"%s\"", tmp);
 

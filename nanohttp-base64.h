@@ -53,6 +53,13 @@
 extern "C" {
 #endif
 
+#define __configUseStreamBase64 1
+
+#define B64_ENCLEN(s) ((unsigned int)((((s) + 2) / 3) * 4 + 1))
+#define B64_DECLEN(s) ((unsigned int)(((s) / 4) * 3))
+
+#if !__configUseStreamBase64
+
 /** Base64 encodes a NUL terminated array of characters.
  *
  * @param instr		Pointer to the input string.
@@ -70,6 +77,50 @@ extern int base64_encode_string(const unsigned char *instr, unsigned char *outst
  * @see base64_encode_string
  */
 extern int base64_decode_string(const unsigned char *instr, unsigned char *outstr);
+
+#else
+
+#include <stdint.h>
+#include <stddef.h>
+#include "nanohttp-config.h"
+#include "nanohttp-common.h"
+
+#define __configUseBase64Decode 1
+
+#define BASE64_ENCODE_OUT_SIZE(s) ((unsigned int)((((s) + 2) / 3) * 4 + 1))
+#define BASE64_DECODE_OUT_SIZE(s) ((unsigned int)(((s) / 4) * 3))
+
+struct b64_state{
+  int16_t s;
+  int16_t j;
+  unsigned char c;
+  unsigned char l;
+  uint16_t pad;
+};
+typedef struct b64_state b64_state_s;
+
+typedef httpd_buf_t ng_buffer_s;
+
+/*
+ * out is null-terminated encode string.
+ * return values is out length, exclusive terminating `\0'
+ */
+int b64Encode(const ng_buffer_s *in, ng_buffer_s *out);
+void b64Encode_Start(b64_state_s *s);
+void b64Encode_Finish(b64_state_s *state, ng_buffer_s *out);
+void b64Encode_Process(b64_state_s *state, const ng_buffer_s *in, ng_buffer_s *out);
+
+#if __configUseBase64Decode
+/*
+ * return values is out length
+ */
+int b64Decode(const ng_buffer_s *in, ng_buffer_s *out);
+static inline void b64Decode_Start(b64_state_s *s) { return b64Encode_Start(s); }
+static inline void b64Decode_Finish(b64_state_s *state, ng_buffer_s *out) { (void)(state); (void)(out);}
+int b64Decode_Process(b64_state_s *state, const ng_buffer_s *in, ng_buffer_s *out);
+#endif
+
+#endif
 
 #ifdef __cplusplus
 }

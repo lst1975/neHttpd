@@ -7,6 +7,7 @@
 #include "nanohttp-file.h"
 #include "nanohttp-user.h"
 #include "nanohttp-logging.h"
+#include "nanohttp-base64.h"
 
 static ng_list_head_s users = NG_LIST_HEAD_INIT(users);
 static httpd_user_t super = {
@@ -15,6 +16,7 @@ static httpd_user_t super = {
   .link = NG_LIST_ENTRY_INIT(),
   .type = _N_http_user_type_SUPER,
 };
+static int __nanohttp_users2file(void);
 
 #define __USER_FILE "data/users.json"
 
@@ -128,7 +130,7 @@ int nanohttp_users_init(void)
     ng_list_add_tail(&entry->link, &users);
   }
   err = 0;
-  
+
 clean2:
   json_pairs_free(pair);
 clean1:
@@ -136,22 +138,6 @@ clean1:
   b->data = NULL;
 clean0:
   return err;
-}
-
-httpd_user_t * 
-nanohttp_users_match(const char *name, int nameLen, 
-  const char *pswd, int pswdLen)
-{
-  httpd_user_t *entry;
-  ng_list_for_each_entry(entry, httpd_user_t, &users, link)
-  {
-    if (entry->name.len != nameLen || strncmp(name, entry->name.data, nameLen))
-      continue;
-    if (pswd && (entry->pswd.len != pswdLen || strncmp(pswd, entry->pswd.data, pswdLen)))
-      continue;
-    return entry;
-  }
-  return NULL;
 }
 
 static const httpd_buf_t __http_user_super={.cptr="SupperUser",.len=10};
@@ -184,12 +170,83 @@ __nanohttp_string2level(const char *level, int levelLen)
 
   return _N_http_user_type_NONE;
 }
+
+#if 0
+static const httpd_buf_t __http_user_crypt={.cptr="neHttpd2025",.len=11};
+
+int
+nanohttp_pswd_enc(httpd_buf_t *b, const char *pswd, int len)
+{
+  unsigned char *p;
+
+  b->size = BASE64_ENCODE_OUT_SIZE(len);
+  b->ptr = (unsigned char *)malloc(b->size + len);
+  if (b->ptr == NULL)
+    return -1;
+  p = b->ptr + b->size;
+  memcpy(p, pswd, len);
+  for (int i=0;i<len;i++)
+  {
+    p[i] ^= __http_user_crypt.cptr[i%__http_user_crypt.len];
+  }
+  b->len = b64Encode(p, len, b->ptr, b->size);
+  return 0;
+}
+
+int
+nanohttp_pswd_dec(httpd_buf_t *b, const char *pswd, int len)
+{
+  unsigned char *p;
+
+  b->size = BASE64_DECODE_OUT_SIZE(len);
+  b->ptr = malloc(b->size + len);
+  if (b->ptr == NULL)
+    return -1;
+  p = b->ptr + b->size;
+  memcpy(p, pswd, len);
+  p[len] = '\0';
+  
+  b->len = b64Decode(p, len, b->ptr, b->size);
+  for (int i=0;i<b->len;i++)
+  {
+    b->ptr[i] ^= __http_user_crypt.cptr[i%__http_user_crypt.len];
+  }
+  return 0;
+}
+#endif
+
+httpd_user_t * 
+nanohttp_users_match(const char *name, int nameLen, 
+  const char *pswd, int pswdLen)
+{
+  httpd_user_t *entry;
+  
+  ng_list_for_each_entry(entry, httpd_user_t, &users, link)
+  {
+    if (entry->name.len != nameLen)
+      continue;
+    if (memcmp(name, entry->name.cptr, nameLen))
+      continue;
+    if (pswd)
+    {
+      if (entry->pswd.len != pswdLen)
+        continue;
+      if (memcmp(entry->pswd.cptr, pswd, pswdLen))
+        continue;
+    }
+    return entry;
+  }
+  
+  return NULL;
+}
+
 static int
 __nanohttp_user2json_super(httpd_user_t *entry, char *b, int len, int count)
 {
   const httpd_buf_t *lp = __nanohttp_level2string(entry->type);
   if (lp == NULL)
     return -1;
+
   int n = snprintf(b, len,
   		"\"username\": {"
   		"  \"type\":\"string\","
@@ -224,8 +281,10 @@ __nanohttp_user2json_super(httpd_user_t *entry, char *b, int len, int count)
       (int)lp->len, lp->cptr,
       count ? ",":""
     );
+
   if (n >= len - 1)
     return - 1;
+  
   return n;
 }
 static int
@@ -234,6 +293,7 @@ __nanohttp_user2json(httpd_user_t *entry, char *b, int len, int count)
   const httpd_buf_t *lp = __nanohttp_level2string(entry->type);
   if (lp == NULL)
     return -1;
+
   int n = snprintf(b, len,
   		"{\"username\": {"
   		"  \"type\":\"string\","
@@ -268,8 +328,10 @@ __nanohttp_user2json(httpd_user_t *entry, char *b, int len, int count)
       (int)lp->len, lp->cptr,
       count ? ",":""
     );
+
   if (n >= len - 1)
     return - 1;
+  
   return n;
 }
 
