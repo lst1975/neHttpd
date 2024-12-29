@@ -1088,9 +1088,11 @@ typedef struct {
   union{
     void *data;
     const char *cptr;
+    unsigned char *ptr;
     char *buf;
   };
   char *p;
+  size_t size;
   size_t len;
 } httpd_buf_t;
 
