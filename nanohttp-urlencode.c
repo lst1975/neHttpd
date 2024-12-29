@@ -1,7 +1,7 @@
 #include "nanohttp-urlencode.h"
 #include "nanohttp-logging.h"
 
-uint8_t utf8_len(const uint8_t* str, int inlen);
+static uint8_t utf8_len(const uint8_t* str, int inlen);
 
 /*
  Alphanumeric characters: A-Z, a-z, 0-9
@@ -547,7 +547,7 @@ static const uint8_t utf8_count_len[256] = {
   4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0, /* 0xF0-0xFF */
 };
 
-uint8_t utf8_len(const uint8_t* str, int inlen) {
+static uint8_t utf8_len(const uint8_t* str, int inlen) {
   if (inlen < 2)
   {
     return inlen;
