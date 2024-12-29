@@ -523,7 +523,7 @@ function cfgOperation(page, alwaysActive, action)
                   var loader = $(this).data("cfg");
                   loader.changeConfigItem($(this), 
                     function(__ev){return __ev.val();},
-                    this.setErr);
+                    $(this).data("cfg").setErr);
                 });
             break;
           case "ipv6":
@@ -562,7 +562,7 @@ function cfgOperation(page, alwaysActive, action)
                   var loader = $(this).data("cfg");
                   loader.changeConfigItem($(this), 
                     function(__ev){return __ev.val().replace(/_/g,"");},
-                    this.setErr);
+                    $(this).data("cfg").setErr);
                 });
             }
             break;
@@ -622,7 +622,7 @@ function cfgOperation(page, alwaysActive, action)
                   var loader = $(this).data("cfg");
                   loader.changeConfigItem($(this), 
                     function(__ev){return __ev.val();},
-                    this.setErr);
+                    $(this).data("cfg").setErr);
                 });
             }
             else
@@ -759,7 +759,7 @@ function cfgOperation(page, alwaysActive, action)
                 var loader = $(this).data("cfg");
   				      loader.changeConfigItem($(this), 
     				    	function(__ev){return __ev.is(':checked');},
-    				    	this.setErr);
+    				    	$(this).data("cfg").setErr);
   			       });
   		      }
             break;
