@@ -37,7 +37,7 @@
     },
     "users":{
       "type":"list+",
-      "label":"Account",
+      "label":"Accounts",
       "id":0,
       "range":[
         1,
