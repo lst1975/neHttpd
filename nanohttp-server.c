@@ -625,11 +625,8 @@ httpd_send_bad_request(httpd_conn_t *conn, const char *msg)
             "<input class='name' type='text' value='' placeholder='Enter Username' name='uname' required>" \
             "<label for='psw'><b>Password</b></label>"  \
             "<input class='password' type='password' value='' placeholder='Enter Password' name='psw' required>" \
-            "<button type='submit'>Login</button>" \
-            "<label>" \
-              "<input type='checkbox' checked='checked' name='remember'> Remember me" \
-            "</label>"  \
-            "</div>"  \
+            "<button class='login' type='submit'>Login</button>" \
+          "</div>"  \
         "</div>"  \
       "</div>"  \
     "</body>"  \

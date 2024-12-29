@@ -777,9 +777,9 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         if (!usr || !pwd)
         {
           if (usr)
-            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s1\",\"reason\":"
                   "\"No password.\"}]}", id, 
-                  (int)usr->keyLength, usr->key);
+                  (int)usr->keyLength-1, usr->key);
           else
             n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"\",\"reason\":"
                   "\"No username.\"}]}", id);
