@@ -55,6 +55,7 @@ function page_common(name, type, display, alwaysActive, action)
       {
         this.page_wrapper.empty();
       }
+      this.inited = false;
     };
   this.initVisible = function(b){
       this.isVisible = b;
@@ -197,33 +198,46 @@ function __load_page(p,data,forced){
   __p = p;
 }
 
+var refreshParent=0;
 function __load_sub_page(name,type,display,data,alwaysActive,action){
   var p = new page_common(name,type,display,alwaysActive,action);
   var parent = __p;
-  if (parent)
+  if (!refreshParent)
   {
+    p.parent = parent;
     parent.hide();
     parent.toggle();
+    p.page_wrapper = ____wrapper;
+    p.container = $("<div class='cfg_container'>").appendTo(p.page_wrapper);
+    p.load(data);
+    p.show();
+    __p = p;
   }
-  p.page_wrapper = ____wrapper;
-  p.container = $("<div class='cfg_container'>").appendTo(p.page_wrapper);
-  p.load(data);
-  p.show();
-  p.parent = parent;
-  __p = p;
+  else
+  {
+    p.parent = parent;
+    __load_page(p,data,true);
+  }
   return p;
 }
 function __close_sub_page(p){
-  if (p.parent)
+  if (!refreshParent)
   {
-    p.parent.show();
-    p.parent.toggle();
-    __p = p.parent;
+    if (p.parent)
+    {
+      p.parent.show();
+      p.parent.toggle();
+      __p = p.parent;
+    }
+    p.hide();
+    p.page_wrapper = null;
+    p.close();
+    p.container.remove();
   }
-  p.hide();
-  p.page_wrapper = null;
-  p.close();
-  p.container.remove();
+  else
+  {
+    __load_page(p.parent,p.parent.data,true);
+  }
   delete p;
 }
 function getIconSvgWithColor(n, color)
