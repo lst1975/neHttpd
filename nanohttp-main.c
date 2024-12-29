@@ -1202,6 +1202,9 @@ main(int argc, char **argv)
     fprintf(stderr, "Cannot init users.\n");
     goto error1;
   }
+
+  //test_encode_url();
+  //test_decode_url();
   
   if ((status = httpd_run()) != H_OK)
   {
