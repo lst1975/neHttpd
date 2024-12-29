@@ -4,16 +4,22 @@
 #define UTF8_LEAD(c) ((uint8_t)(c) < 0x80 || ((uint8_t)(c) > 0xC1 && (uint8_t)(c) < 0xF5))
 #define UTF8_TRAIL(c) (((uint8_t)(c) & 0xC0) == 0x80)
 
-uint8_t utf8_len(const uint8_t* str);
+uint8_t utf8_len(const uint8_t* str, int len);
+
+/*
+ Alphanumeric characters: A-Z, a-z, 0-9
+ Special characters: -, _, ., ~
+ Reserved characters: !, ', (, ), *, ;, :, @, &, =, +, $, ,, /, ?, #, [ and ]
+ */
 
 static const uint8_t xdigit[16] = "0123456789ABCDEF";
 static const int url_unreserved[256] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x00-0x0F */
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x10-0x1F */
-  0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0, /* 0x20-0x2F */
-  1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0, /* 0x30-0x3F */
-  0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, /* 0x40-0x4F */
-  1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1, /* 0x50-0x5F */
+  0,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1, /* 0x20-0x2F */
+  1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1, /* 0x30-0x3F */
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, /* 0x40-0x4F */
+  1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1, /* 0x50-0x5F */
   0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, /* 0x60-0x6F */
   1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,0, /* 0x70-0x7F */
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x80-0x8F */
@@ -25,13 +31,12 @@ static const int url_unreserved[256] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0xE0-0xEF */
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0xF0-0xFF */
 };
-
 int encode_url(httpd_buf_t *b, const uint8_t* input, int len) 
 {
   uint8_t* encoded;
 
   if (!len) len = strlen((const char *)input);
-  b->ptr = encoded = (uint8_t*)malloc(sizeof(uint8_t) * len * 3 + 1);
+  b->ptr = encoded = (uint8_t*)malloc(sizeof(uint8_t) * len * 3);
   if (encoded == NULL)
   {
     log_fatal("Failed to malloc.");
@@ -42,7 +47,7 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
   int out_cursor = 0;
   while (in_cursor < len) 
   {
-    const uint8_t charlen = utf8_len(&input[in_cursor]);
+    const uint8_t charlen = utf8_len(&input[in_cursor], len - in_cursor);
 
     if (charlen == 0) {
       continue;
@@ -53,8 +58,6 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
       in_cursor += charlen;
       if (url_unreserved[c]) {
         encoded[out_cursor++] = c;
-      } else if (c == ' ') {
-        encoded[out_cursor++] = '+';
       } else {
         encoded[out_cursor++] = '%';
         encoded[out_cursor++] = xdigit[c >> 4];
@@ -72,7 +75,6 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
     }
   }
 
-  encoded[out_cursor] = '\0';
   b->len = out_cursor;
 
   return b->len;
@@ -106,7 +108,7 @@ int decode_url(httpd_buf_t *b, const uint8_t* input, int len)
   int out_cursor = 0;
 
   if (!len) len = strlen((const char *)input);
-  b->ptr = decoded = (uint8_t*)malloc(sizeof(uint8_t) * len + 1);
+  b->ptr = decoded = (uint8_t*)malloc(sizeof(uint8_t) * len);
   if (decoded == NULL)
   {
     log_fatal("Failed to malloc.");
@@ -115,7 +117,7 @@ int decode_url(httpd_buf_t *b, const uint8_t* input, int len)
   
   while (in_cursor < len) 
   {
-    const uint8_t charlen = utf8_len(&input[in_cursor]);
+    const uint8_t charlen = utf8_len(&input[in_cursor], len - in_cursor);
 
     if (charlen == 0) {
       continue;
@@ -124,12 +126,6 @@ int decode_url(httpd_buf_t *b, const uint8_t* input, int len)
     if (charlen <= 1) {
       const uint8_t c = input[in_cursor++];
 
-#if 0
-      if (c == '+') {
-        decoded[out_cursor++] = ' ';
-        continue;
-      }
-#endif
       if (c != '%') {
         decoded[out_cursor++] = c;
         continue;
@@ -162,7 +158,6 @@ int decode_url(httpd_buf_t *b, const uint8_t* input, int len)
     }
   }
   
-  decoded[out_cursor] = '\0';
   b->len = out_cursor;
   return b->len;
 }
@@ -217,33 +212,44 @@ static const uint8_t utf8_count_len[256] = {
   4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0, /* 0xF0-0xFF */
 };
 
-uint8_t utf8_len(const uint8_t* str) {
-  const uint8_t lead = *str;
-
-  const uint8_t immediate_len = utf8_immediate_len[lead];
-  if (immediate_len != 0xFF) {
-    return immediate_len;
+uint8_t utf8_len(const uint8_t* str, int inlen) {
+  if (inlen < 2)
+  {
+    return inlen;
   }
+  else
+  {
+    const uint8_t lead = *str;
 
-  const uint8_t count = utf8_count_len[lead];
-  uint8_t trail = *(++str);
+    const uint8_t immediate_len = utf8_immediate_len[lead];
+    if (immediate_len != 0xFF) {
+      return immediate_len;
+    }
 
-  if (count == 3) {
-    if ((lead == 0xE0 && 0xA0 > trail) || (lead == 0xED && trail > 0x9F)) {
-      return 1;
+    const uint8_t count = utf8_count_len[lead];
+    uint8_t trail = *(++str);
+
+    if (count == 3) {
+      if (inlen < count)
+        return 1;
+      if ((lead == 0xE0 && 0xA0 > trail) || (lead == 0xED && trail > 0x9F)) {
+        return 1;
+      }
+    } else if (count == 4) {
+      if (inlen < count)
+        return 1;
+      if ((lead == 0xF0 && 0x90 > trail) || (lead == 0xF4 && trail > 0x8F)) {
+        return 1;
+      }
     }
-  } else if (count == 4) {
-    if ((lead == 0xF0 && 0x90 > trail) || (lead == 0xF4 && trail > 0x8F)) {
-      return 1;
+
+    uint8_t size = 1;
+    for (; size < count; ++size) {
+      if (!UTF8_TRAIL(trail)) {
+        return size;
+      }
+      trail = *(++str);
     }
+    return size;
   }
-
-  uint8_t size = 1;
-  for (; size < count; ++size) {
-    if (!UTF8_TRAIL(trail)) {
-      return size;
-    }
-    trail = *(++str);
-  }
-  return size;
 }
