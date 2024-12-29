@@ -175,16 +175,17 @@ function nanoAjaxGet(context,file,method,data,cb,headers)
 }
 
 function __load_page(p,data,forced){
-  if (!forced && p.isVisible)
-  {
-    __p = p;
-    return;
-  }
   if (__p)
   {
     __p.hide();
     __p.close();
     __p.page_wrapper.remove();
+  }
+
+  if (!forced && p.isVisible)
+  {
+    __p = p;
+    return;
   }
 
   p.page_wrapper = $("<div class='panel_page' id='"+p.name+"'/>").appendTo(____wrapper);
@@ -195,24 +196,35 @@ function __load_page(p,data,forced){
   p.show();
   __p = p;
 }
+
 function __load_sub_page(name,type,display,data,alwaysActive,action){
   var p = new page_common(name,type,display,alwaysActive,action);
-  __p.toggle();
+  var parent = __p;
+  if (parent)
+  {
+    parent.hide();
+    parent.toggle();
+  }
   p.page_wrapper = ____wrapper;
   p.container = $("<div class='cfg_container'>").appendTo(p.page_wrapper);
   p.load(data);
   p.show();
-  p.parent = __p;
+  p.parent = parent;
   __p = p;
   return p;
 }
 function __close_sub_page(p){
-  p.parent.toggle();
+  if (p.parent)
+  {
+    p.parent.show();
+    p.parent.toggle();
+    __p = p.parent;
+  }
+  p.hide();
+  p.page_wrapper = null;
+  p.close();
   p.container.remove();
-  var p_parent = p.parent;
   delete p;
-  __p = null;
-  __load_page(p_parent);
 }
 function getIconSvgWithColor(n, color)
 {

@@ -56,7 +56,8 @@ function MAIN_TEMPLATE_display(p)
   if (p.ajax) p.ajax.abort();
   p.ajax = nanoAjaxGet(p, "data/template.json", "GET", "data="+Base64.encode(y), 
     function(data,err){
-      if (!err)
+      if (!err && !data.err)
+      {
         for (var a in data)
         {
           if (!data.hasOwnProperty(a))
@@ -69,6 +70,9 @@ function MAIN_TEMPLATE_display(p)
           }
         }
         p.loader.load_config(p,p.container,data);
+      }
+      else
+        gmMessageBox("Confirm", null, gmtLangBuild(["TemplateFailed"],1));
     });
 }
 
@@ -77,8 +81,10 @@ function MAIN_USERS_display(p)
   if (p.ajax) p.ajax.abort();
   p.ajax = nanoAjaxGet(p, "data/users.json", "GET", null, 
     function(data,err){
-      if (!err)
+      if (!err && !data.err)
         p.loader.load_config(p,p.container,data);
+      else
+        gmMessageBox("Confirm", null, gmtLangBuild(["TemplateFailed"],1));
     });
 }
 
