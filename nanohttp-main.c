@@ -1106,10 +1106,12 @@ main(int argc, char **argv)
 {
   herror_t status;
 
-  json_test();
-  
   nanohttp_log_set_loglevel(NANOHTTP_LOG_VERBOSE);
 
+  test_encode_url();
+  test_decode_url();
+  json_test();
+  
   if (httpd_init(argc, argv))
   {
     fprintf(stderr, "Cannot init httpd\n");
@@ -1203,9 +1205,6 @@ main(int argc, char **argv)
     goto error1;
   }
 
-  //test_encode_url();
-  //test_decode_url();
-  
   if ((status = httpd_run()) != H_OK)
   {
     fprintf(stderr, "Cannot run httpd (%s)\n", herror_message(status));
