@@ -350,13 +350,7 @@ function __start_main(){
           }
           else
           {
-            $.MessageBox({
-                buttonDone  : gmtLangBuild(["Confirm"],1),
-                buttonFail  : null,
-                message     : gmtLangBuild(["AuthFailed"],1),
-            }).done(function(){
-            }).fail(function(){
-            });              
+            gmMessageBox("Confirm", null, gmtLangBuild(["AuthFailed"],1));
           }
         },
         {
@@ -402,6 +396,7 @@ $(document).ready(function(){
           }
           else
           {
+            gmMessageBox("Confirm", null, gmtLangBuild(["AuthFailed"],1));
             ____auth = null;
           }
         },

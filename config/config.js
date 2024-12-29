@@ -946,54 +946,58 @@ function cfgOperation(page, alwaysActive, action)
                       var self = $(this);
                       var delDiv = $(this).data("delDiv");
                       var __addListItem = $(this).data("addListItem");
-                      $.MessageBox({
-                          buttonDone  : gmtLangBuild(["Confirm"],1),
-                          buttonFail  : gmtLangBuild(["Cancel"],1),
-                          buttonsOrder: "fail done",  // String
-                          message     : gmtLangBuild(["ItemDelMsg"],1)
-                      }).done(function(){
-                        ____workingBusy.show();
-                        var loader = __addListItem.loader;
-                        var ___id = loader.___mibid.id++;
-                        var kd = {
-                            id:___id,
-                            value : loader.makeIndex(__addListItem.index, self.data("i"), __addListItem.n, self.data("i"), false)
-                          };
-                        var y = JSON.stringify(kd);
-                        loader.submit($(this), ___id, "data/del.json", y, function(arg){
-                            var _nn = arg.n;
-                            var ot = arg.stat;
-                            for (var v in ot.values)
+                      __gmMessageBox(
+                        "fail done", 
+                        "Confirm", 
+                        "Cancel", 
+                        gmtLangBuild(["AuthFailed"],1), 
+                        function(err, __addListItem){
+                          if (err) return;
+                          ____workingBusy.show();
+                          var loader = __addListItem.loader;
+                          var ___id = loader.___mibid.id++;
+                          var kd = {
+                              id:___id,
+                              value : loader.makeIndex(__addListItem.index, 
+                                        self.data("i"), __addListItem.n, self.data("i"), false)
+                            };
+                          var y = JSON.stringify(kd);
+                          loader.submit($(this), ___id, "data/del.json", 
+                                        y, function(arg)
                             {
-                              if (!ot.values.hasOwnProperty(v))
-                                continue;
-                              if (v.search(arg.index+".") != 0)
-                                continue;
-                              ot.c--;
-                              delete ot.values[v];
-                            }
-
-                            _nn.value.splice(self.data("i"), 1);
- 
-                            arg.div.empty();
-                            for (var y=0;y<_nn.value.length;y++)
-                            {
-                              arg.addListOne(arg, arg.loader, arg.index, arg.stat, arg.div, _nn, y);
-                            }
-                            if (!_nn.value.length)
-                            {
-                              if (arg.div.is(":visible"))
+                              var _nn = arg.n;
+                              var ot = arg.stat;
+                              for (var v in ot.values)
                               {
-                                arg.group.trigger("tap");
+                                if (!ot.values.hasOwnProperty(v))
+                                  continue;
+                                if (v.search(arg.index+".") != 0)
+                                  continue;
+                                ot.c--;
+                                delete ot.values[v];
                               }
-                              arg.expand.hide();
-                              arg.addButton.addClass("single");
-                            }
-                            //if (arg.loader.action != "data/add.json")
-                            //  __load_page(arg.loader.page, null, true);
-                          }, __addListItem);
-                      }).fail(function(){
-                      });              
+
+                              _nn.value.splice(self.data("i"), 1);
+   
+                              arg.div.empty();
+                              for (var y=0;y<_nn.value.length;y++)
+                              {
+                                arg.addListOne(arg, arg.loader, arg.index, arg.stat, arg.div, _nn, y);
+                              }
+                              if (!_nn.value.length)
+                              {
+                                if (arg.div.is(":visible"))
+                                {
+                                  arg.group.trigger("tap");
+                                }
+                                arg.expand.hide();
+                                arg.addButton.addClass("single");
+                              }
+                              //if (arg.loader.action != "data/add.json")
+                              //  __load_page(arg.loader.page, null, true);
+                            }, __addListItem);
+                        }, 
+                        __addListItem);
                     }
                   });
                   loader.load_group(stat, list, __n.value[k], 
@@ -1056,13 +1060,7 @@ function cfgOperation(page, alwaysActive, action)
         {
           delete this.___mibid.e[___id];
           console.log("Failed to submit your configurations:"+err);
-          $.MessageBox({
-              buttonDone  : gmtLangBuild(["Confirm"],1),
-              buttonFail  : null,
-              message     : gmtLangBuild(["CfgFailed"],1),
-          }).done(function(){
-          }).fail(function(){
-          });              
+          gmMessageBox("Confirm", null, gmtLangBuild(["CfgFailed"],1));
         }
         else
         {
@@ -1096,13 +1094,7 @@ function cfgOperation(page, alwaysActive, action)
             {
               errStr += "<br/>"+x.err[i].id+":"+x.err[i].reason;
             }
-            $.MessageBox({
-                buttonDone  : gmtLangBuild(["Confirm"],1),
-                buttonFail  : null,
-                message     : gmtLangBuild(["CfgFailed"],1) + errStr,
-            }).done(function(){
-            }).fail(function(){
-            });              
+            gmMessageBox("Confirm", null, gmtLangBuild(["CfgFailed"],1) + errStr);
           }
           delete this.___mibid.e[___id];
 
@@ -1188,13 +1180,7 @@ function cfgOperation(page, alwaysActive, action)
               };
             var y = JSON.stringify(k);
             loader.submit(null, ___id, "data/savemib.json", y, function(arg){
-                $.MessageBox({
-                    buttonDone  : gmtLangBuild(["Confirm"],1),
-                    buttonFail  : null,
-                    message     : gmtLangBuild(["SaveOk"],1),
-                }).done(function(){
-                }).fail(function(){
-                });              
+                gmMessageBox("Confirm", null, gmtLangBuild(["SaveOk"],1));
               }, null);
           }
           else if ($(this).hasClass("return"))
@@ -1256,16 +1242,7 @@ function cfgOperation(page, alwaysActive, action)
             }
             var y = JSON.stringify(k);
             loader.submit($(this), ___id, loader.action, y, function(arg){
-                if (arg.loader.action == "data/add.json")
-                {
-                  $.MessageBox({
-                      buttonDone  : gmtLangBuild(["Confirm"],1),
-                      buttonFail  : null,
-                      message     : gmtLangBuild(["AddOk"],1),
-                  }).done(function(){
-                  }).fail(function(){
-                  });              
-                }
+                gmMessageBox("Confirm", null, gmtLangBuild(["AddOk"],1));
                 if (!arg.p.data || !arg.p.data.add)
                   return;
                 

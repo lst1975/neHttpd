@@ -1,3 +1,21 @@
+function __gmMessageBox(order, done, fail, msg, cb, arg)
+{
+  $.MessageBox({
+    buttonDone  : gmtLangBuild([done],1),
+    buttonFail  : fail ? gmtLangBuild(["fail"],1) : null,
+    buttonsOrder: order || null,  // String
+    message     : msg,
+  }).done(function(){
+    if (cb) cb(0, arg);
+  }).fail(function(){
+    if (cb) cb(0, arg);
+  });              
+}
+function gmMessageBox(done, fail, msg, cb, arg)
+{
+  __gmMessageBox(null, done, fail, msg, cb, arg);
+}
+
 function gmtIsArray(obj)
 {
   if (Array.isArray)

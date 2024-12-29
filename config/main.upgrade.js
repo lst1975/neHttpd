@@ -197,13 +197,8 @@ function MAIN_UPGRADE_display(p)
           else {
             console.log('Request failed with status:', xhr.status);
           }
-          $.MessageBox({
-              buttonDone  : gmtLangBuild(["Confirm"],1),
-              buttonFail  : null,
-              message     : gmtLangBuild(["SystemUpgrade", xhr.status === 200 ? "Ok" : "Fail", "FullStop"],1),
-          }).done(function(){
-          }).fail(function(){
-          });              
+          gmMessageBox("Confirm", null, 
+            gmtLangBuild(["SystemUpgrade", xhr.status === 200 ? "Ok" : "Fail", "FullStop"],1));
         }
       };
       if (____auth)
