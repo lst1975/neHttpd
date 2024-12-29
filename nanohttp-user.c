@@ -311,7 +311,7 @@ __nanohttp_users2file(void)
       if (n == -1)
         goto clean0;
       p += n, len -= n;
-      n = snprintf(p, len, "%s", "},\"users\":{\"type\":\"list+\",\"label\":\"Account\",\"id\":0,"
+      n = snprintf(p, len, "%s", "},\"users\":{\"type\":\"list+\",\"label\":\"Accounts\",\"id\":0,"
                                  "\"range\":[1,100],\"writable\":true,\"index\":\"username\",\"value\":[");
       p += n, len -= n;
     }
