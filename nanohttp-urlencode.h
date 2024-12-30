@@ -10,6 +10,8 @@ extern "C" {
 #include <stdint.h>
 #include "nanohttp-common.h"
 
+extern const uint8_t url_unreserved[256];
+
 int decode_url(httpd_buf_t *b, const uint8_t* input, int len);
 int encode_url(httpd_buf_t *b, const uint8_t* input, int len);
 void test_encode_url(void);

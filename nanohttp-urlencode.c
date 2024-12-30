@@ -9,26 +9,72 @@ static const uint8_t xdigit[16] = "0123456789ABCDEF";
  Special characters: -, _, ., ~
  Reserved characters: !, ', (, ), *, ;, :, @, &, =, +, $, ,, /, ?, #
  */
-#if 0
-static const int url_unreserved[256] = {
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x00-0x0F */
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x10-0x1F */
-  0,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1, /* 0x20-0x2F */
-  1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1, /* 0x30-0x3F */
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, /* 0x40-0x4F */
-  1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1, /* 0x50-0x5F */
-  0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, /* 0x60-0x6F */
-  1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,0, /* 0x70-0x7F */
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x80-0x8F */
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x90-0x9F */
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0xA0-0xAF */
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0xB0-0xBF */
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0xC0-0xCF */
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0xD0-0xDF */
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0xE0-0xEF */
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0xF0-0xFF */
+const uint8_t url_unreserved[256] = {
+  /* 0*/  /* 1*/  /* 2*/  /* 3*/  /* 4*/  /* 5*/  /* 6*/  /* 7*/  /* 0x00-0x0F */
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /* 8*/  /*\t*/  /*\n*/  /* b*/  /* c*/  /*\r*/  /* e*/  /* f*/ 
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*10*/  /*11*/  /*12*/  /*13*/  /*14*/  /*15*/  /*16*/  /*17*/  /* 0x10-0x1F */
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*18*/  /*19*/  /*1a*/  /*1b*/  /*1c*/  /*1d*/  /*1e*/  /*1f*/ 
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*  */  /* !*/  /* "*/  /* #*/  /* $*/  /* %*/  /* &*/  /* '*/  /* 0x20-0x2F */
+     0,      1,      0,      1,      1,      0,      1,      1,
+  /* (*/  /* )*/  /* **/  /* +*/  /* ,*/  /* -*/  /* .*/  /* /*/ 
+     1,      1,      1,      1,      1,      1,      1,      1,
+  /* 0*/  /* 1*/  /* 2*/  /* 3*/  /* 4*/  /* 5*/  /* 6*/  /* 7*/  /* 0x30-0x3F */
+     1,      1,      1,      1,      1,      1,      1,      1,
+  /* 8*/  /* 9*/  /* :*/  /* ;*/  /* <*/  /* =*/  /* >*/  /* ?*/ 
+     1,      1,      1,      1,      0,      1,      0,      1,
+  /* @*/  /* A*/  /* B*/  /* C*/  /* D*/  /* E*/  /* F*/  /* G*/  /* 0x40-0x4F */
+     1,      1,      1,      1,      1,      1,      1,      1,
+  /* H*/  /* I*/  /* J*/  /* K*/  /* L*/  /* M*/  /* N*/  /* O*/ 
+     1,      1,      1,      1,      1,      1,      1,      1,
+  /* P*/  /* Q*/  /* R*/  /* S*/  /* T*/  /* U*/  /* V*/  /* W*/  /* 0x50-0x5F */
+     1,      1,      1,      1,      1,      1,      1,      1,
+  /* X*/  /* Y*/  /* Z*/  /* [*/  /* \*/  /* ]*/  /* ^*/  /* _*/ 
+     1,      1,      1,      0,      0,      0,      0,      1,
+  /* `*/  /* a*/  /* b*/  /* c*/  /* d*/  /* e*/  /* f*/  /* g*/  /* 0x60-0x6F */
+     0,      1,      1,      1,      1,      1,      1,      1,
+  /* h*/  /* i*/  /* j*/  /* k*/  /* l*/  /* m*/  /* n*/  /* o*/ 
+     1,      1,      1,      1,      1,      1,      1,      1,
+  /* p*/  /* q*/  /* r*/  /* s*/  /* t*/  /* u*/  /* v*/  /* w*/  /* 0x70-0x7F */
+     1,      1,      1,      1,      1,      1,      1,      1,
+  /* x*/  /* y*/  /* z*/  /* {*/  /* |*/  /* }*/  /* ~*/  /*7f*/ 
+     1,      1,      1,      0,      0,      0,      1,      0,
+  /*80*/  /*81*/  /*82*/  /*83*/  /*84*/  /*85*/  /*86*/  /*87*/  /* 0x80-0x8F */
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*88*/  /*89*/  /*8a*/  /*8b*/  /*8c*/  /*8d*/  /*8e*/  /*8f*/ 
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*90*/  /*91*/  /*92*/  /*93*/  /*94*/  /*95*/  /*96*/  /*97*/  /* 0x90-0x9F */
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*98*/  /*99*/  /*9a*/  /*9b*/  /*9c*/  /*9d*/  /*9e*/  /*9f*/ 
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*a0*/  /*a1*/  /*a2*/  /*a3*/  /*a4*/  /*a5*/  /*a6*/  /*a7*/  /* 0xA0-0xAF */
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*a8*/  /*a9*/  /*aa*/  /*ab*/  /*ac*/  /*ad*/  /*ae*/  /*af*/ 
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*b0*/  /*b1*/  /*b2*/  /*b3*/  /*b4*/  /*b5*/  /*b6*/  /*b7*/  /* 0xB0-0xBF */
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*b8*/  /*b9*/  /*ba*/  /*bb*/  /*bc*/  /*bd*/  /*be*/  /*bf*/ 
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*c0*/  /*c1*/  /*c2*/  /*c3*/  /*c4*/  /*c5*/  /*c6*/  /*c7*/  /* 0xC0-0xCF */
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*c8*/  /*c9*/  /*ca*/  /*cb*/  /*cc*/  /*cd*/  /*ce*/  /*cf*/ 
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*d0*/  /*d1*/  /*d2*/  /*d3*/  /*d4*/  /*d5*/  /*d6*/  /*d7*/  /* 0xD0-0xDF */
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*d8*/  /*d9*/  /*da*/  /*db*/  /*dc*/  /*dd*/  /*de*/  /*df*/ 
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*e0*/  /*e1*/  /*e2*/  /*e3*/  /*e4*/  /*e5*/  /*e6*/  /*e7*/  /* 0xE0-0xEF */
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*e8*/  /*e9*/  /*ea*/  /*eb*/  /*ec*/  /*ed*/  /*ee*/  /*ef*/ 
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*f0*/  /*f1*/  /*f2*/  /*f3*/  /*f4*/  /*f5*/  /*f6*/  /*f7*/  /* 0xF0-0xFF */
+     0,      0,      0,      0,      0,      0,      0,      0,
+  /*f8*/  /*f9*/  /*fa*/  /*fb*/  /*fc*/  /*fd*/  /*fe*/  /*ff*/ 
+     0,      0,      0,      0,      0,      0,      0,      0,
 };
-#endif
 
 struct _str_enc{
   long len;
@@ -36,262 +82,102 @@ struct _str_enc{
 };
 
 static const struct _str_enc url_str_enc[256] = {
-  {.len=3,.cptr="%00"},
-  {.len=3,.cptr="%01"},
-  {.len=3,.cptr="%02"},
-  {.len=3,.cptr="%03"},
-  {.len=3,.cptr="%04"},
-  {.len=3,.cptr="%05"},
-  {.len=3,.cptr="%06"},
-  {.len=3,.cptr="%07"},
-  {.len=3,.cptr="%08"},
-  {.len=3,.cptr="%09"},
-  {.len=3,.cptr="%0A"},
-  {.len=3,.cptr="%0B"},
-  {.len=3,.cptr="%0C"},
-  {.len=3,.cptr="%0D"},
-  {.len=3,.cptr="%0E"},
-  {.len=3,.cptr="%0F"},
-  {.len=3,.cptr="%10"},
-  {.len=3,.cptr="%11"},
-  {.len=3,.cptr="%12"},
-  {.len=3,.cptr="%13"},
-  {.len=3,.cptr="%14"},
-  {.len=3,.cptr="%15"},
-  {.len=3,.cptr="%16"},
-  {.len=3,.cptr="%17"},
-  {.len=3,.cptr="%18"},
-  {.len=3,.cptr="%19"},
-  {.len=3,.cptr="%1A"},
-  {.len=3,.cptr="%1B"},
-  {.len=3,.cptr="%1C"},
-  {.len=3,.cptr="%1D"},
-  {.len=3,.cptr="%1E"},
-  {.len=3,.cptr="%1F"},
-  {.len=3,.cptr="%20"},
-  {.len=1,.cptr="!"},
-  {.len=3,.cptr="%22"},
-  {.len=1,.cptr="#"},
-  {.len=1,.cptr="$"},
-  {.len=3,.cptr="%25"},
-  {.len=1,.cptr="&"},
-  {.len=1,.cptr="'"},
-  {.len=1,.cptr="("},
-  {.len=1,.cptr=")"},
-  {.len=1,.cptr="*"},
-  {.len=1,.cptr="+"},
-  {.len=1,.cptr=","},
-  {.len=1,.cptr="-"},
-  {.len=1,.cptr="."},
-  {.len=1,.cptr="/"},
-  {.len=1,.cptr="0"},
-  {.len=1,.cptr="1"},
-  {.len=1,.cptr="2"},
-  {.len=1,.cptr="3"},
-  {.len=1,.cptr="4"},
-  {.len=1,.cptr="5"},
-  {.len=1,.cptr="6"},
-  {.len=1,.cptr="7"},
-  {.len=1,.cptr="8"},
-  {.len=1,.cptr="9"},
-  {.len=1,.cptr=":"},
-  {.len=1,.cptr=";"},
-  {.len=3,.cptr="%3C"},
-  {.len=1,.cptr="="},
-  {.len=3,.cptr="%3E"},
-  {.len=1,.cptr="?"},
-  {.len=1,.cptr="@"},
-  {.len=1,.cptr="A"},
-  {.len=1,.cptr="B"},
-  {.len=1,.cptr="C"},
-  {.len=1,.cptr="D"},
-  {.len=1,.cptr="E"},
-  {.len=1,.cptr="F"},
-  {.len=1,.cptr="G"},
-  {.len=1,.cptr="H"},
-  {.len=1,.cptr="I"},
-  {.len=1,.cptr="J"},
-  {.len=1,.cptr="K"},
-  {.len=1,.cptr="L"},
-  {.len=1,.cptr="M"},
-  {.len=1,.cptr="N"},
-  {.len=1,.cptr="O"},
-  {.len=1,.cptr="P"},
-  {.len=1,.cptr="Q"},
-  {.len=1,.cptr="R"},
-  {.len=1,.cptr="S"},
-  {.len=1,.cptr="T"},
-  {.len=1,.cptr="U"},
-  {.len=1,.cptr="V"},
-  {.len=1,.cptr="W"},
-  {.len=1,.cptr="X"},
-  {.len=1,.cptr="Y"},
-  {.len=1,.cptr="Z"},
-  {.len=3,.cptr="%5B"},
-  {.len=3,.cptr="%5C"},
-  {.len=3,.cptr="%5D"},
-  {.len=3,.cptr="%5E"},
-  {.len=1,.cptr="_"},
-  {.len=3,.cptr="%60"},
-  {.len=1,.cptr="a"},
-  {.len=1,.cptr="b"},
-  {.len=1,.cptr="c"},
-  {.len=1,.cptr="d"},
-  {.len=1,.cptr="e"},
-  {.len=1,.cptr="f"},
-  {.len=1,.cptr="g"},
-  {.len=1,.cptr="h"},
-  {.len=1,.cptr="i"},
-  {.len=1,.cptr="j"},
-  {.len=1,.cptr="k"},
-  {.len=1,.cptr="l"},
-  {.len=1,.cptr="m"},
-  {.len=1,.cptr="n"},
-  {.len=1,.cptr="o"},
-  {.len=1,.cptr="p"},
-  {.len=1,.cptr="q"},
-  {.len=1,.cptr="r"},
-  {.len=1,.cptr="s"},
-  {.len=1,.cptr="t"},
-  {.len=1,.cptr="u"},
-  {.len=1,.cptr="v"},
-  {.len=1,.cptr="w"},
-  {.len=1,.cptr="x"},
-  {.len=1,.cptr="y"},
-  {.len=1,.cptr="z"},
-  {.len=3,.cptr="%7B"},
-  {.len=3,.cptr="%7C"},
-  {.len=3,.cptr="%7D"},
-  {.len=1,.cptr="~"},
-  {.len=3,.cptr="%7F"},
-  {.len=6,.cptr="%C2%80"},
-  {.len=6,.cptr="%C2%81"},
-  {.len=6,.cptr="%C2%82"},
-  {.len=6,.cptr="%C2%83"},
-  {.len=6,.cptr="%C2%84"},
-  {.len=6,.cptr="%C2%85"},
-  {.len=6,.cptr="%C2%86"},
-  {.len=6,.cptr="%C2%87"},
-  {.len=6,.cptr="%C2%88"},
-  {.len=6,.cptr="%C2%89"},
-  {.len=6,.cptr="%C2%8A"},
-  {.len=6,.cptr="%C2%8B"},
-  {.len=6,.cptr="%C2%8C"},
-  {.len=6,.cptr="%C2%8D"},
-  {.len=6,.cptr="%C2%8E"},
-  {.len=6,.cptr="%C2%8F"},
-  {.len=6,.cptr="%C2%90"},
-  {.len=6,.cptr="%C2%91"},
-  {.len=6,.cptr="%C2%92"},
-  {.len=6,.cptr="%C2%93"},
-  {.len=6,.cptr="%C2%94"},
-  {.len=6,.cptr="%C2%95"},
-  {.len=6,.cptr="%C2%96"},
-  {.len=6,.cptr="%C2%97"},
-  {.len=6,.cptr="%C2%98"},
-  {.len=6,.cptr="%C2%99"},
-  {.len=6,.cptr="%C2%9A"},
-  {.len=6,.cptr="%C2%9B"},
-  {.len=6,.cptr="%C2%9C"},
-  {.len=6,.cptr="%C2%9D"},
-  {.len=6,.cptr="%C2%9E"},
-  {.len=6,.cptr="%C2%9F"},
-  {.len=6,.cptr="%C2%A0"},
-  {.len=6,.cptr="%C2%A1"},
-  {.len=6,.cptr="%C2%A2"},
-  {.len=6,.cptr="%C2%A3"},
-  {.len=6,.cptr="%C2%A4"},
-  {.len=6,.cptr="%C2%A5"},
-  {.len=6,.cptr="%C2%A6"},
-  {.len=6,.cptr="%C2%A7"},
-  {.len=6,.cptr="%C2%A8"},
-  {.len=6,.cptr="%C2%A9"},
-  {.len=6,.cptr="%C2%AA"},
-  {.len=6,.cptr="%C2%AB"},
-  {.len=6,.cptr="%C2%AC"},
-  {.len=6,.cptr="%C2%AD"},
-  {.len=6,.cptr="%C2%AE"},
-  {.len=6,.cptr="%C2%AF"},
-  {.len=6,.cptr="%C2%B0"},
-  {.len=6,.cptr="%C2%B1"},
-  {.len=6,.cptr="%C2%B2"},
-  {.len=6,.cptr="%C2%B3"},
-  {.len=6,.cptr="%C2%B4"},
-  {.len=6,.cptr="%C2%B5"},
-  {.len=6,.cptr="%C2%B6"},
-  {.len=6,.cptr="%C2%B7"},
-  {.len=6,.cptr="%C2%B8"},
-  {.len=6,.cptr="%C2%B9"},
-  {.len=6,.cptr="%C2%BA"},
-  {.len=6,.cptr="%C2%BB"},
-  {.len=6,.cptr="%C2%BC"},
-  {.len=6,.cptr="%C2%BD"},
-  {.len=6,.cptr="%C2%BE"},
-  {.len=6,.cptr="%C2%BF"},
-  {.len=6,.cptr="%C3%80"},
-  {.len=6,.cptr="%C3%81"},
-  {.len=6,.cptr="%C3%82"},
-  {.len=6,.cptr="%C3%83"},
-  {.len=6,.cptr="%C3%84"},
-  {.len=6,.cptr="%C3%85"},
-  {.len=6,.cptr="%C3%86"},
-  {.len=6,.cptr="%C3%87"},
-  {.len=6,.cptr="%C3%88"},
-  {.len=6,.cptr="%C3%89"},
-  {.len=6,.cptr="%C3%8A"},
-  {.len=6,.cptr="%C3%8B"},
-  {.len=6,.cptr="%C3%8C"},
-  {.len=6,.cptr="%C3%8D"},
-  {.len=6,.cptr="%C3%8E"},
-  {.len=6,.cptr="%C3%8F"},
-  {.len=6,.cptr="%C3%90"},
-  {.len=6,.cptr="%C3%91"},
-  {.len=6,.cptr="%C3%92"},
-  {.len=6,.cptr="%C3%93"},
-  {.len=6,.cptr="%C3%94"},
-  {.len=6,.cptr="%C3%95"},
-  {.len=6,.cptr="%C3%96"},
-  {.len=6,.cptr="%C3%97"},
-  {.len=6,.cptr="%C3%98"},
-  {.len=6,.cptr="%C3%99"},
-  {.len=6,.cptr="%C3%9A"},
-  {.len=6,.cptr="%C3%9B"},
-  {.len=6,.cptr="%C3%9C"},
-  {.len=6,.cptr="%C3%9D"},
-  {.len=6,.cptr="%C3%9E"},
-  {.len=6,.cptr="%C3%9F"},
-  {.len=6,.cptr="%C3%A0"},
-  {.len=6,.cptr="%C3%A1"},
-  {.len=6,.cptr="%C3%A2"},
-  {.len=6,.cptr="%C3%A3"},
-  {.len=6,.cptr="%C3%A4"},
-  {.len=6,.cptr="%C3%A5"},
-  {.len=6,.cptr="%C3%A6"},
-  {.len=6,.cptr="%C3%A7"},
-  {.len=6,.cptr="%C3%A8"},
-  {.len=6,.cptr="%C3%A9"},
-  {.len=6,.cptr="%C3%AA"},
-  {.len=6,.cptr="%C3%AB"},
-  {.len=6,.cptr="%C3%AC"},
-  {.len=6,.cptr="%C3%AD"},
-  {.len=6,.cptr="%C3%AE"},
-  {.len=6,.cptr="%C3%AF"},
-  {.len=6,.cptr="%C3%B0"},
-  {.len=6,.cptr="%C3%B1"},
-  {.len=6,.cptr="%C3%B2"},
-  {.len=6,.cptr="%C3%B3"},
-  {.len=6,.cptr="%C3%B4"},
-  {.len=6,.cptr="%C3%B5"},
-  {.len=6,.cptr="%C3%B6"},
-  {.len=6,.cptr="%C3%B7"},
-  {.len=6,.cptr="%C3%B8"},
-  {.len=6,.cptr="%C3%B9"},
-  {.len=6,.cptr="%C3%BA"},
-  {.len=6,.cptr="%C3%BB"},
-  {.len=6,.cptr="%C3%BC"},
-  {.len=6,.cptr="%C3%BD"},
-  {.len=6,.cptr="%C3%BE"},
-  {.len=6,.cptr="%C3%BF"}
+  /* 0*/  /* 1*/  /* 2*/  /* 3*/  /* 4*/  /* 5*/  /* 6*/  /* 7*/  /* 0x00-0x0F */
+  {.len=3,.cptr="%00"},    {.len=3,.cptr="%01"},    {.len=3,.cptr="%02"},    {.len=3,.cptr="%03"}, 
+  {.len=3,.cptr="%04"},    {.len=3,.cptr="%05"},    {.len=3,.cptr="%06"},    {.len=3,.cptr="%07"},
+  /* 8*/  /*\t*/  /*\n*/  /* b*/  /* c*/  /*\r*/  /* e*/  /* f*/ 
+  {.len=3,.cptr="%08"},    {.len=3,.cptr="%09"},    {.len=3,.cptr="%0A"},    {.len=3,.cptr="%0B"},
+  {.len=3,.cptr="%0C"},    {.len=3,.cptr="%0D"},    {.len=3,.cptr="%0E"},    {.len=3,.cptr="%0F"},
+  /*10*/  /*11*/  /*12*/  /*13*/  /*14*/  /*15*/  /*16*/  /*17*/  /* 0x10-0x1F */
+  {.len=3,.cptr="%10"},    {.len=3,.cptr="%11"},    {.len=3,.cptr="%12"},    {.len=3,.cptr="%13"},
+  {.len=3,.cptr="%14"},    {.len=3,.cptr="%15"},    {.len=3,.cptr="%16"},    {.len=3,.cptr="%17"},
+  /*18*/  /*19*/  /*1a*/  /*1b*/  /*1c*/  /*1d*/  /*1e*/  /*1f*/ 
+  {.len=3,.cptr="%18"},    {.len=3,.cptr="%19"},    {.len=3,.cptr="%1A"},    {.len=3,.cptr="%1B"},
+  {.len=3,.cptr="%1C"},    {.len=3,.cptr="%1D"},    {.len=3,.cptr="%1E"},    {.len=3,.cptr="%1F"},
+  /*  */  /* !*/  /* "*/  /* #*/  /* $*/  /* %*/  /* &*/  /* '*/  /* 0x20-0x2F */
+  {.len=3,.cptr="%20"},    {.len=1,.cptr=  "!"},    {.len=3,.cptr="%22"},    {.len=1,.cptr=  "#"},
+  {.len=1,.cptr=  "$"},    {.len=3,.cptr="%25"},    {.len=1,.cptr=  "&"},    {.len=1,.cptr=  "'"},
+  /* (*/  /* )*/  /* **/  /* +*/  /* ,*/  /* -*/  /* .*/  /* /*/ 
+  {.len=1,.cptr=  "("},    {.len=1,.cptr=  ")"},    {.len=1,.cptr=  "*"},    {.len=1,.cptr=  "+"},
+  {.len=1,.cptr=  ","},    {.len=1,.cptr=  "-"},    {.len=1,.cptr=  "."},    {.len=1,.cptr=  "/"},
+  /* 0*/  /* 1*/  /* 2*/  /* 3*/  /* 4*/  /* 5*/  /* 6*/  /* 7*/  /* 0x30-0x3F */
+  {.len=1,.cptr=  "0"},    {.len=1,.cptr=  "1"},    {.len=1,.cptr=  "2"},    {.len=1,.cptr=  "3"},
+  {.len=1,.cptr=  "4"},    {.len=1,.cptr=  "5"},    {.len=1,.cptr=  "6"},    {.len=1,.cptr=  "7"},
+  /* 8*/  /* 9*/  /* :*/  /* ;*/  /* <*/  /* =*/  /* >*/  /* ?*/ 
+  {.len=1,.cptr=  "8"},    {.len=1,.cptr=  "9"},    {.len=1,.cptr=  ":"},    {.len=1,.cptr=  ";"},
+  {.len=3,.cptr="%3C"},    {.len=1,.cptr=  "="},    {.len=3,.cptr="%3E"},    {.len=1,.cptr=  "?"},
+  /* @*/  /* A*/  /* B*/  /* C*/  /* D*/  /* E*/  /* F*/  /* G*/  /* 0x40-0x4F */
+  {.len=1,.cptr=  "@"},    {.len=1,.cptr=  "A"},    {.len=1,.cptr=  "B"},    {.len=1,.cptr=  "C"},
+  {.len=1,.cptr=  "D"},    {.len=1,.cptr=  "E"},    {.len=1,.cptr=  "F"},    {.len=1,.cptr=  "G"},
+  /* H*/  /* I*/  /* J*/  /* K*/  /* L*/  /* M*/  /* N*/  /* O*/ 
+  {.len=1,.cptr=  "H"},    {.len=1,.cptr=  "I"},    {.len=1,.cptr=  "J"},    {.len=1,.cptr=  "K"},
+  {.len=1,.cptr=  "L"},    {.len=1,.cptr=  "M"},    {.len=1,.cptr=  "N"},    {.len=1,.cptr=  "O"},
+  /* P*/  /* Q*/  /* R*/  /* S*/  /* T*/  /* U*/  /* V*/  /* W*/  /* 0x50-0x5F */
+  {.len=1,.cptr=  "P"},    {.len=1,.cptr=  "Q"},    {.len=1,.cptr=  "R"},    {.len=1,.cptr=  "S"},
+  {.len=1,.cptr=  "T"},    {.len=1,.cptr=  "U"},    {.len=1,.cptr=  "V"},    {.len=1,.cptr=  "W"},
+  /* X*/  /* Y*/  /* Z*/  /* [*/  /* \*/  /* ]*/  /* ^*/  /* _*/ 
+  {.len=1,.cptr=  "X"},    {.len=1,.cptr=  "Y"},    {.len=1,.cptr=  "Z"},    {.len=3,.cptr="%5B"},
+  {.len=3,.cptr="%5C"},    {.len=3,.cptr="%5D"},    {.len=3,.cptr="%5E"},    {.len=1,.cptr=  "_"},
+  /* `*/  /* a*/  /* b*/  /* c*/  /* d*/  /* e*/  /* f*/  /* g*/  /* 0x60-0x6F */
+  {.len=3,.cptr="%60"},    {.len=1,.cptr=  "a"},    {.len=1,.cptr=  "b"},    {.len=1,.cptr=  "c"},
+  {.len=1,.cptr=  "d"},    {.len=1,.cptr=  "e"},    {.len=1,.cptr=  "f"},    {.len=1,.cptr=  "g"},
+  /* h*/  /* i*/  /* j*/  /* k*/  /* l*/  /* m*/  /* n*/  /* o*/ 
+  {.len=1,.cptr=  "h"},    {.len=1,.cptr=  "i"},    {.len=1,.cptr=  "j"},    {.len=1,.cptr=  "k"},
+  {.len=1,.cptr=  "l"},    {.len=1,.cptr=  "m"},    {.len=1,.cptr=  "n"},    {.len=1,.cptr=  "o"},
+  /* p*/  /* q*/  /* r*/  /* s*/  /* t*/  /* u*/  /* v*/  /* w*/  /* 0x70-0x7F */
+  {.len=1,.cptr=  "p"},    {.len=1,.cptr=  "q"},    {.len=1,.cptr=  "r"},    {.len=1,.cptr=  "s"},
+  {.len=1,.cptr=  "t"},    {.len=1,.cptr=  "u"},    {.len=1,.cptr=  "v"},    {.len=1,.cptr=  "w"},
+  /* x*/  /* y*/  /* z*/  /* {*/  /* |*/  /* }*/  /* ~*/  /*7f*/ 
+  {.len=1,.cptr=  "x"},    {.len=1,.cptr=  "y"},    {.len=1,.cptr=  "z"},    {.len=3,.cptr="%7B"},
+  {.len=3,.cptr="%7C"},    {.len=3,.cptr="%7D"},    {.len=1,.cptr=  "~"},    {.len=3,.cptr="%7F"},
+  /*80*/  /*81*/  /*82*/  /*83*/  /*84*/  /*85*/  /*86*/  /*87*/  /* 0x80-0x8F */
+  {.len=6,.cptr="%C2%80"}, {.len=6,.cptr="%C2%81"}, {.len=6,.cptr="%C2%82"}, {.len=6,.cptr="%C2%83"},
+  {.len=6,.cptr="%C2%84"}, {.len=6,.cptr="%C2%85"}, {.len=6,.cptr="%C2%86"}, {.len=6,.cptr="%C2%87"},
+  /*88*/  /*89*/  /*8a*/  /*8b*/  /*8c*/  /*8d*/  /*8e*/  /*8f*/ 
+  {.len=6,.cptr="%C2%88"}, {.len=6,.cptr="%C2%89"}, {.len=6,.cptr="%C2%8A"}, {.len=6,.cptr="%C2%8B"},
+  {.len=6,.cptr="%C2%8C"}, {.len=6,.cptr="%C2%8D"}, {.len=6,.cptr="%C2%8E"}, {.len=6,.cptr="%C2%8F"},
+  /*90*/  /*91*/  /*92*/  /*93*/  /*94*/  /*95*/  /*96*/  /*97*/  /* 0x90-0x9F */
+  {.len=6,.cptr="%C2%90"}, {.len=6,.cptr="%C2%91"}, {.len=6,.cptr="%C2%92"}, {.len=6,.cptr="%C2%93"},
+  {.len=6,.cptr="%C2%94"}, {.len=6,.cptr="%C2%95"}, {.len=6,.cptr="%C2%96"}, {.len=6,.cptr="%C2%97"},
+  /*98*/  /*99*/  /*9a*/  /*9b*/  /*9c*/  /*9d*/  /*9e*/  /*9f*/ 
+  {.len=6,.cptr="%C2%98"}, {.len=6,.cptr="%C2%99"}, {.len=6,.cptr="%C2%9A"}, {.len=6,.cptr="%C2%9B"},
+  {.len=6,.cptr="%C2%9C"}, {.len=6,.cptr="%C2%9D"}, {.len=6,.cptr="%C2%9E"}, {.len=6,.cptr="%C2%9F"},
+  /*a0*/  /*a1*/  /*a2*/  /*a3*/  /*a4*/  /*a5*/  /*a6*/  /*a7*/  /* 0xA0-0xAF */
+  {.len=6,.cptr="%C2%A0"}, {.len=6,.cptr="%C2%A1"}, {.len=6,.cptr="%C2%A2"}, {.len=6,.cptr="%C2%A3"},
+  {.len=6,.cptr="%C2%A4"}, {.len=6,.cptr="%C2%A5"}, {.len=6,.cptr="%C2%A6"}, {.len=6,.cptr="%C2%A7"},
+  /*a8*/  /*a9*/  /*aa*/  /*ab*/  /*ac*/  /*ad*/  /*ae*/  /*af*/ 
+  {.len=6,.cptr="%C2%A8"}, {.len=6,.cptr="%C2%A9"}, {.len=6,.cptr="%C2%AA"}, {.len=6,.cptr="%C2%AB"},
+  {.len=6,.cptr="%C2%AC"}, {.len=6,.cptr="%C2%AD"}, {.len=6,.cptr="%C2%AE"}, {.len=6,.cptr="%C2%AF"},
+  /*b0*/  /*b1*/  /*b2*/  /*b3*/  /*b4*/  /*b5*/  /*b6*/  /*b7*/  /* 0xB0-0xBF */
+  {.len=6,.cptr="%C2%B0"}, {.len=6,.cptr="%C2%B1"}, {.len=6,.cptr="%C2%B2"}, {.len=6,.cptr="%C2%B3"},
+  {.len=6,.cptr="%C2%B4"}, {.len=6,.cptr="%C2%B5"}, {.len=6,.cptr="%C2%B6"}, {.len=6,.cptr="%C2%B7"},
+  /*b8*/  /*b9*/  /*ba*/  /*bb*/  /*bc*/  /*bd*/  /*be*/  /*bf*/ 
+  {.len=6,.cptr="%C2%B8"}, {.len=6,.cptr="%C2%B9"}, {.len=6,.cptr="%C2%BA"}, {.len=6,.cptr="%C2%BB"},
+  {.len=6,.cptr="%C2%BC"}, {.len=6,.cptr="%C2%BD"}, {.len=6,.cptr="%C2%BE"}, {.len=6,.cptr="%C2%BF"},
+  /*c0*/  /*c1*/  /*c2*/  /*c3*/  /*c4*/  /*c5*/  /*c6*/  /*c7*/  /* 0xC0-0xCF */
+  {.len=6,.cptr="%C3%80"}, {.len=6,.cptr="%C3%81"}, {.len=6,.cptr="%C3%82"}, {.len=6,.cptr="%C3%83"},
+  {.len=6,.cptr="%C3%84"}, {.len=6,.cptr="%C3%85"}, {.len=6,.cptr="%C3%86"}, {.len=6,.cptr="%C3%87"},
+  /*c8*/  /*c9*/  /*ca*/  /*cb*/  /*cc*/  /*cd*/  /*ce*/  /*cf*/ 
+  {.len=6,.cptr="%C3%88"}, {.len=6,.cptr="%C3%89"}, {.len=6,.cptr="%C3%8A"}, {.len=6,.cptr="%C3%8B"},
+  {.len=6,.cptr="%C3%8C"}, {.len=6,.cptr="%C3%8D"}, {.len=6,.cptr="%C3%8E"}, {.len=6,.cptr="%C3%8F"},
+  /*d0*/  /*d1*/  /*d2*/  /*d3*/  /*d4*/  /*d5*/  /*d6*/  /*d7*/  /* 0xD0-0xDF */
+  {.len=6,.cptr="%C3%90"}, {.len=6,.cptr="%C3%91"}, {.len=6,.cptr="%C3%92"}, {.len=6,.cptr="%C3%93"},
+  {.len=6,.cptr="%C3%94"}, {.len=6,.cptr="%C3%95"}, {.len=6,.cptr="%C3%96"}, {.len=6,.cptr="%C3%97"},
+  /*d8*/  /*d9*/  /*da*/  /*db*/  /*dc*/  /*dd*/  /*de*/  /*df*/ 
+  {.len=6,.cptr="%C3%98"}, {.len=6,.cptr="%C3%99"}, {.len=6,.cptr="%C3%9A"}, {.len=6,.cptr="%C3%9B"},
+  {.len=6,.cptr="%C3%9C"}, {.len=6,.cptr="%C3%9D"}, {.len=6,.cptr="%C3%9E"}, {.len=6,.cptr="%C3%9F"},
+  /*e0*/  /*e1*/  /*e2*/  /*e3*/  /*e4*/  /*e5*/  /*e6*/  /*e7*/  /* 0xE0-0xEF */
+  {.len=6,.cptr="%C3%A0"}, {.len=6,.cptr="%C3%A1"}, {.len=6,.cptr="%C3%A2"}, {.len=6,.cptr="%C3%A3"},
+  {.len=6,.cptr="%C3%A4"}, {.len=6,.cptr="%C3%A5"}, {.len=6,.cptr="%C3%A6"}, {.len=6,.cptr="%C3%A7"},
+  /*e8*/  /*e9*/  /*ea*/  /*eb*/  /*ec*/  /*ed*/  /*ee*/  /*ef*/ 
+  {.len=6,.cptr="%C3%A8"}, {.len=6,.cptr="%C3%A9"}, {.len=6,.cptr="%C3%AA"}, {.len=6,.cptr="%C3%AB"},
+  {.len=6,.cptr="%C3%AC"}, {.len=6,.cptr="%C3%AD"}, {.len=6,.cptr="%C3%AE"}, {.len=6,.cptr="%C3%AF"},
+  /*f0*/  /*f1*/  /*f2*/  /*f3*/  /*f4*/  /*f5*/  /*f6*/  /*f7*/  /* 0xF0-0xFF */
+  {.len=6,.cptr="%C3%B0"}, {.len=6,.cptr="%C3%B1"}, {.len=6,.cptr="%C3%B2"}, {.len=6,.cptr="%C3%B3"},
+  {.len=6,.cptr="%C3%B4"}, {.len=6,.cptr="%C3%B5"}, {.len=6,.cptr="%C3%B6"}, {.len=6,.cptr="%C3%B7"},
+  /*f8*/  /*f9*/  /*fa*/  /*fb*/  /*fc*/  /*fd*/  /*fe*/  /*ff*/ 
+  {.len=6,.cptr="%C3%B8"}, {.len=6,.cptr="%C3%B9"}, {.len=6,.cptr="%C3%BA"}, {.len=6,.cptr="%C3%BB"},
+  {.len=6,.cptr="%C3%BC"}, {.len=6,.cptr="%C3%BD"}, {.len=6,.cptr="%C3%BE"}, {.len=6,.cptr="%C3%BF"}
 };
 
 /*
@@ -442,7 +328,7 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
         const uint8_t c = input[in_cursor++];
         encoded[out_cursor++] = '%';
         encoded[out_cursor++] = xdigit[((c)>>4)&0xF];
-        encoded[out_cursor++] = xdigit[((c)>>0)&0xF];;
+        encoded[out_cursor++] = xdigit[((c)>>0)&0xF];
       }
     }
   }
@@ -778,20 +664,34 @@ size_t calculate_buffer_size(const char *utf8, size_t len)
 
 #include <stdio.h>
 
+#if 0
+static inline void __char_to_escape(char *buf_ptr, uint8_t c)
+{
+  sprintf(buf_ptr, "\\u%04X", c);
+}
+#else
+static inline void __char_to_escape(char *buf_ptr, uint8_t c)
+{
+  *(uint32_t*)buf_ptr = *(const uint32_t*)"\\u00";
+  buf_ptr[4] = xdigit[((c)>>4)&0xF];
+  buf_ptr[5] = xdigit[((c)>>0)&0xF];
+}
+#endif
+
 // Function to convert UTF-8 to Unicode escape sequence and store in buffer
 void convert_utf8_to_unicode_escape(const char *utf8, 
   size_t len, httpd_buf_t *buffer) 
 {
-  unsigned char *ptr = (unsigned char *)utf8;
-  const unsigned char *end = ptr + len;
-  unsigned int codepoint = 0;
+  const uint8_t *ptr = (const uint8_t *)utf8;
+  const uint8_t *end = ptr + len;
+  uint8_t codepoint = 0;
   char *buf_ptr = (char *)buffer->ptr;
 
   while (ptr < end) {
     if (*ptr <= 0x7F) {
       // 1-byte character (ASCII)
       codepoint = *ptr;
-      sprintf(buf_ptr, "\\u%04X", codepoint);
+      __char_to_escape(buf_ptr, codepoint);
       buf_ptr += 6;
       ptr++;
     } else if ((*ptr & 0xE0) == 0xC0) {
@@ -800,7 +700,7 @@ void convert_utf8_to_unicode_escape(const char *utf8,
       codepoint <<= 6;
       ptr++;
       codepoint |= *ptr & 0x3F;
-      sprintf(buf_ptr, "\\u%04X", codepoint);
+      __char_to_escape(buf_ptr, codepoint);
       buf_ptr += 6;
       ptr++;
     } else if ((*ptr & 0xF0) == 0xE0) {
@@ -812,7 +712,7 @@ void convert_utf8_to_unicode_escape(const char *utf8,
       codepoint <<= 6;
       ptr++;
       codepoint |= *ptr & 0x3F;
-      sprintf(buf_ptr, "\\u%04X", codepoint);
+      __char_to_escape(buf_ptr, codepoint);
       buf_ptr += 6;
       ptr++;
     } else if ((*ptr & 0xF8) == 0xF0) {
@@ -827,7 +727,7 @@ void convert_utf8_to_unicode_escape(const char *utf8,
       codepoint <<= 6;
       ptr++;
       codepoint |= *ptr & 0x3F;
-      sprintf(buf_ptr, "\\u%04X", codepoint);
+      __char_to_escape(buf_ptr, codepoint);
       buf_ptr += 6;
       ptr++;
     }
