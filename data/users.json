@@ -53,7 +53,7 @@
               8,
               128
             ],
-            "value":"bob2",
+            "value":"neHttpd",
             "writable":false,
             "label":"User Name",
             "id":0
@@ -64,8 +64,8 @@
               6,
               32
             ],
-            "value":"builder2",
-            "writable":true,
+            "value":"neHttpd",
+            "writable":false,
             "label":"Password",
             "id":1
           },
@@ -76,7 +76,7 @@
               "Guest"
             ],
             "value":"Guest",
-            "writable":true,
+            "writable":false,
             "label":"User Level",
             "id":2
           }
@@ -88,7 +88,7 @@
               8,
               128
             ],
-            "value":"aaaaaaaa",
+            "value":"user0001",
             "writable":false,
             "label":"User Name",
             "id":0
@@ -99,7 +99,7 @@
               6,
               32
             ],
-            "value":"aaaaaaaa",
+            "value":"user0001",
             "writable":true,
             "label":"Password",
             "id":1
@@ -110,7 +110,7 @@
               "Administrator",
               "Guest"
             ],
-            "value":"Guest",
+            "value":"Administrator",
             "writable":true,
             "label":"User Level",
             "id":2
