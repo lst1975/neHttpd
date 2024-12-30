@@ -367,14 +367,16 @@ __nanohttp_users2file(void)
   {
     if (entry->type == _N_http_user_type_SUPER)
     {
-      n = snprintf(p, len, "%s", "\"supperuser\":{\"label\":\"SupperUser\",\"type\":\"group\",\"id\":0,");
+      n = snprintf(p, len, "%s", 
+        "\"supperuser\":{\"label\":\"SupperUser\",\"type\":\"group\",\"id\":0,");
       p += n, len -= n;
       n = __nanohttp_user2json_super(entry, p, len, 0);
       if (n == -1)
         goto clean0;
       p += n, len -= n;
-      n = snprintf(p, len, "%s", "},\"users\":{\"type\":\"list+\",\"label\":\"Accounts\",\"id\":0,"
-                                 "\"range\":[1,100],\"writable\":true,\"index\":\"username\",\"value\":[");
+      n = snprintf(p, len, "%s", 
+        "},\"users\":{\"type\":\"list+\",\"label\":\"Accounts\",\"id\":0,"
+        "\"range\":[1,100],\"writable\":true,\"index\":\"username\",\"value\":[");
       p += n, len -= n;
     }
     else
@@ -393,7 +395,8 @@ __nanohttp_users2file(void)
     len++;
   }
   
-  n = snprintf(p, len, "%s", "]},\"label\":\"Account Configuration\",\"id\":2}}");
+  n = snprintf(p, len, "%s", 
+    "]},\"label\":\"Account Configuration\",\"id\":2}}");
   p += n, len -= n;
 
   len = p -buf;

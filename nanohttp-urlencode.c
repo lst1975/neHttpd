@@ -2,6 +2,7 @@
 #include "nanohttp-logging.h"
 
 static uint8_t utf8_len(const uint8_t* str, int inlen);
+static const uint8_t xdigit[16] = "0123456789ABCDEF";
 
 /*
  Alphanumeric characters: A-Z, a-z, 0-9
@@ -9,7 +10,6 @@ static uint8_t utf8_len(const uint8_t* str, int inlen);
  Reserved characters: !, ', (, ), *, ;, :, @, &, =, +, $, ,, /, ?, #
  */
 #if 0
-static const uint8_t xdigit[16] = "0123456789ABCDEF";
 static const int url_unreserved[256] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x00-0x0F */
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x10-0x1F */
@@ -564,23 +564,32 @@ static uint8_t utf8_len(const uint8_t* str, int inlen) {
     const uint8_t count = utf8_count_len[lead];
     uint8_t trail = *(++str);
 
-    if (count == 3) {
+    if (count == 3) 
+    {
       if (inlen < count)
         return 1;
-      if ((lead == 0xE0 && 0xA0 > trail) || (lead == 0xED && trail > 0x9F)) {
+      if ((lead == 0xE0 && 0xA0 > trail) 
+        || (lead == 0xED && trail > 0x9F)) 
+      {
         return 1;
       }
-    } else if (count == 4) {
+    } 
+    else if (count == 4) 
+    {
       if (inlen < count)
         return 1;
-      if ((lead == 0xF0 && 0x90 > trail) || (lead == 0xF4 && trail > 0x8F)) {
+      if ((lead == 0xF0 && 0x90 > trail) 
+        || (lead == 0xF4 && trail > 0x8F)) 
+      {
         return 1;
       }
     }
 
     uint8_t size = 1;
-    for (; size < count; ++size) {
-      if (!UTF8_TRAIL(trail)) {
+    for (; size < count; ++size) 
+    {
+      if (!UTF8_TRAIL(trail)) 
+      {
         return size;
       }
       trail = *(++str);
@@ -592,16 +601,17 @@ static uint8_t utf8_len(const uint8_t* str, int inlen) {
 #define _TE_INPUT  "c\x01\xff\xfe\xfd"
 #define _TE_OUTPUT "c%01%C3%BF%C3%BE%C3%BD"
 
-void test_encode_url(void)
+static void __test_encode_url(const char *output, int outlen, 
+  const char *input, int inlen)
 {
   httpd_buf_t b;
-  if (0 > encode_url(&b, (const uint8_t *)_TE_INPUT, sizeof(_TE_INPUT)-1))
+  if (0 > encode_url(&b, (const uint8_t *)output, outlen))
   {
     log_verbose("test encode_url FAILED.");
     return;
   }
-  if (b.len != sizeof(_TE_OUTPUT)-1
-    || memcmp(_TE_OUTPUT, b.ptr, b.len))
+  if (b.len != inlen
+    || memcmp(input, b.ptr, b.len))
   {
     log_verbose("test encode_url FAILED.");
     free(b.ptr);
@@ -613,8 +623,30 @@ void test_encode_url(void)
 
 #define _TE_INPUT1  "北京"
 #define _TE_OUTPUT1 "%E5%8C%97%E4%BA%AC"
+static void test_encode_url1(void)
+{
+  __test_encode_url(_TE_INPUT, sizeof(_TE_INPUT)-1,
+    _TE_OUTPUT, sizeof(_TE_OUTPUT)-1);
+}
+static void test_encode_url2(void)
+{
+  __test_encode_url(_TE_INPUT1, sizeof(_TE_INPUT1)-1,
+    _TE_OUTPUT1, sizeof(_TE_OUTPUT1)-1);
+}
 
-static void __test_decode_url(const char *output, int outlen, const char *input, int inlen)
+static void test_encode_url3(void)
+{
+  for (int i=128;i<256;i++)
+  {
+    const struct _str_enc *e = &url_str_enc[i];
+    char output[1]={i};
+    __test_encode_url(output, 1, e->cptr, e->len);
+  }
+}
+
+static void 
+__test_decode_url(const char *output, int outlen, 
+  const char *input, int inlen)
 {
   httpd_buf_t b;
   if (0 > decode_url(&b, (const uint8_t *)output, outlen))
@@ -636,12 +668,14 @@ static void __test_decode_url(const char *output, int outlen, const char *input,
 
 static void test_decode_url1(void)
 {
-  __test_decode_url(_TE_OUTPUT1, sizeof(_TE_OUTPUT1)-1, _TE_INPUT1, sizeof(_TE_INPUT1)-1);
+  __test_decode_url(_TE_OUTPUT1, sizeof(_TE_OUTPUT1)-1, 
+    _TE_INPUT1, sizeof(_TE_INPUT1)-1);
 }
 
 static void test_decode_url2(void)
 {
-  __test_decode_url(_TE_OUTPUT, sizeof(_TE_OUTPUT)-1, _TE_INPUT, sizeof(_TE_INPUT)-1);
+  __test_decode_url(_TE_OUTPUT, sizeof(_TE_OUTPUT)-1, 
+    _TE_INPUT, sizeof(_TE_INPUT)-1);
 }
 
 static void test_decode_url3(void)
@@ -652,6 +686,13 @@ static void test_decode_url3(void)
     char output[1]={i};
     __test_decode_url(e->cptr, e->len, output, 1);
   }
+}
+
+void test_encode_url(void)
+{
+  test_encode_url1();
+  test_encode_url2();
+  test_encode_url3();
 }
 
 void test_decode_url(void)
