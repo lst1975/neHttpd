@@ -9,7 +9,7 @@ static const uint8_t xdigit[16] = "0123456789ABCDEF";
  Special characters: -, _, ., ~
  Reserved characters: !, ', (, ), *, ;, :, @, &, =, +, $, ,, /, ?, #
  */
-const uint8_t url_unreserved[256] = {
+static const uint8_t url_unreserved[256] = {
   /* 0*/  /* 1*/  /* 2*/  /* 3*/  /* 4*/  /* 5*/  /* 6*/  /* 7*/  /* 0x00-0x0F */
      0,      0,      0,      0,      0,      0,      0,      0,
   /* 8*/  /*\t*/  /*\n*/  /* b*/  /* c*/  /*\r*/  /* e*/  /* f*/ 
@@ -75,6 +75,11 @@ const uint8_t url_unreserved[256] = {
   /*f8*/  /*f9*/  /*fa*/  /*fb*/  /*fc*/  /*fd*/  /*fe*/  /*ff*/ 
      0,      0,      0,      0,      0,      0,      0,      0,
 };
+
+int is_url_char_unreserved(uint8_t c)
+{
+  return !url_unreserved[c];
+}
 
 struct _str_enc{
   union {
@@ -391,6 +396,9 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
         case 6:
           *(uint64_t *)&encoded[out_cursor]  = enc->v8;
           out_cursor += 6;
+          break;
+        default:
+          assert(0);
           break;
       }
     }
