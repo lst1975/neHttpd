@@ -748,6 +748,97 @@ static uint8_t utf8_len(const uint8_t* str, int inlen) {
   }
 }
 
+// Function to calculate the size of the output buffer
+size_t calculate_buffer_size(const char *utf8, size_t len) 
+{
+  size_t size = 1;  // Start with 1 for the null terminator
+  unsigned char *ptr = (unsigned char *)utf8;
+  const unsigned char *end = ptr + len;
+  while (ptr < end) {
+    if (*ptr <= 0x7F) {
+      // 1-byte character (ASCII)
+      size += 6;  // Each escape sequence \uXXXX requires 6 characters
+      ptr++;
+    } else if ((*ptr & 0xE0) == 0xC0) {
+      // 2-byte character
+      size += 6;
+      ptr += 2;  // Move past 2-byte character
+    } else if ((*ptr & 0xF0) == 0xE0) {
+      // 3-byte character
+      size += 6;
+      ptr += 3;  // Move past 3-byte character
+    } else if ((*ptr & 0xF8) == 0xF0) {
+      // 4-byte character
+      size += 6;
+      ptr += 4;  // Move past 4-byte character
+    }
+  }
+  return size;
+}
+
+#include <stdio.h>
+
+// Function to convert UTF-8 to Unicode escape sequence and store in buffer
+void convert_utf8_to_unicode_escape(const char *utf8, 
+  size_t len, httpd_buf_t *buffer) 
+{
+  unsigned char *ptr = (unsigned char *)utf8;
+  const unsigned char *end = ptr + len;
+  unsigned int codepoint = 0;
+  char *buf_ptr = (char *)buffer->ptr;
+
+  while (ptr < end) {
+    if (*ptr <= 0x7F) {
+      // 1-byte character (ASCII)
+      codepoint = *ptr;
+      sprintf(buf_ptr, "\\u%04X", codepoint);
+      buf_ptr += 6;
+      ptr++;
+    } else if ((*ptr & 0xE0) == 0xC0) {
+      // 2-byte character
+      codepoint = *ptr & 0x1F;
+      codepoint <<= 6;
+      ptr++;
+      codepoint |= *ptr & 0x3F;
+      sprintf(buf_ptr, "\\u%04X", codepoint);
+      buf_ptr += 6;
+      ptr++;
+    } else if ((*ptr & 0xF0) == 0xE0) {
+      // 3-byte character
+      codepoint = *ptr & 0x0F;
+      codepoint <<= 6;
+      ptr++;
+      codepoint |= *ptr & 0x3F;
+      codepoint <<= 6;
+      ptr++;
+      codepoint |= *ptr & 0x3F;
+      sprintf(buf_ptr, "\\u%04X", codepoint);
+      buf_ptr += 6;
+      ptr++;
+    } else if ((*ptr & 0xF8) == 0xF0) {
+      // 4-byte character
+      codepoint = *ptr & 0x07;
+      codepoint <<= 6;
+      ptr++;
+      codepoint |= *ptr & 0x3F;
+      codepoint <<= 6;
+      ptr++;
+      codepoint |= *ptr & 0x3F;
+      codepoint <<= 6;
+      ptr++;
+      codepoint |= *ptr & 0x3F;
+      sprintf(buf_ptr, "\\u%04X", codepoint);
+      buf_ptr += 6;
+      ptr++;
+    }
+    else {
+      *buf_ptr++ = *ptr++;
+    }
+  }
+
+  buffer->len = buf_ptr - (char *)buffer->ptr;
+}
+
 #define _TE_INPUT  "c\x01\xff\xfe\xfd"
 #define _TE_OUTPUT "c%01%C3%BF%C3%BE%C3%BD"
 
@@ -771,7 +862,8 @@ static void __test_encode_url(const char *output, int outlen,
   log_verbose("test encode_url OK.");
 }
 
-#define _TE_INPUT1  "北京"
+/* "北京" */
+#define _TE_INPUT1  "\u5317\u4eac"
 #define _TE_OUTPUT1 "%E5%8C%97%E4%BA%AC"
 static void test_encode_url1(void)
 {
