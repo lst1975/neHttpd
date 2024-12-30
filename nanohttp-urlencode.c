@@ -294,6 +294,104 @@ static const struct _str_enc url_str_enc[256] = {
   {.len=6,.cptr="%C3%BF"}
 };
 
+/*
+ * http://www.unicode.org/versions/Unicode6.0.0/ch03.pdf - page 94
+ *
+ * Table 3-7. Well-Formed UTF-8 Byte Sequences
+ *
+ * +--------------------+------------+-------------+------------+-------------+
+ * | Code Points        | First Byte | Second Byte | Third Byte | Fourth Byte |
+ * +--------------------+------------+-------------+------------+-------------+
+ * | U+0000..U+007F     | 00..7F     |             |            |             |
+ * +--------------------+------------+-------------+------------+-------------+
+ * | U+0080..U+07FF     | C2..DF     | 80..BF      |            |             |
+ * +--------------------+------------+-------------+------------+-------------+
+ * | U+0800..U+0FFF     | E0         | A0..BF      | 80..BF     |             |
+ * +--------------------+------------+-------------+------------+-------------+
+ * | U+1000..U+CFFF     | E1..EC     | 80..BF      | 80..BF     |             |
+ * +--------------------+------------+-------------+------------+-------------+
+ * | U+D000..U+D7FF     | ED         | 80..9F      | 80..BF     |             |
+ * +--------------------+------------+-------------+------------+-------------+
+ * | U+E000..U+FFFF     | EE..EF     | 80..BF      | 80..BF     |             |
+ * +--------------------+------------+-------------+------------+-------------+
+ * | U+10000..U+3FFFF   | F0         | 90..BF      | 80..BF     | 80..BF      |
+ * +--------------------+------------+-------------+------------+-------------+
+ * | U+40000..U+FFFFF   | F1..F3     | 80..BF      | 80..BF     | 80..BF      |
+ * +--------------------+------------+-------------+------------+-------------+
+ * | U+100000..U+10FFFF | F4         | 80..8F      | 80..BF     | 80..BF      |
+ * +--------------------+------------+-------------+------------+-------------+
+ */
+
+/* Return 0 - success,  >0 - index(1 based) of first error char */
+int utf8_char_lenth(const unsigned char *data, int len)
+{
+  int bytes;
+  const unsigned char byte1 = data[0];
+
+  if (byte1 <= 0x7F) 
+  {
+    /* 00..7F */
+    bytes = 1;
+  } 
+  else if (len >= 2 && byte1 >= 0xC2 && byte1 <= 0xDF &&
+          (signed char)data[1] <= (signed char)0xBF) 
+  {
+    /* C2..DF, 80..BF */
+    bytes = 2;
+  } 
+  else if (len >= 3) 
+  {
+    const unsigned char byte2 = data[1];
+
+    /* Is byte2, byte3 between 0x80 ~ 0xBF */
+    const int byte2_ok = (signed char)byte2 <= (signed char)0xBF;
+    const int byte3_ok = (signed char)data[2] <= (signed char)0xBF;
+
+    if (byte2_ok && byte3_ok &&
+         /* E0, A0..BF, 80..BF */
+        ((byte1 == 0xE0 && byte2 >= 0xA0) ||
+         /* E1..EC, 80..BF, 80..BF */
+         (byte1 >= 0xE1 && byte1 <= 0xEC) ||
+         /* ED, 80..9F, 80..BF */
+         (byte1 == 0xED && byte2 <= 0x9F) ||
+         /* EE..EF, 80..BF, 80..BF */
+         (byte1 >= 0xEE && byte1 <= 0xEF))) 
+    {
+      bytes = 3;
+    } 
+    else if (len >= 4) 
+    {
+      /* Is byte4 between 0x80 ~ 0xBF */
+      const int byte4_ok = (signed char)data[3] <= (signed char)0xBF;
+
+      if (byte2_ok && byte3_ok && byte4_ok &&
+               /* F0, 90..BF, 80..BF, 80..BF */
+              ((byte1 == 0xF0 && byte2 >= 0x90) ||
+               /* F1..F3, 80..BF, 80..BF, 80..BF */
+               (byte1 >= 0xF1 && byte1 <= 0xF3) ||
+               /* F4, 80..8F, 80..BF, 80..BF */
+               (byte1 == 0xF4 && byte2 <= 0x8F))) 
+      {
+        bytes = 4;
+      } 
+      else 
+      {
+        bytes = 1;
+      }
+    } 
+    else 
+    {
+      bytes = 1;
+    }
+  }
+  else 
+  {
+    bytes = 1;
+  }
+
+  return bytes;
+}
+
 int encode_url(httpd_buf_t *b, const uint8_t* input, int len) 
 {
   uint8_t* encoded;
@@ -308,27 +406,44 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
 
   int in_cursor = 0;
   int out_cursor = 0;
+
   while (in_cursor < len) 
   {
-    const struct _str_enc *enc;
-    const uint8_t c = input[in_cursor++];
-    enc = &url_str_enc[c];
-    switch (enc->len)
+    uint8_t charlen;
+    charlen = utf8_char_lenth(&input[in_cursor], len - in_cursor);
+    if (charlen == 1)
     {
-      case 1:
-        encoded[out_cursor++] = enc->cptr[0];
-        break;
-      case 3:
-        encoded[out_cursor++] = enc->cptr[0];
-        encoded[out_cursor++] = enc->cptr[1];
-        encoded[out_cursor++] = enc->cptr[2];
-        break;
-      case 6:
-        *(uint32_t *)&encoded[out_cursor]  = *(const uint32_t *)&enc->cptr[0];
-        out_cursor += 4;
-        *(uint16_t *)&encoded[out_cursor]  = *(const uint16_t *)&enc->cptr[4];
-        out_cursor += 2;
-        break;
+      const struct _str_enc *enc;
+      const uint8_t c = input[in_cursor++];
+      enc = &url_str_enc[c];
+      switch (enc->len)
+      {
+        case 1:
+          encoded[out_cursor++] = enc->cptr[0];
+          break;
+        case 3:
+          encoded[out_cursor++] = enc->cptr[0];
+          encoded[out_cursor++] = enc->cptr[1];
+          encoded[out_cursor++] = enc->cptr[2];
+          break;
+        case 6:
+          *(uint32_t *)&encoded[out_cursor]  = *(const uint32_t *)&enc->cptr[0];
+          out_cursor += 4;
+          *(uint16_t *)&encoded[out_cursor]  = *(const uint16_t *)&enc->cptr[4];
+          out_cursor += 2;
+          break;
+      }
+    }
+    else
+    {
+      int in_end = in_cursor + charlen;
+      while (in_cursor < in_end)
+      {
+        const uint8_t c = input[in_cursor++];
+        encoded[out_cursor++] = '%';
+        encoded[out_cursor++] = xdigit[((c)>>4)&0xF];
+        encoded[out_cursor++] = xdigit[((c)>>0)&0xF];;
+      }
     }
   }
 

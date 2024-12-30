@@ -30,6 +30,6 @@ $(objects): %.o: %.c
 	$(CC) -Wall -O0 -g3 -c $^ -o $@
 
 clean: 
-	rm -f $(objects) httpd
+	rm -f $(objects) httpd httpd.exe
 
 
