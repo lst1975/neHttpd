@@ -497,15 +497,24 @@ function cfgOperation(page, alwaysActive, action)
         switch (n.type)
         {
           case "array":
-            var html = '<select id="'+b+'">';
-            for (var i=0;i<n.range.length;i++)
+            var html;
+            
+            if (n.writable)
             {
-              html += '<option value="'+n.range[i]+'">'+n.range[i]+'</option>';
+              html = '<select id="'+b+'">';
+              for (var i=0;i<n.range.length;i++)
+              {
+                html += '<option value="'+n.range[i]+'">'+n.range[i]+'</option>';
+              }
+              html += '</select>';
             }
-            html += '</select>';
+            else
+            {
+              html = '<div>'+n.value+'</div>';
+            }
             val = $(html).appendTo(group).attr("index", localIndex);
             if (n.writable) stat.w++, val.addClass("writable");
-            if (n.value) val.val(n.value);
+            if (n.writable && n.value) val.val(n.value);
             val.attr("id",localIndex);
             val.attr("cfgType", n.type);
             val.data("osrc", n);
@@ -514,7 +523,10 @@ function cfgOperation(page, alwaysActive, action)
             val.addClass(this._makeIndex(localIndex));
             val.data("setVal", function(__el, __val){
                 __el.data("osrc").value = __val;
-                __el.val(__val);
+                if (__el.hasClass("writable"))
+                  __el.val(__val);
+                else
+                  __el.text(__val);
               });
             if (n.writable)
               val.on("change", function(e){
