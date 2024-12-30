@@ -77,107 +77,183 @@ const uint8_t url_unreserved[256] = {
 };
 
 struct _str_enc{
-  long len;
-  const char *cptr;
+  union {
+    struct {
+      union{
+        const char cptr[0];
+        char buf1[1];
+        char buf4[4];
+        char buf8[6];
+        uint8_t  v1;
+        uint32_t v4;
+      };
+      uint16_t len;
+    };
+    uint64_t v8;
+  };
 };
 
 static const struct _str_enc url_str_enc[256] = {
   /* 0*/  /* 1*/  /* 2*/  /* 3*/  /* 4*/  /* 5*/  /* 6*/  /* 7*/  /* 0x00-0x0F */
-  {.len=3,.cptr="%00"},    {.len=3,.cptr="%01"},    {.len=3,.cptr="%02"},    {.len=3,.cptr="%03"}, 
-  {.len=3,.cptr="%04"},    {.len=3,.cptr="%05"},    {.len=3,.cptr="%06"},    {.len=3,.cptr="%07"},
+  {.len=3,.buf4={"%00"}},    {.len=3,.buf4={"%01"}},    
+  {.len=3,.buf4={"%02"}},    {.len=3,.buf4={"%03"}}, 
+  {.len=3,.buf4={"%04"}},    {.len=3,.buf4={"%05"}},    
+  {.len=3,.buf4={"%06"}},    {.len=3,.buf4={"%07"}},
   /* 8*/  /*\t*/  /*\n*/  /* b*/  /* c*/  /*\r*/  /* e*/  /* f*/ 
-  {.len=3,.cptr="%08"},    {.len=3,.cptr="%09"},    {.len=3,.cptr="%0A"},    {.len=3,.cptr="%0B"},
-  {.len=3,.cptr="%0C"},    {.len=3,.cptr="%0D"},    {.len=3,.cptr="%0E"},    {.len=3,.cptr="%0F"},
+  {.len=3,.buf4={"%08"}},    {.len=3,.buf4={"%09"}},    
+  {.len=3,.buf4={"%0A"}},    {.len=3,.buf4={"%0B"}},
+  {.len=3,.buf4={"%0C"}},    {.len=3,.buf4={"%0D"}},    
+  {.len=3,.buf4={"%0E"}},    {.len=3,.buf4={"%0F"}},
   /*10*/  /*11*/  /*12*/  /*13*/  /*14*/  /*15*/  /*16*/  /*17*/  /* 0x10-0x1F */
-  {.len=3,.cptr="%10"},    {.len=3,.cptr="%11"},    {.len=3,.cptr="%12"},    {.len=3,.cptr="%13"},
-  {.len=3,.cptr="%14"},    {.len=3,.cptr="%15"},    {.len=3,.cptr="%16"},    {.len=3,.cptr="%17"},
+  {.len=3,.buf4={"%10"}},    {.len=3,.buf4={"%11"}},    
+  {.len=3,.buf4={"%12"}},    {.len=3,.buf4={"%13"}},
+  {.len=3,.buf4={"%14"}},    {.len=3,.buf4={"%15"}},    
+  {.len=3,.buf4={"%16"}},    {.len=3,.buf4={"%17"}},
   /*18*/  /*19*/  /*1a*/  /*1b*/  /*1c*/  /*1d*/  /*1e*/  /*1f*/ 
-  {.len=3,.cptr="%18"},    {.len=3,.cptr="%19"},    {.len=3,.cptr="%1A"},    {.len=3,.cptr="%1B"},
-  {.len=3,.cptr="%1C"},    {.len=3,.cptr="%1D"},    {.len=3,.cptr="%1E"},    {.len=3,.cptr="%1F"},
+  {.len=3,.buf4={"%18"}},    {.len=3,.buf4={"%19"}},    
+  {.len=3,.buf4={"%1A"}},    {.len=3,.buf4={"%1B"}},
+  {.len=3,.buf4={"%1C"}},    {.len=3,.buf4={"%1D"}},    
+  {.len=3,.buf4={"%1E"}},    {.len=3,.buf4={"%1F"}},
   /*  */  /* !*/  /* "*/  /* #*/  /* $*/  /* %*/  /* &*/  /* '*/  /* 0x20-0x2F */
-  {.len=3,.cptr="%20"},    {.len=1,.cptr=  "!"},    {.len=3,.cptr="%22"},    {.len=1,.cptr=  "#"},
-  {.len=1,.cptr=  "$"},    {.len=3,.cptr="%25"},    {.len=1,.cptr=  "&"},    {.len=1,.cptr=  "'"},
+  {.len=3,.buf4={"%20"}},    {.len=1,.buf1={  "!"}},    
+  {.len=3,.buf4={"%22"}},    {.len=1,.buf1={  "#"}},
+  {.len=1,.buf1={  "$"}},    {.len=3,.buf4={"%25"}},    
+  {.len=1,.buf1={  "&"}},    {.len=1,.buf1={  "'"}},
   /* (*/  /* )*/  /* **/  /* +*/  /* ,*/  /* -*/  /* .*/  /* /*/ 
-  {.len=1,.cptr=  "("},    {.len=1,.cptr=  ")"},    {.len=1,.cptr=  "*"},    {.len=1,.cptr=  "+"},
-  {.len=1,.cptr=  ","},    {.len=1,.cptr=  "-"},    {.len=1,.cptr=  "."},    {.len=1,.cptr=  "/"},
+  {.len=1,.buf1={  "("}},    {.len=1,.buf1={  ")"}},    
+  {.len=1,.buf1={  "*"}},    {.len=1,.buf1={  "+"}},
+  {.len=1,.buf1={  ","}},    {.len=1,.buf1={  "-"}},    
+  {.len=1,.buf1={  "."}},    {.len=1,.buf1={  "/"}},
   /* 0*/  /* 1*/  /* 2*/  /* 3*/  /* 4*/  /* 5*/  /* 6*/  /* 7*/  /* 0x30-0x3F */
-  {.len=1,.cptr=  "0"},    {.len=1,.cptr=  "1"},    {.len=1,.cptr=  "2"},    {.len=1,.cptr=  "3"},
-  {.len=1,.cptr=  "4"},    {.len=1,.cptr=  "5"},    {.len=1,.cptr=  "6"},    {.len=1,.cptr=  "7"},
+  {.len=1,.buf1={  "0"}},    {.len=1,.buf1={  "1"}},    
+  {.len=1,.buf1={  "2"}},    {.len=1,.buf1={  "3"}},
+  {.len=1,.buf1={  "4"}},    {.len=1,.buf1={  "5"}},    
+  {.len=1,.buf1={  "6"}},    {.len=1,.buf1={  "7"}},
   /* 8*/  /* 9*/  /* :*/  /* ;*/  /* <*/  /* =*/  /* >*/  /* ?*/ 
-  {.len=1,.cptr=  "8"},    {.len=1,.cptr=  "9"},    {.len=1,.cptr=  ":"},    {.len=1,.cptr=  ";"},
-  {.len=3,.cptr="%3C"},    {.len=1,.cptr=  "="},    {.len=3,.cptr="%3E"},    {.len=1,.cptr=  "?"},
+  {.len=1,.buf1={  "8"}},    {.len=1,.buf1={  "9"}},    
+  {.len=1,.buf1={  ":"}},    {.len=1,.buf1={  ";"}},
+  {.len=3,.buf4={"%3C"}},    {.len=1,.buf1={  "="}},    
+  {.len=3,.buf4={"%3E"}},    {.len=1,.buf1={  "?"}},
   /* @*/  /* A*/  /* B*/  /* C*/  /* D*/  /* E*/  /* F*/  /* G*/  /* 0x40-0x4F */
-  {.len=1,.cptr=  "@"},    {.len=1,.cptr=  "A"},    {.len=1,.cptr=  "B"},    {.len=1,.cptr=  "C"},
-  {.len=1,.cptr=  "D"},    {.len=1,.cptr=  "E"},    {.len=1,.cptr=  "F"},    {.len=1,.cptr=  "G"},
+  {.len=1,.buf1={  "@"}},    {.len=1,.buf1={  "A"}},    
+  {.len=1,.buf1={  "B"}},    {.len=1,.buf1={  "C"}},
+  {.len=1,.buf1={  "D"}},    {.len=1,.buf1={  "E"}},    
+  {.len=1,.buf1={  "F"}},    {.len=1,.buf1={  "G"}},
   /* H*/  /* I*/  /* J*/  /* K*/  /* L*/  /* M*/  /* N*/  /* O*/ 
-  {.len=1,.cptr=  "H"},    {.len=1,.cptr=  "I"},    {.len=1,.cptr=  "J"},    {.len=1,.cptr=  "K"},
-  {.len=1,.cptr=  "L"},    {.len=1,.cptr=  "M"},    {.len=1,.cptr=  "N"},    {.len=1,.cptr=  "O"},
+  {.len=1,.buf1={  "H"}},    {.len=1,.buf1={  "I"}},    
+  {.len=1,.buf1={  "J"}},    {.len=1,.buf1={  "K"}},
+  {.len=1,.buf1={  "L"}},    {.len=1,.buf1={  "M"}},    
+  {.len=1,.buf1={  "N"}},    {.len=1,.buf1={  "O"}},
   /* P*/  /* Q*/  /* R*/  /* S*/  /* T*/  /* U*/  /* V*/  /* W*/  /* 0x50-0x5F */
-  {.len=1,.cptr=  "P"},    {.len=1,.cptr=  "Q"},    {.len=1,.cptr=  "R"},    {.len=1,.cptr=  "S"},
-  {.len=1,.cptr=  "T"},    {.len=1,.cptr=  "U"},    {.len=1,.cptr=  "V"},    {.len=1,.cptr=  "W"},
+  {.len=1,.buf1={  "P"}},    {.len=1,.buf1={  "Q"}},    
+  {.len=1,.buf1={  "R"}},    {.len=1,.buf1={  "S"}},
+  {.len=1,.buf1={  "T"}},    {.len=1,.buf1={  "U"}},    
+  {.len=1,.buf1={  "V"}},    {.len=1,.buf1={  "W"}},
   /* X*/  /* Y*/  /* Z*/  /* [*/  /* \*/  /* ]*/  /* ^*/  /* _*/ 
-  {.len=1,.cptr=  "X"},    {.len=1,.cptr=  "Y"},    {.len=1,.cptr=  "Z"},    {.len=3,.cptr="%5B"},
-  {.len=3,.cptr="%5C"},    {.len=3,.cptr="%5D"},    {.len=3,.cptr="%5E"},    {.len=1,.cptr=  "_"},
+  {.len=1,.buf1={  "X"}},    {.len=1,.buf1={  "Y"}},    
+  {.len=1,.buf1={  "Z"}},    {.len=3,.buf4={"%5B"}},
+  {.len=3,.buf4={"%5C"}},    {.len=3,.buf4={"%5D"}},    
+  {.len=3,.buf4={"%5E"}},    {.len=1,.buf1={  "_"}},
   /* `*/  /* a*/  /* b*/  /* c*/  /* d*/  /* e*/  /* f*/  /* g*/  /* 0x60-0x6F */
-  {.len=3,.cptr="%60"},    {.len=1,.cptr=  "a"},    {.len=1,.cptr=  "b"},    {.len=1,.cptr=  "c"},
-  {.len=1,.cptr=  "d"},    {.len=1,.cptr=  "e"},    {.len=1,.cptr=  "f"},    {.len=1,.cptr=  "g"},
+  {.len=3,.buf4={"%60"}},    {.len=1,.buf1={  "a"}},    
+  {.len=1,.buf1={  "b"}},    {.len=1,.buf1={  "c"}},
+  {.len=1,.buf1={  "d"}},    {.len=1,.buf1={  "e"}},    
+  {.len=1,.buf1={  "f"}},    {.len=1,.buf1={  "g"}},
   /* h*/  /* i*/  /* j*/  /* k*/  /* l*/  /* m*/  /* n*/  /* o*/ 
-  {.len=1,.cptr=  "h"},    {.len=1,.cptr=  "i"},    {.len=1,.cptr=  "j"},    {.len=1,.cptr=  "k"},
-  {.len=1,.cptr=  "l"},    {.len=1,.cptr=  "m"},    {.len=1,.cptr=  "n"},    {.len=1,.cptr=  "o"},
+  {.len=1,.buf1={  "h"}},    {.len=1,.buf1={  "i"}},    
+  {.len=1,.buf1={  "j"}},    {.len=1,.buf1={  "k"}},
+  {.len=1,.buf1={  "l"}},    {.len=1,.buf1={  "m"}},    
+  {.len=1,.buf1={  "n"}},    {.len=1,.buf1={  "o"}},
   /* p*/  /* q*/  /* r*/  /* s*/  /* t*/  /* u*/  /* v*/  /* w*/  /* 0x70-0x7F */
-  {.len=1,.cptr=  "p"},    {.len=1,.cptr=  "q"},    {.len=1,.cptr=  "r"},    {.len=1,.cptr=  "s"},
-  {.len=1,.cptr=  "t"},    {.len=1,.cptr=  "u"},    {.len=1,.cptr=  "v"},    {.len=1,.cptr=  "w"},
+  {.len=1,.buf1={  "p"}},    {.len=1,.buf1={  "q"}},    
+  {.len=1,.buf1={  "r"}},    {.len=1,.buf1={  "s"}},
+  {.len=1,.buf1={  "t"}},    {.len=1,.buf1={  "u"}},    
+  {.len=1,.buf1={  "v"}},    {.len=1,.buf1={  "w"}},
   /* x*/  /* y*/  /* z*/  /* {*/  /* |*/  /* }*/  /* ~*/  /*7f*/ 
-  {.len=1,.cptr=  "x"},    {.len=1,.cptr=  "y"},    {.len=1,.cptr=  "z"},    {.len=3,.cptr="%7B"},
-  {.len=3,.cptr="%7C"},    {.len=3,.cptr="%7D"},    {.len=1,.cptr=  "~"},    {.len=3,.cptr="%7F"},
+  {.len=1,.buf1={  "x"}},    {.len=1,.buf1={  "y"}},    
+  {.len=1,.buf1={  "z"}},    {.len=3,.buf4={"%7B"}},
+  {.len=3,.buf4={"%7C"}},    {.len=3,.buf4={"%7D"}},    
+  {.len=1,.buf1={  "~"}},    {.len=3,.buf4={"%7F"}},
   /*80*/  /*81*/  /*82*/  /*83*/  /*84*/  /*85*/  /*86*/  /*87*/  /* 0x80-0x8F */
-  {.len=6,.cptr="%C2%80"}, {.len=6,.cptr="%C2%81"}, {.len=6,.cptr="%C2%82"}, {.len=6,.cptr="%C2%83"},
-  {.len=6,.cptr="%C2%84"}, {.len=6,.cptr="%C2%85"}, {.len=6,.cptr="%C2%86"}, {.len=6,.cptr="%C2%87"},
+  {.len=6,.buf8={"%C2%80"}}, {.len=6,.buf8={"%C2%81"}}, 
+  {.len=6,.buf8={"%C2%82"}}, {.len=6,.buf8={"%C2%83"}},
+  {.len=6,.buf8={"%C2%84"}}, {.len=6,.buf8={"%C2%85"}}, 
+  {.len=6,.buf8={"%C2%86"}}, {.len=6,.buf8={"%C2%87"}},
   /*88*/  /*89*/  /*8a*/  /*8b*/  /*8c*/  /*8d*/  /*8e*/  /*8f*/ 
-  {.len=6,.cptr="%C2%88"}, {.len=6,.cptr="%C2%89"}, {.len=6,.cptr="%C2%8A"}, {.len=6,.cptr="%C2%8B"},
-  {.len=6,.cptr="%C2%8C"}, {.len=6,.cptr="%C2%8D"}, {.len=6,.cptr="%C2%8E"}, {.len=6,.cptr="%C2%8F"},
+  {.len=6,.buf8={"%C2%88"}}, {.len=6,.buf8={"%C2%89"}}, 
+  {.len=6,.buf8={"%C2%8A"}}, {.len=6,.buf8={"%C2%8B"}},
+  {.len=6,.buf8={"%C2%8C"}}, {.len=6,.buf8={"%C2%8D"}}, 
+  {.len=6,.buf8={"%C2%8E"}}, {.len=6,.buf8={"%C2%8F"}},
   /*90*/  /*91*/  /*92*/  /*93*/  /*94*/  /*95*/  /*96*/  /*97*/  /* 0x90-0x9F */
-  {.len=6,.cptr="%C2%90"}, {.len=6,.cptr="%C2%91"}, {.len=6,.cptr="%C2%92"}, {.len=6,.cptr="%C2%93"},
-  {.len=6,.cptr="%C2%94"}, {.len=6,.cptr="%C2%95"}, {.len=6,.cptr="%C2%96"}, {.len=6,.cptr="%C2%97"},
+  {.len=6,.buf8={"%C2%90"}}, {.len=6,.buf8={"%C2%91"}}, 
+  {.len=6,.buf8={"%C2%92"}}, {.len=6,.buf8={"%C2%93"}},
+  {.len=6,.buf8={"%C2%94"}}, {.len=6,.buf8={"%C2%95"}}, 
+  {.len=6,.buf8={"%C2%96"}}, {.len=6,.buf8={"%C2%97"}},
   /*98*/  /*99*/  /*9a*/  /*9b*/  /*9c*/  /*9d*/  /*9e*/  /*9f*/ 
-  {.len=6,.cptr="%C2%98"}, {.len=6,.cptr="%C2%99"}, {.len=6,.cptr="%C2%9A"}, {.len=6,.cptr="%C2%9B"},
-  {.len=6,.cptr="%C2%9C"}, {.len=6,.cptr="%C2%9D"}, {.len=6,.cptr="%C2%9E"}, {.len=6,.cptr="%C2%9F"},
+  {.len=6,.buf8={"%C2%98"}}, {.len=6,.buf8={"%C2%99"}}, 
+  {.len=6,.buf8={"%C2%9A"}}, {.len=6,.buf8={"%C2%9B"}},
+  {.len=6,.buf8={"%C2%9C"}}, {.len=6,.buf8={"%C2%9D"}}, 
+  {.len=6,.buf8={"%C2%9E"}}, {.len=6,.buf8={"%C2%9F"}},
   /*a0*/  /*a1*/  /*a2*/  /*a3*/  /*a4*/  /*a5*/  /*a6*/  /*a7*/  /* 0xA0-0xAF */
-  {.len=6,.cptr="%C2%A0"}, {.len=6,.cptr="%C2%A1"}, {.len=6,.cptr="%C2%A2"}, {.len=6,.cptr="%C2%A3"},
-  {.len=6,.cptr="%C2%A4"}, {.len=6,.cptr="%C2%A5"}, {.len=6,.cptr="%C2%A6"}, {.len=6,.cptr="%C2%A7"},
+  {.len=6,.buf8={"%C2%A0"}}, {.len=6,.buf8={"%C2%A1"}}, 
+  {.len=6,.buf8={"%C2%A2"}}, {.len=6,.buf8={"%C2%A3"}},
+  {.len=6,.buf8={"%C2%A4"}}, {.len=6,.buf8={"%C2%A5"}}, 
+  {.len=6,.buf8={"%C2%A6"}}, {.len=6,.buf8={"%C2%A7"}},
   /*a8*/  /*a9*/  /*aa*/  /*ab*/  /*ac*/  /*ad*/  /*ae*/  /*af*/ 
-  {.len=6,.cptr="%C2%A8"}, {.len=6,.cptr="%C2%A9"}, {.len=6,.cptr="%C2%AA"}, {.len=6,.cptr="%C2%AB"},
-  {.len=6,.cptr="%C2%AC"}, {.len=6,.cptr="%C2%AD"}, {.len=6,.cptr="%C2%AE"}, {.len=6,.cptr="%C2%AF"},
+  {.len=6,.buf8={"%C2%A8"}}, {.len=6,.buf8={"%C2%A9"}}, 
+  {.len=6,.buf8={"%C2%AA"}}, {.len=6,.buf8={"%C2%AB"}},
+  {.len=6,.buf8={"%C2%AC"}}, {.len=6,.buf8={"%C2%AD"}}, 
+  {.len=6,.buf8={"%C2%AE"}}, {.len=6,.buf8={"%C2%AF"}},
   /*b0*/  /*b1*/  /*b2*/  /*b3*/  /*b4*/  /*b5*/  /*b6*/  /*b7*/  /* 0xB0-0xBF */
-  {.len=6,.cptr="%C2%B0"}, {.len=6,.cptr="%C2%B1"}, {.len=6,.cptr="%C2%B2"}, {.len=6,.cptr="%C2%B3"},
-  {.len=6,.cptr="%C2%B4"}, {.len=6,.cptr="%C2%B5"}, {.len=6,.cptr="%C2%B6"}, {.len=6,.cptr="%C2%B7"},
+  {.len=6,.buf8={"%C2%B0"}}, {.len=6,.buf8={"%C2%B1"}}, 
+  {.len=6,.buf8={"%C2%B2"}}, {.len=6,.buf8={"%C2%B3"}},
+  {.len=6,.buf8={"%C2%B4"}}, {.len=6,.buf8={"%C2%B5"}}, 
+  {.len=6,.buf8={"%C2%B6"}}, {.len=6,.buf8={"%C2%B7"}},
   /*b8*/  /*b9*/  /*ba*/  /*bb*/  /*bc*/  /*bd*/  /*be*/  /*bf*/ 
-  {.len=6,.cptr="%C2%B8"}, {.len=6,.cptr="%C2%B9"}, {.len=6,.cptr="%C2%BA"}, {.len=6,.cptr="%C2%BB"},
-  {.len=6,.cptr="%C2%BC"}, {.len=6,.cptr="%C2%BD"}, {.len=6,.cptr="%C2%BE"}, {.len=6,.cptr="%C2%BF"},
+  {.len=6,.buf8={"%C2%B8"}}, {.len=6,.buf8={"%C2%B9"}}, 
+  {.len=6,.buf8={"%C2%BA"}}, {.len=6,.buf8={"%C2%BB"}},
+  {.len=6,.buf8={"%C2%BC"}}, {.len=6,.buf8={"%C2%BD"}}, 
+  {.len=6,.buf8={"%C2%BE"}}, {.len=6,.buf8={"%C2%BF"}},
   /*c0*/  /*c1*/  /*c2*/  /*c3*/  /*c4*/  /*c5*/  /*c6*/  /*c7*/  /* 0xC0-0xCF */
-  {.len=6,.cptr="%C3%80"}, {.len=6,.cptr="%C3%81"}, {.len=6,.cptr="%C3%82"}, {.len=6,.cptr="%C3%83"},
-  {.len=6,.cptr="%C3%84"}, {.len=6,.cptr="%C3%85"}, {.len=6,.cptr="%C3%86"}, {.len=6,.cptr="%C3%87"},
+  {.len=6,.buf8={"%C3%80"}}, {.len=6,.buf8={"%C3%81"}}, 
+  {.len=6,.buf8={"%C3%82"}}, {.len=6,.buf8={"%C3%83"}},
+  {.len=6,.buf8={"%C3%84"}}, {.len=6,.buf8={"%C3%85"}}, 
+  {.len=6,.buf8={"%C3%86"}}, {.len=6,.buf8={"%C3%87"}},
   /*c8*/  /*c9*/  /*ca*/  /*cb*/  /*cc*/  /*cd*/  /*ce*/  /*cf*/ 
-  {.len=6,.cptr="%C3%88"}, {.len=6,.cptr="%C3%89"}, {.len=6,.cptr="%C3%8A"}, {.len=6,.cptr="%C3%8B"},
-  {.len=6,.cptr="%C3%8C"}, {.len=6,.cptr="%C3%8D"}, {.len=6,.cptr="%C3%8E"}, {.len=6,.cptr="%C3%8F"},
+  {.len=6,.buf8={"%C3%88"}}, {.len=6,.buf8={"%C3%89"}}, 
+  {.len=6,.buf8={"%C3%8A"}}, {.len=6,.buf8={"%C3%8B"}},
+  {.len=6,.buf8={"%C3%8C"}}, {.len=6,.buf8={"%C3%8D"}}, 
+  {.len=6,.buf8={"%C3%8E"}}, {.len=6,.buf8={"%C3%8F"}},
   /*d0*/  /*d1*/  /*d2*/  /*d3*/  /*d4*/  /*d5*/  /*d6*/  /*d7*/  /* 0xD0-0xDF */
-  {.len=6,.cptr="%C3%90"}, {.len=6,.cptr="%C3%91"}, {.len=6,.cptr="%C3%92"}, {.len=6,.cptr="%C3%93"},
-  {.len=6,.cptr="%C3%94"}, {.len=6,.cptr="%C3%95"}, {.len=6,.cptr="%C3%96"}, {.len=6,.cptr="%C3%97"},
+  {.len=6,.buf8={"%C3%90"}}, {.len=6,.buf8={"%C3%91"}}, 
+  {.len=6,.buf8={"%C3%92"}}, {.len=6,.buf8={"%C3%93"}},
+  {.len=6,.buf8={"%C3%94"}}, {.len=6,.buf8={"%C3%95"}}, 
+  {.len=6,.buf8={"%C3%96"}}, {.len=6,.buf8={"%C3%97"}},
   /*d8*/  /*d9*/  /*da*/  /*db*/  /*dc*/  /*dd*/  /*de*/  /*df*/ 
-  {.len=6,.cptr="%C3%98"}, {.len=6,.cptr="%C3%99"}, {.len=6,.cptr="%C3%9A"}, {.len=6,.cptr="%C3%9B"},
-  {.len=6,.cptr="%C3%9C"}, {.len=6,.cptr="%C3%9D"}, {.len=6,.cptr="%C3%9E"}, {.len=6,.cptr="%C3%9F"},
+  {.len=6,.buf8={"%C3%98"}}, {.len=6,.buf8={"%C3%99"}}, 
+  {.len=6,.buf8={"%C3%9A"}}, {.len=6,.buf8={"%C3%9B"}},
+  {.len=6,.buf8={"%C3%9C"}}, {.len=6,.buf8={"%C3%9D"}}, 
+  {.len=6,.buf8={"%C3%9E"}}, {.len=6,.buf8={"%C3%9F"}},
   /*e0*/  /*e1*/  /*e2*/  /*e3*/  /*e4*/  /*e5*/  /*e6*/  /*e7*/  /* 0xE0-0xEF */
-  {.len=6,.cptr="%C3%A0"}, {.len=6,.cptr="%C3%A1"}, {.len=6,.cptr="%C3%A2"}, {.len=6,.cptr="%C3%A3"},
-  {.len=6,.cptr="%C3%A4"}, {.len=6,.cptr="%C3%A5"}, {.len=6,.cptr="%C3%A6"}, {.len=6,.cptr="%C3%A7"},
+  {.len=6,.buf8={"%C3%A0"}}, {.len=6,.buf8={"%C3%A1"}}, 
+  {.len=6,.buf8={"%C3%A2"}}, {.len=6,.buf8={"%C3%A3"}},
+  {.len=6,.buf8={"%C3%A4"}}, {.len=6,.buf8={"%C3%A5"}}, 
+  {.len=6,.buf8={"%C3%A6"}}, {.len=6,.buf8={"%C3%A7"}},
   /*e8*/  /*e9*/  /*ea*/  /*eb*/  /*ec*/  /*ed*/  /*ee*/  /*ef*/ 
-  {.len=6,.cptr="%C3%A8"}, {.len=6,.cptr="%C3%A9"}, {.len=6,.cptr="%C3%AA"}, {.len=6,.cptr="%C3%AB"},
-  {.len=6,.cptr="%C3%AC"}, {.len=6,.cptr="%C3%AD"}, {.len=6,.cptr="%C3%AE"}, {.len=6,.cptr="%C3%AF"},
+  {.len=6,.buf8={"%C3%A8"}}, {.len=6,.buf8={"%C3%A9"}}, 
+  {.len=6,.buf8={"%C3%AA"}}, {.len=6,.buf8={"%C3%AB"}},
+  {.len=6,.buf8={"%C3%AC"}}, {.len=6,.buf8={"%C3%AD"}}, 
+  {.len=6,.buf8={"%C3%AE"}}, {.len=6,.buf8={"%C3%AF"}},
   /*f0*/  /*f1*/  /*f2*/  /*f3*/  /*f4*/  /*f5*/  /*f6*/  /*f7*/  /* 0xF0-0xFF */
-  {.len=6,.cptr="%C3%B0"}, {.len=6,.cptr="%C3%B1"}, {.len=6,.cptr="%C3%B2"}, {.len=6,.cptr="%C3%B3"},
-  {.len=6,.cptr="%C3%B4"}, {.len=6,.cptr="%C3%B5"}, {.len=6,.cptr="%C3%B6"}, {.len=6,.cptr="%C3%B7"},
+  {.len=6,.buf8={"%C3%B0"}}, {.len=6,.buf8={"%C3%B1"}}, 
+  {.len=6,.buf8={"%C3%B2"}}, {.len=6,.buf8={"%C3%B3"}},
+  {.len=6,.buf8={"%C3%B4"}}, {.len=6,.buf8={"%C3%B5"}}, 
+  {.len=6,.buf8={"%C3%B6"}}, {.len=6,.buf8={"%C3%B7"}},
   /*f8*/  /*f9*/  /*fa*/  /*fb*/  /*fc*/  /*fd*/  /*fe*/  /*ff*/ 
-  {.len=6,.cptr="%C3%B8"}, {.len=6,.cptr="%C3%B9"}, {.len=6,.cptr="%C3%BA"}, {.len=6,.cptr="%C3%BB"},
-  {.len=6,.cptr="%C3%BC"}, {.len=6,.cptr="%C3%BD"}, {.len=6,.cptr="%C3%BE"}, {.len=6,.cptr="%C3%BF"}
+  {.len=6,.buf8={"%C3%B8"}}, {.len=6,.buf8={"%C3%B9"}}, 
+  {.len=6,.buf8={"%C3%BA"}}, {.len=6,.buf8={"%C3%BB"}},
+  {.len=6,.buf8={"%C3%BC"}}, {.len=6,.buf8={"%C3%BD"}}, 
+  {.len=6,.buf8={"%C3%BE"}}, {.len=6,.buf8={"%C3%BF"}}
 };
 
 /*
@@ -305,18 +381,16 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
       switch (enc->len)
       {
         case 1:
-          encoded[out_cursor++] = enc->cptr[0];
+          encoded[out_cursor] = enc->v1;
+          out_cursor += 1;
           break;
         case 3:
-          encoded[out_cursor++] = enc->cptr[0];
-          encoded[out_cursor++] = enc->cptr[1];
-          encoded[out_cursor++] = enc->cptr[2];
+          *(uint32_t *)&encoded[out_cursor] = enc->v4;
+          out_cursor += 3;
           break;
         case 6:
-          *(uint32_t *)&encoded[out_cursor]  = *(const uint32_t *)&enc->cptr[0];
-          out_cursor += 4;
-          *(uint16_t *)&encoded[out_cursor]  = *(const uint16_t *)&enc->cptr[4];
-          out_cursor += 2;
+          *(uint64_t *)&encoded[out_cursor]  = enc->v8;
+          out_cursor += 6;
           break;
       }
     }
