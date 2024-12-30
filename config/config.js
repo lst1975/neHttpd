@@ -388,7 +388,7 @@ function cfgOperation(page, alwaysActive, action)
         ot.c--;
       delete ot.values[i];
     }
-    if (!this.alwaysActive)
+    if (!this.alwaysActive && ot.submit)
       changeSubmitButtonState(ot.submit, ot.c);
   }
 
