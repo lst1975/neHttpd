@@ -27,7 +27,7 @@ all: $(objects)
 # In the case of the first target, foo.o, the target-pattern matches foo.o and sets the "stem" to be "foo".
 # It then replaces the '%' in prereq-patterns with that stem
 $(objects): %.o: %.c
-	$(CC) -Wall -O0 -g3 -c $^ -o $@
+	$(CC) -Wall -O3 -g3 -c $^ -o $@
 
 clean: 
 	rm -f $(objects) httpd httpd.exe

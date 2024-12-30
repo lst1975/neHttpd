@@ -200,7 +200,7 @@ MIME_reader_read(MIME_reader * reader, unsigned char *buffer, int size)
   {
     /* Fill rest data */
     rest_size = reader->size - reader->current;
-    memcpy(buffer, reader->buffer + reader->current, rest_size);
+    memcpy(buffer, reader->buffer + reader->current, (unsigned int)rest_size);
 
     reader->current = reader->size;
     return MIME_reader_read(reader, buffer + rest_size, size - rest_size);

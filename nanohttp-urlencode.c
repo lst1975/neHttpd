@@ -526,11 +526,46 @@ int decode_url(httpd_buf_t *b, const uint8_t* input, int len)
     }
     charlen = url_str_dec_len[input[in_cursor]];
     if (!charlen)
-      charlen = utf8_len(&input[in_cursor-1], len - in_cursor+1);
-    if (!charlen)
     {
-      decoded[out_cursor++] = c;
-      continue;
+      charlen = utf8_len(&input[in_cursor-1], len - in_cursor+1);
+      if (!charlen)
+      {
+        decoded[out_cursor++] = c;
+        continue;
+      }
+      if (charlen == 1)
+      {
+        v1raw = input[in_cursor++];
+        v2raw = input[in_cursor++];
+        if (v1raw == 0x30 && v2raw == 0x30) {
+          decoded[out_cursor++] = '\0';
+          continue;
+        }
+        v1 = hexval[v1raw];
+        v2 = hexval[v2raw];
+        if ((v1 | v2) != 0xFF) 
+        {
+          decoded[out_cursor++] = (v1 << 4) | v2;
+          continue;
+        }
+        else
+        {
+          decoded[out_cursor++] = '%';
+          decoded[out_cursor++] = v1raw;
+          decoded[out_cursor++] = v2raw;
+          continue;
+        }
+      }
+      else
+      {
+        int in_end = in_cursor + charlen;
+        while (in_cursor < in_end)
+        {
+          decoded[out_cursor++] = c;
+          c = input[in_cursor++];
+        }
+        continue;
+      }
     }
     else if (charlen == 1 || charlen == 2)
     {
