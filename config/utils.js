@@ -109,4 +109,11 @@ function isTouchDevice() {
 
 var sysConfig = { isTouchDevice: isTouchDevice()};
 
-
+function toUnicodeEscapeSequence(str) {
+  return Array.from(str)
+    .map(char => {
+      const codePoint = char.codePointAt(0); // Get Unicode code point
+      return `\\u${codePoint.toString(16).padStart(4, '0')}`; // Format as \uXXXX
+    })
+    .join(''); // Join the array into a single string
+}
