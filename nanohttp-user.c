@@ -62,7 +62,7 @@ static int __nanohttp_users_init__one(JSONPair_t *p)
   else if (type->valueLength == 5 && !strncmp(type->value, "Guest", 5))
     entry->type = _N_http_user_type_GUEST;
   else if (type->valueLength == 10 && !strncmp(type->value, "SupperUser", 10))
-    entry->type = _N_http_user_type_GUEST;
+    entry->type = _N_http_user_type_SUPER;
   else
   {
     free(entry);
