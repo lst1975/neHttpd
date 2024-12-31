@@ -24,6 +24,8 @@
 #ifndef __nanohttp_common_h
 #define __nanohttp_common_h
 
+#include "nanohttp-buffer.h"
+
 #define HEADER_CONTENT_ID		"Content-Id"
 #define HEADER_CONTENT_TRANSFER_ENCODING "Content-Transfer-Encoding"
 #define TRANSFER_ENCODING_CHUNKED	"chunked"
@@ -1083,18 +1085,6 @@ typedef enum _hreq_method
 #define HTTP_STATUS_505_REASON_PHRASE	"HTTP Version not supported"
 
 /*@}*/
-
-typedef struct {
-  union{
-    void *data;
-    const char *cptr;
-    unsigned char *ptr;
-    char *buf;
-  };
-  char *p;
-  size_t size;
-  size_t len;
-} httpd_buf_t;
 
 /**
  *

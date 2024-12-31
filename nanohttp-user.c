@@ -10,12 +10,7 @@
 #include "nanohttp-base64.h"
 
 static ng_list_head_s users = NG_LIST_HEAD_INIT(users);
-static httpd_user_t super = {
-  .name = { .data="bob",     .len=3},
-  .pswd = { .data="builder", .len=7},
-  .link = NG_LIST_ENTRY_INIT(),
-  .type = _N_http_user_type_SUPER,
-};
+
 static int __nanohttp_users2file(void);
 
 #define __USER_FILE "data/users.json"
@@ -32,7 +27,7 @@ __file_user(void *arg, const char *buf, size_t length)
 void nanohttp_users_free(void)
 {
   httpd_user_t *entry;
-  ng_list_del(&super.link);
+
   while(!ng_list_empty(&users))
   {
     entry = ng_list_first_entry(&users,httpd_user_t,link);
@@ -41,11 +36,57 @@ void nanohttp_users_free(void)
   }
 }
 
+static int __nanohttp_users_init__one(JSONPair_t *p)
+{
+  int err = -1;
+
+  httpd_user_t *entry;
+  JSONPair_t *usr, *pwd, *type;
+  if (p->jsonType != JSONObject)
+    goto clean2;
+  usr = json_find_bykey(p->children,  "username", 8);
+  pwd = json_find_bykey(p->children,  "password", 8);
+  type = json_find_bykey(p->children, "level", 5);
+  if (!usr || !pwd || !type)
+    goto clean2;
+  usr = json_find_bykey(usr->children,  "value", 5);
+  pwd = json_find_bykey(pwd->children,  "value", 5);
+  type = json_find_bykey(type->children,"value", 5);
+  if (!usr || !pwd || !type)
+    goto clean2;
+  entry = malloc(sizeof(*entry)+usr->valueLength+pwd->valueLength);
+  if (entry == NULL)
+    goto clean2;
+  if (type->valueLength == 13 && !strncmp(type->value, "Administrator", 13))
+    entry->type = _N_http_user_type_ADMIN;
+  else if (type->valueLength == 5 && !strncmp(type->value, "Guest", 5))
+    entry->type = _N_http_user_type_GUEST;
+  else if (type->valueLength == 10 && !strncmp(type->value, "SupperUser", 10))
+    entry->type = _N_http_user_type_GUEST;
+  else
+  {
+    free(entry);
+    goto clean2;
+  }
+  entry->name.data = ((char *)(entry+1));
+  entry->name.len  = usr->valueLength;
+  memcpy(entry->name.data, usr->value, entry->name.len);
+
+  entry->pswd.data = ((char *)(entry+1))+usr->valueLength;
+  entry->pswd.len  = pwd->valueLength;
+  memcpy(entry->pswd.data, pwd->value, entry->pswd.len);
+  ng_list_add_tail(&entry->link, &users);
+  err = 0;
+
+clean2:
+  return err;
+}
+
 int nanohttp_users_init(void)
 {
   int err = -1;
   herror_t r;
-  JSONPair_t *pair, *p;
+  JSONPair_t *pair, *p, *s;
   JSONStatus_t result;
   httpd_buf_t tmp, _b, *b = &_b;
   
@@ -77,12 +118,22 @@ int nanohttp_users_init(void)
     goto clean1;
   }
 
-  ng_list_add_tail(&super.link, &users);
   p = json_find_bykey(pair, "AccountConfiguration", 20);
   if (p == NULL || p->jsonType != JSONObject)
   {
     goto clean2;
   }
+
+  /* read Supperuser */
+  s = json_find_bykey(p->children, "supperuser", 10);
+  if (s == NULL || s->jsonType != JSONObject)
+  {
+    goto clean2;
+  }
+  if (0 > __nanohttp_users_init__one(s))
+    goto clean2;
+
+  /* read Administrators or Guests */
   p = json_find_bykey(p->children, "users", 5);
   if (p == NULL || p->jsonType != JSONObject)
   {
@@ -95,40 +146,8 @@ int nanohttp_users_init(void)
   }
   for (p=p->children;p!=NULL;p=p->siblings)
   {
-    httpd_user_t *entry;
-    JSONPair_t *usr, *pwd, *type;
-    if (p->jsonType != JSONObject)
+    if (0 > __nanohttp_users_init__one(p))
       goto clean2;
-    usr = json_find_bykey(p->children,  "username", 8);
-    pwd = json_find_bykey(p->children,  "password", 8);
-    type = json_find_bykey(p->children, "level", 5);
-    if (!usr || !pwd || !type)
-      goto clean2;
-    usr = json_find_bykey(usr->children,  "value", 5);
-    pwd = json_find_bykey(pwd->children,  "value", 5);
-    type = json_find_bykey(type->children,"value", 5);
-    if (!usr || !pwd || !type)
-      goto clean2;
-    entry = malloc(sizeof(*entry)+usr->valueLength+pwd->valueLength);
-    if (entry == NULL)
-      goto clean2;
-    if (type->valueLength == 13 && !strncmp(type->value, "Administrator", 13))
-      entry->type = _N_http_user_type_ADMIN;
-    else if (type->valueLength == 5 && !strncmp(type->value, "Guest", 5))
-      entry->type = _N_http_user_type_GUEST;
-    else
-    {
-      free(entry);
-      goto clean2;
-    }
-    entry->name.data = ((char *)(entry+1));
-    entry->name.len  = usr->valueLength;
-    memcpy(entry->name.data, usr->value, entry->name.len);
-    
-    entry->pswd.data = ((char *)(entry+1))+usr->valueLength;
-    entry->pswd.len  = pwd->valueLength;
-    memcpy(entry->pswd.data, pwd->value, entry->pswd.len);
-    ng_list_add_tail(&entry->link, &users);
   }
   err = 0;
 
