@@ -188,7 +188,7 @@ function __load_page(p,data,forced){
   {
     __p.hide();
     __p.close();
-    if (__p.page_wrapper != ____wrapper)
+    if (!__p.page_wrapper.is(____wrapper))
       __p.page_wrapper.remove();
   }
 
