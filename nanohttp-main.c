@@ -659,13 +659,10 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             if ((usrLen < _N_http_user_NAME_MINLEN
               || usrLen > _N_http_user_NAME_MAXLEN))
             {
-              if (usrLen != 4 || memcmp(usr, "bob2", 4))
-              {
-                n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                      "\"This user does not exists.\"}]}", id, 
-                      p->keyLength, p->key);
-                goto finished;
-              }
+              n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                    "\"Invalid username length.\"}]}", id, 
+                    p->keyLength, p->key);
+              goto finished;
             }
             if (!memcmp(p->key+p->keyLength-2, ".0", 2))
             {
@@ -812,7 +809,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           case _N_http_user_error_VPSWD:
             n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
                   "\"The length of username is invalid: [%d,%d].\"}]}", id, 
-                  (int)usr->keyLength, usr->key, 
+                  (int)pwd->keyLength, pwd->key, 
                   _N_http_user_PSWD_MINLEN, _N_http_user_PSWD_MAXLEN);
             goto finished;
           case _N_http_user_error_SYS:
@@ -872,13 +869,10 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         if ((usrLen < _N_http_user_NAME_MINLEN
           || usrLen > _N_http_user_NAME_MAXLEN))
         {
-          if (usrLen != 4 || memcmp(usr, "bob2", 4))
-          {
-            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
-                  "\"This user does not exists.\"}]}", id, 
-                  usrLen, usr);
-            goto finished;
-          }
+          n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                "\"Invalid username length.\"}]}", id, 
+                (int)p->valueLength, p->value);
+          goto finished;
         }
         
         err = nanohttp_users_del(usr, usrLen);
@@ -890,19 +884,24 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           case _N_http_user_error_EXIST:
             n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
                   "\"This user does not exists.\"}]}", id, 
-                  usrLen, usr);
+                  (int)p->valueLength, p->value);
             goto finished;
           case _N_http_user_error_VNAME:
             n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
                   "\"The length of username is invalid: [%d,%d].\"}]}", id, 
-                  usrLen, usr,
+                  (int)p->valueLength, p->value,
                   _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
+            goto finished;
+          case _N_http_user_error_INVAL:
+            n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
+                  "\"Superuser can not be deleted.\"}]}", id, 
+                  (int)p->valueLength, p->value);
             goto finished;
           case _N_http_user_error_SYS:
           default:
             n = snprintf(buf, sizeof buf, "{\"id\":%d,\"err\":[{\"id\":\"%.*s\",\"reason\":"
                   "\"System error.\"}]}", id, 
-                  usrLen, usr);
+                  (int)p->valueLength, p->value);
             goto finished;
         }
       }

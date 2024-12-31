@@ -36,6 +36,17 @@ void nanohttp_users_free(void)
   }
 }
 
+static const httpd_user_t *__superuser=NULL;
+int nanohttp_users_is_super(const char *name, int nameLen)
+{
+  if (__superuser == NULL)
+    return _N_http_user_error_VNAME;
+  if (nameLen != __superuser->name.len 
+    || memcmp(name, __superuser->name.cptr, nameLen))
+    return _N_http_user_error_VNAME;
+  return _N_http_user_error_NONE;
+}
+
 static int __nanohttp_users_init__one(JSONPair_t *p)
 {
   int err = -1;
@@ -57,12 +68,15 @@ static int __nanohttp_users_init__one(JSONPair_t *p)
   entry = malloc(sizeof(*entry)+usr->valueLength+pwd->valueLength);
   if (entry == NULL)
     goto clean2;
-  if (type->valueLength == 13 && !strncmp(type->value, "Administrator", 13))
+  if (type->valueLength == 13 && !memcmp(type->value, "Administrator", 13))
     entry->type = _N_http_user_type_ADMIN;
-  else if (type->valueLength == 5 && !strncmp(type->value, "Guest", 5))
+  else if (type->valueLength == 5 && !memcmp(type->value, "Guest", 5))
     entry->type = _N_http_user_type_GUEST;
-  else if (type->valueLength == 10 && !strncmp(type->value, "SupperUser", 10))
+  else if (type->valueLength == 10 && !memcmp(type->value, "SupperUser", 10))
+  {
     entry->type = _N_http_user_type_SUPER;
+    __superuser = entry;
+  }
   else
   {
     free(entry);
@@ -587,11 +601,13 @@ nanohttp_users_del(const char *name, int nameLen)
 {
   httpd_user_t *entry;
 
+  if (nanohttp_users_is_super(name, nameLen) == _N_http_user_error_NONE)
+    return _N_http_user_error_INVAL;
+
   if (nameLen < _N_http_user_NAME_MINLEN 
     || nameLen > _N_http_user_NAME_MAXLEN)
   {
-    if (nameLen != 4 || memcmp(name, "bob2", 4))
-      return _N_http_user_error_VNAME;
+    return _N_http_user_error_VNAME;
   }
   
   entry = nanohttp_users_match(name, nameLen, NULL, 0);
