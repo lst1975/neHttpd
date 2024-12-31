@@ -2,7 +2,6 @@
 #include "nanohttp-logging.h"
 
 static uint8_t utf8_len(const uint8_t* str, int inlen);
-static const uint8_t xdigit[16] = "0123456789ABCDEF";
 
 /*
  Alphanumeric characters: A-Z, a-z, 0-9
@@ -261,6 +260,73 @@ static const struct _str_enc url_str_enc[256] = {
   {.len=6,.buf8={"%C3%BE"}}, {.len=6,.buf8={"%C3%BF"}}
 };
 
+static const struct _str_enc url_hex_char[256] = {
+	{.len=3,.buf4={"%00"}},{.len=3,.buf4={"%01"}},{.len=3,.buf4={"%02"}},{.len=3,.buf4={"%03"}},
+	{.len=3,.buf4={"%04"}},{.len=3,.buf4={"%05"}},{.len=3,.buf4={"%06"}},{.len=3,.buf4={"%07"}},
+	{.len=3,.buf4={"%08"}},{.len=3,.buf4={"%09"}},{.len=3,.buf4={"%0A"}},{.len=3,.buf4={"%0B"}},
+	{.len=3,.buf4={"%0C"}},{.len=3,.buf4={"%0D"}},{.len=3,.buf4={"%0E"}},{.len=3,.buf4={"%0F"}},
+	{.len=3,.buf4={"%10"}},{.len=3,.buf4={"%11"}},{.len=3,.buf4={"%12"}},{.len=3,.buf4={"%13"}},
+	{.len=3,.buf4={"%14"}},{.len=3,.buf4={"%15"}},{.len=3,.buf4={"%16"}},{.len=3,.buf4={"%17"}},
+	{.len=3,.buf4={"%18"}},{.len=3,.buf4={"%19"}},{.len=3,.buf4={"%1A"}},{.len=3,.buf4={"%1B"}},
+	{.len=3,.buf4={"%1C"}},{.len=3,.buf4={"%1D"}},{.len=3,.buf4={"%1E"}},{.len=3,.buf4={"%1F"}},
+	{.len=3,.buf4={"%20"}},{.len=3,.buf4={"%21"}},{.len=3,.buf4={"%22"}},{.len=3,.buf4={"%23"}},
+	{.len=3,.buf4={"%24"}},{.len=3,.buf4={"%25"}},{.len=3,.buf4={"%26"}},{.len=3,.buf4={"%27"}},
+	{.len=3,.buf4={"%28"}},{.len=3,.buf4={"%29"}},{.len=3,.buf4={"%2A"}},{.len=3,.buf4={"%2B"}},
+	{.len=3,.buf4={"%2C"}},{.len=3,.buf4={"%2D"}},{.len=3,.buf4={"%2E"}},{.len=3,.buf4={"%2F"}},
+	{.len=3,.buf4={"%30"}},{.len=3,.buf4={"%31"}},{.len=3,.buf4={"%32"}},{.len=3,.buf4={"%33"}},
+	{.len=3,.buf4={"%34"}},{.len=3,.buf4={"%35"}},{.len=3,.buf4={"%36"}},{.len=3,.buf4={"%37"}},
+	{.len=3,.buf4={"%38"}},{.len=3,.buf4={"%39"}},{.len=3,.buf4={"%3A"}},{.len=3,.buf4={"%3B"}},
+	{.len=3,.buf4={"%3C"}},{.len=3,.buf4={"%3D"}},{.len=3,.buf4={"%3E"}},{.len=3,.buf4={"%3F"}},
+	{.len=3,.buf4={"%40"}},{.len=3,.buf4={"%41"}},{.len=3,.buf4={"%42"}},{.len=3,.buf4={"%43"}},
+	{.len=3,.buf4={"%44"}},{.len=3,.buf4={"%45"}},{.len=3,.buf4={"%46"}},{.len=3,.buf4={"%47"}},
+	{.len=3,.buf4={"%48"}},{.len=3,.buf4={"%49"}},{.len=3,.buf4={"%4A"}},{.len=3,.buf4={"%4B"}},
+	{.len=3,.buf4={"%4C"}},{.len=3,.buf4={"%4D"}},{.len=3,.buf4={"%4E"}},{.len=3,.buf4={"%4F"}},
+	{.len=3,.buf4={"%50"}},{.len=3,.buf4={"%51"}},{.len=3,.buf4={"%52"}},{.len=3,.buf4={"%53"}},
+	{.len=3,.buf4={"%54"}},{.len=3,.buf4={"%55"}},{.len=3,.buf4={"%56"}},{.len=3,.buf4={"%57"}},
+	{.len=3,.buf4={"%58"}},{.len=3,.buf4={"%59"}},{.len=3,.buf4={"%5A"}},{.len=3,.buf4={"%5B"}},
+	{.len=3,.buf4={"%5C"}},{.len=3,.buf4={"%5D"}},{.len=3,.buf4={"%5E"}},{.len=3,.buf4={"%5F"}},
+	{.len=3,.buf4={"%60"}},{.len=3,.buf4={"%61"}},{.len=3,.buf4={"%62"}},{.len=3,.buf4={"%63"}},
+	{.len=3,.buf4={"%64"}},{.len=3,.buf4={"%65"}},{.len=3,.buf4={"%66"}},{.len=3,.buf4={"%67"}},
+	{.len=3,.buf4={"%68"}},{.len=3,.buf4={"%69"}},{.len=3,.buf4={"%6A"}},{.len=3,.buf4={"%6B"}},
+	{.len=3,.buf4={"%6C"}},{.len=3,.buf4={"%6D"}},{.len=3,.buf4={"%6E"}},{.len=3,.buf4={"%6F"}},
+	{.len=3,.buf4={"%70"}},{.len=3,.buf4={"%71"}},{.len=3,.buf4={"%72"}},{.len=3,.buf4={"%73"}},
+	{.len=3,.buf4={"%74"}},{.len=3,.buf4={"%75"}},{.len=3,.buf4={"%76"}},{.len=3,.buf4={"%77"}},
+	{.len=3,.buf4={"%78"}},{.len=3,.buf4={"%79"}},{.len=3,.buf4={"%7A"}},{.len=3,.buf4={"%7B"}},
+	{.len=3,.buf4={"%7C"}},{.len=3,.buf4={"%7D"}},{.len=3,.buf4={"%7E"}},{.len=3,.buf4={"%7F"}},
+	{.len=3,.buf4={"%80"}},{.len=3,.buf4={"%81"}},{.len=3,.buf4={"%82"}},{.len=3,.buf4={"%83"}},
+	{.len=3,.buf4={"%84"}},{.len=3,.buf4={"%85"}},{.len=3,.buf4={"%86"}},{.len=3,.buf4={"%87"}},
+	{.len=3,.buf4={"%88"}},{.len=3,.buf4={"%89"}},{.len=3,.buf4={"%8A"}},{.len=3,.buf4={"%8B"}},
+	{.len=3,.buf4={"%8C"}},{.len=3,.buf4={"%8D"}},{.len=3,.buf4={"%8E"}},{.len=3,.buf4={"%8F"}},
+	{.len=3,.buf4={"%90"}},{.len=3,.buf4={"%91"}},{.len=3,.buf4={"%92"}},{.len=3,.buf4={"%93"}},
+	{.len=3,.buf4={"%94"}},{.len=3,.buf4={"%95"}},{.len=3,.buf4={"%96"}},{.len=3,.buf4={"%97"}},
+	{.len=3,.buf4={"%98"}},{.len=3,.buf4={"%99"}},{.len=3,.buf4={"%9A"}},{.len=3,.buf4={"%9B"}},
+	{.len=3,.buf4={"%9C"}},{.len=3,.buf4={"%9D"}},{.len=3,.buf4={"%9E"}},{.len=3,.buf4={"%9F"}},
+	{.len=3,.buf4={"%A0"}},{.len=3,.buf4={"%A1"}},{.len=3,.buf4={"%A2"}},{.len=3,.buf4={"%A3"}},
+	{.len=3,.buf4={"%A4"}},{.len=3,.buf4={"%A5"}},{.len=3,.buf4={"%A6"}},{.len=3,.buf4={"%A7"}},
+	{.len=3,.buf4={"%A8"}},{.len=3,.buf4={"%A9"}},{.len=3,.buf4={"%AA"}},{.len=3,.buf4={"%AB"}},
+	{.len=3,.buf4={"%AC"}},{.len=3,.buf4={"%AD"}},{.len=3,.buf4={"%AE"}},{.len=3,.buf4={"%AF"}},
+	{.len=3,.buf4={"%B0"}},{.len=3,.buf4={"%B1"}},{.len=3,.buf4={"%B2"}},{.len=3,.buf4={"%B3"}},
+	{.len=3,.buf4={"%B4"}},{.len=3,.buf4={"%B5"}},{.len=3,.buf4={"%B6"}},{.len=3,.buf4={"%B7"}},
+	{.len=3,.buf4={"%B8"}},{.len=3,.buf4={"%B9"}},{.len=3,.buf4={"%BA"}},{.len=3,.buf4={"%BB"}},
+	{.len=3,.buf4={"%BC"}},{.len=3,.buf4={"%BD"}},{.len=3,.buf4={"%BE"}},{.len=3,.buf4={"%BF"}},
+	{.len=3,.buf4={"%C0"}},{.len=3,.buf4={"%C1"}},{.len=3,.buf4={"%C2"}},{.len=3,.buf4={"%C3"}},
+	{.len=3,.buf4={"%C4"}},{.len=3,.buf4={"%C5"}},{.len=3,.buf4={"%C6"}},{.len=3,.buf4={"%C7"}},
+	{.len=3,.buf4={"%C8"}},{.len=3,.buf4={"%C9"}},{.len=3,.buf4={"%CA"}},{.len=3,.buf4={"%CB"}},
+	{.len=3,.buf4={"%CC"}},{.len=3,.buf4={"%CD"}},{.len=3,.buf4={"%CE"}},{.len=3,.buf4={"%CF"}},
+	{.len=3,.buf4={"%D0"}},{.len=3,.buf4={"%D1"}},{.len=3,.buf4={"%D2"}},{.len=3,.buf4={"%D3"}},
+	{.len=3,.buf4={"%D4"}},{.len=3,.buf4={"%D5"}},{.len=3,.buf4={"%D6"}},{.len=3,.buf4={"%D7"}},
+	{.len=3,.buf4={"%D8"}},{.len=3,.buf4={"%D9"}},{.len=3,.buf4={"%DA"}},{.len=3,.buf4={"%DB"}},
+	{.len=3,.buf4={"%DC"}},{.len=3,.buf4={"%DD"}},{.len=3,.buf4={"%DE"}},{.len=3,.buf4={"%DF"}},
+	{.len=3,.buf4={"%E0"}},{.len=3,.buf4={"%E1"}},{.len=3,.buf4={"%E2"}},{.len=3,.buf4={"%E3"}},
+	{.len=3,.buf4={"%E4"}},{.len=3,.buf4={"%E5"}},{.len=3,.buf4={"%E6"}},{.len=3,.buf4={"%E7"}},
+	{.len=3,.buf4={"%E8"}},{.len=3,.buf4={"%E9"}},{.len=3,.buf4={"%EA"}},{.len=3,.buf4={"%EB"}},
+	{.len=3,.buf4={"%EC"}},{.len=3,.buf4={"%ED"}},{.len=3,.buf4={"%EE"}},{.len=3,.buf4={"%EF"}},
+	{.len=3,.buf4={"%F0"}},{.len=3,.buf4={"%F1"}},{.len=3,.buf4={"%F2"}},{.len=3,.buf4={"%F3"}},
+	{.len=3,.buf4={"%F4"}},{.len=3,.buf4={"%F5"}},{.len=3,.buf4={"%F6"}},{.len=3,.buf4={"%F7"}},
+	{.len=3,.buf4={"%F8"}},{.len=3,.buf4={"%F9"}},{.len=3,.buf4={"%FA"}},{.len=3,.buf4={"%FB"}},
+	{.len=3,.buf4={"%FC"}},{.len=3,.buf4={"%FD"}},{.len=3,.buf4={"%FE"}},{.len=3,.buf4={"%FF"}},
+};
+
 /*
  * http://www.unicode.org/versions/Unicode6.0.0/ch03.pdf - page 94
  *
@@ -380,21 +446,19 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
     charlen = utf8_char_lenth(&input[in_cursor], len - in_cursor);
     if (charlen == 1)
     {
-      const struct _str_enc *enc;
       const uint8_t c = input[in_cursor++];
-      enc = &url_str_enc[c];
-      switch (enc->len)
+      switch (url_str_enc[c].len)
       {
         case 1:
-          encoded[out_cursor] = enc->v1;
+          encoded[out_cursor]                = url_str_enc[c].v1;
           out_cursor += 1;
           break;
         case 3:
-          *(uint32_t *)&encoded[out_cursor] = enc->v4;
+          *(uint32_t *)&encoded[out_cursor]  = url_str_enc[c].v4;
           out_cursor += 3;
           break;
         case 6:
-          *(uint64_t *)&encoded[out_cursor]  = enc->v8;
+          *(uint64_t *)&encoded[out_cursor]  = url_str_enc[c].v8;
           out_cursor += 6;
           break;
         default:
@@ -407,10 +471,8 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
       int in_end = in_cursor + charlen;
       while (in_cursor < in_end)
       {
-        const uint8_t c = input[in_cursor++];
-        encoded[out_cursor++] = '%';
-        encoded[out_cursor++] = xdigit[((c)>>4)&0xF];
-        encoded[out_cursor++] = xdigit[((c)>>0)&0xF];
+        *(uint32_t *)&encoded[out_cursor] = url_hex_char[input[in_cursor++]].v4;
+        out_cursor += 3;
       }
     }
   }
@@ -755,8 +817,8 @@ static inline void __char_to_escape(char *buf_ptr, uint8_t c)
 static inline void __char_to_escape(char *buf_ptr, uint8_t c)
 {
   *(uint32_t*)buf_ptr = *(const uint32_t*)"\\u00";
-  buf_ptr[4] = xdigit[((c)>>4)&0xF];
-  buf_ptr[5] = xdigit[((c)>>0)&0xF];
+  const struct _str_enc *uh = &url_hex_char[c];
+  *(uint16_t *)&buf_ptr[4] = *(uint16_t *)(uh->buf4+1);
 }
 #endif
 
