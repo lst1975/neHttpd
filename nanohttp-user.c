@@ -64,6 +64,7 @@ int nanohttp_users_init(void)
   r = nanohttp_file_read_all(__USER_FILE, __file_user, &tmp);
   if (r != NULL)
   {
+    log_verbose("%s", herror_message(r));
     herror_release(r);
     goto clean1;
   }
