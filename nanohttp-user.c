@@ -37,14 +37,14 @@ void nanohttp_users_free(void)
 }
 
 static const httpd_user_t *__superuser=NULL;
-int nanohttp_users_is_super(const char *name, int nameLen)
+static int __nanohttp_users_is_super(const char *name, int nameLen)
 {
   if (__superuser == NULL)
-    return _N_http_user_error_VNAME;
+    return 0;
   if (nameLen != __superuser->name.len 
     || memcmp(name, __superuser->name.cptr, nameLen))
-    return _N_http_user_error_VNAME;
-  return _N_http_user_error_NONE;
+    return 0;
+  return 1;
 }
 
 static int __nanohttp_users_init__one(JSONPair_t *p)
@@ -485,6 +485,11 @@ nanohttp_users_add(const char *name, int nameLen,
     return _N_http_user_error_VNAME;
   }
   
+  if (__nanohttp_users_is_super(name, nameLen))
+  {
+    return _N_http_user_error_PERM;
+  }
+  
   if (pswdLen < _N_http_user_PSWD_MINLEN 
     || pswdLen > _N_http_user_PSWD_MAXLEN)
   {
@@ -545,6 +550,11 @@ nanohttp_users_update(const char *name, int nameLen,
     return _N_http_user_error_VNAME;
   }
   
+  if (__nanohttp_users_is_super(name, nameLen))
+  {
+    return _N_http_user_error_PERM;
+  }
+
   if (pswdLen && (pswdLen < _N_http_user_PSWD_MINLEN 
     || pswdLen > _N_http_user_PSWD_MAXLEN))
   {
@@ -601,15 +611,17 @@ nanohttp_users_del(const char *name, int nameLen)
 {
   httpd_user_t *entry;
 
-  if (nanohttp_users_is_super(name, nameLen) == _N_http_user_error_NONE)
-    return _N_http_user_error_INVAL;
-
   if (nameLen < _N_http_user_NAME_MINLEN 
     || nameLen > _N_http_user_NAME_MAXLEN)
   {
     return _N_http_user_error_VNAME;
   }
   
+  if (__nanohttp_users_is_super(name, nameLen))
+  {
+    return _N_http_user_error_PERM;
+  }
+
   entry = nanohttp_users_match(name, nameLen, NULL, 0);
   if (entry == NULL)
     return _N_http_user_error_EXIST;

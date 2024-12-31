@@ -28,6 +28,7 @@ typedef struct {
 #define _N_http_user_error_VNAME 4
 #define _N_http_user_error_VPSWD 5
 #define _N_http_user_error_INVAL 6
+#define _N_http_user_error_PERM  7
 
 void nanohttp_users_free(void);
 int nanohttp_users_init(void);
