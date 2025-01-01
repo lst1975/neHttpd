@@ -115,41 +115,6 @@
             "label":"User Level",
             "id":2
           }
-        },
-        {
-          "username":{
-            "type":"string",
-            "range":[
-              8,
-              128
-            ],
-            "value":"dddddddddddd",
-            "writable":false,
-            "label":"User Name",
-            "id":0
-          },
-          "password":{
-            "type":"string",
-            "range":[
-              6,
-              32
-            ],
-            "value":"hhhhhhhhhh",
-            "writable":true,
-            "label":"Password",
-            "id":1
-          },
-          "level":{
-            "type":"array",
-            "range":[
-              "Administrator",
-              "Guest"
-            ],
-            "value":"Guest",
-            "writable":true,
-            "label":"User Level",
-            "id":2
-          }
         }
       ]
     },
