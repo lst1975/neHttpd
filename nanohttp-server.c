@@ -134,6 +134,8 @@
 #include <pthread.h>
 #endif
 
+#include <limits.h>  // For PATH_MAX
+
 #include "nanohttp-logging.h"
 #include "nanohttp-error.h"
 #include "nanohttp-common.h"
@@ -266,7 +268,7 @@ static void
 _httpd_parse_arguments(int argc, char **argv)
 {
   int i;
-
+  
   for (i = 1; i < argc; i++)
   {
     if (!strcmp(argv[i - 1], NHTTPD_ARG_PORT))
@@ -322,20 +324,23 @@ _httpd_connection_slots_free(void)
   pthread_mutex_destroy(&_httpd_connection_lock);
 #endif
 
-  for (int i=0;i<_httpd_max_connections;i++)
+  if (_httpd_connection)
   {
-    conndata_t *conn=(conndata_t *)&_httpd_connection[i];
-    hsocket_close(&(_httpd_connection[i].sock));
-    if (conn->tid == 0)
-      continue;
+    for (int i=0;i<_httpd_max_connections;i++)
+    {
+      conndata_t *conn=(conndata_t *)&_httpd_connection[i];
+      hsocket_close(&(_httpd_connection[i].sock));
+      if (conn->tid == 0)
+        continue;
 #ifndef WIN32
-    pthread_join(conn->tid,NULL);
+      pthread_join(conn->tid,NULL);
 #else
-    WaitForSingleObject(conn->tid,INFINITE);
+      WaitForSingleObject(conn->tid,INFINITE);
 #endif
+    }
+    http_free(_httpd_connection);
   }
-  http_free(_httpd_connection);
-
+  
   log_info("[OK]");
   return;
 }
@@ -366,6 +371,12 @@ httpd_init(int argc, char **argv)
     log_error("Cannot init memcache.");
     return herror_new("http_memcache_init",HSOCKET_ERROR_INIT,"failed");
   }
+
+  if ((status = nanohttp_dir_init(argv[0])) != H_OK)
+  {
+    log_error("nanohttp_dir_init failed (%s)", herror_message(status));
+    return status;
+  } 
 
   if (nanohttp_users_init() < 0)
   {
@@ -640,7 +651,7 @@ _httpd_send_html_message(httpd_conn_t *conn, int reason, const char *phrase, con
       "</head>"
       "<body>"
         "<h3>%s</h3>"
-	"<hr/>"
+      	"<hr/>"
         "<div>Message: '%s'</div>"
       "</body>"
     "</html>";
@@ -650,7 +661,6 @@ _httpd_send_html_message(httpd_conn_t *conn, int reason, const char *phrase, con
 
   len = snprintf(buf, 4096, tmpl, phrase, phrase, msg);
   snprintf(slen, 5, "%lu", len);
-
   httpd_set_header(conn, HEADER_CONTENT_LENGTH, slen);
 
   r = httpd_send_header(conn, reason, phrase);
@@ -665,9 +675,12 @@ httpd_send_bad_request(httpd_conn_t *conn, const char *msg)
   return _httpd_send_html_message(conn, 400, HTTP_STATUS_400_REASON_PHRASE, msg);
 }
 
-#define __nanohttp_index_html_head_JS_MENU_GUEST "<script class='userjs' type='text/javascript' src='config/menu-guest.js'></script>"
-#define __nanohttp_index_html_head_JS_MENU_ADMIN "<script class='userjs' type='text/javascript' src='config/menu-admin.js'></script>"
-#define __nanohttp_index_html_head_JS_MENU_SUPER "<script class='userjs' type='text/javascript' src='config/menu-super.js'></script>"
+#define __nanohttp_index_html_head_JS_MENU_GUEST \
+  "<script class='userjs' type='text/javascript' src='config/menu-guest.js'></script>"
+#define __nanohttp_index_html_head_JS_MENU_ADMIN \
+  "<script class='userjs' type='text/javascript' src='config/menu-admin.js'></script>"
+#define __nanohttp_index_html_head_JS_MENU_SUPER \
+  "<script class='userjs' type='text/javascript' src='config/menu-super.js'></script>"
 #define __nanohttp_index_html_head_DECL1 \
   "<!DOCTYPE html>" \
   "<html lang='en'>" \
@@ -1377,12 +1390,13 @@ httpd_destroy(void)
     hservice_free(cur);
     cur = tmp;
   }
-  log_info("[OK] hservice_free");
+  log_info("[OK]");
 
   hsocket_module_destroy();
   _httpd_connection_slots_free();
 
   nanohttp_users_free();
+  nanohttp_dir_free();
   http_memcache_free();
   return;
 }

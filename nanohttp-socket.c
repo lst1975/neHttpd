@@ -317,7 +317,6 @@ hsocket_init(struct hsocket_t * sock)
   memset(sock, 0, sizeof(struct hsocket_t));
   sock->sock = HSOCKET_FREE;
 
-  log_info("[OK]");
   return H_OK;
 }
 
@@ -481,7 +480,6 @@ hsocket_close(struct hsocket_t * sock)
 
     log_verbose("socket closed");
   }
-  log_info("[OK]");
   return;
 }
 

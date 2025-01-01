@@ -92,10 +92,11 @@
 #undef WIN32
 #undef HAVE_SSL
 
-#define _nanoConfig_HTTPD_PORT 8080
-#define _nanoConfig_HTTPD_MAX_CONNECTIONS 8
-#define _nanoConfig_HTTPD_FILE_BLOCK 1024
-#define _nanoConfig_HTTPD_FILE_SERVICE "/config/"
+#define _nanoConfig_HTTPD_PORT            8080
+#define _nanoConfig_HTTPD_MAX_CONNECTIONS 128
+#define _nanoConfig_HTTPD_FILE_BLOCK      2048
+#define _nanoConfig_HTTPD_FILE_SERVICE    "/config/"
+#define _nanoConfig_HTTPD_DATA_SERVICE    "/data/"
 
 #define DEBUG_MULTIPART
 #define __NHTTP_DEBUG 0

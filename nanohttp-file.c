@@ -60,17 +60,126 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#include "nanohttp-config.h"
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <limits.h>  // For PATH_MAX
+
+#include "nanohttp-config.h"
+#include "nanohttp-common.h"
+#include "nanohttp-defs.h"
 #include "nanohttp-file.h"
+#include "nanohttp-error.h"
+#include "nanohttp-mem.h"
+#include "nanohttp-logging.h"
+
+static httpd_buf_t httpd_base_path = __HTTPD_BUF_INIT_DECL();
+
+herror_t
+nanohttp_dir_init(const char *pfile)
+{
+  if (pfile == NULL)
+  {
+    log_error("pfile is NULL");
+    return herror_new("nanohttp_dir_init", HSERVER_ERROR_INVAL,
+                      "Parameter pfile is NULL");
+  }
+  
+  char *d = http_malloc(PATH_MAX);
+  if (d == NULL)
+  {
+    log_error("hsocket_dir_init failed");
+    return herror_new("nanohttp_dir_init", HSERVER_ERROR_MALLOC,
+                      "Unable to malloc tempary buffer");
+  }
+  const char *pwd = getcwd(d, PATH_MAX);
+  if (pwd == NULL)  
+  {
+    http_free(d);
+    log_error("hsocket_dir_init failed");
+    return herror_new("nanohttp_dir_init", HSERVER_ERROR_SYSTEM,
+                      "Unable to execute getcwd");
+  }
+
+  const char *p = strrchr(pfile, __PATH_DLIM);
+  if (p == NULL)
+  {
+    http_free(d);
+    log_error("bad parameter pfile: %s", pfile);
+    return herror_new("nanohttp_dir_init", HSERVER_ERROR_INVAL,
+                      "bad parameter pfile: %s", pfile);
+  }
+
+  size_t plen = strlen(pwd);
+  size_t flen = p + 1 - pfile;
+  if (flen + plen + 1 >= PATH_MAX)
+  {
+    http_free(d);
+    log_error("dir length is too large: %u", flen + plen + 1);
+    return herror_new("nanohttp_dir_init", HSERVER_ERROR_INVAL,
+                      "dir length is too large: %u", flen + plen + 1);
+  }
+
+  d[plen]=__PATH_DLIM;
+  if (flen==2 && pfile[0]=='.' && pfile[1]==__PATH_DLIM)
+    flen = 0;
+  if (flen) memcpy(d+plen+1,pfile,flen);
+  httpd_base_path.buf = d;
+  httpd_base_path.len = plen + flen + 1;
+  httpd_base_path.buf[httpd_base_path.len]='\0';
+  
+  log_info("[OK]");
+  return H_OK;
+}
+
+void
+nanohttp_dir_free(void)
+{
+  if (httpd_base_path.buf != NULL)
+  {
+    http_free(httpd_base_path.buf);
+    BUF_SIZE_INIT(&httpd_base_path, NULL, 0);
+  }
+  log_info("[OK]");
+}
+
+static char *nanohttp_file_get_path(const char *file)
+{
+  char *path = http_malloc(PATH_MAX);
+  if (path == NULL)
+    return NULL;
+
+  size_t flen = strlen(file);
+  if (flen + httpd_base_path.len >= PATH_MAX)
+  {
+    http_free(path);
+    return NULL;
+  }
+
+  memcpy(path,httpd_base_path.buf,httpd_base_path.len);
+  memcpy(path+httpd_base_path.len,file,flen);
+  path[httpd_base_path.len+flen]='\0';
+  return path;
+}
+
+static void *nanohttp_file_open(const char *file, const char *mode)
+{
+  char *fpath = nanohttp_file_get_path(file);
+  // Open a file in write mode
+  if (fpath != NULL)
+  {
+    void *fp = fopen(file, mode);
+    http_free(fpath);
+    return fp;
+  }
+
+  return NULL;
+}
 
 void *nanohttp_file_open_for_read(const char *file)
 {
-  // Open a file in read mode
-  return fopen(file, "rb");
+  return nanohttp_file_open(file, "rb");
 }
 
 herror_t nanohttp_file_read_all(const char *file, 
@@ -149,8 +258,7 @@ herror_t nanohttp_file_read(void *file,
 
 void *nanohttp_file_open_for_write(const char *file)
 {
-  // Open a file in read mode
-  return fopen(file, "wb+");
+  return nanohttp_file_open(file, "wb+");
 }
 
 void nanohttp_file_close(void *file)
@@ -177,7 +285,7 @@ size_t nanohttp_file_write(void *file,
   { // If the file exist
     // Store the content of the file
     // if (-1 == fseek(FILE *stream, SEEK_SET, SEEK_END))
-	//   return -1;
+  	//   return -1;
     int n = fwrite(buffer, 1, length, fptr);
     if (n != length)
     {
@@ -192,16 +300,28 @@ size_t nanohttp_file_size(const char *file)
   int fd;
   struct stat fileStat;
 
-  fd = open(file, O_RDONLY);
-  if (fd < 0) {
-    return 0;
-  }
+  char *fpath = nanohttp_file_get_path(file);
+  
+  // Open a file in write mode
+  if (fpath != NULL)
+  {
+    fd = open(file, O_RDONLY);
+    if (fd < 0) {
+      http_free(fpath);
+      return 0;
+    }
 
-  if (fstat(fd, &fileStat) < 0) {
+    if (fstat(fd, &fileStat) < 0) {
+      close(fd);
+      http_free(fpath);
+      return 0;
+    }
+
     close(fd);
-    return 0;
+    http_free(fpath);
+    return fileStat.st_size;
   }
-
-  close(fd);
-  return fileStat.st_size;
+  
+  http_free(fpath);
+  return 0;
 }

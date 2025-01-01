@@ -193,4 +193,9 @@
 /** Cache line mask. */
 #define RTE_CACHE_LINE_MASK (RTE_CACHE_LINE_SIZE-1)
 
+#define HSERVER_ERROR			            (1100)
+#define HSERVER_ERROR_MALLOC		      (HSERVER_ERROR + 1)
+#define HSERVER_ERROR_SYSTEM		      (HSERVER_ERROR + 2)
+#define HSERVER_ERROR_INVAL 		      (HSERVER_ERROR + 3)
+
 #endif

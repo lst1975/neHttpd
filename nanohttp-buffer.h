@@ -76,6 +76,9 @@ typedef struct {
   size_t nbytes;
 } httpd_buf_t;
 
+#define __HTTPD_BUF_INIT_DECL() \
+  { .data = NULL, .p = NULL, .len = 0, .size = 0, .nbytes= 0}
+
 static inline void BUF_GO(httpd_buf_t *b, size_t len)
 {
   b->p   += len;

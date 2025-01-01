@@ -1225,8 +1225,8 @@ main(int argc, char **argv)
     goto error1;
   }
 
-  if ((status = httpd_register_secure("/data/", data_service, 
-    simple_authenticator, "DATA")) != H_OK)
+  if ((status = httpd_register_secure(_nanoConfig_HTTPD_DATA_SERVICE, 
+    data_service, simple_authenticator, "DATA")) != H_OK)
   {
     fprintf(stderr, "Cannot register DATA service (%s)\n", 
       herror_message(status));

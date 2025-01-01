@@ -86,6 +86,13 @@
 #ifndef __nanohttp_file_h
 #define __nanohttp_file_h
 
+#ifdef WIN32
+#include<direct.h>
+#define __PATH_DLIM '\\'
+#else
+#define __PATH_DLIM '/'
+#endif
+
 #include "nanohttp-error.h"
 
 typedef herror_t (*rwfile_f)(void *arg, const char *buf, size_t length); 
@@ -98,6 +105,8 @@ void *nanohttp_file_open_for_read(const char *file);
 herror_t nanohttp_file_read_all(const char *file, 
   rwfile_f cb, void *arg);
 size_t nanohttp_file_size(const char *file);
+herror_t nanohttp_dir_init(const char *pfile);
+void nanohttp_dir_free(void);
 
 #ifdef __cplusplus
 }
