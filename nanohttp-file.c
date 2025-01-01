@@ -61,6 +61,8 @@
  **************************************************************************************
  */
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -144,6 +146,35 @@ nanohttp_dir_free(void)
   log_info("[OK]");
 }
 
+static void normalizePath(char *inputPath) {
+  char *token;
+  char *pathCopy = http_strdup(inputPath);
+  char *stack[100]; // Stack to hold path components
+  int top = -1;
+  char *outputPath = inputPath;
+
+  token = strtok(pathCopy, "/");
+  while (token != NULL) {
+    if (strcmp(token, "..") == 0) {
+      if (top > -1) {
+        top--; // Pop the last valid directory
+      }
+    } else if (strcmp(token, ".") != 0 && strlen(token) > 0) {
+      stack[++top] = token; // Push valid directory onto stack
+    }
+    token = strtok(NULL, "/");
+  }
+
+  // Construct the normalized path
+  outputPath[0] = '\0'; // Initialize outputPath
+  for (int i = 0; i <= top; i++) {
+    strcat(outputPath, "/");
+    strcat(outputPath, stack[i]);
+  }
+
+  http_free(pathCopy);
+}
+
 static char *nanohttp_file_get_path(const char *file)
 {
   char *path = http_malloc(PATH_MAX);
@@ -160,6 +191,8 @@ static char *nanohttp_file_get_path(const char *file)
   memcpy(path,httpd_base_path.buf,httpd_base_path.len);
   memcpy(path+httpd_base_path.len,file,flen);
   path[httpd_base_path.len+flen]='\0';
+  normalizePath(path);
+  log_debug("Get path: %s", path);
   return path;
 }
 
@@ -169,7 +202,7 @@ static void *nanohttp_file_open(const char *file, const char *mode)
   // Open a file in write mode
   if (fpath != NULL)
   {
-    void *fp = fopen(file, mode);
+    void *fp = fopen(fpath, mode);
     http_free(fpath);
     return fp;
   }
@@ -298,30 +331,30 @@ size_t nanohttp_file_write(void *file,
 size_t nanohttp_file_size(const char *file)
 {
   int fd;
+  size_t size = 0;
   struct stat fileStat;
 
-  char *fpath = nanohttp_file_get_path(file);
-  
   // Open a file in write mode
-  if (fpath != NULL)
-  {
-    fd = open(file, O_RDONLY);
-    if (fd < 0) {
-      http_free(fpath);
-      return 0;
-    }
-
-    if (fstat(fd, &fileStat) < 0) {
-      close(fd);
-      http_free(fpath);
-      return 0;
-    }
-
-    close(fd);
-    http_free(fpath);
-    return fileStat.st_size;
-  }
+  char *fpath = nanohttp_file_get_path(file);
+  if (fpath == NULL)
+    return 0;
   
+  fd = open(fpath, O_RDONLY);
+  if (fd < 0) {
+    log_debug("Failed to open file: %s", fpath);
+    goto error0;
+  }
+
+  if (fstat(fd, &fileStat) < 0) {
+    log_debug("Failed to fstat file: %s", fpath);
+    goto error1;
+  }
+
+  size = fileStat.st_size;
+  
+error1:
+  close(fd);
+error0:
   http_free(fpath);
-  return 0;
+  return size;
 }

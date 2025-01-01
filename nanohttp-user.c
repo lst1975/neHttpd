@@ -171,11 +171,13 @@ int nanohttp_users_init(void)
   b->len = nanohttp_file_size(__USER_FILE);
   if (b->len == 0)
   {
+    log_verbose("failed to get file size");
     goto clean0;
   }
   tmp.data = b->data = http_malloc(b->len);
   if (b->data == NULL)
   {
+    log_verbose("failed to malloc file size");
     goto clean0;
   }
   tmp.len = 0;
