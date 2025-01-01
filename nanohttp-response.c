@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 /** @file nanohttp-response.c HTTP response handling */
 /******************************************************************
 *  $Id: nanohttp-response.c,v 1.19 2007/11/03 22:40:11 m0gg Exp $
@@ -5,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003-2004  Ferhat Ayaz
 *
-* This library is free software; you can redistribute it and/or
+* This library is http_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -57,9 +119,9 @@ _hresponse_new(void)
 {
   hresponse_t *res;
 
-  if (!(res = (hresponse_t *) malloc(sizeof(hresponse_t))))
+  if (!(res = (hresponse_t *) http_malloc(sizeof(hresponse_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
   }
 
@@ -118,7 +180,7 @@ _hresponse_parse_header(const char *buffer)
     log_error("Parse error reading HTTP description");
     return NULL;
   }
-/*	res->desc = (char *) malloc(strlen(str) + 1);*/
+/*	res->desc = (char *) http_malloc(strlen(str) + 1);*/
   strncpy(res->desc, str, RESPONSE_MAX_DESC_SIZE-1);
   res->desc[strlen(str)] = '\0';
 
@@ -155,7 +217,6 @@ _hresponse_parse_header(const char *buffer)
 herror_t
 hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t ** out)
 {
-  size_t i = 0, count;
   herror_t status;
   hresponse_t *res;
   struct attachments_t *mimeMessage;
@@ -163,23 +224,9 @@ hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t ** out)
 
 read_header:                   /* for errorcode: 100 (continue) */
   /* Read header */
-  while (i < MAX_HEADER_SIZE)
+  if ((status = http_header_recv(sock, buffer, MAX_HEADER_SIZE)) != H_OK)
   {
-    if ((status = hsocket_recv(sock, (unsigned char *)&(buffer[i]), 1, 1, &count)) != H_OK)
-    {
-      log_error("Socket read error");
-      return status;
-    }
-
-    buffer[i + 1] = '\0';       /* for strmp */
-
-    if (i > 3)
-    {
-      if (!strcmp(&(buffer[i - 1]), "\n\n") ||
-          !strcmp(&(buffer[i - 2]), "\n\r\n"))
-        break;
-    }
-    i++;
+    return status;
   }
 
   /* Create response */
@@ -196,7 +243,6 @@ read_header:                   /* for errorcode: 100 (continue) */
   if (res->errcode == 100)
   {
     hresponse_free(res);
-    i = 0;
     goto read_header;
   }
 
@@ -252,7 +298,7 @@ hresponse_free(hresponse_t * res)
     if (res->attachments)
       attachments_free(res->attachments);
 
-    free(res);
+    http_free(res);
   }
   return;
 }

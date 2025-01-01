@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 /** @file nanohttp-base64.c Base64 data encoding/decoding */
 /******************************************************************
 *  $Id: nanohttp-base64.c,v 1.5 2007/11/03 22:40:10 m0gg Exp $
@@ -5,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is free software; you can redistribute it and/or
+* This library is http_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -37,7 +99,7 @@ int base64_encode_string(const unsigned char *instr, unsigned char *outstr)
 
     char counts = 0;
     char buffer[3];
-    char* cipher = (char*)outstr; //malloc(strlen(plain) * 4 / 3 + 4);
+    char* cipher = (char*)outstr; //http_malloc(strlen(plain) * 4 / 3 + 4);
     int i = 0, c = 0;
 
     for(i = 0; instr[i] != '\0'; i++) {
@@ -72,7 +134,7 @@ int base64_decode_string(const unsigned char *instr, unsigned char *outstr)
 {
     char counts = 0;
     char buffer[4];
-    char* plain = (char*)outstr; //malloc(strlen(cipher) * 3 / 4);
+    char* plain = (char*)outstr; //http_malloc(strlen(cipher) * 3 / 4);
     int i = 0, p = 0;
 
     for(i = 0; instr[i] != '\0'; i++) {
@@ -100,7 +162,7 @@ int base64_decode_string(const unsigned char *instr, unsigned char *outstr)
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of

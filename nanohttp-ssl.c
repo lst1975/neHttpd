@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 /** @file nanohttp-ssl.c SSL wrapper */
 /******************************************************************
 *  $Id: nanohttp-ssl.c,v 1.38 2007/11/03 22:40:15 m0gg Exp $
@@ -5,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2001-2005  Rochester Institute of Technology
 *
-* This library is free software; you can redistribute it and/or
+* This library is http_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -228,9 +290,9 @@ void
 hssl_set_certificate(const char *filename)
 {
   if (_hssl_certificate)
-    free(_hssl_certificate);
+    http_free(_hssl_certificate);
 
-  _hssl_certificate = strdup(filename);
+  _hssl_certificate = http_strdup(filename);
 
   return;
 }
@@ -239,9 +301,9 @@ void
 hssl_set_certpass(const char *password)
 {
   if (_hssl_certpass)
-    free(_hssl_certpass);
+    http_free(_hssl_certpass);
 
-  _hssl_certpass = strdup(password);
+  _hssl_certpass = http_strdup(password);
 
   return;
 }
@@ -250,9 +312,9 @@ void
 hssl_set_ca_list(const char *filename)
 {
   if (_hssl_ca_list)
-    free(_hssl_ca_list);
+    http_free(_hssl_ca_list);
 
-  _hssl_ca_list = strdup(filename);
+  _hssl_ca_list = http_strdup(filename);
 
   return;
 }
@@ -411,19 +473,19 @@ hssl_module_destroy(void)
 
   if (_hssl_certpass)
   {
-    free(_hssl_certpass);
+    http_free(_hssl_certpass);
     _hssl_certpass = NULL;
   }
 
   if (_hssl_ca_list)
   {
-    free(_hssl_ca_list);
+    http_free(_hssl_ca_list);
     _hssl_ca_list = NULL;
   }
 
   if (_hssl_certificate)
   {
-    free(_hssl_certificate);
+    http_free(_hssl_certificate);
     _hssl_certificate = NULL;
   }
 

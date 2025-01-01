@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 /** @file nanohttp-server.c HTTP server */
 /******************************************************************
 *  $Id: nanohttp-server.c,v 1.81 2007/11/03 22:40:12 m0gg Exp $
@@ -5,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is free software; you can redistribute it and/or
+* This library is http_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -140,7 +202,7 @@ conndata_t;
  */
 static volatile int _httpd_run = 1;
 
-static struct hsocket_t _httpd_socket;
+static struct hsocket_t _httpd_socket = {.sock = HSOCKET_FREE, .ssl = NULL};
 static int _httpd_port = _nanoConfig_HTTPD_PORT;
 static int _httpd_max_connections = _nanoConfig_HTTPD_MAX_CONNECTIONS;
 
@@ -148,19 +210,19 @@ static hservice_t *_httpd_services_default = NULL;
 static hservice_t *_httpd_services_head = NULL;
 static hservice_t *_httpd_services_tail = NULL;
 
-static conndata_t *_httpd_connection;
+static conndata_t *_httpd_connection = NULL;
 
 #ifdef WIN32
 static DWORD _httpd_terminate_signal = CTRL_C_EVENT;
 static int _httpd_max_idle = 120;
-HANDLE _httpd_connection_lock;
+HANDLE _httpd_connection_lock = NULL;
 LPCTSTR _httpd_connection_lock_str;
 #define strncasecmp(s1, s2, num) strncmp(s1, s2, num)
 #define snprintf(buffer, num, s1, s2) sprintf(buffer, s1,s2)
 #else
 static int _httpd_terminate_signal = SIGINT;
 static sigset_t thrsigset;
-static pthread_mutex_t _httpd_connection_lock;
+static pthread_mutex_t _httpd_connection_lock = PTHREAD_MUTEX_INITIALIZER;;
 #endif
 
 #ifdef WIN32
@@ -242,10 +304,39 @@ _httpd_connection_slots_init(void)
   pthread_mutex_init(&_httpd_connection_lock, NULL);
 #endif
 
-  _httpd_connection = calloc(_httpd_max_connections, sizeof(conndata_t));
+  _httpd_connection = (conndata_t *)http_calloc(_httpd_max_connections, sizeof(conndata_t));
   for (i = 0; i < _httpd_max_connections; i++)
     hsocket_init(&(_httpd_connection[i].sock));
 
+  log_info("[OK]");
+  return;
+}
+
+static void
+_httpd_connection_slots_free(void)
+{
+#ifdef WIN32
+  if (_httpd_connection_lock != NULL)
+    closeHandle(_httpd_connection_lock);
+#else
+  pthread_mutex_destroy(&_httpd_connection_lock);
+#endif
+
+  for (int i=0;i<_httpd_max_connections;i++)
+  {
+    conndata_t *conn=(conndata_t *)&_httpd_connection[i];
+    hsocket_close(&(_httpd_connection[i].sock));
+    if (conn->tid == 0)
+      continue;
+#ifndef WIN32
+    pthread_join(conn->tid,NULL);
+#else
+    WaitForSingleObject(conn->tid,INFINITE);
+#endif
+  }
+  http_free(_httpd_connection);
+
+  log_info("[OK]");
   return;
 }
 
@@ -269,6 +360,18 @@ httpd_init(int argc, char **argv)
   herror_t status;
 
   _httpd_parse_arguments(argc, argv);
+
+  if (http_memcache_init() < 0)
+  {
+    log_error("Cannot init memcache.");
+    return herror_new("http_memcache_init",HSOCKET_ERROR_INIT,"failed");
+  }
+
+  if (nanohttp_users_init() < 0)
+  {
+    log_error("Cannot init users.");
+    return herror_new("nanohttp_users_init",HSOCKET_ERROR_INIT,"failed");
+  }
 
   if ((status = hsocket_module_init(argc, argv)) != H_OK)
   {
@@ -304,17 +407,17 @@ httpd_register_secure(const char *context, httpd_service func, httpd_auth auth, 
 {
   hservice_t *service;
 
-  if (!(service = (hservice_t *) malloc(sizeof(hservice_t))))
+  if (!(service = (hservice_t *) http_malloc(sizeof(hservice_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
-    return herror_new("httpd_register_secure", 0, "malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
+    return herror_new("httpd_register_secure", 0, "http_malloc failed (%s)", strerror(errno));
   }
 
-  if (!(service->statistics = (struct service_statistics *)malloc(sizeof(struct service_statistics))))
+  if (!(service->statistics = (struct service_statistics *)http_malloc(sizeof(struct service_statistics))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
-    free(service);
-    return herror_new("httpd_register_secure", 0, "malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
+    http_free(service);
+    return herror_new("httpd_register_secure", 0, "http_malloc failed (%s)", strerror(errno));
   }    	
   memset(service->statistics, 0, sizeof(struct service_statistics));
   service->statistics->time.tv_sec = 0;
@@ -326,7 +429,7 @@ httpd_register_secure(const char *context, httpd_service func, httpd_auth auth, 
   service->auth = auth;
   service->func = func;
   service->status = NHTTPD_SERVICE_UP;
-  service->context = strdup(context);
+  service->context = http_strdup(context);
 
   log_verbose("register service (%p) for \"%s\"", service, context);
   if (_httpd_services_head == NULL)
@@ -420,10 +523,11 @@ hservice_free(hservice_t * service)
     return;
 
   if (service->statistics)
-    free(service->statistics);
+    http_free(service->statistics);
 
-  free(service);
+  http_free(service);
 
+  log_verbose("unregister service \"%s\"", service->context);
   return;
 }
 
@@ -747,9 +851,9 @@ httpd_new(struct hsocket_t * sock)
 {
   httpd_conn_t *conn;
 
-  if (!(conn = (httpd_conn_t *) malloc(sizeof(httpd_conn_t))))
+  if (!(conn = (httpd_conn_t *) http_malloc(sizeof(httpd_conn_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
   }
   conn->sock = sock;
@@ -772,7 +876,7 @@ httpd_free(httpd_conn_t * conn)
   if (conn->header)
     hpairnode_free_deep(conn->header);
 
-  free(conn);
+  http_free(conn);
 
   return;
 }
@@ -786,9 +890,9 @@ _httpd_decode_authorization(const char *_value, char **user, char **pass)
 
   inlen = strlen(value);
   len = inlen * 2;
-  if (!(tmp = (unsigned char *)calloc(1, len)))
+  if (!(tmp = (unsigned char *)http_calloc(1, len)))
   {
-    log_error("calloc failed (%s)", strerror(errno));
+    log_error("http_calloc failed (%s)", strerror(errno));
     return -1;
   }
 
@@ -804,7 +908,7 @@ _httpd_decode_authorization(const char *_value, char **user, char **pass)
   if (b64Decode(&in, &out) < 0)
   {
     log_error("b64Decode failed");
-    free(tmp);
+    http_free(tmp);
     return -1;
   }
 #else
@@ -816,15 +920,15 @@ _httpd_decode_authorization(const char *_value, char **user, char **pass)
   if ((tmp2 = (unsigned char *)strstr((char *)tmp, ":")))
   {
     *tmp2++ = '\0';
-    *pass = strdup((char *)tmp2);
+    *pass = http_strdup((char *)tmp2);
   }
   else
   {
-    *pass = strdup("");
+    *pass = http_strdup("");
   }
-  *user = strdup((char *)tmp);
+  *user = http_strdup((char *)tmp);
 
-  free(tmp);
+  http_free(tmp);
 
   return 0;
 }
@@ -856,8 +960,8 @@ _httpd_authenticate_request(struct hrequest_t * req, httpd_auth auth)
   else
     log_info("Authentication failed for user=\"%s\"", user);
 
-  free(user);
-  free(pass);
+  http_free(user);
+  http_free(pass);
 
   return ret;
 }
@@ -1028,8 +1132,8 @@ httpd_set_header(httpd_conn_t * conn, const char *key, const char *value)
   {
     if (p->key && !strcmp(p->key, key))
     {
-      free(p->value);
-      p->value = strdup(value);
+      http_free(p->value);
+      p->value = http_strdup(value);
       return 1;
     }
   }
@@ -1165,8 +1269,10 @@ _httpd_start_thread(conndata_t * conn)
 #else
   pthread_attr_init(&(conn->attr));
 
+#if 0
 #ifdef PTHREAD_CREATE_DETACHED
   pthread_attr_setdetachstate(&(conn->attr), PTHREAD_CREATE_DETACHED);
+#endif
 #endif
 
   pthread_sigmask(SIG_BLOCK, &thrsigset, NULL);
@@ -1218,12 +1324,18 @@ httpd_run(void)
       switch (select(_httpd_socket.sock + 1, &fds, NULL, NULL, &timeout))
       {
       case 0:
+        if (!_httpd_run)
+          break;
         /* descriptor is not ready */
         continue;
       case -1:
+        if (!_httpd_run)
+          break;
         /* got a signal? */
         continue;
       default:
+        if (!_httpd_run)
+          break;
         /* no nothing */
         break;
       }
@@ -1257,17 +1369,21 @@ httpd_destroy(void)
 {
   hservice_t *tmp, *cur = _httpd_services_head;
 
+  hsocket_close(&_httpd_socket);
+
   while (cur != NULL)
   {
     tmp = cur->next;
     hservice_free(cur);
     cur = tmp;
   }
+  log_info("[OK] hservice_free");
 
   hsocket_module_destroy();
+  _httpd_connection_slots_free();
 
-  free(_httpd_connection);
-
+  nanohttp_users_free();
+  http_memcache_free();
   return;
 }
 
@@ -1300,18 +1416,18 @@ httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req, long *received,
   if (content_length == 0)
   {
     *received = 0;
-    if (!(postdata = (unsigned char *)malloc(1)))
+    if (!(postdata = (unsigned char *)http_malloc(1)))
     {
 
-      log_error("malloc failed (%s)", strerror(errno));
+      log_error("http_malloc failed (%s)", strerror(errno));
       return NULL;
     }
     postdata[0] = '\0';
     return postdata;
   }
-  if (!(postdata = (unsigned char *) malloc(content_length + 1)))
+  if (!(postdata = (unsigned char *) http_malloc(content_length + 1)))
   {
-    log_error("malloc failed (%)", strerror(errno));
+    log_error("http_malloc failed (%)", strerror(errno));
     return NULL;
   }
   if (http_input_stream_read(req->in, postdata, content_length) > 0)
@@ -1320,7 +1436,7 @@ httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req, long *received,
     postdata[content_length] = '\0';
     return postdata;
   }
-  free(postdata);
+  http_free(postdata);
   return NULL;
 }
 

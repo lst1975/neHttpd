@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -32,8 +94,10 @@ void nanohttp_users_free(void)
   {
     entry = ng_list_first_entry(&users,httpd_user_t,link);
     ng_list_del(&entry->link);
-    free(entry);
+    http_free(entry);
   }
+
+  log_info("[OK]");
 }
 
 static const httpd_user_t *__superuser=NULL;
@@ -65,7 +129,7 @@ static int __nanohttp_users_init__one(JSONPair_t *p)
   type = json_find_bykey(type->children,"value", 5);
   if (!usr || !pwd || !type)
     goto clean2;
-  entry = malloc(sizeof(*entry)+usr->valueLength+pwd->valueLength);
+  entry = http_malloc(sizeof(*entry)+usr->valueLength+pwd->valueLength);
   if (entry == NULL)
     goto clean2;
   if (type->valueLength == 13 && !memcmp(type->value, "Administrator", 13))
@@ -79,7 +143,7 @@ static int __nanohttp_users_init__one(JSONPair_t *p)
   }
   else
   {
-    free(entry);
+    http_free(entry);
     goto clean2;
   }
   entry->name.data = ((char *)(entry+1));
@@ -109,7 +173,7 @@ int nanohttp_users_init(void)
   {
     goto clean0;
   }
-  tmp.data = b->data = malloc(b->len);
+  tmp.data = b->data = http_malloc(b->len);
   if (b->data == NULL)
   {
     goto clean0;
@@ -164,11 +228,12 @@ int nanohttp_users_init(void)
       goto clean2;
   }
   err = 0;
+  log_info("[OK]");
 
 clean2:
   json_pairs_free(pair);
 clean1:
-  free(b->data);
+  http_free(b->data);
   b->data = NULL;
 clean0:
   return err;
@@ -214,7 +279,7 @@ nanohttp_pswd_enc(httpd_buf_t *b, const char *pswd, int len)
   unsigned char *p;
 
   b->size = BASE64_ENCODE_OUT_SIZE(len);
-  b->ptr = (unsigned char *)malloc(b->size + len);
+  b->ptr = (unsigned char *)http_malloc(b->size + len);
   if (b->ptr == NULL)
     return -1;
   p = b->ptr + b->size;
@@ -233,7 +298,7 @@ nanohttp_pswd_dec(httpd_buf_t *b, const char *pswd, int len)
   unsigned char *p;
 
   b->size = BASE64_DECODE_OUT_SIZE(len);
-  b->ptr = malloc(b->size + len);
+  b->ptr = http_malloc(b->size + len);
   if (b->ptr == NULL)
     return -1;
   p = b->ptr + b->size;
@@ -507,7 +572,7 @@ nanohttp_users_add(const char *name, int nameLen,
   entry = nanohttp_users_match(name, nameLen, NULL, 0);
   if (entry != NULL)
     return _N_http_user_error_EXIST;
-  entry = malloc(sizeof(*entry)+nameLen+pswdLen);
+  entry = http_malloc(sizeof(*entry)+nameLen+pswdLen);
   if (entry == NULL)
     return _N_http_user_error_SYS;
 
@@ -526,7 +591,7 @@ nanohttp_users_add(const char *name, int nameLen,
   if (__nanohttp_users2file() < 0)
   {
     ng_list_del(&entry->link);
-    free(entry);
+    http_free(entry);
     return _N_http_user_error_SYS;
   }
   
@@ -578,7 +643,7 @@ nanohttp_users_update(const char *name, int nameLen,
     type = old->type;
   }
 
-  entry = malloc(sizeof(*entry)+nameLen+pswdLen);
+  entry = http_malloc(sizeof(*entry)+nameLen+pswdLen);
   if (entry == NULL)
     return _N_http_user_error_SYS;
 
@@ -594,12 +659,12 @@ nanohttp_users_update(const char *name, int nameLen,
 
   ng_list_add_after(&entry->link, &old->link);
   ng_list_del(&old->link);
-  free(old);
+  http_free(old);
   
   if (__nanohttp_users2file() < 0)
   {
     ng_list_del(&entry->link);
-    free(entry);
+    http_free(entry);
     return _N_http_user_error_SYS;
   }
   

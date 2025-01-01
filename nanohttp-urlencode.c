@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 #include "nanohttp-urlencode.h"
 #include "nanohttp-logging.h"
 
@@ -430,10 +492,10 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
   uint8_t* encoded;
 
   if (!len) len = strlen((const char *)input);
-  b->ptr = encoded = (uint8_t*)malloc(sizeof(uint8_t) * len * 6);
+  b->ptr = encoded = (uint8_t*)http_malloc(sizeof(uint8_t) * len * 6);
   if (encoded == NULL)
   {
-    log_fatal("Failed to malloc.");
+    log_fatal("Failed to http_malloc.");
     return -1;
   }
 
@@ -528,10 +590,10 @@ int decode_url(httpd_buf_t *b, const uint8_t* input, int len)
   int out_cursor = 0;
 
   if (!len) len = strlen((const char *)input);
-  b->ptr = decoded = (uint8_t*)malloc(sizeof(uint8_t) * len);
+  b->ptr = decoded = (uint8_t*)http_malloc(sizeof(uint8_t) * len);
   if (decoded == NULL)
   {
-    log_fatal("Failed to malloc.");
+    log_fatal("Failed to http_malloc.");
     return -1;
   }
   
@@ -883,6 +945,8 @@ void convert_utf8_to_unicode_escape(const char *utf8,
   buffer->len = buf_ptr - (char *)buffer->ptr;
 }
 
+#if __NHTTP_DEBUG
+
 #define _TE_INPUT  "c\x01\xff\xfe\xfd"
 #define _TE_OUTPUT "c%01%C3%BF%C3%BE%C3%BD"
 
@@ -899,12 +963,13 @@ static void __test_encode_url(const char *output, int outlen,
     || memcmp(input, b.ptr, b.len))
   {
     log_verbose("test encode_url FAILED.");
-    free(b.ptr);
+    http_free(b.ptr);
     return;
   }
-  free(b.ptr);
+  http_free(b.ptr);
   log_verbose("test encode_url OK.");
 }
+
 
 /* "北京" */
 #define _TE_INPUT1  "\u5317\u4eac"
@@ -944,12 +1009,12 @@ __test_decode_url(const char *output, int outlen,
     || memcmp(input, b.ptr, b.len))
   {
     log_verbose("test decode_url FAILED.");
-    free(b.ptr);
+    http_free(b.ptr);
     return;
   }
   log_verbose("test decode_url OK.");
   log_verbose("%.*s", b.len, b.ptr);
-  free(b.ptr);
+  http_free(b.ptr);
 }
 
 static void test_decode_url1(void)
@@ -987,4 +1052,4 @@ void test_decode_url(void)
   test_decode_url2();
   test_decode_url3();
 }
-
+#endif

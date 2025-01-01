@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 #include "nanohttp-config.h"
 
 #include <stdio.h>
@@ -13,6 +75,7 @@
 #include "nanohttp-urlencode.h"
 #include "nanohttp-base64.h"
 #include "nanohttp-user.h"
+#include "nanohttp-ring.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const char *user, const char *password)
@@ -444,7 +507,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       do
       {
         int len;
-        bf = (unsigned char *)malloc(B64_DECLEN(sizeof(favorICON)-1)+1);
+        bf = (unsigned char *)http_malloc(B64_DECLEN(sizeof(favorICON)-1)+1);
         if (bf == NULL) break;
 #if __configUseStreamBase64
         ng_buffer_s in, out;
@@ -470,7 +533,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       while(0);
       
       if (bf != NULL)
-        free(bf);
+        http_free(bf);
     }
     else if (strcmp("data/setmib.json", path)
       && strcmp("data/add.json", req->path)
@@ -574,10 +637,10 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     
     log_debug("decoded query is : %.*s", in.len, in.cptr);
 
-    query = (unsigned char *)malloc(B64_DECLEN(in.len) + 1);
+    query = (unsigned char *)http_malloc(B64_DECLEN(in.len) + 1);
     if (query == NULL)
     {
-      log_error("Failed to malloc key");
+      log_error("Failed to http_malloc key");
       goto finished;
     }
     
@@ -588,14 +651,14 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       len = b64Decode(&in, &out);
       if (len < 0)
       {
-        free(in.ptr);
+        http_free(in.ptr);
         log_error("b64Decode failed");
         goto finished;
       }
 #else      
       len = base64_decode_string(in.ptr, query);
 #endif
-      free(in.ptr);
+      http_free(in.ptr);
       log_debug("decoded query is : %s", query);
     }
 
@@ -936,7 +999,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         goto finished;
       }
       
-      free(query);
+      http_free(query);
       json_pairs_free(pair);
       root_service(conn, req);
       return;
@@ -954,7 +1017,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     }
 
 finished:  
-    free(query);
+    http_free(query);
     json_pairs_free(pair);
     r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
     herror_release(r);
@@ -1082,17 +1145,23 @@ main(int argc, char **argv)
   herror_t status;
 
   nanohttp_log_set_loglevel(NANOHTTP_LOG_VERBOSE);
-
-  test_encode_url();
-  test_decode_url();
-  json_test();
-  
+    
   if (httpd_init(argc, argv))
   {
     fprintf(stderr, "Cannot init httpd\n");
     goto error0;
   }
 
+#if __NG_RING_DEBUG
+  test_ring();
+#endif
+
+#if __NHTTP_DEBUG
+  test_encode_url();
+  test_decode_url();
+  json_test();
+#endif
+    
   if ((status = httpd_register_secure("/", root_service, 
     simple_authenticator, "ROOT")) != H_OK)
   {
@@ -1174,12 +1243,6 @@ main(int argc, char **argv)
     goto error1;
   }
 
-  if (nanohttp_users_init() < 0)
-  {
-    fprintf(stderr, "Cannot init users.\n");
-    goto error1;
-  }
-
   if ((status = httpd_run()) != H_OK)
   {
     fprintf(stderr, "Cannot run httpd (%s)\n", herror_message(status));
@@ -1187,7 +1250,7 @@ main(int argc, char **argv)
     goto error1;
   }
 
-  nanohttp_users_free();
+  fprintf(stderr, "Process finished\n");
   httpd_destroy();
   return 0;
     

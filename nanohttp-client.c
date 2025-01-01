@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 /** @file nanohttp-client.c nanoHTTP client interface */
 /******************************************************************
 *  $Id: nanohttp-client.c,v 1.54 2007/11/03 22:40:10 m0gg Exp $
@@ -5,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is free software; you can redistribute it and/or
+* This library is http_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -96,24 +158,24 @@ httpc_new(void)
   herror_t status;
   httpc_conn_t *res;
  
-  if (!(res = (httpc_conn_t *) malloc(sizeof(httpc_conn_t))))
+  if (!(res = (httpc_conn_t *) http_malloc(sizeof(httpc_conn_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
   }
 
-  if (!(res->sock = (struct hsocket_t *)malloc(sizeof(struct hsocket_t))))
+  if (!(res->sock = (struct hsocket_t *)http_malloc(sizeof(struct hsocket_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
-    free(res);
+    log_error("http_malloc failed (%s)", strerror(errno));
+    http_free(res);
     return NULL;
   }
 
-  if (!(res->url = (struct hurl_t *)malloc(sizeof(struct hurl_t))))
+  if (!(res->url = (struct hurl_t *)http_malloc(sizeof(struct hurl_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
-    free(res->sock);
-    free(res);
+    log_error("http_malloc failed (%s)", strerror(errno));
+    http_free(res->sock);
+    http_free(res);
     return NULL;
   }
 
@@ -121,8 +183,8 @@ httpc_new(void)
   {
     log_warn("hsocket_init failed (%s)", herror_message(status));
     hurl_free(res->url);
-    free(res->sock);
-    free(res);
+    http_free(res->sock);
+    http_free(res);
     return NULL;
   }
 
@@ -159,8 +221,8 @@ httpc_free(httpc_conn_t * conn)
   hurl_free(conn->url);
 
   if (conn->sock)
-    free(conn->sock);
-  free(conn);
+    http_free(conn->sock);
+  http_free(conn);
 
   return;
 }
@@ -227,8 +289,8 @@ httpc_set_header(httpc_conn_t *conn, const char *key, const char *value)
   {
     if (p->key && !strcmp(p->key, key))
     {
-      free(p->value);
-      p->value = strdup(value);
+      http_free(p->value);
+      p->value = http_strdup(value);
       return 1;
     }
   }
@@ -258,7 +320,7 @@ _httpc_set_basic_authorization_header(httpc_conn_t *conn,
   inlen  = ulen + plen + 1;
   outlen = B64_ENCLEN(inlen);
 
-  p = (unsigned char *)malloc(6+inlen+1+outlen);
+  p = (unsigned char *)http_malloc(6+inlen+1+outlen);
   if (p == NULL)
   {
     log_fatal("Malloc failed.");
@@ -276,7 +338,7 @@ _httpc_set_basic_authorization_header(httpc_conn_t *conn,
   p[6+len]='\0';
   
   len = httpc_set_header(conn, key, (char *)p);
-  free(p);
+  http_free(p);
   return len;
 }
 #else
@@ -300,7 +362,7 @@ _httpc_set_basic_authorization_header(httpc_conn_t *conn,
   inlen  = ulen + plen + 1;
   outlen = B64_ENCLEN(inlen);
 
-  p = (unsigned char *)malloc(6+inlen+1+outlen);
+  p = (unsigned char *)http_malloc(6+inlen+1+outlen);
   if (p == NULL)
   {
     log_fatal("Malloc failed.");
@@ -321,7 +383,7 @@ _httpc_set_basic_authorization_header(httpc_conn_t *conn,
   p[6+len]='\0';
   
   len = httpc_set_header(conn, key, (char *)p);
-  free(p);
+  http_free(p);
   return len;
 }
 #endif

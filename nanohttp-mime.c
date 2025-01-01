@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 /** @file nanohttp-mime.c MIME handling */
 /******************************************************************
 *  _  _   _   _  _   __
@@ -9,7 +71,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003-2004  Ferhat Ayaz
 *
-* This library is free software; you can redistribute it and/or
+* This library is http_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -87,8 +149,7 @@ typedef enum _MIME_read_status
 #define MIME_PARSER_BUFFER_SIZE 1054
 
 
-typedef MIME_read_status(*MIME_read_function) (void *, unsigned char *,
-                                               int *);
+typedef MIME_read_status(*MIME_read_function) (void *, unsigned char *, int *);
 
 
 /**
@@ -577,9 +638,9 @@ _mime_part_begin(void *data)
  
   cbdata = (mime_callback_data_t *) data;
   log_verbose("Begin Part (%p)", data);
-  if (!(part = (struct part_t *) malloc(sizeof(struct part_t))))
+  if (!(part = (struct part_t *) http_malloc(sizeof(struct part_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
     return;
   }
   part->next = NULL;
@@ -821,9 +882,9 @@ mime_message_parse(struct http_input_stream_t * in, const char *root_id,
 
   mime_callback_data_t *cbdata;
  
-  if (!(cbdata = (mime_callback_data_t *) malloc(sizeof(mime_callback_data_t))))
+  if (!(cbdata = (mime_callback_data_t *) http_malloc(sizeof(mime_callback_data_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
   }
 
@@ -836,10 +897,10 @@ mime_message_parse(struct http_input_stream_t * in, const char *root_id,
   strcpy(cbdata->root_id, root_id);
   strcpy(cbdata->root_dir, dest_dir);
 
-  if (!(message = (struct attachments_t *) malloc(sizeof(struct attachments_t))))
+  if (!(message = (struct attachments_t *) http_malloc(sizeof(struct attachments_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
-    free(cbdata);
+    log_error("http_malloc failed (%s)", strerror(errno));
+    http_free(cbdata);
     return NULL;
   }
   cbdata->message = message;
@@ -857,7 +918,7 @@ mime_message_parse(struct http_input_stream_t * in, const char *root_id,
 
   if (status == MIME_PARSER_OK)
   {
-    free(cbdata);
+    http_free(cbdata);
     return message;
   }
   else
@@ -879,9 +940,9 @@ mime_message_parse_from_file(FILE * in, const char *root_id,
 
   mime_callback_data_t *cbdata;
  
-  if (!(cbdata = (mime_callback_data_t *) malloc(sizeof(mime_callback_data_t))))
+  if (!(cbdata = (mime_callback_data_t *) http_malloc(sizeof(mime_callback_data_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
   }
 
@@ -894,10 +955,10 @@ mime_message_parse_from_file(FILE * in, const char *root_id,
   strcpy(cbdata->root_id, root_id);
   strcpy(cbdata->root_dir, dest_dir);
 
-  if (!(message = (struct attachments_t *) malloc(sizeof(struct attachments_t))))
+  if (!(message = (struct attachments_t *) http_malloc(sizeof(struct attachments_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
-    free(cbdata);
+    log_error("http_malloc failed (%s)", strerror(errno));
+    http_free(cbdata);
     return NULL;
   }
 
@@ -916,7 +977,7 @@ mime_message_parse_from_file(FILE * in, const char *root_id,
 
   if (status == MIME_PARSER_OK)
   {
-    free(cbdata);
+    http_free(cbdata);
     return message;
   }
   else

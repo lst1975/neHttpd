@@ -60,55 +60,65 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef __nanohttp_buffer_h
-#define __nanohttp_buffer_h
+#ifndef __nanohttp_mem_h
+#define __nanohttp_mem_h
 
-typedef struct {
-  union{
-    void *data;
-    const char *cptr;
-    unsigned char *ptr;
-    char *buf;
-  };
-  char *p;
-  size_t size;
-  size_t len;
-  size_t nbytes;
-} httpd_buf_t;
+#include "nanohttp-defs.h"
 
-static inline void BUF_GO(httpd_buf_t *b, size_t len)
+void *__http_malloc(size_t size
+#if __NHTTP_MEM_DEBUG  
+  , const char *file, int line
+#endif
+);
+void __http_free(void *ptr);
+
+void http_memcache_free(void);
+int http_memcache_init(void);
+
+#if __NHTTP_MEM_DEBUG  
+#define http_malloc(size) __http_malloc(size, __FILE__, __LINE__)
+#define http_strdup(ptr) __http_strdup(ptr, __FILE__, __LINE__)
+#define http_calloc(n,size) __http_calloc(n,size, __FILE__, __LINE__)
+#else
+#define http_malloc(size) __http_malloc(size)
+#define http_strdup(ptr) __http_strdup(ptr)
+#define http_calloc(n,size) __http_calloc(n,size)
+#endif
+
+#define http_free(ptr) __http_free(ptr)
+#define os_malloc(size) malloc(size)
+#define os_free(ptr) free(ptr)
+
+static inline char *__http_strdup(const char *p
+#if __NHTTP_MEM_DEBUG  
+    , const char *file, int line
+#endif
+)
 {
-  b->p   += len;
-  b->len += len;
+  size_t len = strlen(p)+1;
+  void *np = __http_malloc(len
+#if __NHTTP_MEM_DEBUG  
+      , file, line
+#endif
+    );
+  if (np == NULL)
+    return NULL;
+  memcpy(np, p, len);
+  return np;
 }
 
-static inline void BUF_SET_CHR(httpd_buf_t *b, char c)
+static inline char *__http_calloc(size_t n, size_t size
+#if __NHTTP_MEM_DEBUG  
+    , const char *file, int line
+#endif
+)
 {
-  b->p[0] = (char)c;
-}
-
-static inline size_t BUF_LEN(httpd_buf_t *b)
-{
-  return b->len;
-}
-
-static inline char *BUF_CUR_PTR(httpd_buf_t *b)
-{
-  return b->p;
-}
-
-static inline size_t BUF_REMAIN(httpd_buf_t *b)
-{
-  return b->size - b->len;
-}
-
-static inline void BUF_SIZE_INIT(httpd_buf_t *b, char *buf, size_t size)
-{
-  b->p      = buf;
-  b->data   = buf;
-  b->len    = 0;
-  b->size   = size;
-  b->nbytes = 0;
+  return __http_malloc(n*size
+#if __NHTTP_MEM_DEBUG  
+      , file, line
+#endif
+    );
 }
 
 #endif
+

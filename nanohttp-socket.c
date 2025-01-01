@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 /** @file nanohttp-socket.c Socket wrapper */
 /******************************************************************
 *  $Id: nanohttp-socket.c,v 1.71 2007/11/03 22:40:14 m0gg Exp $
@@ -5,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is free software; you can redistribute it and/or
+* This library is http_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -94,11 +156,14 @@ typedef int ssize_t;
 #include "nanohttp-ssl.h"
 #endif
 
-#define	HSOCKET_FREE	-1
-
 static int _hsocket_timeout = 10;
 
 #ifdef WIN32
+static inline int _hsocket_should_again(int err)
+{
+  return (err == WSAEWOULDBLOCK);
+}
+
 static herror_t
 _hsocket_sys_accept(struct hsocket_t * sock, struct hsocket_t * dest)
 {
@@ -130,12 +195,16 @@ _hsocket_sys_close(struct hsocket_t * sock)
 {
   char junk[10];
 
+  if (sock->sock == HSOCKET_FREE)
+    return;
+  
   /* shutdown(sock,SD_RECEIVE); */
 
   shutdown(sock->sock, SD_SEND);
   while (recv(sock->sock, junk, sizeof(junk), 0) > 0);
     /* nothing */
   closesocket(sock->sock);
+  sock->sock = HSOCKET_FREE;
 
   return;
 }
@@ -157,6 +226,11 @@ _hsocket_module_sys_destroy(void)
   return;
 }
 #else
+static inline int _hsocket_should_again(int err)
+{
+  return (err == EWOULDBLOCK || err == EAGAIN || err == EINTR);
+}
+
 static inline void
 _hsocket_module_sys_init(int argc, char **argv)
 {
@@ -176,21 +250,32 @@ _hsocket_sys_accept(struct hsocket_t * sock, struct hsocket_t * dest)
 
   len = sizeof(struct sockaddr_in);
 
-  if ((dest->sock = accept(sock->sock, (struct sockaddr *) &(dest->addr), &len)) == -1)
+  while (1)
   {
-    log_warn("accept failed (%s)", strerror(errno));
-    return herror_new("hsocket_accept", HSOCKET_ERROR_ACCEPT, "Cannot accept network connection (%s)", strerror(errno));
+    dest->sock = accept(sock->sock, (struct sockaddr *) &(dest->addr), &len);
+    if (dest->sock != HSOCKET_FREE)
+      break;
+    if (!_hsocket_should_again(errno))
+    {
+      log_warn("accept failed (%s)", strerror(errno));
+      return herror_new("hsocket_accept", HSOCKET_ERROR_ACCEPT, 
+        "Cannot accept network connection (%s)", strerror(errno));
+    }
   }
-
+  
   return H_OK;
 }
 
 static inline void
 _hsocket_sys_close(struct hsocket_t * sock)
 {
+  if (sock->sock == HSOCKET_FREE)
+    return;
+  
   shutdown(sock->sock, SHUT_RDWR);
 
   close(sock->sock);
+  sock->sock = HSOCKET_FREE;
 
   return;
 }
@@ -213,6 +298,7 @@ hsocket_module_init(int argc, char **argv)
   }
 #endif
 
+  log_info("[OK]");
   return H_OK;
 }
 
@@ -221,6 +307,7 @@ hsocket_module_destroy(void)
 {
   _hsocket_module_sys_destroy();
 
+  log_info("[OK]");
   return;
 }
 
@@ -230,6 +317,7 @@ hsocket_init(struct hsocket_t * sock)
   memset(sock, 0, sizeof(struct hsocket_t));
   sock->sock = HSOCKET_FREE;
 
+  log_info("[OK]");
   return H_OK;
 }
 
@@ -378,28 +466,29 @@ hsocket_listen(struct hsocket_t * sock)
 void
 hsocket_close(struct hsocket_t * sock)
 {
-  log_verbose("closing socket %p (%d)...", sock, sock->sock);
+  if (sock->sock != HSOCKET_FREE)
+  {
+    log_verbose("closing socket %p (%d)...", sock, sock->sock);
 
 #ifdef HAVE_SSL
-  hssl_cleanup(sock);
+    hssl_cleanup(sock);
 #endif
 
-  _hsocket_sys_close(sock);
+    _hsocket_sys_close(sock);
 
-  sock->bytes_received = 0;
-  sock->bytes_transmitted = 0;
+    sock->bytes_received = 0;
+    sock->bytes_transmitted = 0;
 
-  log_verbose("socket closed");
-
+    log_verbose("socket closed");
+  }
+  log_info("[OK]");
   return;
 }
 
 herror_t
 hsocket_send(struct hsocket_t * sock, const unsigned char * bytes, size_t n)
 {
-#ifdef HAVE_SSL
-  herror_t status;
-#endif
+  herror_t status = H_OK;
   size_t total = 0;
   size_t size;
 
@@ -415,12 +504,20 @@ hsocket_send(struct hsocket_t * sock, const unsigned char * bytes, size_t n)
     if ((status = hssl_write(sock, bytes + total, n, &size)) != H_OK)
     {
       log_warn("hssl_write failed (%s)", herror_message(status));
-      return status;
     }
 #else
     if ((size = send(sock->sock, bytes + total, n, 0)) == -1)
-      return herror_new("hsocket_send", HSOCKET_ERROR_SEND, "send failed (%s)", strerror(errno));
+    {
+      status = herror_new("hsocket_send", HSOCKET_ERROR_SEND, "send failed (%s)", strerror(errno));
+    }
 #endif
+
+    if (status != H_OK && _hsocket_should_again(errno))
+    {
+      herror_release(status);
+      continue;
+    }
+
     sock->bytes_received += size;
 
     n -= size;
@@ -441,6 +538,7 @@ hsocket_send_string(struct hsocket_t * sock, const char *str)
 int
 hsocket_select_recv(int sock, char *buf, size_t len)
 {
+  int n;
   struct timeval timeout;
   fd_set fds;
 
@@ -450,22 +548,43 @@ hsocket_select_recv(int sock, char *buf, size_t len)
   timeout.tv_sec = _hsocket_timeout;
   timeout.tv_usec = 0;
 
-  if (select(sock + 1, &fds, NULL, NULL, &timeout) == 0)
+  while (1)
   {
-    errno = ETIMEDOUT;
-    log_verbose("Socket %d timed out", sock);
-    return -1;
+    n = select(sock + 1, &fds, NULL, NULL, &timeout);
+    if (n == 0)
+    {
+      errno = ETIMEDOUT;
+      log_verbose("Socket %d timed out", sock);
+      return -1;
+    }
+    else if (n == -1)
+    {
+      if (!_hsocket_should_again(errno))
+      {
+        log_verbose("Socket %d select error", sock);
+        return -1;
+      }
+    }
+  	else
+  	{
+  	  break;
+  	}
+  }
+  
+  while (1)
+  {
+    n = recv(sock, buf, len, 0);
+    if (n != -1 || !_hsocket_should_again(errno))
+      break;
   }
 
-  return recv(sock, buf, len, 0);
+  return n;
 }
 
 herror_t
 hsocket_recv(struct hsocket_t * sock, unsigned char * buffer, size_t total, int force, size_t *received)
 {
-#ifdef HAVE_SSL
-  herror_t status;
-#endif
+  herror_t status = H_OK;
   size_t totalRead;
   size_t count;
 
@@ -479,12 +598,18 @@ hsocket_recv(struct hsocket_t * sock, unsigned char * buffer, size_t total, int 
     if ((status = hssl_read(sock, (char *)buffer + totalRead, (size_t) total - totalRead, &count)) != H_OK)
     {
       log_warn("hssl_read failed (%s)", herror_message(status));
-      return status;
     }
 #else
     if ((count = hsocket_select_recv(sock->sock, (char *)buffer + totalRead, (size_t) total - totalRead)) == -1)
-      return herror_new("hsocket_recv", HSOCKET_ERROR_RECEIVE, "recv failed (%s)", strerror(errno));
+    {
+      status = herror_new("hsocket_recv", HSOCKET_ERROR_RECEIVE, "recv failed (%s)", strerror(errno));
+    }
 #endif
+    if (status != H_OK)
+    {
+      return status;
+    }
+
     sock->bytes_received += count;
 
     if (!force)
@@ -523,3 +648,41 @@ hsocket_set_timeout(int secs)
 
   return;
 }
+
+herror_t http_header_recv(struct hsocket_t *sock, char *buffer, size_t size)
+{
+  size_t readed=0;
+  herror_t status;
+  httpd_buf_t p;
+  const char *ptr, *pln;
+
+  BUF_SIZE_INIT(&p, buffer, size);
+  ptr = p.buf;
+
+  /* Read header */
+  while (1)
+  {
+    if ((status = hsocket_recv(sock, (unsigned char *)BUF_CUR_PTR(&p), 
+      BUF_REMAIN(&p), 0, &readed)) != H_OK)
+    {
+      log_error("hsocket_recv failed (%s)", herror_message(status));
+      return status;
+    }
+    BUF_GO(&p, readed);
+
+    /* log_error("buffer=\"%s\"", buffer); */
+    if (BUF_CUR_PTR(&p) - ptr < 4)
+      continue;
+    
+    BUF_SET_CHR(&p, '\0');
+    pln = strstr(ptr, "\n\r\n");
+    if (pln == NULL)
+      pln = strstr(ptr, "\n\n");
+    if (pln != NULL)
+      break;
+    ptr = BUF_CUR_PTR(&p) - 3;
+  }
+
+  return H_OK;
+}
+

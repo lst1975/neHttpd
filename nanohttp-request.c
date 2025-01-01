@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 /** @file nanohttp-request.c HTTP request handling */
 /******************************************************************
 *  $Id: nanohttp-request.c,v 1.21 2007/11/03 22:40:11 m0gg Exp $
@@ -5,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is free software; you can redistribute it and/or
+* This library is http_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -61,16 +123,16 @@ hrequest_new(void)
 {
   struct hrequest_t *req;
  
-  if (!(req = (struct hrequest_t *) malloc(sizeof(struct hrequest_t))))
+  if (!(req = (struct hrequest_t *) http_malloc(sizeof(struct hrequest_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
   }
 
-  if (!(req->statistics = (struct request_statistics *)malloc(sizeof(struct request_statistics))))
+  if (!(req->statistics = (struct request_statistics *)http_malloc(sizeof(struct request_statistics))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
-    free(req);
+    log_error("http_malloc failed (%s)", strerror(errno));
+    http_free(req);
     return NULL;
   }
 
@@ -154,7 +216,7 @@ _hrequest_parse_header(char *data)
       tmp2 = saveptr2;
       if (tmp2 != NULL)
       {
-        /* req->spec = (char *) malloc(strlen(tmp2) + 1); strcpy(req->spec,
+        /* req->spec = (char *) http_malloc(strlen(tmp2) + 1); strcpy(req->spec,
            tmp2); */
         if (!strcmp(tmp2, "HTTP/1.0"))
           req->version = HTTP_1_0;
@@ -173,7 +235,7 @@ _hrequest_parse_header(char *data)
         tmp2 = saveptr2;
 
         /* save path */
-        /* req->path = (char *) malloc(strlen(key) + 1); */
+        /* req->path = (char *) http_malloc(strlen(key) + 1); */
         strncpy(req->path, key, REQUEST_MAX_PATH_SIZE-1);
 
         /* parse options */
@@ -194,9 +256,9 @@ _hrequest_parse_header(char *data)
           /* create option pair */
           if (opt_key != NULL)
           {
-            if (!(tmppair = (hpair_t *) malloc(sizeof(hpair_t))))
+            if (!(tmppair = (hpair_t *) http_malloc(sizeof(hpair_t))))
             {
-              log_error("malloc failed (%s)", strerror(errno));
+              log_error("http_malloc failed (%s)", strerror(errno));
               return NULL;
             }
 
@@ -212,8 +274,8 @@ _hrequest_parse_header(char *data)
 
             /* fill hpairnode_t struct */
             qpair->next = NULL;
-            qpair->key = strdup(opt_key);
-            qpair->value = strdup(opt_value);
+            qpair->key = http_strdup(opt_key);
+            qpair->value = http_strdup(opt_value);
           }
         }
       }
@@ -261,9 +323,9 @@ hrequest_free(struct hrequest_t * req)
     attachments_free(req->attachments);
 
   if (req->statistics)
-    free(req->statistics);
+    http_free(req->statistics);
 
-  free(req);
+  http_free(req);
 
   return;
 }
@@ -271,32 +333,14 @@ hrequest_free(struct hrequest_t * req)
 herror_t
 hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t ** out)
 {
-  size_t i, readed;
   herror_t status;
   struct hrequest_t *req;
   char buffer[MAX_HEADER_SIZE + 1];
   struct attachments_t *mimeMessage;
 
-  memset(buffer, 0, MAX_HEADER_SIZE);
-  /* Read header */
-  for(i=0; i < MAX_HEADER_SIZE; i++)
+  if ((status = http_header_recv(sock, buffer, MAX_HEADER_SIZE)) != H_OK)
   {
-    if ((status = hsocket_recv(sock, (unsigned char *)&(buffer[i]), 1, 1, &readed)) != H_OK)
-    {
-      log_error("hsocket_recv failed (%s)", herror_message(status));
-      return status;
-    }
-
-    buffer[i + 1] = '\0';       /* for strmp */
-
-    /* log_error("buffer=\"%s\"", buffer); */
-
-    if (i > 3)
-    {
-      if (!strcmp(&(buffer[i - 1]), "\n\n") ||
-          !strcmp(&(buffer[i - 2]), "\n\r\n"))
-        break;
-    }
+    return status;
   }
 
   /* Create response */

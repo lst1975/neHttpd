@@ -1,3 +1,65 @@
+/**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
+ *               TDMA Time-Sensitive-Network Wifi V1.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ **************************************************************************************
+ *                              
+ *                    https://github.com/lst1975/TDMA-ng-Wifi
+ *                              
+ **************************************************************************************
+ */
+/*************************************************************************************
+ *                               ngRTOS Kernel V2.0.1
+ * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
+ **************************************************************************************
+ *
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * THE ABOVE COPYRIGHT NOTICE AND THIS PERMISSION NOTICE SHALL BE INCLUDED IN ALL
+ * COPIES OR SUBSTANTIAL PORTIONS OF THE SOFTWARE. WHAT'S MORE, A DECLARATION OF 
+ * NGRTOS MUST BE DISPLAYED IN THE FINAL SOFTWARE OR PRODUCT RELEASE. NGRTOS HAS 
+ * NOT ANY LIMITATION OF CONTRIBUTIONS TO IT, WITHOUT ANY LIMITATION OF CODING STYLE, 
+ * DRIVERS, CORE, APPLICATIONS, LIBRARIES, TOOLS, AND ETC. ANY LICENSE IS PERMITTED 
+ * UNDER THE ABOVE LICENSE. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF 
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
+ * EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES 
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
+ *
+ *************************************************************************************
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
+ **************************************************************************************
+ */
 /** @file nanohttp-common.c Common functions and definitions */
 /******************************************************************
 *  $Id: nanohttp-common.c,v 1.39 2007/11/03 22:40:10 m0gg Exp $
@@ -5,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is free software; you can redistribute it and/or
+* This library is http_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -62,15 +124,15 @@ hpairnode_new(const char *key, const char *value, hpair_t * next)
   hpair_t *pair;
 
   log_verbose("new pair ('%s','%s')", SAVE_STR(key), SAVE_STR(value));
-  if (!(pair = (hpair_t *) malloc(sizeof(hpair_t))))
+  if (!(pair = (hpair_t *) http_malloc(sizeof(hpair_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
   }
 
   if (key != NULL)
   {
-    pair->key = strdup(key);
+    pair->key = http_strdup(key);
   }
   else
   {
@@ -79,7 +141,7 @@ hpairnode_new(const char *key, const char *value, hpair_t * next)
 
   if (value != NULL)
   {
-    pair->value = strdup(value);
+    pair->value = http_strdup(value);
   }
   else
   {
@@ -97,7 +159,7 @@ hpairnode_parse(const char *str, const char *delim, hpair_t * next)
   hpair_t *pair;
   char *key, *value;
 
-  pair = (hpair_t *) malloc(sizeof(hpair_t));
+  pair = (hpair_t *) http_malloc(sizeof(hpair_t));
   pair->key = "";
   pair->value = "";
   pair->next = next;
@@ -106,14 +168,14 @@ hpairnode_parse(const char *str, const char *delim, hpair_t * next)
 
   if (key != NULL)
   {
-    pair->key = strdup(key);
+    pair->key = http_strdup(key);
   }
   if (value != NULL)
   {
     /* skip white space */
     for (; *value == ' '; value++) ;
 
-    pair->value = strdup(value);
+    pair->value = http_strdup(value);
   }
   return pair;
 }
@@ -189,12 +251,12 @@ hpairnode_free(hpair_t * pair)
     return;
 
   if (pair->key)
-    free(pair->key);
+    http_free(pair->key);
 
   if (pair->value)
-    free(pair->value);
+    http_free(pair->value);
 
-  free(pair);
+  http_free(pair);
 
   return;
 }
@@ -276,7 +338,7 @@ content_type_new(const char *content_type_str)
 
 
   /* Create object */
-  ct = (content_type_t *) malloc(sizeof(content_type_t));
+  ct = (content_type_t *) http_malloc(sizeof(content_type_t));
   ct->params = NULL;
 
   len = strlen(content_type_str);
@@ -356,7 +418,7 @@ content_type_free(content_type_t * ct)
     return;
 
   hpairnode_free_deep(ct->params);
-  free(ct);
+  http_free(ct);
 
   return;
 }
@@ -366,9 +428,9 @@ part_new(const char *id, const char *filename, const char *content_type, const c
 {
   struct part_t *part;
  
-  if (!(part = (struct part_t *) malloc(sizeof(struct part_t))))
+  if (!(part = (struct part_t *) http_malloc(sizeof(struct part_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
   }
 
@@ -415,7 +477,7 @@ part_free(struct part_t * part)
 
   hpairnode_free_deep(part->header);
 
-  free(part);
+  http_free(part);
 }
 
 struct attachments_t *
@@ -423,9 +485,9 @@ attachments_new(void)               /* should be used internally */
 {
   struct attachments_t *attachments;
  
-  if (!(attachments = (struct attachments_t *) malloc(sizeof(struct attachments_t))))
+  if (!(attachments = (struct attachments_t *) http_malloc(sizeof(struct attachments_t))))
   {
-    log_error("malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
   }
 
@@ -474,9 +536,8 @@ attachments_free(struct attachments_t *message)
   if (message->root_part)
     part_free(message->root_part);
 
-  free(message);
+  http_free(message);
 
   return;
 }
-
 

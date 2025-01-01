@@ -1,9 +1,10 @@
 /**************************************************************************************
+ *          Embedded HTTP Server with Web Configuraion Framework  V2.0.0-beta
  *               TDMA Time-Sensitive-Network Wifi V1.0.1
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
@@ -34,7 +35,7 @@
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
@@ -55,8 +56,8 @@
  * IN THE SOFTWARE.
  *
  *************************************************************************************
- *                              https://www.ngRTOS.org
- *                              https://github.com/ngRTOS
+ *                              https://github.com/lst1975/ngRTOS
+ *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
 #ifndef  __ng_LIST_h__
@@ -66,47 +67,7 @@
 extern "C" {
 #endif
 
-#ifndef offsetof
-/** Return the offset of a field in a structure. */
-#define offsetof(TYPE, MEMBER)  __builtin_offsetof (TYPE, MEMBER)
-#endif
-
-/**
- * short definition to mark a function parameter unused
- */
-#if defined(_MSC_VER)
-#define __rte_unused
-#else
-#define __rte_unused __attribute__((__unused__))
-#endif
-
-/**
- * Return pointer to the wrapping struct instance.
- *
- * Example:
- *
- *  struct wrapper {
- *      ...
- *      struct child c;
- *      ...
- *  };
- *
- *  struct child *x = obtain(...);
- *  struct wrapper *w = container_of(x, struct wrapper, c);
- */
-#ifndef container_of
-#if defined(_MSC_VER)
-#define container_of(ptr, type, member) \
-			((type *)((uintptr_t)(ptr) - offsetof(type, member)))
-#else
-#define container_of(ptr, type, member)	__extension__ ({		\
-			const typeof(((type *)0)->member) *_ptr = (ptr); \
-			__rte_unused type *_target_ptr =	\
-				(type *)(ptr);				\
-			(type *)(((uintptr_t)_ptr) - offsetof(type, member)); \
-		})
-#endif
-#endif
+#include "nanohttp-defs.h"
 
 #define ng_WRITE_ONCE(a,v)        ((a) = (v))
 #define ng_READ_ONCE(v)           (v)
@@ -142,7 +103,7 @@ struct ng_list_head {
   (entry)->prev = NG_LIST_POISON2; \
 }
 #else
-#define __ng_list_poison_entry(entry) (void)(entry)
+#define __ng_list_poison_entry(entry) HTTPD_UNUSED(entry)
 #endif  
 
 /*
