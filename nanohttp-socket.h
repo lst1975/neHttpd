@@ -124,7 +124,10 @@ struct hsocket_t
 #else
   int sock;
 #endif
-  struct sockaddr_in addr;
+  union{
+    struct sockaddr_in addr;
+    struct sockaddr_in6 addr6;
+  };
   size_t bytes_transmitted;
   size_t bytes_received;
   void *ssl;
@@ -203,7 +206,7 @@ extern void hsocket_close(struct hsocket_t *sock);
  *
  * @see hsocket_listen()
  */
-extern herror_t hsocket_bind(struct hsocket_t *sock, unsigned short port);
+extern herror_t hsocket_bind(uint8_t fam, struct hsocket_t *sock, unsigned short port);
 
 /** This function sets the socket to the listen mode. You must bind the
  * socket to a port with hsocket_bind() before you can listen to the

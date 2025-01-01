@@ -380,14 +380,16 @@ hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
 }
 
 herror_t
-hsocket_bind(struct hsocket_t *dsock, unsigned short port)
+hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
 {
   struct hsocket_t sock;
-  struct sockaddr_in addr;
-  int opt = 1;
+  int salen;
+  struct sockaddr *addr;
+  
+  int opt = 1, flags;
 
   /* create socket */
-  if ((sock.sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+  if ((sock.sock = socket(fam, SOCK_STREAM, 0)) == -1)
   {
     log_error("Cannot create socket (%s)", strerror(errno));
     return herror_new("hsocket_bind", HSOCKET_ERROR_CREATE,
@@ -395,21 +397,52 @@ hsocket_bind(struct hsocket_t *dsock, unsigned short port)
   }
 
   // Set FD_CLOEXEC on the file descriptor
-  int flags = fcntl(sock.sock, F_GETFD);
+  flags = fcntl(sock.sock, F_GETFD);
   if (flags == -1 || fcntl(sock.sock, F_SETFD, flags | FD_CLOEXEC) == -1) {
+    close(sock.sock);
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
                       "Socket error (%s)", strerror(errno));
   }
   
-  setsockopt(sock.sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-  /* bind socket */
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(port);
-  addr.sin_addr.s_addr = INADDR_ANY;
-  memset(&(addr.sin_zero), '\0', 8);    /* zero the rest of the struct */
-
-  if (bind(sock.sock, (struct sockaddr *) &addr, sizeof(struct sockaddr)) == -1)
+  if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
   {
+    close(sock.sock);
+    return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
+                      "Socket SOL_SOCKET SO_REUSEADDR (%s)", 
+                      strerror(errno));
+  }
+  
+  if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0)
+  {
+    close(sock.sock);
+    return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
+                      "Socket SOL_SOCKET SO_REUSEPORT (%s)", 
+                      strerror(errno));
+  }
+  
+  /* bind socket */
+  if (fam == AF_INET)
+  {
+    addr = (struct sockaddr *)&dsock->addr;
+    memset(addr, 0, sizeof(dsock->addr));
+    dsock->addr.sin_family = AF_INET;
+    dsock->addr.sin_port = htons(port);
+    dsock->addr.sin_addr.s_addr = INADDR_ANY;
+    salen = sizeof(dsock->addr);
+  }
+  else
+  {
+    addr = (struct sockaddr *)&dsock->addr6;
+    memset(addr, 0, sizeof(dsock->addr6));
+    dsock->addr6.sin6_family = AF_INET6;
+    dsock->addr6.sin6_port = htons(port);
+    dsock->addr6.sin6_addr = in6addr_any;
+    salen = sizeof(dsock->addr6);
+  }
+
+  if (bind(sock.sock, (struct sockaddr *)addr, salen) == -1)
+  {
+    close(sock.sock);
     log_error("Cannot bind socket (%s)", strerror(errno));
     return herror_new("hsocket_bind", HSOCKET_ERROR_BIND, "Socket error (%s)",
                       strerror(errno));

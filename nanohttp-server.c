@@ -204,7 +204,8 @@ conndata_t;
  */
 static volatile int _httpd_run = 1;
 
-static struct hsocket_t _httpd_socket = {.sock = HSOCKET_FREE, .ssl = NULL};
+static struct hsocket_t _httpd_socket4 = {.sock = HSOCKET_FREE, .ssl = NULL};
+static struct hsocket_t _httpd_socket6 = {.sock = HSOCKET_FREE, .ssl = NULL};
 static int _httpd_port = _nanoConfig_HTTPD_PORT;
 static int _httpd_max_connections = _nanoConfig_HTTPD_MAX_CONNECTIONS;
 
@@ -215,17 +216,71 @@ static hservice_t *_httpd_services_tail = NULL;
 static conndata_t *_httpd_connection = NULL;
 
 #ifdef WIN32
+#undef errno
+#define errno GetLastError()
 static DWORD _httpd_terminate_signal = CTRL_C_EVENT;
 static int _httpd_max_idle = 120;
+typedef HANDLE MUTEXT_T;
+typedef HANDLE THREAD_T;
+typedef DWORD WINAPI (*HTTP_THREAD_EXEFUNC_T)(LPVOID arg);
 HANDLE _httpd_connection_lock = NULL;
-LPCTSTR _httpd_connection_lock_str;
 #define strncasecmp(s1, s2, num) strncmp(s1, s2, num)
 #define snprintf(buffer, num, s1, s2) sprintf(buffer, s1,s2)
+
 #else
+
+typedef pthread_mutex_t MUTEXT_T;
+typedef pthread_t THREAD_T;
+typedef void * (*HTTP_THREAD_EXEFUNC_T)(void *data);
 static int _httpd_terminate_signal = SIGINT;
 static sigset_t thrsigset;
 static pthread_mutex_t _httpd_connection_lock = PTHREAD_MUTEX_INITIALIZER;;
 #endif
+
+int httpd_create_mutex(MUTEXT_T *mutex)
+{
+  int err = 0;
+#ifdef WIN32
+  *mutex = CreateMutex(NULL, TRUE, NULL);
+  if (*mutex == NULL)
+    err = 1;
+#else
+  pthread_mutex_init(mutex, NULL);
+#endif
+  if (err)
+    log_error("httpd_create_mutex failed");
+  return err;
+}
+void httpd_destroy_mutex(MUTEXT_T *mutex)
+{
+#ifdef WIN32
+  if (*mutex != NULL)
+  {
+    closeHandle(*mutex);
+    *mutex = NULL;
+  }
+#else
+  pthread_mutex_destroy(mutex);
+#endif
+}
+
+void httpd_thread_join(THREAD_T *tid)
+{
+#ifndef WIN32
+  pthread_join(*tid,NULL);
+#else
+  WaitForSingleObject(*tid, INFINITE);
+#endif
+}
+
+void httpd_thread_init(THREAD_T *tid)
+{
+#ifndef WIN32
+  memset(tid, 0, sizeof(*tid));
+#else
+  *tid = NULL;
+#endif
+}
 
 #ifdef WIN32
 BOOL WINAPI
@@ -294,49 +349,58 @@ _httpd_parse_arguments(int argc, char **argv)
   return;
 }
 
-
-static void
+static herror_t
 _httpd_connection_slots_init(void)
 {
   int i;
+  herror_t status;
 
-#ifdef WIN32
-  _httpd_connection_lock = CreateMutex( NULL, TRUE, _httpd_connection_lock_str );
-#else
-  pthread_mutex_init(&_httpd_connection_lock, NULL);
-#endif
-
-  _httpd_connection = (conndata_t *)http_calloc(_httpd_max_connections, sizeof(conndata_t));
+  if (httpd_create_mutex(&_httpd_connection_lock))
+  {
+    status = herror_new("httpd_create_mutex",  GENERAL_ERROR,
+                               "Failed to create mutex!");
+    goto clean0;
+  }
+  _httpd_connection = (conndata_t *)
+        http_calloc(_httpd_max_connections, sizeof(conndata_t));
+  if (_httpd_connection == NULL)
+  {
+    status = herror_new("_httpd_connection_slots_init",
+                               GENERAL_ERROR,
+                               "Failed malloc _httpd_connection!");
+    goto clean1;
+  }
+  
   for (i = 0; i < _httpd_max_connections; i++)
-    hsocket_init(&(_httpd_connection[i].sock));
-
+  {
+    conndata_t *c = &_httpd_connection[i];
+    hsocket_init(&c->sock);
+    httpd_thread_init(&c->tid);
+  }
   log_info("[OK]");
-  return;
+  return H_OK;
+
+clean1:
+  httpd_destroy_mutex(&_httpd_connection_lock);
+clean0:
+  log_info("[FAIL]");
+  return status;
 }
 
 static void
 _httpd_connection_slots_free(void)
 {
-#ifdef WIN32
-  if (_httpd_connection_lock != NULL)
-    closeHandle(_httpd_connection_lock);
-#else
-  pthread_mutex_destroy(&_httpd_connection_lock);
-#endif
+  httpd_destroy_mutex(&_httpd_connection_lock);
 
   if (_httpd_connection)
   {
     for (int i=0;i<_httpd_max_connections;i++)
     {
-      conndata_t *conn=(conndata_t *)&_httpd_connection[i];
-      hsocket_close(&(_httpd_connection[i].sock));
-      if (conn->tid == 0)
+      conndata_t *conn=&_httpd_connection[i];
+      hsocket_close(&conn->sock);
+      if (conn->flag == CONNECTION_FREE)
         continue;
-#ifndef WIN32
-      pthread_join(conn->tid,NULL);
-#else
-      WaitForSingleObject(conn->tid,INFINITE);
-#endif
+      httpd_thread_join(&conn->tid);
     }
     http_free(_httpd_connection);
   }
@@ -390,7 +454,11 @@ httpd_init(int argc, char **argv)
     return status;
   } 
 
-  _httpd_connection_slots_init();
+  if ((status = _httpd_connection_slots_init()) != H_OK)
+  {
+    log_error("hsocket_modeule_init failed (%s)", herror_message(status));
+    return status;
+  } 
 
   if ((status = _httpd_register_builtin_services(argc, argv)) != H_OK)
   {
@@ -398,13 +466,25 @@ httpd_init(int argc, char **argv)
     return status;
   }
 
-  if ((status = hsocket_init(&_httpd_socket)) != H_OK)
+  if ((status = hsocket_init(&_httpd_socket4)) != H_OK)
   {
     log_error("hsocket_init failed (%s)", herror_message(status));
     return status;
   }
 
-  if ((status = hsocket_bind(&_httpd_socket, _httpd_port)) != H_OK)
+  if ((status = hsocket_init(&_httpd_socket6)) != H_OK)
+  {
+    log_error("hsocket_init failed (%s)", herror_message(status));
+    return status;
+  }
+
+  if ((status = hsocket_bind(AF_INET, &_httpd_socket4, _httpd_port)) != H_OK)
+  {
+    log_error("hsocket_bind failed (%s)", herror_message(status));
+    return status;
+  }
+
+  if ((status = hsocket_bind(AF_INET6, &_httpd_socket6, _httpd_port)) != H_OK)
   {
     log_error("hsocket_bind failed (%s)", herror_message(status));
     return status;
@@ -1272,7 +1352,7 @@ _httpd_wait_for_empty_conn(void)
 }
 
 static void
-_httpd_start_thread(conndata_t * conn)
+_httpd_start_thread(conndata_t *conn)
 {
   int err;
 
@@ -1297,8 +1377,8 @@ _httpd_start_thread(conndata_t * conn)
   return;
 }
 
-herror_t
-httpd_run(void)
+static inline herror_t
+__httpd_run(struct hsocket_t *sock)
 {
   struct timeval timeout;
   conndata_t *conn;
@@ -1309,7 +1389,7 @@ httpd_run(void)
 
   _httpd_register_signal_handler();
 
-  if ((err = hsocket_listen(&_httpd_socket)) != H_OK)
+  if ((err = hsocket_listen(sock)) != H_OK)
   {
     log_error("hsocket_listen failed (%s)", herror_message(err));
     return err;
@@ -1331,10 +1411,10 @@ httpd_run(void)
 
       /* zero and set file descriptior */
       FD_ZERO(&fds);
-      FD_SET(_httpd_socket.sock, &fds);
+      FD_SET(sock->sock, &fds);
 
       /* select socket descriptor */
-      switch (select(_httpd_socket.sock + 1, &fds, NULL, NULL, &timeout))
+      switch (select(sock->sock + 1, &fds, NULL, NULL, &timeout))
       {
       case 0:
         if (!_httpd_run)
@@ -1352,7 +1432,7 @@ httpd_run(void)
         /* no nothing */
         break;
       }
-      if (FD_ISSET(_httpd_socket.sock, &fds))
+      if (FD_ISSET(sock->sock, &fds))
       {
         break;
       }
@@ -1362,7 +1442,8 @@ httpd_run(void)
     if (!_httpd_run)
       break;
 
-    if ((err = hsocket_accept(&_httpd_socket, &(conn->sock))) != H_OK)
+    err = hsocket_accept(sock, &(conn->sock));
+    if (err != H_OK)
     {
       log_error("hsocket_accept failed (%s)", herror_message(err));
 
@@ -1377,12 +1458,202 @@ httpd_run(void)
   return 0;
 }
 
+#ifdef WIN32
+HANDLE main_cond=NULL;
+HANDLE main_mutex=NULL;
+typedef HANDLE COND_T;
+#else
+pthread_cond_t  main_cond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t main_mutex = PTHREAD_MUTEX_INITIALIZER;
+typedef pthread_cond_t COND_T;
+#endif
+static int condition_met = 0;
+
+int httpd_create_cond(COND_T *cond)
+{
+  int err = 0;
+#ifdef WIN32
+  *cond = CreateEvent(NULL, FALSE, FALSE, NULL);
+  if (*cond == NULL)
+  {
+    err = 1;
+    log_error("httpd_create_mutex failed: (%d)", errno);
+    goto clean0;
+  }
+#else
+  err = httpd_create_mutex(&main_mutex);
+  if (httpd_create_mutex(&main_mutex))
+  {
+    err = 1;
+    log_error("httpd_create_mutex failed: (%s)", strerror(errno));
+    goto clean0;
+  }
+  if (pthread_cond_init(cond, NULL))
+  {
+    err = 1;
+    log_error("pthread_cond_init failed: %d", strerror(errno));
+    goto clean1;
+  }
+#endif
+
+  return err;
+  
+#ifndef WIN32
+clean1:  
+  httpd_destroy_mutex(&main_mutex);
+#endif
+clean0:  
+  return err;
+}
+void httpd_destroy_cond(COND_T *cond)
+{
+#ifdef WIN32
+  if (*cond != NULL)
+  {
+    closeHandle(*cond);
+    *cond = NULL;
+  }
+#else
+  httpd_destroy_mutex(&main_mutex);
+  pthread_cond_destroy(cond);
+#endif
+}
+
+void httpd_wait_cond(COND_T *cond)
+{
+#ifdef WIN32
+  WaitForSingleObject(*cond, INFINITE);
+#else
+  pthread_mutex_lock(&main_mutex);
+  while (!condition_met) 
+  {
+    pthread_cond_wait(cond, &main_mutex); // Wait for the condition
+  }
+  pthread_mutex_unlock(&main_mutex);
+#endif
+}
+void httpd_signal_cond(COND_T *cond)
+{
+#ifdef WIN32
+  SetEvent(*cond);;
+#else
+  pthread_mutex_lock(&main_mutex);
+  condition_met = 1; // Set the condition
+  pthread_cond_signal(cond); // Signal the main thread
+  pthread_mutex_unlock(&main_mutex);
+#endif
+}
+
+#ifdef WIN32
+DWORD WINAPI thread_function_ipv4(LPVOID arg) 
+#else
+static void *thread_function_ipv4(void* arg) 
+#endif
+{
+  __httpd_run(&_httpd_socket4);
+  httpd_signal_cond(&main_cond);
+#ifdef WIN32
+  return NULL;
+#else
+  return 0;
+#endif
+}
+
+#ifdef WIN32
+DWORD WINAPI thread_function_ipv6(LPVOID arg) 
+#else
+static void *thread_function_ipv6(void* arg) 
+#endif
+{
+  __httpd_run(&_httpd_socket6);
+  httpd_signal_cond(&main_cond);
+#ifdef WIN32
+  return NULL;
+#else
+  return 0;
+#endif
+}
+
+static herror_t
+__start_thread(conndata_t *conn, HTTP_THREAD_EXEFUNC_T exefunc)
+{
+  int err;
+  herror_t status = H_OK;
+#ifdef WIN32
+  conn->tid = CreateThread(NULL, 65535, exefunc, conn, 0, NULL);
+  if (conn->id == NULL)
+  {
+    err = 1;
+    log_error("pthread_create failed (%d)", GetLastError());
+  }
+#else
+  pthread_attr_init(&conn->attr);
+  err = pthread_create(&conn->tid, &conn->attr, exefunc, conn);
+  if (err)
+    log_error("pthread_create failed (%s)", strerror(err));
+#endif
+
+  if (err)
+    status = herror_new("__start_thread",  THREAD_BEGIN_ERROR,
+                             "Failed to create pthread!");
+  return status;
+}
+
+static conndata_t httpd_thread_ipv4;
+static conndata_t httpd_thread_ipv6;
+herror_t httpd_run(void)
+{
+  herror_t status = H_OK;
+  conndata_t *c;
+  
+  if (httpd_create_cond(&main_cond))
+  {
+    log_error("httpd_create_cond failed");
+    status = herror_new("httpd_run",  THREAD_BEGIN_ERROR,
+                             "Failed to create condition!");
+    goto clean0;
+  }
+
+  c = &httpd_thread_ipv4;
+  hsocket_init(&c->sock);
+  httpd_thread_init(&c->tid);
+  c = &httpd_thread_ipv6;
+  hsocket_init(&c->sock);
+  httpd_thread_init(&c->tid);
+  
+  status = __start_thread(c, thread_function_ipv4);
+  if (status != H_OK)
+    goto clean1;
+  
+  status = __start_thread(c, thread_function_ipv6);
+  if (status != H_OK)
+  {
+	_httpd_run = 0;
+#ifdef WIN32
+#else
+    pthread_kill(httpd_thread_ipv4.tid, SIGTERM);
+#endif
+    httpd_thread_join(&httpd_thread_ipv4.tid);
+    goto clean1;
+  }
+
+  httpd_wait_cond(&main_cond);
+  httpd_thread_join(&httpd_thread_ipv4.tid);
+  httpd_thread_join(&httpd_thread_ipv6.tid);
+  
+clean1:
+  httpd_destroy_cond(&main_cond);
+clean0:
+  return status;
+}
+
 void
 httpd_destroy(void)
 {
   hservice_t *tmp, *cur = _httpd_services_head;
 
-  hsocket_close(&_httpd_socket);
+  hsocket_close(&_httpd_socket4);
+  hsocket_close(&_httpd_socket6);
 
   while (cur != NULL)
   {
