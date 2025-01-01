@@ -115,20 +115,32 @@ nanohttp_dir_init(const char *pfile)
 
   size_t plen = strlen(pwd);
   size_t flen = p + 1 - pfile;
-  if (flen + plen + 1 >= PATH_MAX)
+  if (pfile[0] == __PATH_DLIM 
+    ||(flen >= plen 
+        && (!memcmp(pwd, pfile, plen))))
   {
-    http_free(d);
-    log_error("dir length is too large: %u", flen + plen + 1);
-    return herror_new("nanohttp_dir_init", HSERVER_ERROR_INVAL,
-                      "dir length is too large: %u", flen + plen + 1);
-  }
-
-  d[plen]=__PATH_DLIM;
-  if (flen==2 && pfile[0]=='.' && pfile[1]==__PATH_DLIM)
+    memcpy(d, pwd, plen+1);
     flen = 0;
-  if (flen) memcpy(d+plen+1,pfile,flen);
+    d[plen++]=__PATH_DLIM;
+  }
+  else
+  {
+    if (flen + plen + 1 >= PATH_MAX)
+    {
+      http_free(d);
+      log_error("dir length is too large: %u", flen + plen + 1);
+      return herror_new("nanohttp_dir_init", HSERVER_ERROR_INVAL,
+                        "dir length is too large: %u", flen + plen + 1);
+    }
+
+    d[plen++]=__PATH_DLIM;
+    if (flen==2 && pfile[0]=='.' && pfile[1]==__PATH_DLIM)
+      flen = 0;
+    if (flen) memcpy(d+plen,pfile,flen);
+  }
+  
   httpd_base_path.buf = d;
-  httpd_base_path.len = plen + flen + 1;
+  httpd_base_path.len = plen + flen;
   httpd_base_path.buf[httpd_base_path.len]='\0';
   
   log_info("[OK]");
@@ -153,7 +165,7 @@ static void normalizePath(char *inputPath) {
   int top = -1;
   char *outputPath = inputPath;
 
-  token = strtok(pathCopy, "/");
+  token = strtok(pathCopy, __PATH_DLIM_S);
   while (token != NULL) {
     if (strcmp(token, "..") == 0) {
       if (top > -1) {
@@ -162,13 +174,13 @@ static void normalizePath(char *inputPath) {
     } else if (strcmp(token, ".") != 0 && strlen(token) > 0) {
       stack[++top] = token; // Push valid directory onto stack
     }
-    token = strtok(NULL, "/");
+    token = strtok(NULL, __PATH_DLIM_S);
   }
 
   // Construct the normalized path
   outputPath[0] = '\0'; // Initialize outputPath
   for (int i = 0; i <= top; i++) {
-    strcat(outputPath, "/");
+    strcat(outputPath, __PATH_DLIM_S);
     strcat(outputPath, stack[i]);
   }
 
@@ -182,6 +194,18 @@ static char *nanohttp_file_get_path(const char *file)
     return NULL;
 
   size_t flen = strlen(file);
+  if (file[0] == __PATH_DLIM 
+    ||(flen >= httpd_base_path.len 
+        && (!memcmp(httpd_base_path.buf, file, httpd_base_path.len))))
+  {
+    if (flen >= PATH_MAX)
+    {
+      http_free(path);
+      return NULL;
+    }
+    memcpy(path, file, flen+1);
+    return path;
+  }
   if (flen + httpd_base_path.len >= PATH_MAX)
   {
     http_free(path);

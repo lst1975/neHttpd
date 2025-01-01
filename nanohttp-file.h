@@ -89,8 +89,10 @@
 #ifdef WIN32
 #include<direct.h>
 #define __PATH_DLIM '\\'
+#define __PATH_DLIM_S "\\"
 #else
 #define __PATH_DLIM '/'
+#define __PATH_DLIM_S "/"
 #endif
 
 #include "nanohttp-error.h"
