@@ -645,6 +645,12 @@ nanohttp_users_update(const char *name, int nameLen,
     type = old->type;
   }
 
+  if (!pswdLen)
+  {
+    pswd    = old->pswd.buf;
+    pswdLen = old->pswd.len;
+  }
+
   entry = http_malloc(sizeof(*entry)+nameLen+pswdLen);
   if (entry == NULL)
     return _N_http_user_error_SYS;
@@ -654,12 +660,6 @@ nanohttp_users_update(const char *name, int nameLen,
   entry->name.data = ((char *)(entry+1));
   entry->name.len  = nameLen;
   memcpy(entry->name.data, name, entry->name.len);
-
-  if (!pswdLen)
-  {
-    pswd    = old->pswd.buf;
-    pswdLen = old->pswd.len;
-  }
   
   entry->pswd.data = ((char *)(entry+1))+nameLen;
   entry->pswd.len  = pswdLen;
