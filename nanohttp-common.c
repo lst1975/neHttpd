@@ -330,15 +330,29 @@ content_type_t *
 content_type_new(const char *content_type_str)
 {
   hpair_t *pair = NULL, *last = NULL;
-  content_type_t *ct;
-  char ch, key[256], value[256];
+  content_type_t *ct = NULL;
+  char ch;
+  char *key, *value;
   int inQuote = 0, i = 0, c = 0, begin = 0, len;
   int mode = 0;
   /* 0: searching ';' 1: process key 2: process value */
 
-
+#define __KV_SIZE 256
+  key = (char *)http_malloc(__KV_SIZE*2+2);
+  if (key == NULL)
+  {
+    log_fatal("Failed to malloc temp buffer.");
+    goto clean0;
+  }
+  value = key + __KV_SIZE+1;
+  
   /* Create object */
   ct = (content_type_t *) http_malloc(sizeof(content_type_t));
+  if (ct == NULL)
+  {
+    log_fatal("Failed to malloc content_type_t.");
+    goto clean1;
+  }
   ct->params = NULL;
 
   len = strlen(content_type_str);
@@ -370,12 +384,15 @@ content_type_new(const char *content_type_str)
 
       if (ch == '=')
       {
-        key[c] = '\0';
+        key[c%__KV_SIZE] = '\0';
         c = 0;
         mode = 2;
       }
       else if (ch != ' ' && ch != '\t' && ch != '\r')
-        key[c++] = ch;
+      {
+        key[c%__KV_SIZE] = ch;
+        c++;
+      }
       break;
 
     case 2:
@@ -385,7 +402,7 @@ content_type_new(const char *content_type_str)
 
       if ((ch == ' ' || ch == ';') && !inQuote && begin)
       {
-        value[c] = '\0';
+        value[c%__KV_SIZE] = '\0';
 
         pair = hpairnode_new(key, value, NULL);
         if (ct->params == NULL)
@@ -401,13 +418,19 @@ content_type_new(const char *content_type_str)
       else if (ch == '"')
         inQuote = !inQuote;
       else if (begin && ch != '\r')
-        value[c++] = ch;
-
+      {
+        value[c%__KV_SIZE] = ch;
+        c++;
+      }
       break;
 
     }
   }
+#undef __KV_SIZE
 
+clean1:
+  http_free(key);
+clean0: 
   return ct;
 }
 

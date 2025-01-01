@@ -490,14 +490,28 @@ If success, this function will return 0.
 static herror_t
 _httpc_talk_to_server(hreq_method_t method, httpc_conn_t * conn, const char *urlstr)
 {
-  char buffer[4096];
+  char *buffer;
   herror_t status;
-  int len;
-  int ssl;
+  int len, ssl;
 
+#define ___BUFSZ 4096
+  buffer = (char *)http_malloc(___BUFSZ);
+  if (buffer == NULL)
+  {
+    log_fatal("Failed to malloc temp buffer.");
+    status = herror_new("httpc_mime_begin", 
+                      HSERVER_ERROR_MALLOC,
+                      "Can malloc \"%d\" (%s)", 
+                      ___BUFSZ, 
+                      strerror(errno));
+    goto clean0;
+  }
+  
   if (conn == NULL)
   {
-    return herror_new("httpc_talk_to_server", GENERAL_INVALID_PARAM, "httpc_conn_t param is NULL");
+    status = herror_new("httpc_talk_to_server", GENERAL_INVALID_PARAM, 
+      "httpc_conn_t param is NULL");
+    goto clean1;
   }
 
   /* Build request header */
@@ -506,9 +520,9 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t * conn, const char *url
   if ((status = hurl_parse(conn->url, urlstr)) != H_OK)
   {
     log_error("Cannot parse URL \"%s\"", SAVE_STR(urlstr));
-    return status;
+    goto clean1;
   }
-/* TODO (#1#): Check for HTTP protocol in URL */
+  /* TODO (#1#): Check for HTTP protocol in URL */
 
   /* Set hostname */
   httpc_set_header(conn, HEADER_HOST, conn->url->host);
@@ -517,52 +531,64 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t * conn, const char *url
   log_verbose("ssl = %i (%i %i)", ssl, conn->url->protocol, PROTOCOL_HTTPS);
 
   /* Open connection */
-  if ((status = hsocket_open(conn->sock, conn->url->host, conn->url->port, ssl)) != H_OK)
+  status = hsocket_open(conn->sock, conn->url->host, conn->url->port, ssl);
+  if (status != H_OK)
   {
     log_error("hsocket_open failed (%s)", herror_message(status));
-    return status;
+    goto clean1;
   }
 
   switch(method)
   {
     case HTTP_REQUEST_GET:
 
-      len = sprintf(buffer, "GET %s HTTP/%s\r\n",
+      len = snprintf(buffer, ___BUFSZ, "GET %s HTTP/%s\r\n",
           (conn->url->context[0] != '\0') ? conn->url->context : ("/"),
           (conn->version == HTTP_1_0) ? "1.0" : "1.1");
       break;
 
     case HTTP_REQUEST_POST:
 
-      len = sprintf(buffer, "POST %s HTTP/%s\r\n",
+      len = snprintf(buffer, ___BUFSZ, "POST %s HTTP/%s\r\n",
           (conn->url->context[0] != '\0') ? conn->url->context : ("/"),
           (conn->version == HTTP_1_0) ? "1.0" : "1.1");
       break;
 
     default:
       log_error("Unknown method type!");
-      return herror_new("httpc_talk_to_server",
+      status = herror_new("httpc_talk_to_server",
         GENERAL_INVALID_PARAM,
         "hreq_method_t must be  HTTP_REQUEST_GET or HTTP_REQUEST_POST");
+      goto clean2;
   }
 
   log_verbose("Sending request...");
-  if ((status = hsocket_send(conn->sock, (unsigned char *)buffer, len)) != H_OK)
+  status = hsocket_send(conn->sock, (unsigned char *)buffer, len);
+  if (status != H_OK)
   {
     log_error("Cannot send request (%s)", herror_message(status));
-    hsocket_close(conn->sock);
-    return status;
+    goto clean2;
   }
 
   log_verbose("Sending header...");
-  if ((status = httpc_send_header(conn)) != H_OK)
+  status = httpc_send_header(conn);
+  if (status != H_OK)
   {
     log_error("Cannot send header (%s)", herror_message(status));
-    hsocket_close(conn->sock);
-    return status;
+    goto clean2;
   }
 
+  http_free(buffer);
   return H_OK;
+
+#undef ___BUFSZ
+  
+clean2:
+  hsocket_close(conn->sock);
+clean1:
+  http_free(buffer);
+clean0:
+  return status;
 }
 
 herror_t
@@ -624,106 +650,235 @@ httpc_post_end(httpc_conn_t * conn, hresponse_t ** out)
   MIME support functions httpc_mime_* function set
 -----------------------------------------------------*/
 
-static void
-_httpc_mime_get_boundary(httpc_conn_t * conn, char *dest)
+static size_t
+_httpc_mime_get_boundary(httpc_conn_t * conn, char *dest, size_t len)
 {
-  sprintf(dest, "---=.Part_NH_%d", conn->id);
+  size_t n = snprintf(dest, len, "---=.Part_NH_%d", conn->id);
   log_verbose("boundary= \"%s\"", dest);
+  return n;
+}
 
-  return;
+#define _HTTPC_MIME_BOUNDARY_SIZE_MAX 75
+
+static herror_t __httpc_mime_toolarge(const char *func, size_t size)
+{
+  return herror_new(func, 
+                    HSERVER_ERROR_2SHORT,
+                    "Tempary buffer is too short: \"%d\"", 
+                    size);
+}
+
+static inline herror_t 
+__httpc_mime_concat(httpd_buf_t *b, size_t tsize, const char *fmt, 
+  const char *data, char *temp, size_t temp_size)
+{
+  size_t n;
+  n = snprintf(temp, temp_size, fmt, data);
+  if (BUF_REMAIN(b) <= n)
+  {
+    return __httpc_mime_toolarge("__httpc_mime_concat", tsize);
+  }
+  memcpy(BUF_CUR_PTR(b), temp, n);
+  BUF_GO(b, n);
+  BUF_SET_CHR(b, '\0');
+  return H_OK;
+}
+
+static inline herror_t
+httpc_mime_copy2(char *buffer, size_t blen, const char *d1, size_t d1len, 
+  const char *d2, size_t d2len)
+{
+  if (blen < d1len+d2len)
+  {
+    return __httpc_mime_toolarge("httpc_mime_copy2", blen);
+  }
+  memcpy(buffer, d1, d1len);
+  memcpy(buffer+d1len, d2, d2len);
+  return H_OK;
+}
+
+static inline herror_t
+httpc_mime_copy3(char *buffer, size_t blen, const char *d1, size_t d1len, 
+  const char *d2, size_t d2len, const char *d3, size_t d3len)
+{
+  if (blen < d1len+d2len+d3len)
+  {
+    return __httpc_mime_toolarge("httpc_mime_copy3", blen);
+  }
+  memcpy(buffer, d1, d1len);
+  memcpy(buffer+d1len, d2, d2len);
+  memcpy(buffer+d1len+d2len, d3, d3len);
+  return H_OK;
 }
 
 herror_t
-httpc_mime_begin(httpc_conn_t * conn, const char *url, const char *related_start, const char *related_start_info, const char *related_type)
+httpc_mime_begin(httpc_conn_t * conn, const char *url, const char *related_start, 
+  const char *related_start_info, const char *related_type)
 {
   herror_t status;
-  char buffer[300];
-  char temp[75+75];
-  char boundary[75];
+  size_t n,tsize;
+  char *buffer, *boundary;
+  httpd_buf_t b;
+
+#define ___BUFSZ 512
+  tsize = ___BUFSZ+_HTTPC_MIME_BOUNDARY_SIZE_MAX;
+  buffer = (char *)http_malloc(tsize);
+  if (buffer == NULL)
+  {
+    log_fatal("Failed to malloc temp buffer.");
+    status = herror_new("httpc_mime_begin", 
+                      HSERVER_ERROR_MALLOC,
+                      "Can malloc \"%d\" (%s)", 
+                      tsize, 
+                      strerror(errno));
+    goto clean0;
+  }
+  boundary = buffer+___BUFSZ;
+  
+  BUF_SIZE_INIT(&b, buffer, ___BUFSZ);
 
   /* 
      Set Content-type Set multipart/related parameter type=..; start=.. ;
      start-info= ..; boundary=...
 
    */
-  sprintf(buffer, "multipart/related;");
-
+  memcpy(BUF_CUR_PTR(&b), "multipart/related;", 18);
+  BUF_GO(&b, 18);
+  
   if (related_type)
   {
-    snprintf(temp, 75, " type=\"%s\";", related_type);
-    strcat(buffer, temp);
+    status = httpc_mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
+      " type=\"", 7, related_type, strlen(related_type), "\";", 2);
+    if (status != H_OK) goto clean1;
   }
 
   if (related_start)
   {
-    snprintf(temp, 75, " start=\"%s\";", related_start);
-    strcat(buffer, temp);
+    status = httpc_mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
+      " start=\"", 8, related_start, strlen(related_start), "\";", 2);
+    if (status != H_OK) goto clean1;
   }
+
 
   if (related_start_info)
   {
-    snprintf(temp, 75, " start-info=\"%s\";", related_start_info);
-    strcat(buffer, temp);
+    status = httpc_mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
+      " start-info=\"", 13, related_start_info, 
+      strlen(related_start_info), "\";", 2);
+    if (status != H_OK) goto clean1;
   }
 
-  _httpc_mime_get_boundary(conn, boundary);
-  snprintf(temp, sizeof temp, " boundary=\"%s\"", boundary);
-  strcat(buffer, temp);
+  n = _httpc_mime_get_boundary(conn, boundary, _HTTPC_MIME_BOUNDARY_SIZE_MAX);
+  status = httpc_mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
+    " boundary=\"", 11, boundary, n, "\"", 1);
+  if (status != H_OK) goto clean1;
 
   httpc_set_header(conn, HEADER_CONTENT_TYPE, buffer);
-
   status = httpc_post_begin(conn, url);
+  
+#undef ___BUFSZ
+  
+clean1:
+  http_free(buffer);
+clean0:
   return status;
 }
 
 herror_t
-httpc_mime_next(httpc_conn_t * conn, const char *content_id, const char *content_type, const char *transfer_encoding)
+httpc_mime_next(httpc_conn_t * conn, const char *content_id, 
+  const char *content_type, const char *transfer_encoding)
 {
   herror_t status;
-  char buffer[512];
-  char boundary[75];
+  char *buffer, *boundary;
   size_t len;
 
-  /* Get the boundary string */
-  _httpc_mime_get_boundary(conn, boundary);
-  len = sprintf(buffer, "\r\n--%s\r\n", boundary);
+#define ___BUFSZ 512
+  size_t tsize = ___BUFSZ+_HTTPC_MIME_BOUNDARY_SIZE_MAX;
+  buffer = (char *)http_malloc(tsize);
+  if (buffer == NULL)
+  {
+    log_fatal("Failed to malloc temp buffer.");
+    status = herror_new("httpc_mime_next", 
+                      HSERVER_ERROR_MALLOC,
+                      "Can malloc \"%d\" (%s)", 
+                      tsize, 
+                      strerror(errno));
+    goto clean0;
+  }
+  boundary = buffer+___BUFSZ;
 
+  /* Get the boundary string */
+  len = _httpc_mime_get_boundary(conn, boundary, _HTTPC_MIME_BOUNDARY_SIZE_MAX);
+  status = httpc_mime_copy3(buffer, ___BUFSZ, "\r\n--", 4, 
+    boundary, len, "\r\n", 2);
+  if (status != H_OK)
+    goto clean1;
+  len = 4+len+2;
   /* Send boundary */
-  if ((status = http_output_stream_write(conn->out, (unsigned char *)buffer, len)) != H_OK)
-    return status;
+  status = http_output_stream_write(conn->out, (unsigned char *)buffer, len);
+  if (status != H_OK)
+    goto clean1;
 
   /* Send Content header */
-  len = sprintf(buffer, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
+  len = snprintf(buffer, ___BUFSZ, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
             HEADER_CONTENT_TYPE, content_type,
             HEADER_CONTENT_TRANSFER_ENCODING, transfer_encoding,
             HEADER_CONTENT_ID, content_id);
 
-  return http_output_stream_write(conn->out, (unsigned char *)buffer, len);
+  status = http_output_stream_write(conn->out, (unsigned char *)buffer, len);
+
+#undef ___BUFSZ
+
+clean1:
+  http_free(buffer);
+clean0:
+  return status;
 }
 
 herror_t
 httpc_mime_end(httpc_conn_t * conn, hresponse_t ** out)
 {
-  herror_t status;
-  char buffer[512];
-  char boundary[75];
+  herror_t status = H_OK;
+  char *buffer, *boundary;
   size_t len;
 
+#define ___BUFSZ 512
+  buffer = (char *)http_malloc(___BUFSZ+_HTTPC_MIME_BOUNDARY_SIZE_MAX);
+  if (buffer == NULL)
+  {
+    log_fatal("Failed to malloc temp buffer.");
+    status = herror_new("httpc_mime_end", 
+                      HSERVER_ERROR_MALLOC,
+                      "Can malloc \"%d\" (%s)", 
+                      512+_HTTPC_MIME_BOUNDARY_SIZE_MAX, 
+                      strerror(errno));
+    goto clean0;
+  }
+  boundary = buffer+___BUFSZ;
+
   /* Get the boundary string */
-  _httpc_mime_get_boundary(conn, boundary);
-  len = sprintf(buffer, "\r\n--%s--\r\n\r\n", boundary);
+  len = _httpc_mime_get_boundary(conn, boundary, _HTTPC_MIME_BOUNDARY_SIZE_MAX);
+  status = httpc_mime_copy3(buffer, ___BUFSZ, "\r\n--", 4, boundary, len, "--\r\n\r\n", 6);
+  if (status != H_OK)
+    goto clean1;
+  len = 4+len+6;
 
   /* Send boundary */
-  if ((status = http_output_stream_write(conn->out, (unsigned char *)buffer, len)) != H_OK)
-    return status;
+  status = http_output_stream_write(conn->out, (unsigned char *)buffer, len);
+  if (status != H_OK) goto clean1;
 
-  if ((status = http_output_stream_flush(conn->out)) != H_OK)
-    return status;
+  status = http_output_stream_flush(conn->out);
+  if (status != H_OK) goto clean1;
 
-  if ((status = hresponse_new_from_socket(conn->sock, out)) != H_OK)
-    return status;
+  status = hresponse_new_from_socket(conn->sock, out);
+  if (status != H_OK) goto clean1;
 
-  return H_OK;
+#undef ___BUFSZ
+
+clean1:
+  http_free(buffer);
+clean0:
+  return status;
 }
 
 
@@ -732,35 +887,47 @@ httpc_mime_end(httpc_conn_t * conn, hresponse_t ** out)
   with next part
 */
 herror_t
-httpc_mime_send_file(httpc_conn_t * conn, const char *content_id, const char *content_type, const char *transfer_encoding, const char *filename)
+httpc_mime_send_file(httpc_conn_t * conn, const char *content_id, 
+  const char *content_type, const char *transfer_encoding, 
+  const char *filename)
 {
-  herror_t status;
-  FILE *fd;
-  unsigned char buffer[MAX_FILE_BUFFER_SIZE];
+  herror_t status = H_OK;
+  unsigned char *buffer;
   size_t size;
+  FILE *fd;
+
+  buffer = (unsigned char *)http_malloc(MAX_FILE_BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    log_fatal("Failed to malloc temp buffer.");
+    status = herror_new("httpc_mime_send_file", 
+                      HSERVER_ERROR_MALLOC,
+                      "Can malloc \"%d\" (%s)", 
+                      MAX_FILE_BUFFER_SIZE, 
+                      strerror(errno));
+    goto clean0;
+  }
 
   if ((fd = fopen(filename, "rb")) == NULL)
   {
     log_error("fopen failed (%s)", strerror(errno));
-    return herror_new("httpc_mime_send_file", FILE_ERROR_OPEN,
+    status = herror_new("httpc_mime_send_file", FILE_ERROR_OPEN,
                       "Can not open file \"%s\" (%s)", filename, strerror(errno));
+    goto clean1;
   }
 
   status = httpc_mime_next(conn, content_id, content_type, transfer_encoding);
   if (status != H_OK)
-  {
-    fclose(fd);
-    return status;
-  }
+    goto clean2;
 
   while (!feof(fd))
   {
     size = fread(buffer, 1, MAX_FILE_BUFFER_SIZE, fd);
     if (size == -1)
     {
-      fclose(fd);
-      return herror_new("httpc_mime_send_file", FILE_ERROR_READ,
+      status = herror_new("httpc_mime_send_file", FILE_ERROR_READ,
                         "Can not read from file '%s'", filename);
+      goto clean2;
     }
 
     if (size > 0)
@@ -768,15 +935,16 @@ httpc_mime_send_file(httpc_conn_t * conn, const char *content_id, const char *co
       /* DEBUG: fwrite(buffer, 1, size, stdout); */
       status = http_output_stream_write(conn->out, buffer, size);
       if (status != H_OK)
-      {
-        fclose(fd);
-        return status;
-      }
+        goto clean2;
     }
   }
 
-  fclose(fd);
   log_verbose("file sent!");
 
-  return H_OK;
+clean2:
+  fclose(fd);
+clean1:
+  http_free(buffer);
+clean0:
+  return status;
 }

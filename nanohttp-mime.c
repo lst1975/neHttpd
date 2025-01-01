@@ -210,7 +210,6 @@ MIME_reader_read(MIME_reader * reader, unsigned char *buffer, int size)
 {
   MIME_read_status status;
   int len;
-  unsigned char tempBuffer[MIME_READER_MAX_BUFFER_SIZE];
   int rest_size;
 
   /* Check if buffer is full */
@@ -223,14 +222,12 @@ MIME_reader_read(MIME_reader * reader, unsigned char *buffer, int size)
     {
       if (reader->marker != 0)
       {
-        memcpy(tempBuffer, reader->buffer + reader->marker,
-               reader->size - reader->marker);
-        memcpy(reader->buffer, tempBuffer, reader->size - reader->marker);
         reader->current = reader->size - reader->marker;
+        memcpy(reader->buffer, reader->buffer + reader->marker, reader->current);
       }
       else if (reader->current == MIME_READER_MAX_BUFFER_SIZE - 1)
       {
-        fprintf(stderr, "Marker error");
+        log_error("%s", "Marker error");
         return MIME_READ_ERROR;
       }
       reader->marker = 0;
@@ -632,10 +629,18 @@ _mime_parse_end(void *data)
 static void
 _mime_part_begin(void *data)
 {
-  char buffer[1054];
+  char *buffer;
   struct part_t *part;
   mime_callback_data_t *cbdata;
- 
+  
+#define _TMP_SIZE 1054
+  buffer = (char *)http_malloc(_TMP_SIZE);
+  if (buffer == NULL)
+  {
+    log_fatal("Failed to malloc temp buffer.");
+    return;
+  }
+
   cbdata = (mime_callback_data_t *) data;
   log_verbose("Begin Part (%p)", data);
   if (!(part = (struct part_t *) http_malloc(sizeof(struct part_t))))
@@ -659,14 +664,16 @@ _mime_part_begin(void *data)
   cbdata->header_search = 0;
 
 #ifdef WIN32
-  sprintf(buffer, "%s\\mime_%p_%d.part", cbdata->root_dir,
+  snprintf(buffer, _TMP_SIZE, "%s\\mime_%p_%d.part", cbdata->root_dir,
           cbdata, cbdata->part_id++);
 #else
-  sprintf(buffer, "%s/mime_%p_%d.part", cbdata->root_dir,
+  snprintf(buffer, _TMP_SIZE, "%s/mime_%p_%d.part", cbdata->root_dir,
           cbdata, cbdata->part_id++);
 #endif
+  http_free(buffer);
 
-/*  log_info("Creating FILE ('%s') deleteOnExit=1", buffer);*/
+#undef _TMP_SIZE
+  /*  log_info("Creating FILE ('%s') deleteOnExit=1", buffer);*/
   part->deleteOnExit = 1;
   cbdata->current_fd = fopen(buffer, "wb");
   if (cbdata->current_fd)
@@ -696,8 +703,16 @@ _mime_process_header(char *buffer)
 {
   int i = 0, c = 0, proc_key, begin = 0;
   hpair_t *first = NULL, *last = NULL;
-  char key[1054], value[1054];
+  char *key, *value;
 
+#define __KV_SIZE 912
+  key = (char *)http_malloc(__KV_SIZE*2+2);
+  if (key == NULL)
+  {
+    log_fatal("Failed to malloc temp buffer.");
+    return NULL;
+  }
+  value = key + __KV_SIZE+1;
   key[0] = '\0';
   value[0] = '\0';
   proc_key = 1;
@@ -706,7 +721,7 @@ _mime_process_header(char *buffer)
   {
     if (buffer[i] == '\r' && buffer[i + 1] == '\n')
     {
-      value[c] = '\0';
+      value[c%__KV_SIZE] = '\0';
       if (last)
       {
         last->next = hpairnode_new(key, value, NULL);
@@ -722,7 +737,7 @@ _mime_process_header(char *buffer)
     }
     else if (buffer[i] == ':')
     {
-      key[c] = '\0';
+      key[c%__KV_SIZE] = '\0';
       c = 0;
       begin = 0;
       proc_key = 0;
@@ -730,17 +745,25 @@ _mime_process_header(char *buffer)
     else
     {
       if (proc_key)
-        key[c++] = buffer[i];
+      {
+        key[c%__KV_SIZE] = buffer[i];
+        c++;
+      }
       else
       {
         if (buffer[i] != ' ')
           begin = 1;
         if (begin)
-          value[c++] = buffer[i];
+        {
+          value[c%__KV_SIZE] = buffer[i];
+          c++;
+        }
       }
     }
     i++;
   }
+#undef __KV_SIZE
+  http_free(key);
   return first;
 }
 
