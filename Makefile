@@ -60,6 +60,10 @@
  #                              https://github.com/lst1975/neHttpd
  #*************************************************************************************
  #
+
+STRIP ?= strip
+
+PHONY: all
  
 objects = \
 	nanohttp-main.o \
@@ -85,6 +89,10 @@ objects = \
 	nanohttp-mem.o \
 	nanohttp-urlencode.o
 
+release:  $(objects)
+	$(CC) $^ -o httpd -lpthread -lc
+	$(STRIP) httpd
+
 all: $(objects)
 	$(CC) $^ -o httpd -lpthread -lc
 
@@ -96,5 +104,4 @@ $(objects): %.o: %.c
 
 clean: 
 	rm -f $(objects) httpd httpd.exe
-
 
