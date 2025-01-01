@@ -411,7 +411,8 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
                       "Socket SOL_SOCKET SO_REUSEADDR (%s)", 
                       strerror(errno));
   }
-  
+
+#ifdef SO_REUSEPORT  
   if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0)
   {
     close(sock.sock);
@@ -419,7 +420,8 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
                       "Socket SOL_SOCKET SO_REUSEPORT (%s)", 
                       strerror(errno));
   }
-  
+#endif
+
   /* bind socket */
   if (fam == AF_INET)
   {
