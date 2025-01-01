@@ -640,6 +640,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     query = (unsigned char *)http_malloc(B64_DECLEN(in.len) + 1);
     if (query == NULL)
     {
+      http_free(in.ptr);
       log_error("Failed to http_malloc key");
       goto finished;
     }
