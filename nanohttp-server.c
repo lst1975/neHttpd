@@ -697,12 +697,12 @@ httpd_send_bad_request(httpd_conn_t *conn, const char *msg)
       "</style>" \
       "<title></title>" \
       "<!--[if IE]><link rel='shortcut icon' href=''><![endif]-->" \
-      "<link rel='stylesheet' type='text/css' href='config/messagebox.min.css' media='screen'>" \
+      "<link rel='stylesheet' type='text/css' href='config/messagebox.css' media='screen'>" \
       "<link rel='stylesheet' type='text/css' href='config/base.css' media='screen'>" \
       "<link rel='stylesheet' type='text/css' href='config/signal.css' media='screen'>" \
       "<link rel='stylesheet' type='text/css' href='config/jquery.csspiechart.css' media='screen'>" \
       "<script type='text/javascript' src='config/jquery-3.7.1.js'></script>" \
-      "<script type='text/javascript' src='config/messagebox.min.js'></script>" \
+      "<script type='text/javascript' src='config/messagebox.js'></script>" \
       "<script type='text/javascript' src='config/lang.js'></script>" \
       "<script type='text/javascript' src='config/data.js'></script>" \
       "<script type='text/javascript' src='config/utils.js'></script>" \
