@@ -1431,35 +1431,32 @@ __httpd_run(struct hsocket_t *sock, const char *name)
     while (nanohttpd_is_running())
     {
       /* select socket descriptor with proper timeout */
-      switch (epoll_wait(sock->ep, &event, 1, 1000))
+      int n = epoll_wait(sock->ep, &event, 1, 1000);
+      switch (n)
       {
       case 0:
-        if (!nanohttpd_is_running())
-          break;
         /* descriptor is not ready */
-        continue;
+        break;
       case -1:
         log_warn("Socket %d epoll_wait error: (%s)", 
           sock, strerror(errno));
-        if (_hsocket_should_again(errno))
-          continue;
         /* got a signal? */
         break;
-      default:
-        if (!nanohttpd_is_running())
-          break;
+      case 1:
         if (event.events & (EPOLLRDHUP|EPOLLERR))
           continue;
         /* no nothing */
         if ((event.events & EPOLLIN) 
           && event.data.fd == sock->sock)
           break;
+        // FALLTHROUGH;
+      default:
         log_fatal("Socket %d unknown error: (%s)", 
           sock, strerror(errno));
-        continue;
+        break;
       }
 
-      if (event.events & EPOLLIN) 
+      if (n == 1 && (event.events & EPOLLIN)) 
         break;
     }
 
