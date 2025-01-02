@@ -1191,8 +1191,8 @@ int json_test(void)
     "                                                                      \n" \
     "        Embedded HTTP Server with Web Configuraion Framework          \n" \
     "                   Copyright (C) 2022 Songtao Liu                     \n" \
-    "                       980680431@qq.com                               \n" \
-    "                      All Rights Reserved                             \n" \
+    "                          980680431@qq.com                            \n" \
+    "                         All Rights Reserved                          \n" \
     "######################################################################\n"
 void main_print_license(void)
 {

@@ -218,17 +218,18 @@ void http_memcache_free(void)
   }
 
 #if __NHTTP_MEM_DEBUG  
-  if (!ng_list_empty(&msg_malloced_list))
+  ng_list_head_s *list = &msg_malloced_list;
+  if (!ng_list_empty(list))
   {
     log_fatal("!!!!!!!!!!!MEMORY LEAKED!!!!!!!!!!!!!!.");
-    while (!ng_list_empty(&msg_malloced_list))
+    while (!ng_list_empty(list))
     {
       http_mentry_s *e;
-      e = ng_list_first_entry(&msg_malloced_list,http_mentry_s,link);
+      e = ng_list_first_entry(list,http_mentry_s,link);
       ng_list_del(&e->link);
       log_fatal("file:%s, line:%d", file_base_name(e->file), e->line);
       os_free(e);
-    }
+    }
   }
 #endif
   rte_ring_free(__http_mem_ring);
