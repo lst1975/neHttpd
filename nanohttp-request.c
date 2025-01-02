@@ -180,31 +180,32 @@ _hrequest_parse_header(char *data)
 
     if (firstline)
     {
+      int key_len;
       firstline = 0;
       tmp2 = result;
 
       /* parse [GET|POST] [PATH] [SPEC] */
       key = (char *) strtok_r(tmp2, " ", &saveptr2);
-
       /* save method (get or post) */
       tmp2 = saveptr2;
       if (key != NULL)
       {
-        if (!strcmp(key, "POST"))
+        key_len = tmp2 - key;
+        if (key_len == 4 && !memcmp(key, "POST", 4))
           req->method = HTTP_REQUEST_POST;
-        else if (!strcmp(key, "GET"))
+        else if (key_len == 3 && !memcmp(key, "GET", 3))
           req->method = HTTP_REQUEST_GET;
-      	else if (!strcmp(key, "OPTIONS"))
+      	else if (key_len == 7 && !memcmp(key, "OPTIONS", 7))
                 req->method = HTTP_REQUEST_OPTIONS;
-      	else if (!strcmp(key, "HEAD"))
+      	else if (key_len == 4 && !memcmp(key, "HEAD", 4))
           req->method = HTTP_REQUEST_HEAD;
-        else if (!strcmp(key, "PUT"))
+        else if (key_len == 3 && !memcmp(key, "PUT", 3))
           req->method = HTTP_REQUEST_PUT;
-        else if (!strcmp(key, "DELETE"))
+        else if (key_len == 6 && !memcmp(key, "DELETE", 6))
           req->method = HTTP_REQUEST_DELETE;
-        else if (!strcmp(key, "TRACE"))
+        else if (key_len == 5 && !memcmp(key, "TRACE", 5))
           req->method = HTTP_REQUEST_TRACE;
-        else if (!strcmp(key, "CONNECT"))
+        else if (key_len == 7 && !memcmp(key, "CONNECT", 7))
           req->method = HTTP_REQUEST_CONNECT;
         else
           req->method = HTTP_REQUEST_UNKOWN;
@@ -216,8 +217,8 @@ _hrequest_parse_header(char *data)
       tmp2 = saveptr2;
       if (tmp2 != NULL)
       {
-        /* req->spec = (char *) http_malloc(strlen(tmp2) + 1); strcpy(req->spec,
-           tmp2); */
+        /* req->spec = (char *) http_malloc(strlen(tmp2) + 1); 
+          strcpy(req->spec, tmp2); */
         if (!strcmp(tmp2, "HTTP/1.0"))
           req->version = HTTP_1_0;
         else
@@ -237,7 +238,8 @@ _hrequest_parse_header(char *data)
         /* save path */
         /* req->path = (char *) http_malloc(strlen(key) + 1); */
         req->path_len = tmp2 - key;
-        memcpy(req->path, key, req->path_len);
+        memcpy(req->path, key, RTE_MIN(req->path_len, sizeof(req->path)-1));
+        req->path[req->path_len] = '\0';
 
         /* parse options */
         for (;;)

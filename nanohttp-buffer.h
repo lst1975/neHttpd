@@ -63,6 +63,8 @@
 #ifndef __nanohttp_buffer_h
 #define __nanohttp_buffer_h
 
+#include <string.h>
+
 typedef struct {
   union{
     void *data;
@@ -112,6 +114,11 @@ static inline void BUF_SIZE_INIT(httpd_buf_t *b, char *buf, size_t size)
   b->len    = 0;
   b->size   = size;
   b->nbytes = 0;
+}
+
+static inline int BUF_isequal(const httpd_buf_t *b, char *buf, size_t size)
+{
+  return b->len == size && !memcmp(b->data, buf, size);
 }
 
 #endif

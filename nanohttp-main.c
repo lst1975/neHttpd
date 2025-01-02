@@ -202,7 +202,7 @@ __multipart_cb_headers_complete(multipartparser *p)
     p->arg = nanohttp_file_open_for_write(file);
     if (p->arg == NULL)
     {
-      log_error("Not able to open the file %s.", file);
+      log_error("Not able to open the file %s for writing.", file);
       return -1;
     }
   }
@@ -501,7 +501,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       if (file == NULL)
       {
         // If the file does not exist
-        log_error("Not able to open the file %s.", path);
+        log_error("Not able to open the file %s for reading.", path);
         r = httpd_send_header(conn, 404, HTTP_STATUS_404_REASON_PHRASE);
       }
       else
@@ -543,16 +543,23 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
 #define CFG_RET0(msg) __CFG_ret0("") msg CFG_ret3
 #define CFG_RET1(msg) CFG_ret1 msg CFG_ret3
 
+#define _(x) _nanoConfig_HTTPD_DATA_SERVICE x
+#define __(x) { .cptr=_(x), .len=sizeof(_(x))-1 }
+static const httpd_buf_t __SYS_FILE=__("system.json");
+static const httpd_buf_t __DEV_FILE=__("device.json");
+static const httpd_buf_t __USR_FILE=__("users.json");
+#undef _
+#undef __
+
 static void
 data_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   herror_t r;
 
 #if __NHTTP_TEST      
-  if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"system.json", req->path)
-    || !strcmp(_nanoConfig_HTTPD_DATA_SERVICE"device.json", req->path)
-    || !strcmp(_nanoConfig_HTTPD_DATA_SERVICE"users.json", req->path)
-    )
+  if (BUF_isequal(&__SYS_FILE, req->path, req->path_len)
+    || BUF_isequal(&__DEV_FILE, req->path, req->path_len)
+    || BUF_isequal(&__USR_FILE, req->path, req->path_len))
   {
     return root_service(conn, req);
   }
@@ -1043,6 +1050,7 @@ finished:
     if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"system.json", req->path))
     {
       // Generate system.json
+      r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
     }
     else
     {
