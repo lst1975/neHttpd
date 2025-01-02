@@ -157,11 +157,12 @@ typedef int ssize_t;
 #endif
 
 static int _hsocket_timeout = 10;
+extern int nanohttpd_is_running(void);
 
 #ifdef WIN32
 static inline int _hsocket_should_again(int err)
 {
-  return (err == WSAEWOULDBLOCK);
+  return (err == WSAEWOULDBLOCK) && nanohttpd_is_running();
 }
 
 static herror_t
@@ -228,7 +229,8 @@ _hsocket_module_sys_destroy(void)
 #else
 static inline int _hsocket_should_again(int err)
 {
-  return (err == EWOULDBLOCK || err == EAGAIN || err == EINTR);
+  return (err == EWOULDBLOCK || err == EAGAIN || err == EINTR) 
+    && nanohttpd_is_running();
 }
 
 static inline void

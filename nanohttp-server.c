@@ -215,6 +215,11 @@ static hservice_t *_httpd_services_tail = NULL;
 
 static conndata_t *_httpd_connection = NULL;
 
+int nanohttpd_is_running(void)
+{
+  return _httpd_run;
+}
+
 #ifdef WIN32
 #undef errno
 #define errno GetLastError()
