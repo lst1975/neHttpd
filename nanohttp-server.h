@@ -238,6 +238,8 @@
 					         to terminate the server */
 #define NHTTPD_ARG_MAXCONN  "-NHTTPmaxconn" /**< Maximum number of
 					         simultanous connections */
+#define NHTTPD_ARG_MAXCONN_PEND  "-NHTTPmaxconnPend" /**< Maximum number of
+                   pending connections for listen*/
 #define NHTTPD_ARG_TIMEOUT  "-NHTTPtimeout" /**< Timeout on reads */
 /**@}*/
 /**@}*/

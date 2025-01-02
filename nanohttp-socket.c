@@ -550,13 +550,13 @@ hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
 }
 
 herror_t
-hsocket_listen(struct hsocket_t * sock)
+hsocket_listen(struct hsocket_t * sock, int pend_max)
 {
   if (sock->sock < 0)
     return herror_new("hsocket_listen", HSOCKET_ERROR_NOT_INITIALIZED,
                       "Called hsocket_listen before initializing!");
 
-  if (listen(sock->sock, 15) == -1)
+  if (listen(sock->sock, pend_max) == -1)
   {
     log_error("listen failed (%s)", strerror(errno));
     return herror_new("hsocket_listen", HSOCKET_ERROR_LISTEN,

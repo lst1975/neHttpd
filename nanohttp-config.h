@@ -94,6 +94,7 @@
 
 #define _nanoConfig_HTTPD_PORT            8080
 #define _nanoConfig_HTTPD_MAX_CONNECTIONS 128
+#define _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS 256
 #define _nanoConfig_HTTPD_FILE_BLOCK      2048
 #define _nanoConfig_HTTPD_FILE_SERVICE    "/config/"
 #define _nanoConfig_HTTPD_DATA_SERVICE    "/data/"

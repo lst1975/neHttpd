@@ -205,6 +205,7 @@ static struct hsocket_t _httpd_socket4 = {.sock = HSOCKET_FREE, .ssl = NULL};
 static struct hsocket_t _httpd_socket6 = {.sock = HSOCKET_FREE, .ssl = NULL};
 static int _httpd_port = _nanoConfig_HTTPD_PORT;
 static int _httpd_max_connections = _nanoConfig_HTTPD_MAX_CONNECTIONS;
+static int _httpd_max_pending_connections = _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS;
 
 static hservice_t *_httpd_services_default = NULL;
 static hservice_t *_httpd_services_head = NULL;
@@ -347,6 +348,10 @@ _httpd_parse_arguments(int argc, char **argv)
     else if (!strcmp(argv[i - 1], NHTTPD_ARG_MAXCONN))
     {
       _httpd_max_connections = atoi(argv[i]);
+    }
+    else if (!strcmp(argv[i - 1], NHTTPD_ARG_MAXCONN_PEND))
+    {
+      _httpd_max_pending_connections = atoi(argv[i]);
     }
     else if (!strcmp(argv[i - 1], NHTTPD_ARG_TIMEOUT))
     {
@@ -1397,7 +1402,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
   
   log_verbose("starting run routine: %s", name);
 
-  if ((err = hsocket_listen(sock)) != H_OK)
+  if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
     log_error("hsocket_listen failed (%s)", herror_message(err));
     return err;
@@ -1488,7 +1493,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
 
   log_verbose("starting run routine: %s", name);
 
-  if ((err = hsocket_listen(sock)) != H_OK)
+  if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
     log_error("hsocket_listen failed (%s)", herror_message(err));
     return err;

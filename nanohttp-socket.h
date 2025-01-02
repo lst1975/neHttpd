@@ -233,7 +233,7 @@ extern herror_t hsocket_bind(uint8_t fam, struct hsocket_t *sock, unsigned short
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_LISTEN
  */
-extern herror_t hsocket_listen(struct hsocket_t *sock);
+extern herror_t hsocket_listen(struct hsocket_t *sock, int pend_max);
 
 /** This function accepts an incoming socket request. Note that this
  * function will not return until a socket connection is ready.
