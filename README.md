@@ -1,7 +1,22 @@
 # neHttpd
 
-Embedded HTTP Server for Web Configuraion Framwork
+######################################################################
+         Embedded HTTP Server for Web Configuraion Framwork
+                      _    _ _______ _______ _____  _____
+                     | |  | |__   __|__   __|  __ \|  __ \
+           _ __   ___| |__| |  | |     | |  | |__) | |  | |
+          | '_ \ / _ \  __  |  | |     | |  |  ___/| |  | |
+          | | | |  __/ |  | |  | |     | |  | |    | |__| |
+          |_| |_|\___|_|  |_|  |_|     |_|  |_|    |_____/
 
+
+                 https://github.com/lst1975/neHttpd
+
+        Embedded HTTP Server with Web Configuraion Framework
+                   Copyright (C) 2022 Songtao Liu
+                          980680431@qq.com
+                         All Rights Reserved
+######################################################################
 # Compile
    make
 
