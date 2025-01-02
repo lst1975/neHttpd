@@ -1227,7 +1227,6 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register service (%s)\n", 
       herror_message(status));
-    herror_release(status);
     goto error1;
   }
 
@@ -1236,7 +1235,6 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register service (%s)\n", 
       herror_message(status));
-    herror_release(status);
     goto error1;
   }
 
@@ -1245,7 +1243,6 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register secure service (%s)\n", 
       herror_message(status));
-    herror_release(status);
     goto error1;
   }
 
@@ -1254,7 +1251,6 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register headers service (%s)\n", 
       herror_message(status));
-    herror_release(status);
     goto error1;
   }
 
@@ -1263,7 +1259,6 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register MIME service (%s)\n", 
       herror_message(status));
-    herror_release(status);
     goto error1;
   }
 
@@ -1272,7 +1267,6 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register POST service (%s)\n", 
       herror_message(status));
-    herror_release(status);
     goto error1;
   }
 
@@ -1281,7 +1275,6 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register default service (%s)\n", 
       herror_message(status));
-    herror_release(status);
     goto error1;
   }
 
@@ -1290,7 +1283,6 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register DATA service (%s)\n", 
       herror_message(status));
-    herror_release(status);
     goto error1;
   }
 
@@ -1299,26 +1291,27 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register default service (%s)\n", 
       herror_message(status));
-    herror_release(status);
     goto error1;
   }
 
   main_print_license();
+
+  fprintf(stderr, "\nneHTTPd is listening on PORT %d\n\n\n", _nanoConfig_HTTPD_PORT);
 
   if ((status = httpd_run()) != H_OK)
   {
     fprintf(stderr, "Cannot run httpd (%s)\n", herror_message(status));
-    herror_release(status);
     goto error1;
   }
 
   httpd_destroy();
-
   main_print_license();
+
   return 0;
     
+error1:
+  herror_release(status);
 error0:
   httpd_destroy();
-error1:
   return 1;
 }
