@@ -156,6 +156,7 @@ static inline int hssl_enabled(void) { return 0; }
 #include "nanohttp-admin.h"
 #include "nanohttp-file.h"
 #include "nanohttp-user.h"
+#include "nanohttp-ring.h"
 
 #ifndef timeradd
 #define timeradd(tvp, uvp, vvp)						\
@@ -275,6 +276,14 @@ void httpd_thread_join(THREAD_T *tid)
   pthread_join(*tid,NULL);
 #else
   WaitForSingleObject(*tid, INFINITE);
+#endif
+}
+
+void httpd_thread_kill(THREAD_T *tid)
+{
+#ifdef WIN32
+#else
+  pthread_kill(*tid, _httpd_terminate_signal);
 #endif
 }
 
@@ -1530,7 +1539,7 @@ void httpd_wait_cond(COND_T *cond)
   WaitForSingleObject(*cond, INFINITE);
 #else
   pthread_mutex_lock(&main_mutex);
-  while (!condition_met) 
+  while (!condition_met && nanohttpd_is_running()) 
   {
     pthread_cond_wait(cond, &main_mutex); // Wait for the condition
   }
@@ -1540,10 +1549,11 @@ void httpd_wait_cond(COND_T *cond)
 void httpd_signal_cond(COND_T *cond)
 {
 #ifdef WIN32
-  SetEvent(*cond);;
+  SetEvent(*cond);
 #else
   pthread_mutex_lock(&main_mutex);
   condition_met = 1; // Set the condition
+  ng_smp_mb();
   pthread_cond_signal(cond); // Signal the main thread
   pthread_mutex_unlock(&main_mutex);
 #endif
@@ -1556,6 +1566,7 @@ static void *thread_function_ipv4(void* arg)
 #endif
 {
   __httpd_run(&_httpd_socket4);
+  ng_smp_mb();
   httpd_signal_cond(&main_cond);
 #ifdef WIN32
   return NULL;
@@ -1571,6 +1582,7 @@ static void *thread_function_ipv6(void* arg)
 #endif
 {
   __httpd_run(&_httpd_socket6);
+  ng_smp_mb();
   httpd_signal_cond(&main_cond);
 #ifdef WIN32
   return NULL;
@@ -1633,16 +1645,15 @@ herror_t httpd_run(void)
   status = __start_thread(c, thread_function_ipv6);
   if (status != H_OK)
   {
-	_httpd_run = 0;
-#ifdef WIN32
-#else
-    pthread_kill(httpd_thread_ipv4.tid, SIGTERM);
-#endif
+  	_httpd_run = 0;
+    ng_smp_mb();
+    httpd_thread_kill(&httpd_thread_ipv4.tid);
     httpd_thread_join(&httpd_thread_ipv4.tid);
     goto clean1;
   }
 
   httpd_wait_cond(&main_cond);
+  ng_smp_mb();
   httpd_thread_join(&httpd_thread_ipv4.tid);
   httpd_thread_join(&httpd_thread_ipv6.tid);
   
