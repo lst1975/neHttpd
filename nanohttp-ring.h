@@ -1313,7 +1313,7 @@ __rte_ring_do_dequeue_elem(struct rte_ring *r, void *obj_table,
     enum rte_ring_queue_behavior behavior, unsigned int is_sc,
     unsigned int *available)
 {
-  uint32_t cons_head, cons_next;
+  uint32_t cons_head, cons_next=0;
   uint32_t entries;
 
   n = __rte_ring_move_cons_head(r, (int)is_sc, n, behavior,

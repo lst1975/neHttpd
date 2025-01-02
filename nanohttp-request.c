@@ -190,13 +190,13 @@ _hrequest_parse_header(char *data)
       tmp2 = saveptr2;
       if (key != NULL)
       {
-        key_len = tmp2 - key;
+        key_len = strlen(key);
         if (key_len == 4 && !memcmp(key, "POST", 4))
           req->method = HTTP_REQUEST_POST;
         else if (key_len == 3 && !memcmp(key, "GET", 3))
           req->method = HTTP_REQUEST_GET;
       	else if (key_len == 7 && !memcmp(key, "OPTIONS", 7))
-                req->method = HTTP_REQUEST_OPTIONS;
+          req->method = HTTP_REQUEST_OPTIONS;
       	else if (key_len == 4 && !memcmp(key, "HEAD", 4))
           req->method = HTTP_REQUEST_HEAD;
         else if (key_len == 3 && !memcmp(key, "PUT", 3))
@@ -209,7 +209,14 @@ _hrequest_parse_header(char *data)
           req->method = HTTP_REQUEST_CONNECT;
         else
           req->method = HTTP_REQUEST_UNKOWN;
+
+        if (req->method > HTTP_REQUEST_GET)
+        {
+          log_error("Not supported request method (%.*s)", key_len, key);
+          return NULL;
+        }
       }
+
       /* below is key the path and tmp2 the spec */
       key = (char *) strtok_r(tmp2, " ", &saveptr2);
 
@@ -237,7 +244,7 @@ _hrequest_parse_header(char *data)
 
         /* save path */
         /* req->path = (char *) http_malloc(strlen(key) + 1); */
-        req->path_len = tmp2 - key;
+        req->path_len = strlen(key);
         memcpy(req->path, key, RTE_MIN(req->path_len, sizeof(req->path)-1));
         req->path[req->path_len] = '\0';
 
@@ -348,10 +355,12 @@ hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t ** out)
 
   /* Create response */
   req = _hrequest_parse_header(buffer);
-
-  /* Create input stream */
-  req->in = http_input_stream_new(sock, req->header);
-
+  if (req == NULL)
+  {
+    return herror_new("hrequest_new_from_socket", GENERAL_HEADER_PARSE_ERROR, 
+      "_hrequest_parse_header failed.");
+  }
+  
   /* Check for MIME message */
   if ((req->content_type &&
        !strcmp(req->content_type->type, "multipart/related")))
@@ -368,6 +377,17 @@ hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t ** out)
       req->attachments = mimeMessage;
       req->in =
         http_input_stream_new_from_file(mimeMessage->root_part->filename);
+    }
+  }
+  else
+  {
+    /* Create input stream */
+    req->in = http_input_stream_new(sock, req->header);
+    if (req->in == NULL)
+    {
+      hrequest_free(req);
+      return herror_new("hrequest_new_from_socket", GENERAL_ERROR, 
+        "http_input_stream_new failed.");
     }
   }
 

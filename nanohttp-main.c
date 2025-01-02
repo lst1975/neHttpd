@@ -66,6 +66,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <limits.h>  // For PATH_MAX
 
 #include "nanohttp-logging.h"
 #include "nanohttp-server.h"
@@ -159,9 +160,13 @@ mime_service(httpd_conn_t *conn, struct hrequest_t *req)
 static size_t 
 __multipart_cb_headers_complete(multipartparser *p)
 {
-  if (p->arg == NULL)
+  if (p->arg != NULL)
   {
-    char buf[256];
+    return 0;
+  }
+  else
+  {
+    char *buf = NULL;
     char *file = "uploads/gw.bin";
 
     if (p->value_length)
@@ -191,7 +196,13 @@ __multipart_cb_headers_complete(multipartparser *p)
               e++;
             if (e <= end && e-f < sizeof(buf)-1)
             {
-              snprintf(buf,sizeof(buf),"%s/%.*s","uploads",(int)(e-f), f);
+              buf = http_malloc(PATH_MAX);
+              if (buf == NULL)
+              {
+                log_error("Failed to malloc temporary buffer.");
+                return -1;
+              }
+              snprintf(buf,PATH_MAX,"%s/%.*s","uploads",(int)(e-f), f);
               file = buf;
             }
           }
@@ -202,11 +213,16 @@ __multipart_cb_headers_complete(multipartparser *p)
     p->arg = nanohttp_file_open_for_write(file);
     if (p->arg == NULL)
     {
+      if (buf != NULL)
+        http_free(buf);
       log_error("Not able to open the file %s for writing.", file);
       return -1;
     }
+    
+    if (buf != NULL)
+      http_free(buf);
+    return 0;
   }
-  return 0;
 }
 
 static size_t
@@ -259,6 +275,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
     {
       r = herror_new("post_service", FILE_ERROR_READ, 
         "Failed to read stream %s", req->path);
+      req->code = 500;
       return r;
     }
 
@@ -271,6 +288,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       {
         r = herror_new("post_service", FILE_ERROR_READ, 
           "Failed to read stream %s", req->path);
+        req->code = 500;
         break;
       }
 
@@ -278,21 +296,20 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       {
         r = herror_new("post_service", FILE_ERROR_WRITE, 
           "Failed to read stream %s", req->path);
+        req->code = 500;
         break;
       }
     }
 
     nanohttp_file_close(p.arg);
+    req->code = 200;
   }
   else
   {
     r = httpd_send_not_implemented(conn, "post_service");
+    req->code = 0;
   }
 
-  if (r != NULL)
-  {
-    log_error("%s", herror_message(r));
-  }
   return r;
 }
 
@@ -300,16 +317,21 @@ static void
 post_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   herror_t r = __post_service(conn, req, "config/gw.bin");
-  if (r == NULL)
+  if (r == H_OK)
   {
     r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+    herror_release(r);
   }
   else
   {
-    r = httpd_send_header(conn, 500, HTTP_STATUS_500_REASON_PHRASE);
+    log_error("%s", herror_message(r));
+    if (req->code)
+    {
+      r = httpd_send_header(conn, req->code, HTTP_STATUS_500_REASON_PHRASE);
+      herror_release(r);
+    }
   }
-
-  herror_release(r);
+  req->code = 0;
 }
 
 static herror_t
@@ -434,6 +456,22 @@ secure_service(httpd_conn_t *conn, struct hrequest_t *req)
 
 extern const char *nanohttp_index_html_head;
 
+#define _(x) _nanoConfig_HTTPD_DATA_SERVICE x
+#define __(x) { .cptr=_(x), .len=sizeof(_(x))-1 }
+#define ___(x) { .cptr=x, .len=sizeof(x)-1 }
+static const httpd_buf_t __SYS_FILE=__("system.json");
+static const httpd_buf_t __DEV_FILE=__("device.json");
+static const httpd_buf_t __USR_FILE=__("users.json");
+static const httpd_buf_t __MIB_FILE=__("setmib.json");
+static const httpd_buf_t __ADD_FILE=__("add.json");
+static const httpd_buf_t __DEL_FILE=__("del.json");
+static const httpd_buf_t __SAV_FILE=__("save.json");
+static const httpd_buf_t __FAVOR_FILE =___("/favicon.ico");
+static const httpd_buf_t __ROOT_FILE  =___("/");
+#undef ___
+#undef __
+#undef _
+
 static void
 root_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
@@ -445,12 +483,11 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
   }
   else
   {
-    const char *path = req->path+1;
-    if (!strcmp("/", req->path))
+    if (BUF_isequal(&__ROOT_FILE, req->path, req->path_len))
     {
       r = __send_root_html(conn, req);
     }
-    else if (!strcmp("favicon.ico", path))
+    else if (BUF_isequal(&__FAVOR_FILE, req->path, req->path_len))
     {
       unsigned char *bf=NULL;
       do
@@ -484,24 +521,24 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       if (bf != NULL)
         http_free(bf);
     }
-    else if (strcmp("data/setmib.json", path)
-      && strcmp("data/add.json", req->path)
-      && strcmp("data/del.json", req->path)
-      && strcmp("data/save.json", req->path)
+    else if (!BUF_isequal(&__MIB_FILE, req->path, req->path_len)
+      && !BUF_isequal(&__ADD_FILE, req->path, req->path_len)
+      && !BUF_isequal(&__DEL_FILE, req->path, req->path_len)
+      && !BUF_isequal(&__SAV_FILE, req->path, req->path_len)
 #if !__NHTTP_TEST      
-      && strcmp("data/deivce.json", req->path)
-      && strcmp("data/users.json", req->path)
-      && strcmp("data/system.json", req->path)
+      && !BUF_isequal(&__DEV_FILE, req->path, req->path_len)
+      && !BUF_isequal(&__USR_FILE, req->path, req->path_len)
+      && !BUF_isequal(&__SYS_FILE, req->path, req->path_len)
 #endif      
       )
     {
-      log_debug("Try to open the file %s.", path);
+      log_debug("Try to open the file %s.", req->path);
 
-      void *file = nanohttp_file_open_for_read(path);
+      void *file = nanohttp_file_open_for_read(req->path+1);
       if (file == NULL)
       {
         // If the file does not exist
-        log_error("Not able to open the file %s for reading.", path);
+        log_error("Not able to open the file %s for reading.", req->path);
         r = httpd_send_header(conn, 404, HTTP_STATUS_404_REASON_PHRASE);
       }
       else
@@ -514,7 +551,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
           {
             char buf[1024];
             size_t n = snprintf(buf, sizeof buf, 
-              "Failed to readfile %s: %s", path, herror_message(r));
+              "Failed to readfile %s: %s", req->path, herror_message(r));
             log_error("%s", buf);
             herror_release(r);
             r = http_output_stream_write(conn->out, (const unsigned char *)buf, n-1);
@@ -542,14 +579,6 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
 #define CFG_ret3 "\"}]}"
 #define CFG_RET0(msg) __CFG_ret0("") msg CFG_ret3
 #define CFG_RET1(msg) CFG_ret1 msg CFG_ret3
-
-#define _(x) _nanoConfig_HTTPD_DATA_SERVICE x
-#define __(x) { .cptr=_(x), .len=sizeof(_(x))-1 }
-static const httpd_buf_t __SYS_FILE=__("system.json");
-static const httpd_buf_t __DEV_FILE=__("device.json");
-static const httpd_buf_t __USR_FILE=__("users.json");
-#undef _
-#undef __
 
 static void
 data_service(httpd_conn_t *conn, struct hrequest_t *req)
