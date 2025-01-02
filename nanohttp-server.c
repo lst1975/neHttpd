@@ -1488,8 +1488,6 @@ __httpd_run(struct hsocket_t *sock)
 
   log_verbose("starting run routine");
 
-  _httpd_register_signal_handler();
-
   if ((err = hsocket_listen(sock)) != H_OK)
   {
     log_error("hsocket_listen failed (%s)", herror_message(err));
