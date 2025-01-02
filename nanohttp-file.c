@@ -195,15 +195,15 @@ static void normalizePath(char *inputPath) {
 #define __TOP_MAX_E __TOP_MAX - 1
 struct _topp{
   uint16_t i;
-  uint16_t l;
+  uint16_t l:15;
+  uint16_t d:1;
 };
-static int normalizePath(char *inputPath, int len) 
+static int normalizePath(char *inputPath, int len)
 {
   char *token;
   struct _topp stack[100]; // Stack to hold path components
   int top = -1;
   char *end = inputPath + len;
-  char *out = inputPath;
   struct _topp *t;
   char *p = inputPath;
 
@@ -248,15 +248,20 @@ static int normalizePath(char *inputPath, int len)
 	  break;
   }
 
+  if (p[0] == __PATH_DLIM)
+    p++;
+
   // Construct the normalized path
+  p = inputPath;
   for (int i = 0; i <= top; i++) 
   {
+	if (i)
+      *p++ = __PATH_DLIM;
     t = &stack[i];
-	*out++ = __PATH_DLIM;
-	memcpy(out, inputPath+t->i, t->l);
-	out += t->l;
+	memcpy(p, inputPath+t->i, t->l);
+	p += t->l;
   }
-  *out = '\0';
+  *p = '\0';
   return 0;
 }
 #undef __TOP_MAX
