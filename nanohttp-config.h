@@ -97,6 +97,7 @@
 #define _nanoConfig_HTTPD_FILE_BLOCK      2048
 #define _nanoConfig_HTTPD_FILE_SERVICE    "/config/"
 #define _nanoConfig_HTTPD_DATA_SERVICE    "/data/"
+#define _nanoConfig_HTTPD_LOG_LEVEL NANOHTTP_LOG_FATAL
 
 #define DEBUG_MULTIPART
 #define __NHTTP_DEBUG 0

@@ -1177,12 +1177,34 @@ int json_test(void)
   return 0;
 }
 
+#define __HTTPD_LICENSE \
+    "######################################################################\n" \
+    "                      _    _ _______ _______ _____  _____             \n" \
+    "                     | |  | |__   __|__   __|  __ \\|  __ \\            \n" \
+    "           _ __   ___| |__| |  | |     | |  | |__) | |  | |           \n" \
+    "          | '_ \\ / _ \\  __  |  | |     | |  |  ___/| |  | |           \n" \
+    "          | | | |  __/ |  | |  | |     | |  | |    | |__| |           \n" \
+    "          |_| |_|\\___|_|  |_|  |_|     |_|  |_|    |_____/            \n" \
+    "                                                                      \n" \
+    "                                                                      \n" \
+    "                 https://github.com/lst1975/neHttpd                   \n" \
+    "                                                                      \n" \
+    "        Embedded HTTP Server with Web Configuraion Framework          \n" \
+    "                   Copyright (C) 2022 Songtao Liu                     \n" \
+    "                       980680431@qq.com                               \n" \
+    "                      All Rights Reserved                             \n" \
+    "######################################################################\n"
+void main_print_license(void)
+{
+  fprintf(stderr, "\n%s\n", __HTTPD_LICENSE);
+}
+
 int
 main(int argc, char **argv)
 {
   herror_t status;
 
-  nanohttp_log_set_loglevel(NANOHTTP_LOG_VERBOSE);
+  nanohttp_log_set_loglevel(_nanoConfig_HTTPD_LOG_LEVEL);
     
   if (httpd_init(argc, argv))
   {
@@ -1281,6 +1303,8 @@ main(int argc, char **argv)
     goto error1;
   }
 
+  main_print_license();
+
   if ((status = httpd_run()) != H_OK)
   {
     fprintf(stderr, "Cannot run httpd (%s)\n", herror_message(status));
@@ -1288,8 +1312,9 @@ main(int argc, char **argv)
     goto error1;
   }
 
-  fprintf(stderr, "Process finished\n");
   httpd_destroy();
+
+  main_print_license();
   return 0;
     
 error0:
