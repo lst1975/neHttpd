@@ -63,6 +63,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -158,6 +159,8 @@ nanohttp_dir_free(void)
   log_info("[OK]");
 }
 
+#if 0
+#define __TOP_MAX 100
 static void normalizePath(char *inputPath) {
   char *token;
   char *pathCopy = http_strdup(inputPath);
@@ -186,17 +189,90 @@ static void normalizePath(char *inputPath) {
 
   http_free(pathCopy);
 }
+#undef __TOP_MAX
+#else
+#define __TOP_MAX 100
+#define __TOP_MAX_E __TOP_MAX - 1
+struct _topp{
+  uint16_t i;
+  uint16_t l;
+};
+static int normalizePath(char *inputPath, int len) 
+{
+  char *token;
+  struct _topp stack[100]; // Stack to hold path components
+  int top = -1;
+  char *end = inputPath + len;
+  char *out = inputPath;
+  struct _topp *t;
+  char *p = inputPath;
+
+  while (p < end)
+  {
+    token = memchr(p, __PATH_DLIM, len);
+    if (token == NULL)
+    {
+	  if (top == __TOP_MAX_E)
+		return -1;
+  	  t = &stack[++top];
+      t->i = p - inputPath; // Push valid directory onto stack
+  	  t->l = end - p;
+  	  break;
+    }
+    if (end - token > 2 
+	  && *(uint16_t*)(token+1) == *(const uint16_t*)"..") 
+	{
+      if (top > -1) 
+	  {
+        top--; // Pop the last valid directory
+      }
+	  p = token + 3;
+    } 
+	else if (token > p)
+	{
+	  if (token - p != 1 || p[0] != '.')
+	  {
+	    if (top == __TOP_MAX_E)
+		  return -1;
+	    t = &stack[++top];
+        t->i = p - inputPath; // Push valid directory onto stack
+	    t->l = token - p;
+	  }
+	  p = token + 1;
+    }
+	else if (end - token > 0)
+	{
+	  p = token + 1;
+    }
+	else 
+	  break;
+  }
+
+  // Construct the normalized path
+  for (int i = 0; i <= top; i++) 
+  {
+    t = &stack[i];
+	*out++ = __PATH_DLIM;
+	memcpy(out, inputPath+t->i, t->l);
+	out += t->l;
+  }
+  *out = '\0';
+  return 0;
+}
+#undef __TOP_MAX
+#endif
 
 static char *nanohttp_file_get_path(const char *file)
 {
+  httpd_buf_t *b = &httpd_base_path;
   char *path = http_malloc(PATH_MAX);
   if (path == NULL)
     return NULL;
 
   size_t flen = strlen(file);
   if (file[0] == __PATH_DLIM 
-    ||(flen >= httpd_base_path.len 
-        && (!memcmp(httpd_base_path.buf, file, httpd_base_path.len))))
+    ||(flen >= b->len 
+        && (!memcmp(b->buf, file, b->len))))
   {
     if (flen >= PATH_MAX)
     {
@@ -206,16 +282,20 @@ static char *nanohttp_file_get_path(const char *file)
     memcpy(path, file, flen+1);
     return path;
   }
-  if (flen + httpd_base_path.len >= PATH_MAX)
+  if (flen + b->len >= PATH_MAX)
   {
     http_free(path);
     return NULL;
   }
 
-  memcpy(path,httpd_base_path.buf,httpd_base_path.len);
-  memcpy(path+httpd_base_path.len,file,flen);
-  path[httpd_base_path.len+flen]='\0';
-  normalizePath(path);
+  memcpy(path,b->buf,b->len);
+  memcpy(path+b->len,file,flen);
+  path[b->len+flen]='\0';
+  if (normalizePath(path, b->len+flen))
+  {
+    http_free(path);
+    return NULL;
+  }
   log_debug("Get path: %s", path);
   return path;
 }
