@@ -1389,13 +1389,13 @@ _httpd_start_thread(conndata_t *conn)
 
 #if __NHTTP_USE_EPOLL
 static inline herror_t
-__httpd_run(struct hsocket_t *sock)
+__httpd_run(struct hsocket_t *sock, const char *name)
 {
   conndata_t *conn;
   herror_t err;
   struct epoll_event event;
   
-  log_verbose("starting run routine");
+  log_verbose("starting run routine: %s", name);
 
   if ((err = hsocket_listen(sock)) != H_OK)
   {
@@ -1479,14 +1479,14 @@ __httpd_run(struct hsocket_t *sock)
 }
 #else
 static inline herror_t
-__httpd_run(struct hsocket_t *sock)
+__httpd_run(struct hsocket_t *sock, const char *name)
 {
   struct timeval timeout;
   conndata_t *conn;
   herror_t err;
   fd_set fds;
 
-  log_verbose("starting run routine");
+  log_verbose("starting run routine: %s", name);
 
   if ((err = hsocket_listen(sock)) != H_OK)
   {
@@ -1567,11 +1567,14 @@ pthread_cond_t  main_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t main_mutex = PTHREAD_MUTEX_INITIALIZER;
 typedef pthread_cond_t COND_T;
 #endif
-static int condition_met = 0;
+static NG_ATOMIC_T(NG_U32) condition_met;
 
 int httpd_create_cond(COND_T *cond)
 {
   int err = 0;
+
+  ng_atomic_set(&condition_met, 0);
+  
 #ifdef WIN32
   *cond = CreateEvent(NULL, FALSE, FALSE, NULL);
   if (*cond == NULL)
@@ -1634,12 +1637,17 @@ void httpd_wait_cond(COND_T *cond)
 }
 void httpd_signal_cond(COND_T *cond)
 {
+  int already_set = ng_atomic_read(&condition_met);
+  if (already_set)
+    return;
+
+  // Set the condition
+  ng_atomic_set(&condition_met, 1);
+  
 #ifdef WIN32
   SetEvent(*cond);
 #else
   pthread_mutex_lock(&main_mutex);
-  condition_met = 1; // Set the condition
-  ng_smp_mb();
   pthread_cond_signal(cond); // Signal the main thread
   pthread_mutex_unlock(&main_mutex);
 #endif
@@ -1651,7 +1659,7 @@ DWORD WINAPI thread_function_ipv4(LPVOID arg)
 static void *thread_function_ipv4(void* arg) 
 #endif
 {
-  __httpd_run(&_httpd_socket4);
+  __httpd_run(&_httpd_socket4, "ipv4");
   ng_smp_mb();
   httpd_signal_cond(&main_cond);
 #ifdef WIN32
@@ -1667,7 +1675,7 @@ DWORD WINAPI thread_function_ipv6(LPVOID arg)
 static void *thread_function_ipv6(void* arg) 
 #endif
 {
-  __httpd_run(&_httpd_socket6);
+  __httpd_run(&_httpd_socket6, "ipv6");
   ng_smp_mb();
   httpd_signal_cond(&main_cond);
 #ifdef WIN32
