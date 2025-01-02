@@ -1330,7 +1330,7 @@ _httpd_wait_for_empty_conn(void)
 
   for (i = 0;; i++)
   {
-    if (!_httpd_run)
+    if (!nanohttpd_is_running())
     {
 #ifdef WIN32
       ReleaseMutex(_httpd_connection_lock);
@@ -1496,14 +1496,14 @@ __httpd_run(struct hsocket_t *sock)
     return err;
   }
 
-  while (_httpd_run)
+  while (nanohttpd_is_running())
   {
     conn = _httpd_wait_for_empty_conn();
-    if (!_httpd_run)
+    if (!nanohttpd_is_running())
       break;
 
     /* Wait for a socket to accept */
-    while (_httpd_run)
+    while (nanohttpd_is_running())
     {
 
       /* set struct timeval to the proper timeout */
@@ -1518,17 +1518,17 @@ __httpd_run(struct hsocket_t *sock)
       switch (select(sock->sock + 1, &fds, NULL, NULL, &timeout))
       {
       case 0:
-        if (!_httpd_run)
+        if (!nanohttpd_is_running())
           break;
         /* descriptor is not ready */
         continue;
       case -1:
-        if (!_httpd_run)
+        if (!nanohttpd_is_running())
           break;
         /* got a signal? */
         continue;
       default:
-        if (!_httpd_run)
+        if (!nanohttpd_is_running())
           break;
         /* no nothing */
         break;
@@ -1540,7 +1540,7 @@ __httpd_run(struct hsocket_t *sock)
     }
 
     /* check signal status */
-    if (!_httpd_run)
+    if (!nanohttpd_is_running())
       break;
 
     err = hsocket_accept(sock, &(conn->sock));
