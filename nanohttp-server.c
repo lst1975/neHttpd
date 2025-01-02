@@ -213,6 +213,12 @@ static hservice_t *_httpd_services_tail = NULL;
 
 static conndata_t *_httpd_connection = NULL;
 
+#define __HTTP_USE_CONN_RING 1
+
+#if __HTTP_USE_CONN_RING
+static struct rte_ring *_httpd_connection_ring = NULL;
+#endif
+
 int nanohttpd_is_running(void)
 {
   return _httpd_run;
@@ -226,7 +232,9 @@ static int _httpd_max_idle = 120;
 typedef HANDLE MUTEXT_T;
 typedef HANDLE THREAD_T;
 typedef DWORD WINAPI (*HTTP_THREAD_EXEFUNC_T)(LPVOID arg);
+#if !__HTTP_USE_CONN_RING
 HANDLE _httpd_connection_lock = NULL;
+#endif
 #define strncasecmp(s1, s2, num) strncmp(s1, s2, num)
 #define snprintf(buffer, num, s1, s2) sprintf(buffer, s1,s2)
 
@@ -237,7 +245,9 @@ typedef pthread_t THREAD_T;
 typedef void * (*HTTP_THREAD_EXEFUNC_T)(void *data);
 static int _httpd_terminate_signal = SIGINT;
 static sigset_t thrsigset;
+#if !__HTTP_USE_CONN_RING
 static pthread_mutex_t _httpd_connection_lock = PTHREAD_MUTEX_INITIALIZER;;
+#endif
 #endif
 
 int httpd_create_mutex(MUTEXT_T *mutex)
@@ -370,12 +380,15 @@ _httpd_connection_slots_init(void)
   int i;
   herror_t status;
 
+#if !__HTTP_USE_CONN_RING
   if (httpd_create_mutex(&_httpd_connection_lock))
   {
     status = herror_new("httpd_create_mutex",  GENERAL_ERROR,
                                "Failed to create mutex!");
     goto clean0;
   }
+#endif
+
   _httpd_connection = (conndata_t *)
         http_calloc(_httpd_max_connections, sizeof(conndata_t));
   if (_httpd_connection == NULL)
@@ -386,26 +399,64 @@ _httpd_connection_slots_init(void)
     goto clean1;
   }
   
+#if __HTTP_USE_CONN_RING
+  struct rte_ring *ring;
+  ring = rte_ring_create("http_conn", _httpd_max_connections, RING_F_EXACT_SZ);
+  if (ring == NULL)
+  {
+    log_fatal("rte_ring_create failed.");
+    status = herror_new("_httpd_connection_slots_init",
+                               GENERAL_ERROR,
+                               "Failed create ring for _httpd_connection!");
+    goto clean2;
+  }
+  rte_ring_dump(ring);
+  _httpd_connection_ring = ring;
+#endif
+
   for (i = 0; i < _httpd_max_connections; i++)
   {
     conndata_t *c = &_httpd_connection[i];
     hsocket_init(&c->sock);
     httpd_thread_init(&c->tid);
+#if __HTTP_USE_CONN_RING
+    if (rte_ring_mp_enqueue(ring, c) < 0)
+    {
+      log_fatal("rte_ring_mp_enqueue failed.");
+      status = herror_new("_httpd_connection_slots_init",
+                                 GENERAL_ERROR,
+                                 "Failed rte_ring_mp_enqueue!");
+      goto clean3;
+    }
+#endif
   }
+
   log_info("[OK]");
   return H_OK;
 
+#if __HTTP_USE_CONN_RING
+clean3:
+  rte_ring_free(_httpd_connection_ring);
+  _httpd_connection_ring = NULL;
+#endif
+clean2:
+  http_free(_httpd_connection);
+  _httpd_connection = NULL;
 clean1:
+#if !__HTTP_USE_CONN_RING
   httpd_destroy_mutex(&_httpd_connection_lock);
 clean0:
   log_info("[FAIL]");
+#endif  
   return status;
 }
 
 static void
 _httpd_connection_slots_free(void)
 {
+#if !__HTTP_USE_CONN_RING
   httpd_destroy_mutex(&_httpd_connection_lock);
+#endif
 
   if (_httpd_connection)
   {
@@ -420,6 +471,11 @@ _httpd_connection_slots_free(void)
     http_free(_httpd_connection);
   }
   
+#if __HTTP_USE_CONN_RING
+  rte_ring_free(_httpd_connection_ring);
+  _httpd_connection_ring = NULL;
+#endif
+
   log_info("[OK]");
   return;
 }
@@ -605,15 +661,17 @@ httpd_get_protocol(void)
 int
 httpd_get_conncount(void)
 {
+#if __HTTP_USE_CONN_RING
+  return rte_ring_free_count(_httpd_connection_ring);
+#else
   int i, ret;
-
   for (ret = i = 0; i<_httpd_max_connections; i++)
   {
     if (_httpd_connection[i].flag == CONNECTION_IN_USE)
       ret++;
   }
-
   return ret;
+#endif
 }
 
 hservice_t *
@@ -1215,6 +1273,14 @@ httpd_session_main(void *data)
 #endif
 
   conn->flag = CONNECTION_FREE;
+#if __HTTP_USE_CONN_RING
+  if (rte_ring_mp_enqueue(_httpd_connection_ring, conn) < 0)
+  {
+    log_fatal("rte_ring_mp_enqueue failed.");
+  }
+#endif
+
+  log_debug("Connection used is: %d", httpd_get_conncount());
 
 #ifdef WIN32
   _endthread();
@@ -1325,6 +1391,7 @@ _httpd_register_signal_handler(void)
 static conndata_t *
 _httpd_wait_for_empty_conn(void)
 {
+#if !__HTTP_USE_CONN_RING
   int i;
 
 #ifdef WIN32
@@ -1364,6 +1431,14 @@ _httpd_wait_for_empty_conn(void)
 #endif
 
   return &_httpd_connection[i];
+#else
+  while (1)
+  {
+    conndata_t *conn;
+    if (!rte_ring_mc_dequeue(_httpd_connection_ring, (void **)&conn))
+      return conn;
+  };
+#endif
 }
 
 static void
