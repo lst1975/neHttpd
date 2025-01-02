@@ -156,7 +156,12 @@ typedef int ssize_t;
 #include "nanohttp-ssl.h"
 #endif
 
+#if __NHTTP_USE_EPOLL
 static int _hsocket_timeout = 10000;
+#else
+static int _hsocket_timeout = 10;
+#endif
+
 extern int nanohttpd_is_running(void);
 
 #ifdef WIN32
@@ -207,11 +212,13 @@ _hsocket_sys_close(struct hsocket_t * sock)
   closesocket(sock->sock);
   sock->sock = HSOCKET_FREE;
 
+#if __NHTTP_USE_EPOLL
   if (sock->ep != HSOCKET_FREE)
   {
     closesocket(sock->ep);
     sock->ep = HSOCKET_FREE;
   }
+#endif
   return;
 }
 
@@ -284,11 +291,13 @@ _hsocket_sys_close(struct hsocket_t * sock)
   close(sock->sock);
   sock->sock = HSOCKET_FREE;
 
+#if __NHTTP_USE_EPOLL
   if (sock->ep != HSOCKET_FREE)
   {
     close(sock->ep);
     sock->ep = HSOCKET_FREE;
   }
+#endif
   return;
 }
 #endif
@@ -328,7 +337,9 @@ hsocket_init(struct hsocket_t * sock)
 {
   memset(sock, 0, sizeof(struct hsocket_t));
   sock->sock = HSOCKET_FREE;
+#if __NHTTP_USE_EPOLL
   sock->ep   = HSOCKET_FREE;
+#endif
 
   return H_OK;
 }
@@ -468,6 +479,7 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
   return H_OK;
 }
 
+#if __NHTTP_USE_EPOLL
 herror_t
 hsocket_epoll_create(struct hsocket_t *dest)
 {
@@ -499,6 +511,7 @@ hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
 
   return H_OK;
 }
+#endif
 
 herror_t
 hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
@@ -512,12 +525,14 @@ hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
   if ((status = _hsocket_sys_accept(sock, dest)) != H_OK)
     return status;
 
+#if __NHTTP_USE_EPOLL
   if ((status = hsocket_epoll_create(dest)) != H_OK)
     return status;
 
   if ((status = hsocket_epoll_ctl(dest->ep, dest->sock, 
     &dest->event, EPOLL_CTL_ADD, EPOLLIN|EPOLLRDHUP|EPOLLERR)) != H_OK)
     return status;
+#endif
 
 #ifdef HAVE_SSL
   if ((status = hssl_server_ssl(dest)) != H_OK)
@@ -623,6 +638,7 @@ hsocket_send_string(struct hsocket_t * sock, const char *str)
   return hsocket_send(sock, (unsigned char *)str, strlen(str));
 }
 
+#if __NHTTP_USE_EPOLL
 int
 hsocket_select_recv(struct hsocket_t *sock, 
   char *buf, size_t len)
@@ -668,6 +684,53 @@ hsocket_select_recv(struct hsocket_t *sock,
 
   return n;
 }
+#else
+int
+hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
+{
+  int n;
+  fd_set fds;
+  struct timeval timeout;
+
+  FD_ZERO(&fds);
+  FD_SET(sock->sock, &fds);
+
+  timeout.tv_sec = _hsocket_timeout;
+  timeout.tv_usec = 0;
+
+  while (1)
+  {
+    n = select(sock->sock + 1, &fds, NULL, NULL, &timeout);
+    if (n == 0)
+    {
+      errno = ETIMEDOUT;
+      log_verbose("Socket %d timed out", sock->sock);
+      return -1;
+    }
+    else if (n == -1)
+    {
+      if (!_hsocket_should_again(errno))
+      {
+        log_verbose("Socket %d select error", sock->sock);
+        return -1;
+      }
+    }
+  	else
+  	{
+  	  break;
+  	}
+  }
+  
+  while (1)
+  {
+    n = recv(sock->sock, buf, len, 0);
+    if (n != -1 || !_hsocket_should_again(errno))
+      break;
+  }
+
+  return n;
+}
+#endif
 
 herror_t
 hsocket_recv(struct hsocket_t *sock, unsigned char * buffer, 

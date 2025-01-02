@@ -86,7 +86,13 @@
 #ifndef __nanohttp_socket_h
 #define __nanohttp_socket_h
 
+#include "nanohttp-config.h"
+
+#if __NHTTP_USE_EPOLL
 #include <sys/epoll.h>
+#else
+#include <sys/select.h>
+#endif
 
 /** @file nanohttp-socket.h Socket wrapper
  *
@@ -126,8 +132,10 @@ struct hsocket_t
   SOCKET ep;
 #else
   int sock;
+#if __NHTTP_USE_EPOLL 
   int ep;
   struct epoll_event event;
+#endif
 #endif
   union{
     struct sockaddr_in addr;
@@ -263,9 +271,11 @@ extern herror_t hsocket_send(struct hsocket_t *sock, const unsigned char *bytes,
 extern herror_t hsocket_send_string(struct hsocket_t *sock, const char *str);
 
 extern int hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len);
+#if __NHTTP_USE_EPOLL
 herror_t hsocket_epoll_create(struct hsocket_t *dest);
 herror_t hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
   int op, int flags);
+#endif
 
 /** This function reads data from the socket.
  *

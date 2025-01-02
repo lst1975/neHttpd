@@ -86,8 +86,6 @@
 ******************************************************************/
 #include "nanohttp-config.h"
 
-#include <sys/epoll.h>
-
 #ifdef HAVE_SOCKET_H
 #include <sys/socket.h>
 #endif
@@ -1389,6 +1387,7 @@ _httpd_start_thread(conndata_t *conn)
   return;
 }
 
+#if __NHTTP_USE_EPOLL
 static inline herror_t
 __httpd_run(struct hsocket_t *sock)
 {
@@ -1478,6 +1477,88 @@ __httpd_run(struct hsocket_t *sock)
 
   return 0;
 }
+#else
+static inline herror_t
+__httpd_run(struct hsocket_t *sock)
+{
+  struct timeval timeout;
+  conndata_t *conn;
+  herror_t err;
+  fd_set fds;
+
+  log_verbose("starting run routine");
+
+  _httpd_register_signal_handler();
+
+  if ((err = hsocket_listen(sock)) != H_OK)
+  {
+    log_error("hsocket_listen failed (%s)", herror_message(err));
+    return err;
+  }
+
+  while (_httpd_run)
+  {
+    conn = _httpd_wait_for_empty_conn();
+    if (!_httpd_run)
+      break;
+
+    /* Wait for a socket to accept */
+    while (_httpd_run)
+    {
+
+      /* set struct timeval to the proper timeout */
+      timeout.tv_sec = 1;
+      timeout.tv_usec = 0;
+
+      /* zero and set file descriptior */
+      FD_ZERO(&fds);
+      FD_SET(sock->sock, &fds);
+
+      /* select socket descriptor */
+      switch (select(sock->sock + 1, &fds, NULL, NULL, &timeout))
+      {
+      case 0:
+        if (!_httpd_run)
+          break;
+        /* descriptor is not ready */
+        continue;
+      case -1:
+        if (!_httpd_run)
+          break;
+        /* got a signal? */
+        continue;
+      default:
+        if (!_httpd_run)
+          break;
+        /* no nothing */
+        break;
+      }
+      if (FD_ISSET(sock->sock, &fds))
+      {
+        break;
+      }
+    }
+
+    /* check signal status */
+    if (!_httpd_run)
+      break;
+
+    err = hsocket_accept(sock, &(conn->sock));
+    if (err != H_OK)
+    {
+      log_error("hsocket_accept failed (%s)", herror_message(err));
+
+      hsocket_close(&(conn->sock));
+
+      continue;
+    }
+
+    _httpd_start_thread(conn);
+  }
+
+  return 0;
+}
+#endif
 
 #ifdef WIN32
 HANDLE main_cond=NULL;
