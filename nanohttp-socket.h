@@ -86,6 +86,8 @@
 #ifndef __nanohttp_socket_h
 #define __nanohttp_socket_h
 
+#include <sys/epoll.h>
+
 /** @file nanohttp-socket.h Socket wrapper
  *
  * @defgroup NANOHTTP_SOCKET Socket wrapper
@@ -121,8 +123,11 @@ struct hsocket_t
 {
 #ifdef WIN32
   SOCKET sock;
+  SOCKET ep;
 #else
   int sock;
+  int ep;
+  struct epoll_event event;
 #endif
   union{
     struct sockaddr_in addr;
@@ -137,6 +142,8 @@ struct hsocket_t
 extern "C"
 {
 #endif
+
+extern int _hsocket_should_again(int err);
 
 /** This function iitializes the socket modul. This should be called
  * only once for an application.
@@ -255,7 +262,10 @@ extern herror_t hsocket_send(struct hsocket_t *sock, const unsigned char *bytes,
  */
 extern herror_t hsocket_send_string(struct hsocket_t *sock, const char *str);
 
-extern int hsocket_select_recv(int sock, char *buf, size_t len);
+extern int hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len);
+herror_t hsocket_epoll_create(struct hsocket_t *dest);
+herror_t hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
+  int op, int flags);
 
 /** This function reads data from the socket.
  *

@@ -156,11 +156,11 @@ typedef int ssize_t;
 #include "nanohttp-ssl.h"
 #endif
 
-static int _hsocket_timeout = 10;
+static int _hsocket_timeout = 10000;
 extern int nanohttpd_is_running(void);
 
 #ifdef WIN32
-static inline int _hsocket_should_again(int err)
+int _hsocket_should_again(int err)
 {
   return (err == WSAEWOULDBLOCK) && nanohttpd_is_running();
 }
@@ -207,6 +207,11 @@ _hsocket_sys_close(struct hsocket_t * sock)
   closesocket(sock->sock);
   sock->sock = HSOCKET_FREE;
 
+  if (sock->ep != HSOCKET_FREE)
+  {
+    closesocket(sock->ep);
+    sock->ep = HSOCKET_FREE;
+  }
   return;
 }
 
@@ -227,7 +232,7 @@ _hsocket_module_sys_destroy(void)
   return;
 }
 #else
-static inline int _hsocket_should_again(int err)
+int _hsocket_should_again(int err)
 {
   return (err == EWOULDBLOCK || err == EAGAIN || err == EINTR) 
     && nanohttpd_is_running();
@@ -279,6 +284,11 @@ _hsocket_sys_close(struct hsocket_t * sock)
   close(sock->sock);
   sock->sock = HSOCKET_FREE;
 
+  if (sock->ep != HSOCKET_FREE)
+  {
+    close(sock->ep);
+    sock->ep = HSOCKET_FREE;
+  }
   return;
 }
 #endif
@@ -318,6 +328,7 @@ hsocket_init(struct hsocket_t * sock)
 {
   memset(sock, 0, sizeof(struct hsocket_t));
   sock->sock = HSOCKET_FREE;
+  sock->ep   = HSOCKET_FREE;
 
   return H_OK;
 }
@@ -362,7 +373,8 @@ hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
 
   /* connect to the server */
   if (connect(dsock->sock, (struct sockaddr *) &address, sizeof(address)) != 0)
-    return herror_new("hsocket_open", HSOCKET_ERROR_CONNECT, "Socket error (%s)", strerror(errno));
+    return herror_new("hsocket_open", HSOCKET_ERROR_CONNECT, 
+                "Socket error (%s)", strerror(errno));
 
   if (ssl)
   {
@@ -378,6 +390,7 @@ hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
     return herror_new("hssl_client_ssl", 0, "SSL wasn't enabled at compile time");
 #endif
   }
+
   return H_OK;
 }
 
@@ -456,7 +469,39 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
 }
 
 herror_t
-hsocket_accept(struct hsocket_t * sock, struct hsocket_t * dest)
+hsocket_epoll_create(struct hsocket_t *dest)
+{
+  dest->ep = epoll_create1(0);
+  if (dest->ep == HSOCKET_FREE) 
+  {
+    return herror_new("hsocket_accept", HSOCKET_ERROR_INIT, 
+      "epoll_create1 (%s)", strerror(errno));
+  }
+  return H_OK;
+}
+
+herror_t
+hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
+  int op, int flags)
+{
+  event->events = flags; // Monitor for input events
+  event->data.fd = sock;
+  if (epoll_ctl(ep, op, sock, event) == -1) 
+  {
+    if (errno != EEXIST)
+    {
+      log_verbose("epoll_ctl %d failed", sock);
+      return herror_new("__httpd_run", HSOCKET_ERROR_RECEIVE,
+                        "Cannot epoll_ctl on this socket (%s)", 
+                        strerror(errno));
+    }
+  }
+
+  return H_OK;
+}
+
+herror_t
+hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
 {
   herror_t status;
 
@@ -465,6 +510,13 @@ hsocket_accept(struct hsocket_t * sock, struct hsocket_t * dest)
                       "hsocket_t not initialized");
 
   if ((status = _hsocket_sys_accept(sock, dest)) != H_OK)
+    return status;
+
+  if ((status = hsocket_epoll_create(dest)) != H_OK)
+    return status;
+
+  if ((status = hsocket_epoll_ctl(dest->ep, dest->sock, 
+    &dest->event, EPOLL_CTL_ADD, EPOLLIN|EPOLLRDHUP|EPOLLERR)) != H_OK)
     return status;
 
 #ifdef HAVE_SSL
@@ -543,7 +595,8 @@ hsocket_send(struct hsocket_t * sock, const unsigned char * bytes, size_t n)
 #else
     if ((size = send(sock->sock, bytes + total, n, 0)) == -1)
     {
-      status = herror_new("hsocket_send", HSOCKET_ERROR_SEND, "send failed (%s)", strerror(errno));
+      status = herror_new("hsocket_send", HSOCKET_ERROR_SEND, 
+        "send failed (%s)", strerror(errno));
     }
 #endif
 
@@ -571,44 +624,44 @@ hsocket_send_string(struct hsocket_t * sock, const char *str)
 }
 
 int
-hsocket_select_recv(int sock, char *buf, size_t len)
+hsocket_select_recv(struct hsocket_t *sock, 
+  char *buf, size_t len)
 {
+  // Example: Adding stdin (file descriptor 0) to epoll
   int n;
-  struct timeval timeout;
-  fd_set fds;
-
-  FD_ZERO(&fds);
-  FD_SET(sock, &fds);
-
-  timeout.tv_sec = _hsocket_timeout;
-  timeout.tv_usec = 0;
-
-  while (1)
+  struct epoll_event event;
+  
+  while (1) 
   {
-    n = select(sock + 1, &fds, NULL, NULL, &timeout);
-    if (n == 0)
+    int n = epoll_wait(sock->ep, &event, 1, _hsocket_timeout);
+    if (n == -1)
+    {
+      if (_hsocket_should_again(errno))
+        continue;
+      log_verbose("Socket %d epoll_wait error", sock);
+      return -1;
+    }
+    else if (n == 0)
     {
       errno = ETIMEDOUT;
       log_verbose("Socket %d timed out", sock);
       return -1;
     }
-    else if (n == -1)
+    else
     {
-      if (!_hsocket_should_again(errno))
-      {
-        log_verbose("Socket %d select error", sock);
+      if (event.events & (EPOLLRDHUP|EPOLLERR))
         return -1;
-      }
+      if ((event.events & EPOLLIN) 
+          && event.data.fd == sock->sock)
+        break;
+      log_verbose("Socket %d unknown error", sock);
+      return -1;
     }
-  	else
-  	{
-  	  break;
-  	}
   }
   
   while (1)
   {
-    n = recv(sock, buf, len, 0);
+    n = recv(sock->sock, buf, len, 0);
     if (n != -1 || !_hsocket_should_again(errno))
       break;
   }
@@ -617,7 +670,8 @@ hsocket_select_recv(int sock, char *buf, size_t len)
 }
 
 herror_t
-hsocket_recv(struct hsocket_t * sock, unsigned char * buffer, size_t total, int force, size_t *received)
+hsocket_recv(struct hsocket_t *sock, unsigned char * buffer, 
+  size_t total, int force, size_t *received)
 {
   herror_t status = H_OK;
   size_t totalRead;
@@ -630,14 +684,17 @@ hsocket_recv(struct hsocket_t * sock, unsigned char * buffer, size_t total, int 
   {
 
 #ifdef HAVE_SSL
-    if ((status = hssl_read(sock, (char *)buffer + totalRead, (size_t) total - totalRead, &count)) != H_OK)
+    if ((status = hssl_read(sock, (char *)buffer + totalRead, 
+      (size_t) total - totalRead, &count)) != H_OK)
     {
       log_warn("hssl_read failed (%s)", herror_message(status));
     }
 #else
-    if ((count = hsocket_select_recv(sock->sock, (char *)buffer + totalRead, (size_t) total - totalRead)) == -1)
+    if ((count = hsocket_select_recv(sock, (char *)buffer + totalRead, 
+      (size_t) total - totalRead)) == -1)
     {
-      status = herror_new("hsocket_recv", HSOCKET_ERROR_RECEIVE, "recv failed (%s)", strerror(errno));
+      status = herror_new("hsocket_recv", HSOCKET_ERROR_RECEIVE, 
+        "recv failed (%s)", strerror(errno));
     }
 #endif
     if (status != H_OK)

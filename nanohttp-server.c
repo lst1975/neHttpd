@@ -86,9 +86,7 @@
 ******************************************************************/
 #include "nanohttp-config.h"
 
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
-#endif
+#include <sys/epoll.h>
 
 #ifdef HAVE_SOCKET_H
 #include <sys/socket.h>
@@ -1394,14 +1392,11 @@ _httpd_start_thread(conndata_t *conn)
 static inline herror_t
 __httpd_run(struct hsocket_t *sock)
 {
-  struct timeval timeout;
   conndata_t *conn;
   herror_t err;
-  fd_set fds;
-
+  struct epoll_event event;
+  
   log_verbose("starting run routine");
-
-  _httpd_register_signal_handler();
 
   if ((err = hsocket_listen(sock)) != H_OK)
   {
@@ -1409,63 +1404,75 @@ __httpd_run(struct hsocket_t *sock)
     return err;
   }
 
-  while (_httpd_run)
+  if ((err = hsocket_epoll_create(sock)) != H_OK)
+  {
+    log_error("hsocket_epoll_create failed (%s)", herror_message(err));
+    return err;
+  }
+  
+  if ((err = hsocket_epoll_ctl(sock->ep, sock->sock, 
+    &sock->event, EPOLL_CTL_ADD, EPOLLIN|EPOLLRDHUP|EPOLLERR)) != H_OK)
+  {
+    log_error("hsocket_epoll_ctl failed (%s)", herror_message(err));
+    return err;
+  }
+  
+  while (nanohttpd_is_running())
   {
     conn = _httpd_wait_for_empty_conn();
-    if (!_httpd_run)
+    if (!nanohttpd_is_running())
       break;
 
     /* Wait for a socket to accept */
-    while (_httpd_run)
+    while (nanohttpd_is_running())
     {
-
-      /* set struct timeval to the proper timeout */
-      timeout.tv_sec = 1;
-      timeout.tv_usec = 0;
-
-      /* zero and set file descriptior */
-      FD_ZERO(&fds);
-      FD_SET(sock->sock, &fds);
-
-      /* select socket descriptor */
-      switch (select(sock->sock + 1, &fds, NULL, NULL, &timeout))
+      /* select socket descriptor with proper timeout */
+      switch (epoll_wait(sock->ep, &event, 1, 1000))
       {
       case 0:
-        if (!_httpd_run)
+        if (!nanohttpd_is_running())
           break;
         /* descriptor is not ready */
         continue;
       case -1:
-        if (!_httpd_run)
-          break;
+        log_warn("Socket %d epoll_wait error: (%s)", 
+          sock, strerror(errno));
+        if (_hsocket_should_again(errno))
+          continue;
         /* got a signal? */
-        continue;
+        break;
       default:
-        if (!_httpd_run)
+        if (!nanohttpd_is_running())
           break;
+        if (event.events & (EPOLLRDHUP|EPOLLERR))
+          continue;
         /* no nothing */
-        break;
+        if ((event.events & EPOLLIN) 
+          && event.data.fd == sock->sock)
+          break;
+        log_fatal("Socket %d unknown error: (%s)", 
+          sock, strerror(errno));
+        continue;
       }
-      if (FD_ISSET(sock->sock, &fds))
-      {
+
+      if (event.events & EPOLLIN) 
         break;
-      }
     }
 
     /* check signal status */
-    if (!_httpd_run)
+    if (!nanohttpd_is_running())
       break;
-
+    
     err = hsocket_accept(sock, &(conn->sock));
     if (err != H_OK)
     {
       log_error("hsocket_accept failed (%s)", herror_message(err));
-
+    
       hsocket_close(&(conn->sock));
-
+    
       continue;
     }
-
+    
     _httpd_start_thread(conn);
   }
 
@@ -1623,6 +1630,8 @@ herror_t httpd_run(void)
   herror_t status = H_OK;
   conndata_t *c;
   
+  _httpd_register_signal_handler();
+
   if (httpd_create_cond(&main_cond))
   {
     log_error("httpd_create_cond failed");
