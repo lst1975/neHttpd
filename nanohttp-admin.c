@@ -190,7 +190,8 @@ _httpd_admin_list_services(httpd_conn_t *conn)
 }
 
 static void
-_httpd_admin_list_statistics(httpd_conn_t *conn, const char *service_name)
+_httpd_admin_list_statistics(httpd_conn_t *conn, 
+  const char *service_name, int service_name_len)
 {
   char buffer[1024];
   hservice_t *service;
@@ -200,7 +201,8 @@ _httpd_admin_list_statistics(httpd_conn_t *conn, const char *service_name)
   sprintf(buffer, "Listing statistics for service <b>%s</b>", service_name);
   _httpd_admin_send_title(conn, buffer);
 
-  if (!service_name || !(service = httpd_find_service(service_name)))
+  if (!service_name 
+    || !(service = httpd_find_service(service_name, service_name_len)))
   {
     http_output_stream_write_string(conn->out,
       "<p>"
@@ -230,7 +232,8 @@ _httpd_admin_list_statistics(httpd_conn_t *conn, const char *service_name)
 }
 
 static void
-_httpd_admin_enable_service(httpd_conn_t *conn, const char *service_name)
+_httpd_admin_enable_service(httpd_conn_t *conn, 
+  const char *service_name, int service_name_len)
 {
   hservice_t *service;
   char buffer[1024];
@@ -238,7 +241,7 @@ _httpd_admin_enable_service(httpd_conn_t *conn, const char *service_name)
   sprintf(buffer, "Activating service <b>%s</b>", service_name);
   _httpd_admin_send_title(conn, buffer);
 
-  if (!(service = httpd_find_service(service_name)))
+  if (!(service = httpd_find_service(service_name, service_name_len)))
   {
     http_output_stream_write_string(conn->out,
       "<p>"
@@ -260,7 +263,8 @@ _httpd_admin_enable_service(httpd_conn_t *conn, const char *service_name)
 }
 
 static void
-_httpd_admin_disable_service(httpd_conn_t *conn, const char *service_name)
+_httpd_admin_disable_service(httpd_conn_t *conn, 
+  const char *service_name, int service_name_len)
 {
   hservice_t *service;
   char buffer[1024];
@@ -268,7 +272,7 @@ _httpd_admin_disable_service(httpd_conn_t *conn, const char *service_name)
   sprintf(buffer, "Passivating service <b>%s</b>", service_name);
   _httpd_admin_send_title(conn, buffer);
 
-  if (!(service = httpd_find_service(service_name)))
+  if (!(service = httpd_find_service(service_name, service_name_len)))
   {
     http_output_stream_write_string(conn->out,
       "<p>"
@@ -376,15 +380,15 @@ _httpd_admin_handle_get(httpd_conn_t * conn, struct hrequest_t *req)
   }
   else if ((param = hpairnode_get_ignore_case(req->query, NHTTPD_ADMIN_QUERY_STATISTICS)))
   {
-    _httpd_admin_list_statistics(conn, param);
+    _httpd_admin_list_statistics(conn, param, strlen(param));
   }
   else if ((param = hpairnode_get_ignore_case(req->query, NHTTPD_ADMIN_QUERY_ACTIVATE_SERVICE)))
   {
-    _httpd_admin_enable_service(conn, param);
+    _httpd_admin_enable_service(conn, param, strlen(param));
   }
   else if ((param = hpairnode_get_ignore_case(req->query, NHTTPD_ADMIN_QUERY_PASSIVATE_SERVICE)))
   {
-    _httpd_admin_disable_service(conn, param);
+    _httpd_admin_disable_service(conn, param, strlen(param));
   }
   else if ((param = hpairnode_get_ignore_case(req->query, NHTTPD_ADMIN_QUERY_SET_LOGLEVEL)))
   {

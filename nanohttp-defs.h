@@ -199,4 +199,6 @@
 #define HSERVER_ERROR_INVAL 		      (HSERVER_ERROR + 3)
 #define HSERVER_ERROR_2SHORT		      (HSERVER_ERROR + 4)
 
+#define RTE_MIN(x,y) ((x)<(y) ? (x) : (y))
+
 #endif

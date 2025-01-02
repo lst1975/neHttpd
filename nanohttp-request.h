@@ -346,7 +346,7 @@ struct hrequest_t
   hreq_method_t method;
   http_version_t version;
   char path[REQUEST_MAX_PATH_SIZE];
-
+  int path_len;
   hpair_t *query;
   hpair_t *header;
   void    *conn;

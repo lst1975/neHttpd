@@ -76,6 +76,7 @@
 #include "nanohttp-base64.h"
 #include "nanohttp-user.h"
 #include "nanohttp-ring.h"
+#include "nanohttp-data.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const char *user, const char *password)
@@ -347,34 +348,6 @@ __root_service_read(void *arg, const char *buf, size_t length)
 "</html>");
 */
 
-static const char *nanohttp_index_html_body =
-    "<div class=\"workingBusy\"></div>"
-    "<table class=\"main-layout\">"
-      "<tr class='head'>"
-        "<td class=\"table-head left\">"
-          "<img class=\"logo\" src=\"\">"
-        "</td>"
-        "<td class=\"table-head right\">"
-          "<span class=\"title\"></span>"
-          "<a class=\"login\"><img src=\"\"></a>"
-        "</td>"
-      "</tr>"
-      "<tr class='main'>"
-        "<td class=\"table-left\">"
-          "<div class=\"table-left-container\">"
-          "</div>"
-        "</td>"
-        "<td class=\"table-right\">"
-          "<div class=\"panel_container\">"
-          "</div>"
-        "</td>"
-    "	</tr>"
-    "</table>"
-    "<script>\n"
-      "var userjs = $('html > head > script.userjs');\n"
-      "if (userjs.length) userjs.remove();\n"
-    "</script>";
-
 static herror_t
 __send_menu_js(httpd_conn_t *conn, struct hrequest_t *req)
 {
@@ -412,11 +385,17 @@ __send_root_html(httpd_conn_t *conn, struct hrequest_t *req)
     r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_DECL2);
     if (r != H_OK) break;
 
-    r = http_output_stream_write_string(conn->out, "<body>");
+    r = http_output_stream_write(conn->out, 
+                (const unsigned char *)"<body>", 
+                6);
     if (r != H_OK) break;
-    r = http_output_stream_write_string(conn->out, nanohttp_index_html_body);
+    r = http_output_stream_write(conn->out, 
+                (const unsigned char *)__nanohttp_index_html_body, 
+                sizeof(__nanohttp_index_html_body)-1);
     if (r != H_OK) break;
-    r = http_output_stream_write_string(conn->out, "</body></html>");
+    r = http_output_stream_write(conn->out, 
+                (const unsigned char *)"</body></html>", 
+                14);
   } 
   while(0);
 
@@ -433,7 +412,9 @@ secure_service(httpd_conn_t *conn, struct hrequest_t *req)
   {
     log_info("secure_service received, redirect to index.html");
     do {
-      r = http_output_stream_write_string(conn->out, nanohttp_index_html_body);
+      r = http_output_stream_write(conn->out, 
+                (const unsigned char *)__nanohttp_index_html_body, 
+                sizeof(__nanohttp_index_html_body)-1);
       if (r != H_OK) break;
       r = __send_menu_js(conn, req);
       if (r != H_OK) break;
@@ -442,15 +423,9 @@ secure_service(httpd_conn_t *conn, struct hrequest_t *req)
   }
   else
   {
-    r = http_output_stream_write_string(conn->out,
-      "<html>"
-        "<head>"
-          "<title>Secure ressource!</title>"
-        "</head>"
-        "<body>"
-          "<h1>Authenticated access!!!</h1>"
-        "</body>"
-      "</html>");
+    r = http_output_stream_write(conn->out,
+                (const unsigned char *)__nanohttp_secure_html,
+                sizeof(__nanohttp_secure_html)-1);
   }
 
   herror_release(r);
@@ -458,67 +433,6 @@ secure_service(httpd_conn_t *conn, struct hrequest_t *req)
 }
 
 extern const char *nanohttp_index_html_head;
-#define favorICON \
-  "AAABAAEAICAAAAEAIACoEAAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAABAAACMuAAAjLgAAAAAAAAAAAAAAAAANAAAADQAA" \
-  "AA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAA" \
-  "AA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAAwAAwwMABFSEgAQ" \
-  "TRIAAggLAAAADAAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAAMAAcgDQATWBMACi8PAAAACwAA" \
-  "AAwAAQcMABFPEgARTxIAAQcLAAAADAAAAA0AAAANAAAADQAAAA0AAAAMACSpIAA072kANvmWADb5lAAz7WMAIZwcAAAADAAA" \
-  "AA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADAAqwisANfR6ADb6mQAy6YYAJaw7ABhzFQAy610ANvmVADb5lQAz" \
-  "610AGnkWAAAADAAAAA0AAAANAAAADAAioB4ANvmTADf/ywA3/8QAN//FADf/ygA194kAHYYZAAAADAAAAA0AAAANAAAADQAA" \
-  "AA0AAAANAAAADQAAAAwAJrAiADb7nwA3/8sANvvDAC/c0AAmsbwAL9yKADf/xQA3/8UAN//FADf/yAA08W0ABRgOAAAADQAA" \
-  "AA0AAAALADPsXgA3/8oANvqaAC7YPgAv3EMANvujADf/yAAx5lIAAAAKAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAEFDQA0" \
-  "8W0AN//MADb5kQAszTcAJrSEACav2AA08s0AN/64ADHkTgAx5E4AN/66ADb9rwAkpyEAAAAMAAAADQADDw4ANfaFADf/yAAx" \
-  "5EkAAAAIAAAACAAy6lcAN//LADT0eQAAAAwAAAANAAAADQAAAA0AAAANAAAADQAAAAsAK8kuADf9tQA3/rsALtY3AAAABQAe" \
-  "jkoALdPMADf/ygA083QAAw4LAByCFQA2+6AAN/66ACm+KwAAAAsAAAANAAcjDwA194oAN//FAC7ZPAAAAAoAAAAKADHjSgA3" \
-  "/8kANfaAAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAszDwA19XwAN//MADT0eAAIKA4AAAAJACvLTwA1+MkANv2vACnAKQAA" \
-  "AAsAGHEWADb7nwA3/roAKb8rAAAACwAAAA0AByIPADX3igA3/8UALtc9AAAACgAAAAoAMOFLADf/yQA19oAAAAANAAAADQAA" \
-  "AA0AAAANAAAADQAAAAsALtc6ADf+vAA3/bIAKsYsAAAACgAYcBQANvmOADf9zgAv240ABRoPAAAADAAYcRYANvufADf+ugAp" \
-  "vysAAAALAAAADQAHIg8ANfeKADf/xQAu1z0AAAAKAAAACgAw4UsAN//JADX2gAAAAA0AAAANAAAADQAAAA0AAAANABRgEwA1" \
-  "+IoAN//LADTwaQAAAAwAAAAKADHkTAA3/8IAM+zPACe3jwADEQ4AAAAMABhxFgA2+58AN/66ACm/KwAAAAsAAAANAAciDwA1" \
-  "94oAN//FAC7XPQAAAAoAAAAKADDhSwA3/8kANfaAAAAADQAAAA0AAAANAAAADQAAAAoAMOFHADf/wwA2/KgAJrIiAAAACwAf" \
-  "kxoANvqcADf9ywAt0NQAKsSNAAYcDgAAAAwAGHEWADb7nwA3/roAKb8rAAAACwAAAA0AByIPADX3igA3/8UALtc9AAAACgAA" \
-  "AAoAMOFLADf/yQA19oAAAAANAAAADQAAAA0AAAAMAB2HGAA2+pcAN//JADPrWwAAAAsAAAALADLrWgA3/8YAM+zCACzN0wAx" \
-  "5YkABhsOAAAADAAYcRYANvufADf+ugApvysAAAALAAAADQAHIg8ANfeKADf/xQAu1z0AAAAKAAAACgAw4UsAN//JADX2gAAA" \
-  "AA0AAAANAAAADQAAAAsAMulUADf/xwA2+p0AIJUbAAAACwAlryIANvyoADf/wAAv3YIAMeXJADX1hwAFGA4AAAAMABhxFgA2" \
-  "+58AN/66ACm/KwAAAAsAAAANAAciDwA194oAN//FAC7XPQAAAAoAAAAKADDhSwA3/8kANfaAAAAADQAAAA0AAAAMACOlHwA2" \
-  "+6MAN//FADHlTAAAAAoAAAAMADTwaQA3/8sANfiIAC7WSwA2+sgANfeHAAUXDgAAAAwAGHEWADb7nwA3/roAKb8rAAAACwAA" \
-  "AA0AByIPADX3igA3/8UALtc9AAAACgAAAAoAMOFLADf/yQA19oAAAAANAAAADQAAAAsAM+5jADf/ywA1+JAAGHAVAAAACgAq" \
-  "xCsAN/2yADf+vQAu1TgAL9xBADf/xwA194cABRcOAAAADAAYcRYANvufADf+ugApvysAAAALAAAADQAHIg8ANfeKADf/xQAu" \
-  "1z0AAAAKAAAACgAw4UsAN//JADX2gAAAAA0AAAALACi9KAA2/K4AN/6/AC/cPwAAAAoACCQOADX0dwA3/8wANfV9AAAADAAv" \
-  "3UMAN//HADX3hwAFFw4AAAAMABhxFgA2+58AN/66ACm/KwAAAAsAAAANAAciDwA194oAN//FAC7XPQAAAAoAAAAKADDhSwA3" \
-  "/8kANfaAAAAADQAEEg0ANPJyADf/zAA19oEADkQQAAAACgAt1DYAN/66ADf9tQAsyy8AAAAIAC/dRAA3/8cANfeHAAUXDgAA" \
-  "AAwAGHEWADb7nwA3/roAKb8rAAAACwAAAA0AByIPADX3igA3/8UALtc9AAAACgAAAAoAMOFLADf/yQA19YAAAAALACzOMgA3" \
-  "/bcAN/24ACzPMwAAAAoAElMRADX3hgA3/8wANPJuAAIJDQAAAAoAL91EADf/xwA194cABRcOAAAADAAYcRYANvufADf+ugAp" \
-  "vysAAAALAAAADQAHIg8ANfeKADf/xQAu1z0AAAAKAAAACgAw4UsAN//JADX1fwANPxAANfaAADf/zAA083MABRYNAAAACgAw" \
-  "30MAN/7BADb8rAAnuCUAAAALAAAACgAv3UQAN//HADX3hwAFFw4AAAAMABhxFgA2+58AN/66ACm/KwAAAAsAAAANAAciDwA1" \
-  "94oAN//FAC7XPQAAAAoAAAAKADDhSwA3/skAM+5+AC/aPgA3/r8ANv2vACm/KAAAAAoAG30WADb5lAA3/8oAM+1gAAAACwAA" \
-  "AA0AAAAKAC/dRAA3/8cANfeHAAUXDgAAAAwAGHEWADb7nwA3/roAKb8rAAAACwAAAA0AByIPADX3igA3/8UALtc9AAAACgAA" \
-  "AAoAMeJLADX3ygAu2IwANfiOADf/ygAz72QAAAALAAAACwAy5lAAN//GADb7oQAioB0AAAAMAAAADQAAAAoAL91EADf/xwA1" \
-  "94cABRcOAAAADAAYcRYANvufADf+ugApvysAAAALAAAADQAHIg8ANfeKADf/xQAu1z0AAAAKAAAACgAw3ksAMN/MAC3TvAA3" \
-  "/8MANvukACSnHwAAAAsAIp4dADb7oAA3/8YAMudRAAAACwAAAA0AAAANAAAACgAv3UQAN//HADX3hwAFFw4AAAAMABhxFgA2" \
-  "+58AN/66ACm/KwAAAAsAAAANAAciDwA194oAN//FAC7XPQAAAAoAAAAKACrFTQAryNAAMunNADf/xQAy6VUAAAALAAAACwAz" \
-  "7V8AN//KADb5lAAbfxcAAAAMAAAADQAAAA0AAAAKAC/dRAA3/8cANfeHAAUXDgAAAAwAGHEWADb7nwA3/roAKb8rAAAACwAA" \
-  "AA0AByIPADX3igA3/8UALtc9AAAACgAAAAoAJKdPACzPzgA3/csANvqXAB2IGAAAAAsAJ7clADb8qwA3/sEAMN9EAAAACgAA" \
-  "AA0AAAANAAAADQAAAAoAL91EADf/xwA194cABRcOAAAADAAYcRYANvufADf+ugApvysAAAALAAAADQAHIg8ANfeKADf/xQAu" \
-  "1z0AAAAKAAAACgAmsE4AM+7KADf/wAAw4UcAAAAKAAEGDQA08m4AN//MADX3hwASVhIAAAANAAAADQAAAA0AAAANAAAACgAv" \
-  "3UQAN//HADX3hwAFFw4AAAAMABhxFgA2+58AN/66ACm/KwAAAAsAAAANAAciDwA194oAN//FAC7XPQAAAAoAAAAMADPtbAA3" \
-  "/swANPGUABVjFAAAAAoAK8ovADf9tQA3/rsALtU3AAAACwAAAA0AAAANAAAADQAAAA0AAAAKAC/dRAA3/8cANfeHAAQWDgAA" \
-  "AAwAGHEWADb7nwA3/roAKb8rAAAACwAAAA0AByMPADX3igA3/8UAL9w8AAAABwAqwykAN/2wADX0zwAntocAAAALAAs1DwA1" \
-  "9XwAN//MADT0eQAIKA4AAAANAAAADQAAAA0AAAANAAAADQAAAAoAL9tBADf/xwA1+IwACzcOAAAACwAeixcANvujADf+ugAp" \
-  "vSoAAAALAAAADQABBw0ANfaCADf/ygAz610AG34YADT0eQA3/8oALdDUACOjpAAdhyAAL91DADf+vQA3/bMAKsUsAAAACwAA" \
-  "AA0AAAANAAAADQAAAA0AAAANAAAACwApwCwAN/23ADf9tAAu1z0AGHEWADHkTgA3/sAANvynACCVHQAAAAwAAAANAAAACwAx" \
-  "5E4AN//EADf+vQA2+6cAN//FADb6twAms7wAKsPTADPsrAA3/rcAN//JADPwZwAAAAwAAAANAAAADQAAAA0AAAANAAAADQAA" \
-  "AA0AAAANAAovDwA083QAN//KADf+ugA2+6MAN/6/ADf/xQAz7F0AAAAMAAAADQAAAA0AAAANABNZEgAz7WIANvysADf+uwA2" \
-  "+6EAMN9GACGaOgAv2ZkANvq6ADf9sgA08nMAHYkYAAAADAAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAAMAB6KGQA0" \
-  "8W0AN/ytADf+uwA2/KcAM+xfABViEwAAAAwAAAANAAAADQAAAA0AAAAMAAcfDQAioiAAKcArAB6OGwABBAwAAAALABlzFgAo" \
-  "vSoAJrAkAA07DwAAAAwAAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAAMAAgmDQAjoyAAKcAsACCWHAAE" \
-  "FAwAAAAMAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADAAAAAsAAAAMAAAADQAAAA0AAAAMAAAACwAAAAsAAAANAAAADQAA" \
-  "AA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADAAAAAsAAAAMAAAADQAAAA0AAAANAAAADQAA" \
-  "AA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAA" \
-  "AA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAADQAAAA0AAAANAAAAAAAAAAAAAAAAAAAAAAAA" \
-  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" \
-  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 static void
 root_service(httpd_conn_t *conn, struct hrequest_t *req)
@@ -744,7 +658,8 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           if (req->userLevel != _N_http_user_type_SUPER)
           {
             // Process set operation
-            n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
+            n = snprintf(buf, sizeof buf, 
+                    CFG_RET0("Authorization Failed."), id);
             goto finished;
           }
           
@@ -758,24 +673,32 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             if ((usrLen < _N_http_user_NAME_MINLEN
               || usrLen > _N_http_user_NAME_MAXLEN))
             {
-              n = snprintf(buf, sizeof buf, CFG_RET1("Invalid username length."), id, 
-                    p->keyLength, p->key);
+              n = snprintf(buf, sizeof buf, 
+                    CFG_RET1("Invalid username length."), 
+                    id, 
+                    p->keyLength, 
+                    p->key);
               goto finished;
             }
             if (!memcmp(p->key+p->keyLength-2, ".0", 2))
             {
-              n = snprintf(buf, sizeof buf, CFG_RET1("This user does not exists."), id, 
-                    p->keyLength, p->key);
+              n = snprintf(buf, sizeof buf, 
+                    CFG_RET1("This user does not exists."), 
+                    id, 
+                    p->keyLength, 
+                    p->key);
             }
             else 
             {
               if (!memcmp(p->key+p->keyLength-2, ".1", 2))
               {
-                err = nanohttp_users_update(usr, usrLen, p->value, p->valueLength, NULL, 0);
+                err = nanohttp_users_update(usr, usrLen, 
+                        p->value, p->valueLength, NULL, 0);
               }
               else if (!memcmp(p->key+p->keyLength-2, ".2", 2))
               {
-                err = nanohttp_users_update(usr, usrLen, NULL, 0, p->value, p->valueLength);
+                err = nanohttp_users_update(usr, usrLen, 
+                        NULL, 0, p->value, p->valueLength);
               }
               else
               {
@@ -787,38 +710,52 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
                   n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
                   break;
                 case _N_http_user_error_PERM:
-                  n = snprintf(buf, sizeof buf, CFG_RET1("Superuser can not be deleted."), id, 
-                        (int)p->keyLength, p->key);
+                  n = snprintf(buf, sizeof buf, 
+                        CFG_RET1("Superuser can not be deleted."), 
+                        id, 
+                        (int)p->keyLength, 
+                        p->key);
                   goto finished;
                 case _N_http_user_error_EXIST:
                   n = snprintf(buf, sizeof buf, 
-                        CFG_RET1("This user does not exists."), id, 
-                        p->keyLength, p->key);
+                        CFG_RET1("This user does not exists."), 
+                        id, 
+                        p->keyLength, 
+                        p->key);
                   goto finished;
                 case _N_http_user_error_VNAME:
                   n = snprintf(buf, sizeof buf, 
-                        CFG_RET1("The length of username is invalid: [%d,%d]."), id, 
-                        p->keyLength, p->key,
+                        CFG_RET1("The length of username is invalid: [%d,%d]."), 
+                        id, 
+                        p->keyLength, 
+                        p->key,
                         _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
                   goto finished;
                 case _N_http_user_error_INVAL:
                   n = snprintf(buf, sizeof buf, 
-                        CFG_RET1("Invalid account type."), id, 
-                        p->keyLength, p->key);
+                        CFG_RET1("Invalid account type."), 
+                        id, 
+                        p->keyLength, 
+                        p->key);
                   goto finished;
                 case _N_http_user_error_SYS:
                 default:
                   n = snprintf(buf, sizeof buf, 
-                        CFG_RET1("System error."), id, 
-                        p->keyLength, p->key);
+                        CFG_RET1("System error."), 
+                        id, 
+                        p->keyLength, 
+                        p->key);
                   goto finished;
               }
             }
           }
           else
           {
-            n = snprintf(buf, sizeof buf, CFG_RET1("Invalid parameter."), id, 
-                  p->keyLength, p->key);
+            n = snprintf(buf, sizeof buf, 
+                  CFG_RET1("Invalid parameter."), 
+                  id, 
+                  p->keyLength, 
+                  p->key);
             goto finished;
           }
         }
@@ -826,8 +763,10 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         {
           // Process set operation
           n = snprintf(buf, sizeof buf, 
-            CFG_RET1("For testing received error message from our product."), 
-            id, p->keyLength, p->key);
+                  CFG_RET1("For testing received error message from our product."), 
+                  id, 
+                  p->keyLength, 
+                  p->key);
         }
       }
     }
@@ -890,22 +829,36 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
             break;
           case _N_http_user_error_PERM:
-            n = snprintf(buf, sizeof buf, CFG_RET1("Superuser can not be deleted."), id, 
-                  (int)usr->keyLength, usr->key);
+            n = snprintf(buf, sizeof buf, 
+                  CFG_RET1("Superuser can not be deleted."), 
+                  id, 
+                  (int)usr->keyLength, 
+                  usr->key);
             goto finished;
           case _N_http_user_error_EXIST:
-            n = snprintf(buf, sizeof buf, CFG_RET1("This user already exists."), id, 
-                  (int)usr->keyLength, usr->key);
+            n = snprintf(buf, sizeof buf, 
+                  CFG_RET1("This user already exists."), 
+                  id, 
+                  (int)usr->keyLength, 
+                  usr->key);
             goto finished;
           case _N_http_user_error_VNAME:
-            n = snprintf(buf, sizeof buf, CFG_RET1("The length of username is invalid: [%d,%d]."), id, 
-                  (int)usr->keyLength, usr->key, 
-                  _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
+            n = snprintf(buf, sizeof buf, 
+                  CFG_RET1("The length of username is invalid: [%d,%d]."), 
+                  id, 
+                  (int)usr->keyLength, 
+                  usr->key, 
+                  _N_http_user_NAME_MINLEN, 
+                  _N_http_user_NAME_MAXLEN);
             goto finished;
           case _N_http_user_error_VPSWD:
-            n = snprintf(buf, sizeof buf, CFG_RET1("The length of username is invalid: [%d,%d]."), id, 
-                  (int)pwd->keyLength, pwd->key, 
-                  _N_http_user_PSWD_MINLEN, _N_http_user_PSWD_MAXLEN);
+            n = snprintf(buf, sizeof buf, 
+                  CFG_RET1("The length of username is invalid: [%d,%d]."), 
+                  id, 
+                  (int)pwd->keyLength, 
+                  pwd->key, 
+                  _N_http_user_PSWD_MINLEN, 
+                  _N_http_user_PSWD_MAXLEN);
             goto finished;
           case _N_http_user_error_SYS:
           default:
@@ -950,8 +903,11 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         colon = memchr(p->value, ':', p->valueLength);
         if (colon == NULL || colon-p->value < ___USER_PFX_LEN + 1)
         {
-          n = snprintf(buf, sizeof buf, CFG_RET1("This user does not exists."), id, 
-                (int)p->valueLength, p->value);
+          n = snprintf(buf, sizeof buf, 
+                CFG_RET1("This user does not exists."), 
+                id, 
+                (int)p->valueLength, 
+                p->value);
           goto finished;
         }
         usr = colon + 1;
@@ -959,8 +915,11 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         if ((usrLen < _N_http_user_NAME_MINLEN
           || usrLen > _N_http_user_NAME_MAXLEN))
         {
-          n = snprintf(buf, sizeof buf, CFG_RET1("Invalid username length."), id, 
-                (int)p->valueLength, p->value);
+          n = snprintf(buf, sizeof buf, 
+                CFG_RET1("Invalid username length."), 
+                id, 
+                (int)p->valueLength, 
+                p->value);
           goto finished;
         }
         
@@ -971,22 +930,35 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
             break;
           case _N_http_user_error_EXIST:
-            n = snprintf(buf, sizeof buf, CFG_RET1("This user does not exists."), id, 
-                  (int)p->valueLength, p->value);
+            n = snprintf(buf, sizeof buf, 
+                  CFG_RET1("This user does not exists."), 
+                  id, 
+                  (int)p->valueLength, 
+                  p->value);
             goto finished;
           case _N_http_user_error_VNAME:
-            n = snprintf(buf, sizeof buf, CFG_RET1("The length of username is invalid: [%d,%d]."), id, 
-                  (int)p->valueLength, p->value,
-                  _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
+            n = snprintf(buf, sizeof buf, 
+                  CFG_RET1("The length of username is invalid: [%d,%d]."), 
+                  id, 
+                  (int)p->valueLength, 
+                  p->value,
+                  _N_http_user_NAME_MINLEN, 
+                  _N_http_user_NAME_MAXLEN);
             goto finished;
           case _N_http_user_error_PERM:
-            n = snprintf(buf, sizeof buf, CFG_RET1("Superuser can not be deleted."), id, 
-                  (int)p->valueLength, p->value);
+            n = snprintf(buf, sizeof buf, 
+                  CFG_RET1("Superuser can not be deleted."), 
+                  id, 
+                  (int)p->valueLength, 
+                  p->value);
             goto finished;
           case _N_http_user_error_SYS:
           default:
-            n = snprintf(buf, sizeof buf, CFG_RET1("System error."), id, 
-                  (int)p->valueLength, p->value);
+            n = snprintf(buf, sizeof buf, 
+                  CFG_RET1("System error."), 
+                  id, 
+                  (int)p->valueLength, 
+                  p->value);
             goto finished;
         }
       }
@@ -1114,7 +1086,8 @@ void json_show( const char * json,
   }
 }
 
-int json_test(void)
+#if __NHTTP_DEBUG
+static int json_test(void)
 {
   // Variables used in this example.
   JSONStatus_t result;
@@ -1176,25 +1149,8 @@ int json_test(void)
 
   return 0;
 }
+#endif
 
-#define __HTTPD_LICENSE \
-    "######################################################################\n" \
-    "         Embedded HTTP Server for Web Configuraion Framwork           \n" \
-    "                      _    _ _______ _______ _____  _____             \n" \
-    "                     | |  | |__   __|__   __|  __ \\|  __ \\            \n" \
-    "           _ __   ___| |__| |  | |     | |  | |__) | |  | |           \n" \
-    "          | '_ \\ / _ \\  __  |  | |     | |  |  ___/| |  | |           \n" \
-    "          | | | |  __/ |  | |  | |     | |  | |    | |__| |           \n" \
-    "          |_| |_|\\___|_|  |_|  |_|     |_|  |_|    |_____/            \n" \
-    "                                                                      \n" \
-    "                                                                      \n" \
-    "                 https://github.com/lst1975/neHttpd                   \n" \
-    "                                                                      \n" \
-    "        Embedded HTTP Server with Web Configuraion Framework          \n" \
-    "                   Copyright (C) 2022 Songtao Liu                     \n" \
-    "                          980680431@qq.com                            \n" \
-    "                         All Rights Reserved                          \n" \
-    "######################################################################\n"
 void main_print_license(void)
 {
   fprintf(stderr, "\n%s\n", __HTTPD_LICENSE);
@@ -1297,7 +1253,8 @@ main(int argc, char **argv)
 
   main_print_license();
 
-  fprintf(stderr, "\nneHTTPd is listening on PORT %d\n\n\n", _nanoConfig_HTTPD_PORT);
+  fprintf(stderr, "\nneHTTPd is listening on PORT %d\n\n\n", 
+    _nanoConfig_HTTPD_PORT);
 
   if ((status = httpd_run()) != H_OK)
   {

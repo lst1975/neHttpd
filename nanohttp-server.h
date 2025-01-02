@@ -304,6 +304,8 @@ typedef struct tag_hservice
   httpd_auth auth;                       /**< Authentication function */
   struct tag_hservice *next;             /**< Next service in service list */
   struct service_statistics *statistics; /**< Service statistics */
+  int name_len;
+  int context_len;
 }
 hservice_t;
 
@@ -385,7 +387,7 @@ extern const char *httpd_get_protocol(void);
 extern int httpd_get_conncount(void);
 
 extern hservice_t *httpd_get_services(void);
-extern hservice_t *httpd_find_service(const char *name);
+extern hservice_t *httpd_find_service(const char *name, int context_len);
 
 extern int httpd_enable_service(hservice_t *service);
 extern int httpd_disable_service(hservice_t *service);

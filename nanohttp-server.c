@@ -153,6 +153,7 @@ static inline int hssl_enabled(void) { return 0; }
 #include "nanohttp-file.h"
 #include "nanohttp-user.h"
 #include "nanohttp-ring.h"
+#include "nanohttp-data.h"
 
 #ifndef timeradd
 #define timeradd(tvp, uvp, vvp)						\
@@ -565,21 +566,25 @@ httpd_init(int argc, char **argv)
 }
 
 herror_t
-httpd_register_secure(const char *context, httpd_service func, httpd_auth auth, const char *service_name)
+httpd_register_secure(const char *context, httpd_service func, 
+  httpd_auth auth, const char *service_name)
 {
   hservice_t *service;
 
   if (!(service = (hservice_t *) http_malloc(sizeof(hservice_t))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
-    return herror_new("httpd_register_secure", 0, "http_malloc failed (%s)", strerror(errno));
+    return herror_new("httpd_register_secure", 0, 
+      "http_malloc failed (%s)", strerror(errno));
   }
 
-  if (!(service->statistics = (struct service_statistics *)http_malloc(sizeof(struct service_statistics))))
+  if (!(service->statistics = (struct service_statistics *)
+    http_malloc(sizeof(struct service_statistics))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
     http_free(service);
-    return herror_new("httpd_register_secure", 0, "http_malloc failed (%s)", strerror(errno));
+    return herror_new("httpd_register_secure", 0, 
+      "http_malloc failed (%s)", strerror(errno));
   }    	
   memset(service->statistics, 0, sizeof(struct service_statistics));
   service->statistics->time.tv_sec = 0;
@@ -592,6 +597,8 @@ httpd_register_secure(const char *context, httpd_service func, httpd_auth auth, 
   service->func = func;
   service->status = NHTTPD_SERVICE_UP;
   service->context = http_strdup(context);
+  service->name_len = strlen(service_name);
+  service->context_len = strlen(context);
 
   log_verbose("register service (%p) for \"%s\"", service, context);
   if (_httpd_services_head == NULL)
@@ -608,13 +615,15 @@ httpd_register_secure(const char *context, httpd_service func, httpd_auth auth, 
 }
 
 herror_t
-httpd_register(const char *context, httpd_service service, const char *service_name)
+httpd_register(const char *context, httpd_service service, 
+  const char *service_name)
 {
   return httpd_register_secure(context, service, NULL, service_name);
 }
 
 herror_t
-httpd_register_default_secure(const char *context, httpd_service service, httpd_auth auth)
+httpd_register_default_secure(const char *context, 
+  httpd_service service, httpd_auth auth)
 {
   herror_t ret;
 
@@ -716,18 +725,20 @@ int httpd_disable_service(hservice_t *service)
 }
 
 hservice_t *
-httpd_find_service(const char *context)
+httpd_find_service(const char *context, int context_len)
 {
   hservice_t *cur;
 
   for (cur = _httpd_services_head; cur; cur = cur->next)
   {
-    if (!strcmp(cur->name, "FILE") || !strcmp(cur->name, "DATA"))
+    if (cur->name_len == 4 && (*(uint32_t*)cur->name == *(const uint32_t*)"FILE"
+      || *(uint32_t*)cur->name == *(const uint32_t*)"DATA"))
     {
-      if (!strncmp(cur->context, context, strlen(cur->context)))
+      if (!memcmp(cur->context, context, cur->context_len))
         return cur;
     }
-    else if (!strcmp(cur->context, context))
+    else if (cur->context_len == context_len
+        && !memcmp(cur->context, context, context_len))
       return cur;
   }
 
@@ -747,19 +758,34 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
 {
   struct tm stm;
   time_t nw;
-  char buffer[255];
-  char header[1024];
+  char *header;
   hpair_t *cur;
-  herror_t status;
+  herror_t status = H_OK;
+  httpd_buf_t b;
+  int n;
+  
+#define __BUF_SZ 1024
+#define __BUF BUF_CUR_PTR(&b), BUF_REMAIN(&b)
+  header = (char *)http_malloc(__BUF_SZ);
+  if (header == NULL)
+  {
+    log_fatal("Failed to malloc tempary buffer");
+    status = herror_new("httpd_send_header", GENERAL_ERROR,
+                      "Failed to malloc tempary buffer!");
+    goto clean0;
+  }
 
+  BUF_SIZE_INIT(&b, header, __BUF_SZ);
+  
   /* set status code */
-  sprintf(header, "HTTP/1.1 %d %s\r\n", code, text);
-
+  n = snprintf(__BUF, "HTTP/1.1 %d %s\r\n", code, text);
+  BUF_GO(&b, n);
+  
   /* set date */
   nw = time(NULL);
   localtime_r(&nw, &stm);
-  strftime(buffer, sizeof(buffer)-1, "Date: %a, %d %b %Y %H:%M:%S GMT\r\n", &stm);
-  strcat(header, buffer);
+  n = strftime(__BUF, "Date: %a, %d %b %Y %H:%M:%S GMT\r\n", &stm);
+  BUF_GO(&b, n);
 
   /* set content-type */
   /* 
@@ -769,7 +795,8 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
    */
 
   /* set server name */
-  strcat(header, "Server: nanoHTTP library\r\n");
+  n = snprintf(__BUF, "%s", "Server: nanoHTTP library\r\n");
+  BUF_GO(&b, n);
 
   /* set _httpd_connection status */
   /* strcat (header, "Connection: close\r\n"); */
@@ -777,23 +804,49 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
   /* add pairs */
   for (cur = res->header; cur; cur = cur->next)
   {
-    sprintf(buffer, "%s: %s\r\n", cur->key, cur->value);
-    strcat(header, buffer);
+    n = snprintf(__BUF, "%s: %s\r\n", cur->key, cur->value);
+    BUF_GO(&b, n);
   }
 
   /* set end of header */
-  strcat(header, "\r\n");
+  if (BUF_REMAIN(&b) > 1)
+  {
+    *(uint16_t*)BUF_CUR_PTR(&b) = *(const uint16_t*)"\r\n";
+    BUF_GO(&b, 2);
+  }
+  else
+  {
+    log_warn("Tempary buffer size is too small: %d", __BUF_SZ);
+    status = herror_new("httpd_send_header", GENERAL_ERROR,
+                      "Tempary buffer size is too small: %d", 
+                      __BUF_SZ);
+    goto clean1;
+  }
 
   /* send header */
-  if ((status = hsocket_send(res->sock, (unsigned char *)header, strlen(header))) != H_OK)
-    return status;
+  if ((status = hsocket_send(res->sock, b.ptr, b.len)) != H_OK)
+    goto clean1;
+
+#undef __BUF_SZ
 
   res->out = http_output_stream_new(res->sock, res->header);
-  return H_OK;
+  if (res->out == NULL)
+  {
+    log_fatal("Failed to malloc http_output_stream");
+    status = herror_new("httpd_send_header", GENERAL_ERROR,
+                      "Failed to malloc http_output_stream!");
+    goto clean1;
+  }
+
+clean1:
+  http_free(header);
+clean0:
+  return status;
 }
 
 static herror_t
-_httpd_send_html_message(httpd_conn_t *conn, int reason, const char *phrase, const char *msg)
+_httpd_send_html_message(httpd_conn_t *conn, int reason, 
+  const char *phrase, const char *msg)
 {
   herror_t r;
   
@@ -827,80 +880,6 @@ httpd_send_bad_request(httpd_conn_t *conn, const char *msg)
 {
   return _httpd_send_html_message(conn, 400, HTTP_STATUS_400_REASON_PHRASE, msg);
 }
-
-#define __nanohttp_index_html_head_JS_MENU_GUEST \
-  "<script class='userjs' type='text/javascript' src='config/menu-guest.js'></script>"
-#define __nanohttp_index_html_head_JS_MENU_ADMIN \
-  "<script class='userjs' type='text/javascript' src='config/menu-admin.js'></script>"
-#define __nanohttp_index_html_head_JS_MENU_SUPER \
-  "<script class='userjs' type='text/javascript' src='config/menu-super.js'></script>"
-#define __nanohttp_index_html_head_DECL1 \
-  "<!DOCTYPE html>" \
-  "<html lang='en'>" \
-    "<head>" \
-      "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>" \
-      "<meta id='MetaDescription' name='DESCRIPTION' content=''>" \
-      "<meta id='MetaKeywords' name='KEYWORDS' content=''>" \
-      "<meta name='msapplication-TileColor' content='#000000'>" \
-      "<meta name='msapplication-TileImage' content='config/logo.png'>" \
-      "<meta name='viewport' content='initial-scale=1, width=device-width'>" \
-      "<meta name='msapplication-tap-highlight' content='no'>" \
-      "<meta http-equiv='X-UA-Compatible' content='IE=edge'>" \
-      "<meta http-equiv='X-UA-Compatible' content='IE=10'>" \
-      "<meta http-equiv='X-UA-Compatible' content='IE=9'>" \
-      "<meta http-equiv='cleartype' content='off'>" \
-      "<meta name='MobileOptimized' content='320'>" \
-      "<meta name='HandheldFriendly' content='True'>" \
-      "<meta name='mobile-web-app-capable' content='yes'>" \
-      "<link rel='apple-touch-icon' href='config/logo.png'>" \
-      "<link rel='icon' href=''>" \
-      "<style>" \
-      " /* following two viewport lines are equivalent to meta viewport statement above, and is needed for Windows */" \
-      " /* see http://www.quirksmode.org/blog/archives/2014/05/html5_dev_conf.html and http://dev.w3.org/csswg/css-device-adapt/ */" \
-      " @-ms-viewport { width: 100vw ; min-zoom: 100% ; zoom: 100% ; } @viewport { width: 100vw ; min-zoom: 100% zoom: 100% ; }" \
-      " @-ms-viewport { user-zoom: fixed ; min-zoom: 100% ; } @viewport { user-zoom: fixed ; min-zoom: 100% ; }" \
-      " /*@-ms-viewport { user-zoom: zoom ; min-zoom: 100% ; max-zoom: 200% ; }   @viewport { user-zoom: zoom ; min-zoom: 100% ; max-zoom: 200% ; }*/" \
-      "</style>" \
-      "<title></title>" \
-      "<!--[if IE]><link rel='shortcut icon' href=''><![endif]-->" \
-      "<link rel='stylesheet' type='text/css' href='config/messagebox.css' media='screen'>" \
-      "<link rel='stylesheet' type='text/css' href='config/base.css' media='screen'>" \
-      "<link rel='stylesheet' type='text/css' href='config/signal.css' media='screen'>" \
-      "<link rel='stylesheet' type='text/css' href='config/jquery.csspiechart.css' media='screen'>" \
-      "<script type='text/javascript' src='config/jquery-3.7.1.js'></script>" \
-      "<script type='text/javascript' src='config/messagebox.js'></script>" \
-      "<script type='text/javascript' src='config/lang.js'></script>" \
-      "<script type='text/javascript' src='config/data.js'></script>" \
-      "<script type='text/javascript' src='config/utils.js'></script>" \
-      "<script type='text/javascript' src='config/main.upgrade.js'></script>" \
-      "<script type='text/javascript' src='config/main.system.js'></script>" \
-      "<script type='text/javascript' src='config/main.device.js'></script>"
-
-#define __nanohttp_index_html_head_DECL2 \
-      "<script type='text/javascript' src='config/main.js'></script>" \
-      "<script type='text/javascript' src='config/jquery.input-ip-address-control.js'></script>" \
-      "<script type='text/javascript' src='config/signal.js'></script>" \
-      "<script type='text/javascript' src='config/jquery.csspiechart.js'></script>" \
-      "<script type='text/javascript' src='config/config.js'></script>" \
-      "<script type='text/javascript' src='config/jquery.mousewheel.js'></script>" \
-      "<script type='text/javascript' src='config/alloy_finger.js'></script>" \
-    "</head>"
-
-#define __nanohttp_index_html_head_LOGIN \
-    "<body>"  \
-      "<div id='id01' class='__login modal'>"  \
-        "<div class='modal-content animate' action='config/secure' method='get'>" \
-          "<div class='container'>"  \
-            "<label for='uname'><b>Username</b></label>"  \
-            "<input class='name' type='text' value='' placeholder='Enter Username' name='uname' required>" \
-            "<label for='psw'><b>Password</b></label>"  \
-            "<input class='password' type='password' value='' placeholder='Enter Password' name='psw' required>" \
-            "<button class='login' type='submit'>Login</button>" \
-          "</div>"  \
-        "</div>"  \
-      "</div>"  \
-    "</body>"  \
-  "</html>"
 
 #define _(x) { .cptr = x, .len = sizeof(x) -1}
 httpd_buf_t __nanohttp_html[]={
@@ -957,7 +936,8 @@ httpd_send_unauthorized(httpd_conn_t *conn, const char *realm)
       log_debug("httpd_send_header failed: %s.", herror_message(r));
       return r;
     }
-    return _httpd_send_html_message(conn, 401, HTTP_STATUS_401_REASON_PHRASE, "Unauthorized request logged");
+    return _httpd_send_html_message(conn, 401, 
+      HTTP_STATUS_401_REASON_PHRASE, "Unauthorized request logged");
   }
 }
 
@@ -1199,7 +1179,7 @@ httpd_session_main(void *data)
       if (!done)
         done = req->version == HTTP_1_0 ? 1 : 0;
 
-      if ((service = httpd_find_service(req->path)))
+      if ((service = httpd_find_service(req->path, req->path_len)))
       {
         log_verbose("service '%s' for '%s'(%s) found", service->context, req->path, service->name);
 
@@ -1233,7 +1213,8 @@ httpd_session_main(void *data)
             }
             else
             {
-              snprintf(buffer, sizeof(buffer), "service '%s' is not registered properly (service function is NULL)", req->path);
+              snprintf(buffer, sizeof(buffer), 
+                "service '%s' is not registered properly (service function is NULL)", req->path);
               log_verbose("%s", buffer);
               httpd_send_not_implemented(rconn, buffer);
             }
@@ -1862,7 +1843,8 @@ httpd_destroy(void)
 }
 
 unsigned char *
-httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req, long *received, long max)
+httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req, 
+  long *received, long max)
 {
   char *content_length_str;
   size_t content_length = 0;

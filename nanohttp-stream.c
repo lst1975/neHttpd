@@ -557,12 +557,9 @@ http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
   struct http_output_stream_t *result;
   char *content_length;
 
-  /* Paranoya check */
-/*  if (header == NULL)
-    return NULL;
-*/
   /* Create object */
-  if (!(result = (struct http_output_stream_t *) http_malloc(sizeof(struct http_output_stream_t))))
+  result = (struct http_output_stream_t *)http_malloc(sizeof(*result));
+  if (result == NULL)
   {
     log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;

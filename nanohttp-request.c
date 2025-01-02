@@ -236,7 +236,8 @@ _hrequest_parse_header(char *data)
 
         /* save path */
         /* req->path = (char *) http_malloc(strlen(key) + 1); */
-        strncpy(req->path, key, REQUEST_MAX_PATH_SIZE-1);
+        req->path_len = tmp2 - key;
+        memcpy(req->path, key, req->path_len);
 
         /* parse options */
         for (;;)
