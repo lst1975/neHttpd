@@ -107,6 +107,12 @@ static inline size_t BUF_REMAIN(httpd_buf_t *b)
   return b->size - b->len;
 }
 
+static inline void BUF_SET(httpd_buf_t *b, char *ptr, size_t len)
+{
+  b->buf = ptr;
+  b->len = len;
+}
+
 static inline void BUF_SIZE_INIT(httpd_buf_t *b, char *buf, size_t size)
 {
   b->p      = buf;

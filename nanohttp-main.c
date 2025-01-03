@@ -309,6 +309,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       || ct->type_len != 19
       || memcmp(ct->type, "multipart/form-data", 19))
     {
+      hrequest_free_data(req);
       log_warn("Bad POST data format, must 'multipart/form-data' for %s", req->path);
       return httpd_send_not_implemented(conn, "post_service");
     }
@@ -320,6 +321,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       || pair->value == NULL
       || !pair->value_len)
     {
+      hrequest_free_data(req);
       r = herror_new("post_service", FILE_ERROR_READ, 
         "Bad POST data format, must 'multipart/form-data' for %s", req->path);
       return __post_internal_error(conn, r);
@@ -327,6 +329,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
 
     if (multipartparser_init(&p, NULL, pair->value, pair->value_len))
     {
+      hrequest_free_data(req);
       r = herror_new("post_service", GENERAL_ERROR, 
         "Failed to do multipartparser for 'multipart/form-data'");
       return __post_internal_error(conn, r);
@@ -341,6 +344,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
         len = http_input_stream_read(req->in, req->data.ptr, req->data.size);
         if (len == -1)
         {
+          hrequest_free_data(req);
           nanohttp_file_close(p.arg);
           r = herror_new("post_service", FILE_ERROR_READ, 
             "Failed to read stream %s", req->path);
@@ -358,6 +362,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       
       if (len != multipartparser_execute(&p, &settings, buffer, len))
       {
+        hrequest_free_data(req);
         nanohttp_file_close(p.arg);
         r = herror_new("post_service", FILE_ERROR_WRITE, 
           "Failed to read stream %s", req->path);
@@ -371,6 +376,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
   }
   else
   {
+    hrequest_free_data(req);
     return httpd_send_not_implemented(conn, "post_service");
   }
 }

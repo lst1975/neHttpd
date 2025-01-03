@@ -64,11 +64,10 @@
 #include "nanohttp-config.h"
 #include "nanohttp-form.h"
 
-#define CR '\r'
-#define LF '\n'
-#define SP ' '
-#define HT '\t'
-#define HYPHEN '-'
+void multipartparser_callbacks_init(multipartparser_callbacks* callbacks)
+{
+  memset(callbacks, 0, sizeof(*callbacks));
+}
 
 #define CALLBACK_NOTIFY(NAME)                           \
     if (callbacks->on_##NAME != NULL) {                 \
@@ -81,28 +80,6 @@
         if (callbacks->on_##NAME(parser, P, S) != 0)    \
             goto error;                                 \
     }
-
-enum state {
-    s_preamble,
-    s_preamble_hy_hy,
-    s_first_boundary,
-    s_header_field_start,
-    s_header_field,
-    s_header_value_start,
-    s_header_value,
-    s_header_value_cr,
-    s_headers_done,
-    s_data,
-    s_data_cr,
-    s_data_cr_lf,
-    s_data_cr_lf_hy,
-    s_data_boundary_start,
-    s_data_boundary,
-    s_data_boundary_done,
-    s_data_boundary_done_cr_lf,
-    s_data_boundary_done_hy_hy,
-    s_epilogue,
-};
 
 /* Header field name as defined by rfc 2616. Also lowercases them.
  *     field-name   = token
@@ -160,27 +137,79 @@ const uint8_t __isValidToken[256] = {
   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
 };
 
-int multipartparser_init(multipartparser *parser, void *arg, 
-  const char *boundary, int boundaryLen)
-{
-  if (boundaryLen > sizeof(parser->boundary))
-    return -1;
-  
-  memcpy(parser->boundary, boundary, boundaryLen);
-  parser->boundary_length = boundaryLen;
-  parser->arg   = arg;
-  parser->data  = NULL;
-  parser->index = 0;
-  parser->state        = s_preamble;
-  parser->value_length = 0;
-  parser->field_length = 0;
-  parser->content_disposition_parsed = 0;
-  return 0;
-}
+#define CR '\r'
+#define LF '\n'
+#define SP ' '
+#define HT '\t'
+#define HYPHEN '-'
 
-void multipartparser_callbacks_init(multipartparser_callbacks* callbacks)
+/*
+ "--------------A940F1230E6F0105F03DB2CB\r\n" \
+ "Content-Type: text/html; charset=\"utf-8\"\r\n" \
+ "Content-Transfer-Encoding: 8bit\r\n\r\n" \
+ "<html><head>\r\n" \
+ "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n" \
+ "  </head>\r\n" \
+ "  <body bgcolor=\"#FFFFFF\" text=\"#000000\">\r\n" \
+ "    <p>This is a test.&nbsp; <img src=\"cid:part1.E16AE3B4.1505C436@chilkatsoft.com\" height=\"20\" width=\"20\"></p>\r\n" \
+ "  </body>\r\n" \
+ "</html>\r\n" \
+ "--------------A940F1230E6F0105F03DB2CB\r\n" \
+ "Content-Transfer-Encoding: base64\r\n" \
+ "Content-Type: image/jpeg; name=\"starfish20.jpg\"\r\n" \
+ "Content-Disposition: inline; filename=\"starfish20.jpg\"\r\n" \
+ "Content-ID: <part1.E16AE3B4.1505C436@chilkatsoft.com>\r\n\r\n" \
+ "/9j/4AAQSkZJRgABAQEASABIAAD//gAmRmlsZSB3cml0dGVuIGJ5IEFkb2JlIFBob3Rvc2hvcD8g\r\n" \
+ "NC4w/9sAQwAQCwwODAoQDg0OEhEQExgoGhgWFhgxIyUdKDozPTw5Mzg3QEhcTkBEV0U3OFBtUVdf\r\n" \
+ "YmdoZz5NcXlwZHhcZWdj/9sAQwEREhIYFRgvGhovY0I4QmNjY2NjY2NjY2NjY2NjY2NjY2NjY2Nj\r\n" \
+ "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2Nj/8IAEQgAFAAUAwERAAIRAQMRAf/EABcAAAMBAAAA\r\n" \
+ "AAAAAAAAAAAAAAIDBAX/xAAYAQADAQEAAAAAAAAAAAAAAAABAgMEAP/aAAwDAQACEAMQAAAB2kZY\r\n" \
+ "NNEijWKddfTmLgALWH//xAAbEAACAgMBAAAAAAAAAAAAAAABAgMRAAQSE//aAAgBAQABBQL0XqN+\r\n" \
+ "pM2aqJGMiqFFCyg7z//EABwRAAICAgMAAAAAAAAAAAAAAAERAAIQIQMSUf/aAAgBAwEBPwHqU5aq\r\n" \
+ "Axx+y1tMQl4elj//xAAcEQEAAQUBAQAAAAAAAAAAAAABEQACEBIhA1H/2gAIAQIBAT8B3Bhqy7Zc\r\n" \
+ "enyiwmGgDhiOzj//xAAdEAABAwUBAAAAAAAAAAAAAAABAAIREBIhIkFR/9oACAEBAAY/ArZyn+Cg\r\n" \
+ "xtxWuJaoCnqDuin/xAAcEAABBAMBAAAAAAAAAAAAAAABABEhYRAxQVH/2gAIAQEAAT8hkEwPUUR9\r\n" \
+ "DYfE4nxtRpIkBTsayuALIiuY/9oADAMBAAIAAwAAABDWPTsf/8QAGhEAAwADAQAAAAAAAAAAAAAA\r\n" \
+ "AAEREDFBIf/aAAgBAwEBPxC0DVPcWm+Ce4OesrkE6bjH/8QAGBEBAQEBAQAAAAAAAAAAAAAAAREA\r\n" \
+ "QRD/2gAIAQIBAT8QahMiOc8YgSrnTY3ELclHXn//xAAcEAEBAAIDAQEAAAAAAAAAAAABEQAhMUFx\r\n" \
+ "EFH/2gAIAQEAAT8Qn3igmSZSj+c4N4zapMy9IjFV98wncN2iuLFsCEbDGxQkI6RO/n//2Q==\r\n" \
+ "--------------A940F1230E6F0105F03DB2CB--"
+ */
+
+enum state {
+    s_preamble,
+    s_preamble_hy_hy,
+    s_first_boundary,
+    s_header_field_start,
+    s_header_field,
+    s_header_value_start,
+    s_header_value,
+    s_header_value_cr,
+    s_headers_done,
+    s_data,
+    s_data_cr,
+    s_data_cr_lf,
+    s_data_cr_lf_hy,
+    s_data_boundary_start,
+    s_data_boundary,
+    s_data_boundary_done,
+    s_data_boundary_done_cr_lf,
+    s_data_boundary_done_hy_hy,
+    s_epilogue,
+};
+
+/* SP or HTAB : ((x) == 9 || (x) == 32) : 0x101 || 0x10 */
+#define __is_OWS(x) ((x) == 9 || (x) == 32)
+
+static inline const char *
+__http_strnstr(char *str, const char *p, size_t len)
 {
-  memset(callbacks, 0, sizeof(*callbacks));
+  char c = str[len];
+  const char *r;
+  str[len]='\0';
+  r = strstr(str, p);
+  str[len]=c;
+  return r;
 }
 
 size_t multipartparser_execute(multipartparser *parser,
@@ -188,9 +217,9 @@ size_t multipartparser_execute(multipartparser *parser,
                  const char *data,
                  size_t size)
 {
-  const char *mark;
-  const char *end;
-  const char *p;
+  const char   *mark;
+  const char   *end;
+  const char   *p;
   unsigned char c;
 
   end = data + size;
@@ -215,6 +244,16 @@ reexecute:
         break;
 
       case s_first_boundary:
+        if (!parser->index && end - p >= parser->boundary_length)
+        {
+          if (memcmp(p, parser->boundary, parser->boundary_length))
+          {
+            goto error;
+          }
+          parser->index = parser->boundary_length;
+          p += parser->boundary_length - 1;
+          break;
+        }
         if (parser->index == parser->boundary_length) {
           if (c != CR)
             goto error;
@@ -245,6 +284,18 @@ reexecute:
         // fallthrough;
 
       case s_header_field:
+        /* Header field name as defined by rfc 2616. Also lowercases them.
+         *     field-name   = token
+         *     token        = 1*<any CHAR except CTLs or tspecials>
+         *     CTL          = <any US-ASCII control character (octets 0 - 31) and DEL (127)>
+         *     tspecials    = "(" | ")" | "<" | ">" | "@"
+         *                  | "," | ";" | ":" | "\" | DQUOTE
+         *                  | "/" | "[" | "]" | "?" | "="
+         *                  | "{" | "}" | SP | HT
+         *     DQUOTE       = <US-ASCII double-quote mark (34)>
+         *     SP           = <US-ASCII SP, space (32)>
+         *     HT           = <US-ASCII HT, horizontal-tab (9)>
+         */
         mark = p;
         while (p != end) 
         {
@@ -256,12 +307,16 @@ reexecute:
         if (p > mark) {
           CALLBACK_DATA(header_field, mark, p - mark);
         }
-        if (p == end) 
-        {
+        if (p == end) {
           break;
         }
         if (c == ':') {
           parser->state = s_header_value_start;
+          break;
+        }
+        else if (c == CR) {
+          /* No headers */
+          parser->state = s_header_value_cr;
           break;
         }
         goto error;
@@ -274,6 +329,34 @@ reexecute:
         // fallthrough;
 
       case s_header_value:
+        /**
+         *  field-value    = *( field-content / obs-fold )
+         *  field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+         *  field-vchar    = VCHAR / obs-text
+            obs-fold       = CRLF 1*( SP / HTAB )
+                        ; obsolete line folding
+                        ; see Section 3.2.4     
+        
+         field-value    = *field-content
+         field-content  = field-vchar
+                          [ 1*( SP / HTAB / field-vchar ) field-vchar ]
+         field-vchar    = VCHAR / obs-text
+         
+         VCHAR          =  %x21-7E[visible (printing) characters]
+         obs-text       = %x80-FF
+         
+         >>>>>>>>>>>>>>https://httpwg.org/specs/rfc9110.html#fields.values
+         **/
+        mark = memchr(p, CR, end - p);
+        if (mark != NULL)
+        {
+          if (mark > p) {
+            CALLBACK_DATA(header_value, p, mark - p);
+          }
+          p = mark;
+          parser->state = s_header_value_cr;
+          break;
+        }
         mark = p;
         while (p != end) {
           c = *p;
@@ -306,6 +389,16 @@ reexecute:
         goto error;
 
       case s_data:
+        mark = memchr(p, CR, end - p);
+        if (mark != NULL)
+        {
+          if (mark > p) {
+            CALLBACK_DATA(data, p, mark - p);
+          }
+          parser->state = s_data_cr;
+          p = mark;
+          break;
+        }
         mark = p;
         while (p != end) {
           c = *p;
@@ -353,6 +446,16 @@ reexecute:
         // fallthrough;
 
       case s_data_boundary:
+        if (!parser->index && end - p >= parser->boundary_length)
+        {
+          if (!memcmp(p, parser->boundary, parser->boundary_length))
+          {
+            parser->index = 0;
+            parser->state = s_data_boundary_done;
+            p += parser->boundary_length - 1;
+            goto reexecute;
+          }
+        }
         if (parser->index == parser->boundary_length) {
           parser->index = 0;
           parser->state = s_data_boundary_done;
@@ -406,3 +509,24 @@ reexecute:
 error:
   return p - data;
 }
+
+int multipartparser_init(multipartparser *parser, void *arg, 
+  const char *boundary, int boundaryLen)
+{
+  parser->boundary_length = boundaryLen;
+
+  if (boundaryLen >= sizeof(parser->boundary))
+    return -1;
+  memcpy(parser->boundary, boundary, boundaryLen);
+  parser->boundary[boundaryLen]='\0';
+
+  parser->arg   = arg;
+  parser->data  = NULL;
+  parser->index = 0;
+  parser->value_length = 0;
+  parser->field_length = 0;
+  parser->state        = s_preamble;
+  parser->content_disposition_parsed = 0;
+  return 0;
+}
+
