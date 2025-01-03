@@ -312,7 +312,7 @@ _httpd_term(DWORD sig)
 {
   /* log_debug ("Got signal %d", sig); */
   if (sig == _httpd_terminate_signal
-    || sig == SIGTERM)
+    || sig == SIGTERM || sig == SIGABRT)
     _httpd_run = 0;
 
   return TRUE;

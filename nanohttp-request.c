@@ -278,17 +278,24 @@ _hrequest_parse_header(char *data, size_t len)
       result = opt_key;
       if (result != NULL)
       {
-        result++;
-        for (;;)
+        t = memchr(result, ' ', t - result);
+        
+        for (;result;)
         {
+          result++;
           opt_key = result;
-          key = memchr(opt_key, '&', t-result);
+          key = memchr(result, '&', t - result);
           if (key == NULL)
-            break;
-
+          {
+            key = t;
+            result = NULL;
+          }
+          else
+          {
+            result = key;
+          }
+          
           opt_value = memchr(opt_key, '=', key - opt_key);
-          if (opt_value == NULL)
-            opt_value = "";
 
           /* create option pair */
           if (!(tmppair = (hpair_t *)http_malloc(sizeof(hpair_t))))
@@ -297,22 +304,23 @@ _hrequest_parse_header(char *data, size_t len)
             goto clean1;
           }
 
+          /* fill hpairnode_t struct */
+          tmppair->next = NULL;
+          tmppair->value_len = opt_value == NULL ? 0 : key - opt_value - 1;
+          tmppair->key_len = opt_value == NULL ? key - opt_key : opt_value - opt_key;
+          tmppair->key = http_strdup_size(opt_key, tmppair->key_len);
+          if (opt_value)
+            tmppair->value = http_strdup_size(opt_value+1, tmppair->value_len);
+          
           if (req->query == NULL)
           {
-            req->query = qpair = tmppair;
+            req->query = tmppair;
           }
           else
           {
             qpair->next = tmppair;
-            qpair = tmppair;
-          }
-
-          /* fill hpairnode_t struct */
-          qpair->next = NULL;
-          qpair->value_len = opt_value == NULL ? 0 : key - opt_value - 1;
-          qpair->key_len = opt_value == NULL ? key - opt_key : opt_value - opt_key;
-          qpair->key = http_strdup_size(opt_key, qpair->key_len);
-          qpair->value = http_strdup_size(opt_value, qpair->value_len);
+           }
+          qpair = tmppair;
         }
       }
     }
