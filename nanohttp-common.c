@@ -202,7 +202,7 @@ hpairnode_parse(const char *str, int _size, char delim, hpair_t *next)
   if (value != NULL)
   {
     /* skip white space */
-    for (value++; isspace(*value); value++) ;
+    for (value++; isspace((int)*value); value++) ;
     pair->value_len = size - (value - str);
     if (pair->value_len)
     {
