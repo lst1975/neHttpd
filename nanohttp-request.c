@@ -123,13 +123,14 @@ hrequest_new(void)
 {
   struct hrequest_t *req;
  
-  if (!(req = (struct hrequest_t *) http_malloc(sizeof(struct hrequest_t))))
+  if (!(req = (struct hrequest_t *)http_malloc(sizeof(*req))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
   }
 
-  if (!(req->statistics = (struct request_statistics *)http_malloc(sizeof(struct request_statistics))))
+  if (!(req->statistics = (struct request_statistics *)
+    http_malloc(sizeof(*req->statistics))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
     http_free(req);
@@ -151,149 +152,181 @@ hrequest_new(void)
 }
 
 static struct hrequest_t *
-_hrequest_parse_header(char *data)
+_hrequest_parse_header(char *data, size_t len)
 {
   struct hrequest_t *req;
   hpair_t *hpair = NULL, *qpair = NULL, *tmppair = NULL;
 
   char *tmp;
-  char *tmp2;
-  char *saveptr;
-  char *saveptr2;
-  char *saveptr3;
   char *result;
   char *key;
+  char *end;
   char *opt_key;
   char *opt_value;
   int firstline = 1;
 
   req = hrequest_new();
+  if (req == NULL)
+  {
+    log_error("hrequest_new failed.");
+    goto clean0;
+  }
   tmp = data;
-
+  end = data + len;
+  
   for (;;)
   {
-    result = (char *) strtok_r(tmp, "\r\n", &saveptr);
-    tmp = saveptr;
-
+    if (end - tmp < 2)
+    {
+      if (end == tmp)
+        break;
+      if (tmp[0] != '\n')
+      {
+        log_error("Bad header.");
+        goto clean1;
+      }
+    }
+    result = memchr(tmp, '\n', end - tmp);
     if (result == NULL)
       break;
-
+    if (*--result!='\r')
+      continue;
+    
+    key = tmp;
+    tmp = result + 2;
+    
     if (firstline)
     {
       int key_len;
+      char *t;
       firstline = 0;
-      tmp2 = result;
 
       /* parse [GET|POST] [PATH] [SPEC] */
-      key = (char *) strtok_r(tmp2, " ", &saveptr2);
+      t = result;
+      result = (char *) memchr(key, ' ', t - key);
+      if (result == NULL)
+        break;
+      
       /* save method (get or post) */
-      tmp2 = saveptr2;
-      if (key != NULL)
-      {
-        key_len = strlen(key);
-        if (key_len == 4 && !memcmp(key, "POST", 4))
-          req->method = HTTP_REQUEST_POST;
-        else if (key_len == 3 && !memcmp(key, "GET", 3))
-          req->method = HTTP_REQUEST_GET;
-      	else if (key_len == 7 && !memcmp(key, "OPTIONS", 7))
-          req->method = HTTP_REQUEST_OPTIONS;
-      	else if (key_len == 4 && !memcmp(key, "HEAD", 4))
-          req->method = HTTP_REQUEST_HEAD;
-        else if (key_len == 3 && !memcmp(key, "PUT", 3))
-          req->method = HTTP_REQUEST_PUT;
-        else if (key_len == 6 && !memcmp(key, "DELETE", 6))
-          req->method = HTTP_REQUEST_DELETE;
-        else if (key_len == 5 && !memcmp(key, "TRACE", 5))
-          req->method = HTTP_REQUEST_TRACE;
-        else if (key_len == 7 && !memcmp(key, "CONNECT", 7))
-          req->method = HTTP_REQUEST_CONNECT;
-        else
-          req->method = HTTP_REQUEST_UNKOWN;
+      key_len = result - key;
+      if (key_len == 4 && !memcmp(key, "POST", 4))
+        req->method = HTTP_REQUEST_POST;
+      else if (key_len == 3 && !memcmp(key, "GET", 3))
+        req->method = HTTP_REQUEST_GET;
+      else if (key_len == 7 && !memcmp(key, "OPTIONS", 7))
+        req->method = HTTP_REQUEST_OPTIONS;
+      else if (key_len == 4 && !memcmp(key, "HEAD", 4))
+        req->method = HTTP_REQUEST_HEAD;
+      else if (key_len == 3 && !memcmp(key, "PUT", 3))
+        req->method = HTTP_REQUEST_PUT;
+      else if (key_len == 6 && !memcmp(key, "DELETE", 6))
+        req->method = HTTP_REQUEST_DELETE;
+      else if (key_len == 5 && !memcmp(key, "TRACE", 5))
+        req->method = HTTP_REQUEST_TRACE;
+      else if (key_len == 7 && !memcmp(key, "CONNECT", 7))
+        req->method = HTTP_REQUEST_CONNECT;
+      else
+        req->method = HTTP_REQUEST_UNKOWN;
 
-        if (req->method > HTTP_REQUEST_GET)
-        {
-          log_error("Not supported request method (%.*s)", key_len, key);
-          return NULL;
-        }
+      if (req->method > HTTP_REQUEST_GET)
+      {
+        log_error("Not supported request method (%.*s)", 
+          key_len, key);
+        goto clean1;
       }
 
       /* below is key the path and tmp2 the spec */
-      key = (char *) strtok_r(tmp2, " ", &saveptr2);
-
+      result++;
+      key = (char *)memchr(result, ' ', t - result);
       /* save version */
-      tmp2 = saveptr2;
-      if (tmp2 != NULL)
+      if (key == NULL)
       {
-        /* req->spec = (char *) http_malloc(strlen(tmp2) + 1); 
-          strcpy(req->spec, tmp2); */
-        if (!strcmp(tmp2, "HTTP/1.0"))
+        log_error("Not supported http version (%.*s)", key_len, key);
+        goto clean1;
+      }
+
+      req->version = -1;
+      /* req->spec = (char *) http_malloc(strlen(tmp2) + 1); 
+        strcpy(req->spec, tmp2); */
+      if (t - key - 1 == 8)
+      {
+        if (*(uint64_t *)(key + 1) == *(const uint64_t *)"HTTP/1.0")
           req->version = HTTP_1_0;
-        else
+        else if (*(uint64_t *)(key + 1) == *(const uint64_t *)"HTTP/1.1")
           req->version = HTTP_1_1;
       }
+      if (req->version == -1)
+      {
+        log_error("Not supported http version (%.*s)", 
+          t - key - 1, key + 1);
+        goto clean1;
+      }
+      
       /* 
        * parse and save path+query parse:
        * /path/of/target?key1=value1&key2=value2...
        */
+      opt_key = memchr(result, '?', key-result);
 
-      if (key != NULL)
+      /* save path */
+      /* req->path = (char *) http_malloc(strlen(key) + 1); */
+      req->path_len = opt_key == NULL ? key-result : opt_key - result;
+      memcpy(req->path, result, RTE_MIN(req->path_len, sizeof(req->path)-1));
+      req->path[req->path_len] = '\0';
+
+      /* parse options */
+      result = opt_key;
+      if (result != NULL)
       {
-        tmp2 = key;
-        key = (char *) strtok_r(tmp2, "?", &saveptr2);
-        tmp2 = saveptr2;
-
-        /* save path */
-        /* req->path = (char *) http_malloc(strlen(key) + 1); */
-        req->path_len = strlen(key);
-        memcpy(req->path, key, RTE_MIN(req->path_len, sizeof(req->path)-1));
-        req->path[req->path_len] = '\0';
-
-        /* parse options */
+        result++;
         for (;;)
         {
-          key = (char *) strtok_r(tmp2, "&", &saveptr2);
-          tmp2 = saveptr2;
-
+          opt_key = result;
+          key = memchr(opt_key, '&', t-result);
           if (key == NULL)
             break;
 
-          opt_key = (char *) strtok_r(key, "=", &saveptr3);
-          opt_value = saveptr3;
-
+          opt_value = memchr(opt_key, '=', key - opt_key);
           if (opt_value == NULL)
             opt_value = "";
 
           /* create option pair */
-          if (opt_key != NULL)
+          if (!(tmppair = (hpair_t *)http_malloc(sizeof(hpair_t))))
           {
-            if (!(tmppair = (hpair_t *) http_malloc(sizeof(hpair_t))))
-            {
-              log_error("http_malloc failed (%s)", strerror(errno));
-              return NULL;
-            }
-
-            if (req->query == NULL)
-            {
-              req->query = qpair = tmppair;
-            }
-            else
-            {
-              qpair->next = tmppair;
-              qpair = tmppair;
-            }
-
-            /* fill hpairnode_t struct */
-            qpair->next = NULL;
-            qpair->key = http_strdup(opt_key);
-            qpair->value = http_strdup(opt_value);
+            log_error("http_malloc failed (%s)", strerror(errno));
+            goto clean1;
           }
+
+          if (req->query == NULL)
+          {
+            req->query = qpair = tmppair;
+          }
+          else
+          {
+            qpair->next = tmppair;
+            qpair = tmppair;
+          }
+
+          /* fill hpairnode_t struct */
+          qpair->next = NULL;
+          qpair->value_len = opt_value == NULL ? 0 : key - opt_value - 1;
+          qpair->key_len = opt_value == NULL ? key - opt_key : opt_value - opt_key;
+          qpair->key = http_strdup_size(opt_key, qpair->key_len);
+          qpair->value = http_strdup_size(opt_value, qpair->value_len);
         }
       }
     }
     else
     {
-      tmppair = hpairnode_parse(result, ":", NULL);
-
+      if (result - key == 0)
+        continue;
+      tmppair = hpairnode_parse(key, result-key, ':', NULL);
+      if (tmppair == NULL)
+      {
+        log_error("hpairnode_parse failed.");
+        goto clean1;
+      }
+        
       if (req->header == NULL)
       {
         req->header = hpair = tmppair;
@@ -307,11 +340,32 @@ _hrequest_parse_header(char *data)
   }
 
   /* Check Content-type */
-  tmp = hpairnode_get_ignore_case(req->header, HEADER_CONTENT_TYPE);
-  if (tmp != NULL)
-    req->content_type = content_type_new(tmp);
-
+  tmppair = hpairnode_get_ignore_case_len(req->header, 
+                      HEADER_CONTENT_TYPE, 12);
+  if (tmppair != NULL)
+  {
+    req->content_type = content_type_new(tmppair->value, tmppair->value_len);
+    if (req->content_type == NULL)
+    {
+      log_error("content_type_new failed.");
+      goto clean1;
+    }
+  }
   return req;
+  
+clean1:
+  hrequest_free(req);
+clean0:
+  return NULL;
+}
+
+static inline void __buf_free(httpd_buf_t *b)
+{
+  if (b->data)
+  {
+    http_free(b->data);
+    b->data = NULL;
+  }
 }
 
 void
@@ -335,31 +389,51 @@ hrequest_free(struct hrequest_t * req)
   if (req->statistics)
     http_free(req->statistics);
 
+  if (req->data.data)
+    http_free(req->data.data);
+  
   http_free(req);
 
   return;
 }
 
 herror_t
-hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t ** out)
+hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t **out)
 {
-  herror_t status;
+  size_t hdrlen;
+  size_t rcvbytes;
+  herror_t status = H_OK;
+  char *buffer;
   struct hrequest_t *req;
-  char buffer[MAX_HEADER_SIZE + 1];
   struct attachments_t *mimeMessage;
 
-  if ((status = http_header_recv(sock, buffer, MAX_HEADER_SIZE)) != H_OK)
+  buffer = http_malloc(MAX_HEADER_SIZE + 1);
+  if (buffer == NULL)
   {
-    return status;
+    status = herror_new("hrequest_new_from_socket", GENERAL_ERROR, 
+      "http_malloc failed.");
+    goto clean0;
+  }
+  
+  if ((status = http_header_recv(sock, buffer, MAX_HEADER_SIZE, &hdrlen, &rcvbytes)) != H_OK)
+  {
+    goto clean1;
   }
 
   /* Create response */
-  req = _hrequest_parse_header(buffer);
+  req = _hrequest_parse_header(buffer, hdrlen);
   if (req == NULL)
   {
-    return herror_new("hrequest_new_from_socket", GENERAL_HEADER_PARSE_ERROR, 
+    status = herror_new("hrequest_new_from_socket", GENERAL_HEADER_PARSE_ERROR, 
       "_hrequest_parse_header failed.");
+    goto clean1;
   }
+
+  req->data.buf  = buffer;
+  req->data.p    = buffer + hdrlen;
+  req->data.len  = rcvbytes - hdrlen;
+  req->data.size = MAX_HEADER_SIZE + 1;
+  hpairnode_dump_deep(req->header);
   
   /* Check for MIME message */
   if ((req->content_type &&
@@ -383,14 +457,20 @@ hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t ** out)
   {
     /* Create input stream */
     req->in = http_input_stream_new(sock, req->header);
-    if (req->in == NULL)
-    {
-      hrequest_free(req);
-      return herror_new("hrequest_new_from_socket", GENERAL_ERROR, 
-        "http_input_stream_new failed.");
-    }
+  }
+
+  if (req->in == NULL)
+  {
+    hrequest_free(req);
+    return herror_new("hrequest_new_from_socket", GENERAL_ERROR, 
+      "http_input_stream_new failed.");
   }
 
   *out = req;
   return H_OK;
+  
+clean1:  
+  http_free(buffer);
+clean0:  
+  return status;
 }

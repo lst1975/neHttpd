@@ -378,6 +378,8 @@ struct hpair
 {
   char *key;
   char *value;
+  int key_len;
+  int value_len;
   hpair_t *next;
 };
 
@@ -406,6 +408,7 @@ typedef enum _http_version
 typedef struct _content_type
 {
   char type[128];
+  int type_len;
   hpair_t *params;
 } content_type_t;
 
@@ -1197,6 +1200,8 @@ extern "C" {
  *
  */
 extern hpair_t *hpairnode_new(const char *key, const char *value, hpair_t * next);
+extern hpair_t *hpairnode_new_len(const char *key, int keylen, 
+                    const char *value, int valuelen, hpair_t *next);
 
 /**
  *
@@ -1213,7 +1218,7 @@ extern hpair_t *hpairnode_new(const char *key, const char *value, hpair_t * next
  *         to http_free the pair.
  *
  */
-extern hpair_t *hpairnode_parse(const char *str, const char *delim, hpair_t * next);
+extern hpair_t *hpairnode_parse(const char *str, int size, char delim, hpair_t *next);
 
 /**
  *
@@ -1247,6 +1252,7 @@ extern void hpairnode_free_deep(hpair_t * pair);
  *
  */
 extern char *hpairnode_get(hpair_t * pair, const char *key);
+extern hpair_t *hpairnode_get_len(hpair_t *pair, const char *key, int len);
 
 /**
  *
@@ -1262,6 +1268,7 @@ extern char *hpairnode_get(hpair_t * pair, const char *key);
  *
  */
 extern char *hpairnode_get_ignore_case(hpair_t * pair, const char *key);
+extern hpair_t *hpairnode_get_ignore_case_len(hpair_t *pair, const char *key, int len);
 
 /**
  *
@@ -1320,7 +1327,7 @@ extern void hpairnode_dump(const hpair_t *pair);
  * @see content_type_free
  *
  */
-extern content_type_t *content_type_new(const char *content_type_str);
+extern content_type_t *content_type_new(const char *content_type_str, int size);
 
 /**
  *
@@ -1346,6 +1353,14 @@ extern struct attachments_t *attachments_new(void);
  */
 extern void attachments_free(struct attachments_t * message);
 extern void attachments_add_part(struct attachments_t * attachments, struct part_t * part);
+
+static inline int SAFE_STRLEN(const char *x)
+{
+  if (likely((x)!=NULL))
+    return strlen(x);
+  else
+    return 0;
+}
 
 #ifdef __cplusplus
 }

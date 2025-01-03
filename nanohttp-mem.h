@@ -78,10 +78,14 @@ int http_memcache_init(void);
 #if __NHTTP_MEM_DEBUG  
 #define http_malloc(size) __http_malloc(size, __FILE__, __LINE__)
 #define http_strdup(ptr) __http_strdup(ptr, __FILE__, __LINE__)
+#define http_strdup_len(ptr,len) __http_strdup_len(ptr, len, __FILE__, __LINE__)
+#define http_strdup_size(ptr,len) __http_strdup_size(ptr, len, __FILE__, __LINE__)
 #define http_calloc(n,size) __http_calloc(n,size, __FILE__, __LINE__)
 #else
 #define http_malloc(size) __http_malloc(size)
 #define http_strdup(ptr) __http_strdup(ptr)
+#define http_strdup_len(ptr,len) __http_strdup_len(ptr, len)
+#define http_strdup_size(ptr,len) __http_strdup_size(ptr, len)
 #define http_calloc(n,size) __http_calloc(n,size)
 #endif
 
@@ -95,6 +99,9 @@ static inline char *__http_strdup(const char *p
 #endif
 )
 {
+  if (p == NULL)
+    return NULL;
+
   size_t len = strlen(p)+1;
   void *np = __http_malloc(len
 #if __NHTTP_MEM_DEBUG  
@@ -104,6 +111,49 @@ static inline char *__http_strdup(const char *p
   if (np == NULL)
     return NULL;
   memcpy(np, p, len);
+  return np;
+}
+
+static inline char *__http_strdup_size(const char *p, int len
+#if __NHTTP_MEM_DEBUG  
+    , const char *file, int line
+#endif
+)
+{
+  if (p == NULL)
+    return NULL;
+
+  char *np = (char *)__http_malloc(len+1
+#if __NHTTP_MEM_DEBUG  
+      , file, line
+#endif
+    );
+  if (np == NULL)
+    return NULL;
+  memcpy(np, p, len);
+  np[len] = '\0';
+  return np;
+}
+
+static inline char *__http_strdup_len(const char *p, int *_len
+#if __NHTTP_MEM_DEBUG  
+    , const char *file, int line
+#endif
+)
+{
+  if (p == NULL)
+    return NULL;
+
+  size_t len = strlen(p)+1;
+  void *np = __http_malloc(len
+#if __NHTTP_MEM_DEBUG  
+      , file, line
+#endif
+    );
+  if (np == NULL)
+    return NULL;
+  memcpy(np, p, len);
+  *_len = len - 1;
   return np;
 }
 

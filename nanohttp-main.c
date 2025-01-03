@@ -166,8 +166,7 @@ __multipart_cb_headers_complete(multipartparser *p)
   }
   else
   {
-    char *buf = NULL;
-    char *file = "uploads/gw.bin";
+    char *file = NULL;
 
     if (p->value_length)
     {
@@ -187,40 +186,55 @@ __multipart_cb_headers_complete(multipartparser *p)
           {
             char *e;
             f++;
-            while(f <end && isspace((int)*f))
+            while(f < end && isspace((int)*f))
             {
               f++;
             }
-            e = f;
-            while (e < end && *e != '"')
-              e++;
-            if (e <= end && e-f < sizeof(buf)-1)
+            e = memchr(f, '"', end - f);
+            if (e != NULL)
             {
-              buf = http_malloc(PATH_MAX);
-              if (buf == NULL)
+              while(e > f && isspace((int)e[-1]))
               {
-                log_error("Failed to malloc temporary buffer.");
-                return -1;
+                e--;
               }
-              snprintf(buf,PATH_MAX,"%s/%.*s","uploads",(int)(e-f), f);
-              file = buf;
+              if (e > f && e - f < PATH_MAX)
+              {
+                char *buf = NULL;
+                buf = http_malloc(PATH_MAX);
+                if (buf == NULL)
+                {
+                  log_error("Failed to malloc temporary buffer.");
+                  return -1;
+                }
+                snprintf(buf,PATH_MAX,"%s/%.*s","uploads",(int)(e-f), f);
+                file = buf;
+              }
             }
           }
         }
       }
     }
 
-    p->arg = nanohttp_file_open_for_write(file);
+    if (file == NULL)
+    {
+      log_error("Try to open the file uploads/gw.bin for writing.");
+      if (p->arg == NULL)
+        log_error("Not able to open the file uploads/gw.bin for writing.");
+    }
+    else
+    {
+      log_error("Try to open the file %s for writing.", file);
+      p->arg = nanohttp_file_open_for_write(file);
+      http_free(file);
+      if (p->arg == NULL)
+        log_error("Not able to open the file %s for writing.", file);
+    }
+    
     if (p->arg == NULL)
     {
-      if (buf != NULL)
-        http_free(buf);
-      log_error("Not able to open the file %s for writing.", file);
       return -1;
     }
     
-    if (buf != NULL)
-      http_free(buf);
     return 0;
   }
 }
@@ -255,12 +269,30 @@ __multipart_cb_header_value(multipartparser *p, const char* data, size_t size)
 }
 
 static herror_t
+__post_internal_error(httpd_conn_t *conn, herror_t r)
+{
+  herror_t sr;
+  log_error("%s", herror_message(r));
+  sr = httpd_send_header(conn, 500, HTTP_STATUS_500_REASON_PHRASE);
+  if (sr != H_OK) 
+  {
+    herror_release(sr);
+    return r;
+  }
+  sr = http_output_stream_write_string(conn->out, herror_message(r));
+  herror_release(sr);
+  return r;
+}
+
+static herror_t
 __post_service(httpd_conn_t *conn, struct hrequest_t *req, 
   const char *file)
 {
-  herror_t r = NULL;
+  herror_t r;
   if (req->method == HTTP_REQUEST_POST)
   {
+    hpair_t *pair;
+    content_type_t *ct;
     multipartparser p;
     multipartparser_callbacks settings;
     multipartparser_callbacks_init(&settings);
@@ -269,69 +301,82 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
     settings.on_header_value = __multipart_cb_header_value;
     settings.on_headers_complete = __multipart_cb_headers_complete;
 
-    if (!req->content_type || !req->content_type->params
-      || strcmp(req->content_type->params->key, "boundary")
-      || !req->content_type->params->value)
+    ct = req->content_type;
+    if (ct == NULL
+      || ct->type_len != 19
+      || memcmp(ct->type, "multipart/form-data", 19))
+    {
+      log_warn("Bad POST data format, must 'multipart/form-data' for %s", req->path);
+      return httpd_send_not_implemented(conn, "post_service");
+    }
+
+    pair = ct->params;
+    if (pair == NULL
+      || pair->key_len != 8
+      || memcmp(pair->key, "boundary", 8)
+      || pair->value == NULL
+      || !pair->value_len)
     {
       r = herror_new("post_service", FILE_ERROR_READ, 
-        "Failed to read stream %s", req->path);
-      req->code = 500;
-      return r;
+        "Bad POST data format, must 'multipart/form-data' for %s", req->path);
+      return __post_internal_error(conn, r);
     }
 
-    multipartparser_init(&p, NULL, req->content_type->params->value);
+    multipartparser_init(&p, NULL, pair->value);
     while (http_input_stream_is_ready(req->in))
     {
-      unsigned char buffer[1024];
-      size_t len = http_input_stream_read(req->in, buffer, 1024);
-      if (len == -1)
+      char *buffer;
+      size_t len;
+      if (!req->data.len)
       {
-        r = herror_new("post_service", FILE_ERROR_READ, 
-          "Failed to read stream %s", req->path);
-        req->code = 500;
-        break;
+        len = http_input_stream_read(req->in, req->data.ptr, req->data.size);
+        if (len == -1)
+        {
+          nanohttp_file_close(p.arg);
+          r = herror_new("post_service", FILE_ERROR_READ, 
+            "Failed to read stream %s", req->path);
+          return __post_internal_error(conn, r);
+        }
+        buffer = req->data.buf;
       }
-
-      if (len != multipartparser_execute(&p, &settings, (const char *)buffer, len))
+      else
       {
+        buffer = req->data.p;
+        len = req->data.len;
+        req->data.len = 0;
+        if (req->in->type == HTTP_TRANSFER_CONTENT_LENGTH)
+        {
+          req->in->received = len;
+        }
+      }
+      if (len != multipartparser_execute(&p, &settings, buffer, len))
+      {
+        nanohttp_file_close(p.arg);
         r = herror_new("post_service", FILE_ERROR_WRITE, 
           "Failed to read stream %s", req->path);
-        req->code = 500;
-        break;
+        return __post_internal_error(conn, r);
       }
     }
 
+    if (req->data.buf != NULL)
+    {
+      http_free(req->data.buf);
+      req->data.buf = NULL;
+    }
     nanohttp_file_close(p.arg);
-    req->code = 200;
+    return httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
   }
   else
   {
-    r = httpd_send_not_implemented(conn, "post_service");
-    req->code = 0;
+    return httpd_send_not_implemented(conn, "post_service");
   }
-
-  return r;
 }
 
 static void
 post_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   herror_t r = __post_service(conn, req, "config/gw.bin");
-  if (r == H_OK)
-  {
-    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
-    herror_release(r);
-  }
-  else
-  {
-    log_error("%s", herror_message(r));
-    if (req->code)
-    {
-      r = httpd_send_header(conn, req->code, HTTP_STATUS_500_REASON_PHRASE);
-      herror_release(r);
-    }
-  }
-  req->code = 0;
+  herror_release(r);
 }
 
 static herror_t

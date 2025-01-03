@@ -512,7 +512,8 @@ http_input_stream_is_ready(struct http_input_stream_t * stream)
   <0 on error
 */
 size_t
-http_input_stream_read(struct http_input_stream_t * stream, unsigned char *dest, size_t size)
+http_input_stream_read(struct http_input_stream_t * stream, 
+  unsigned char *dest, size_t size)
 {
   size_t len = 0;
 

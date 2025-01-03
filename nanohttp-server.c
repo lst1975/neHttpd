@@ -232,6 +232,7 @@ static DWORD _httpd_terminate_signal = CTRL_C_EVENT;
 static int _httpd_max_idle = 120;
 typedef HANDLE MUTEXT_T;
 typedef HANDLE THREAD_T;
+typedef DWORD SIGNAL_T;
 typedef DWORD WINAPI (*HTTP_THREAD_EXEFUNC_T)(LPVOID arg);
 #if !__HTTP_USE_CONN_RING
 HANDLE _httpd_connection_lock = NULL;
@@ -244,6 +245,7 @@ HANDLE _httpd_connection_lock = NULL;
 typedef pthread_mutex_t MUTEXT_T;
 typedef pthread_t THREAD_T;
 typedef void * (*HTTP_THREAD_EXEFUNC_T)(void *data);
+typedef int SIGNAL_T;
 static int _httpd_terminate_signal = SIGINT;
 static sigset_t thrsigset;
 #if !__HTTP_USE_CONN_RING
@@ -309,7 +311,8 @@ BOOL WINAPI
 _httpd_term(DWORD sig)
 {
   /* log_debug ("Got signal %d", sig); */
-  if (sig == _httpd_terminate_signal)
+  if (sig == _httpd_terminate_signal
+    || sig == SIGTERM)
     _httpd_run = 0;
 
   return TRUE;
@@ -327,7 +330,8 @@ _httpd_term(int sig)
 {
   log_debug("Got signal %d", sig);
 
-  if (sig == _httpd_terminate_signal)
+  if (sig == _httpd_terminate_signal
+    || sig == SIGTERM || sig == SIGABRT)
     _httpd_run = 0;
 
   return;
@@ -464,15 +468,20 @@ _httpd_connection_slots_free(void)
     for (int i=0;i<_httpd_max_connections;i++)
     {
       conndata_t *conn=&_httpd_connection[i];
-      hsocket_close(&conn->sock);
-      if (conn->flag == CONNECTION_FREE)
-        continue;
-      httpd_thread_join(&conn->tid);
+      if (conn->flag == CONNECTION_IN_USE)
+      {
+        hsocket_close(&conn->sock);
+      }
     }
     http_free(_httpd_connection);
   }
   
 #if __HTTP_USE_CONN_RING
+  int count = rte_ring_count(_httpd_connection_ring);
+  while (count < _httpd_max_connections - 2){
+    log_warn("Number of active connection thread is (%d)", count);
+    _httpd_sys_sleep(1);
+  };
   rte_ring_free(_httpd_connection_ring);
   _httpd_connection_ring = NULL;
 #endif
@@ -971,23 +980,30 @@ _httpd_request_print(struct hrequest_t * req)
   log_verbose(" Path   : '%s'", req->path);
   log_verbose(" Spec   : '%s'",
                (req->version == HTTP_1_0) ? "HTTP/1.0" : "HTTP/1.1");
-  log_verbose(" Parsed query string :");
+  log_verbose(" ++++++ Parsed Query string :");
 
   for (pair = req->query; pair; pair = pair->next)
     log_verbose(" %s = '%s'", pair->key, pair->value);
 
-  log_verbose(" Parsed header :");
+  log_verbose(" ++++++ Parsed Header :");
   for (pair = req->header; pair; pair = pair->next)
     log_verbose(" %s = '%s'", pair->key, pair->value);
 
+  log_verbose(" ++++++ Parsed Content-Type :");
   if (req->content_type != NULL)
-    log_verbose(" ContentType : %s", req->content_type->type);
+  {
+    pair = req->content_type->params;
+    if (pair != NULL)
+      log_verbose(" Content-Type : %s; %s", req->content_type->type, pair->value);
+    else
+      log_verbose(" Content-Type : %s", req->content_type->type);
+  }
+  log_verbose("++++++++++++++++++++++++");
 
   level = __nanohttp_level2string(req->userLevel);
   if (level != NULL)
     log_verbose(" User Level : %.*s", (int)level->len, level->cptr);
   log_verbose(" Connection : %p", req->conn);
-  log_verbose("++++++++++++++++++++++++");
 
   return;
 }
@@ -1083,19 +1099,21 @@ static int
 _httpd_authenticate_request(struct hrequest_t * req, httpd_auth auth)
 {
   char *user, *pass;
-  char *authorization;
+  hpair_t *authorization_pair;
   int ret;
 
   if (!auth)
     return 1;
 
-  if (!(authorization = hpairnode_get_ignore_case(req->header, HEADER_AUTHORIZATION)))
+  authorization_pair = hpairnode_get_ignore_case_len(req->header, 
+    HEADER_AUTHORIZATION, sizeof(HEADER_AUTHORIZATION)-1);
+  if (authorization_pair == NULL)
   {
     log_debug("\"%s\" header not set", HEADER_AUTHORIZATION);
     return 0;
   }
 
-  if (_httpd_decode_authorization(authorization, &user, &pass))
+  if (_httpd_decode_authorization(authorization_pair->value, &user, &pass))
   {
     log_error("httpd_base64_decode_failed");
     return 0;
@@ -1166,14 +1184,16 @@ httpd_session_main(void *data)
     else
     {
       char buffer[REQUEST_MAX_PATH_SIZE+256+1];
-      char *conn_str;
+      hpair_t *conn_pair;
 
       req->conn = conn;
       req->userLevel = _N_http_user_type_NONE;
       _httpd_request_print(req);
       
-      conn_str = hpairnode_get_ignore_case(req->header, HEADER_CONNECTION);
-      if (conn_str && strncasecmp(conn_str, "close", 6) == 0)
+      conn_pair = hpairnode_get_ignore_case_len(req->header, 
+        HEADER_CONNECTION, sizeof(HEADER_CONNECTION)-1);
+      if (conn_pair != NULL && 
+        (conn_pair->value_len == 6 && !strncasecmp(conn_pair->value, "close", 6)))
         done = 1;
 
       if (!done)
@@ -1346,7 +1366,7 @@ httpd_add_headers(httpd_conn_t * conn, const hpair_t * values)
  * -----------------------------------------------------
  */
 static void
-_httpd_register_signal_handler(void)
+_httpd_register_signal_handler(SIGNAL_T sig)
 {
 
 #ifndef WIN32
@@ -1355,7 +1375,7 @@ _httpd_register_signal_handler(void)
 #endif
 
   log_verbose("registering termination signal handler (SIGNAL:%d)",
-               _httpd_terminate_signal);
+               sig);
 #ifdef WIN32
   if (SetConsoleCtrlHandler((PHANDLER_ROUTINE) _httpd_term, TRUE) == FALSE)
   {
@@ -1363,7 +1383,7 @@ _httpd_register_signal_handler(void)
   }
 
 #else
-  signal(_httpd_terminate_signal, _httpd_term);
+  signal(sig, _httpd_term);
 #endif
 
   return;
@@ -1433,10 +1453,8 @@ _httpd_start_thread(conndata_t *conn)
 #else
   pthread_attr_init(&(conn->attr));
 
-#if 0
 #ifdef PTHREAD_CREATE_DETACHED
   pthread_attr_setdetachstate(&(conn->attr), PTHREAD_CREATE_DETACHED);
-#endif
 #endif
 
   pthread_sigmask(SIG_BLOCK, &thrsigset, NULL);
@@ -1775,7 +1793,9 @@ herror_t httpd_run(void)
   herror_t status = H_OK;
   conndata_t *c;
   
-  _httpd_register_signal_handler();
+  _httpd_register_signal_handler(_httpd_terminate_signal);
+  _httpd_register_signal_handler(SIGTERM);
+  _httpd_register_signal_handler(SIGABRT);
 
   if (httpd_create_cond(&main_cond))
   {
@@ -1846,19 +1866,19 @@ unsigned char *
 httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req, 
   long *received, long max)
 {
-  char *content_length_str;
   size_t content_length = 0;
   unsigned char *postdata = NULL;
 
   if (req->method == HTTP_REQUEST_POST)
   {
+    hpair_t *content_length_pair;
+    content_length_pair =
+      hpairnode_get_ignore_case_len(req->header, 
+      HEADER_CONTENT_LENGTH,
+      sizeof(HEADER_CONTENT_LENGTH) - 1);
 
-    content_length_str =
-      hpairnode_get_ignore_case(req->header, HEADER_CONTENT_LENGTH);
-
-    if (content_length_str != NULL)
-      content_length = atol(content_length_str);
-
+    if (content_length_pair != NULL)
+      content_length = atol(content_length_pair->value);
   }
   else
   {

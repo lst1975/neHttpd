@@ -304,12 +304,14 @@ static char *nanohttp_file_get_path(const char *file)
   return path;
 }
 
-static void *nanohttp_file_open(const char *file, const char *mode)
+static void *nanohttp_file_open(const char *file, 
+  const char *mode, int del)
 {
   char *fpath = nanohttp_file_get_path(file);
   // Open a file in write mode
   if (fpath != NULL)
   {
+    if (del) remove(fpath);
     void *fp = fopen(fpath, mode);
     http_free(fpath);
     return fp;
@@ -320,7 +322,7 @@ static void *nanohttp_file_open(const char *file, const char *mode)
 
 void *nanohttp_file_open_for_read(const char *file)
 {
-  return nanohttp_file_open(file, "rb");
+  return nanohttp_file_open(file, "rb", 0);
 }
 
 herror_t nanohttp_file_read_all(const char *file, 
@@ -399,7 +401,7 @@ herror_t nanohttp_file_read(void *file,
 
 void *nanohttp_file_open_for_write(const char *file)
 {
-  return nanohttp_file_open(file, "wb+");
+  return nanohttp_file_open(file, "wb", 1);
 }
 
 void nanohttp_file_close(void *file)

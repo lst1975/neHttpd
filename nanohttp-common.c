@@ -119,11 +119,13 @@
 #include "nanohttp-common.h"
 
 hpair_t *
-hpairnode_new(const char *key, const char *value, hpair_t * next)
+hpairnode_new_len(const char *key, int keylen, 
+  const char *value, int valuelen, hpair_t *next)
 {
   hpair_t *pair;
 
-  log_verbose("new pair ('%s','%s')", SAVE_STR(key), SAVE_STR(value));
+  log_verbose("new pair ('%.*s','%.*s')", keylen, key, 
+    valuelen, value);
   if (!(pair = (hpair_t *) http_malloc(sizeof(hpair_t))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
@@ -132,20 +134,24 @@ hpairnode_new(const char *key, const char *value, hpair_t * next)
 
   if (key != NULL)
   {
-    pair->key = http_strdup(key);
+    pair->key_len = keylen;
+    pair->key = http_strdup_size(key, pair->key_len);
   }
   else
   {
     pair->key = NULL;
+    pair->key_len = 0;
   }
 
   if (value != NULL)
   {
-    pair->value = http_strdup(value);
+    pair->value_len = valuelen;
+    pair->value = http_strdup_size(value, pair->value_len);
   }
   else
   {
     pair->value = NULL;
+    pair->value_len = 0;
   }
 
   pair->next = next;
@@ -154,30 +160,66 @@ hpairnode_new(const char *key, const char *value, hpair_t * next)
 }
 
 hpair_t *
-hpairnode_parse(const char *str, const char *delim, hpair_t * next)
+hpairnode_new(const char *key, const char *value, hpair_t * next)
+{
+  return hpairnode_new_len(key, SAFE_STRLEN(key), value, SAFE_STRLEN(value), next);
+}
+
+hpair_t *
+hpairnode_parse(const char *str, int _size, char delim, hpair_t *next)
 {
   hpair_t *pair;
-  char *key, *value;
-
-  pair = (hpair_t *) http_malloc(sizeof(hpair_t));
-  pair->key = "";
-  pair->value = "";
-  pair->next = next;
-
-  key = strtok_r((char *) str, delim, &value);
-
-  if (key != NULL)
+  const char *value;
+  int size = _size ? _size : strlen(str);
+  
+  if (str == NULL || !_size)
   {
-    pair->key = http_strdup(key);
+    log_error("bad header key.");
+    goto clean0;
   }
+  
+  pair = (hpair_t *) http_malloc(sizeof(hpair_t));
+  if (pair == NULL)
+  {
+    log_error("http_malloc hpair_t failed.");
+    goto clean0;
+  }
+  pair->key = NULL;
+  pair->value = NULL;
+  pair->next = next;
+  pair->key_len = 0;
+  pair->value_len = 0;
+
+  value = memchr(str, delim, size);
+  pair->key_len = value == NULL ? size : value - str;
+  pair->key = http_strdup_size(str, pair->key_len);
+  if (pair->key == NULL)
+  {
+    log_error("http_malloc hpair_t->key failed.");
+    goto clean1;
+  }
+  
   if (value != NULL)
   {
     /* skip white space */
-    for (; *value == ' '; value++) ;
-
-    pair->value = http_strdup(value);
+    for (value++; isspace(*value); value++) ;
+    pair->value_len = size - (value - str);
+    if (pair->value_len)
+    {
+      pair->value = http_strdup_size(value, pair->value_len);
+      if (pair->value == NULL)
+      {
+        log_error("http_malloc hpair_t->value failed.");
+        goto clean1;
+      }
+    }
   }
   return pair;
+  
+clean1:
+  hpairnode_free(pair);
+clean0:
+  return NULL;
 }
 
 hpair_t *
@@ -277,22 +319,57 @@ hpairnode_free_deep(hpair_t * pair)
   return;
 }
 
+hpair_t *
+hpairnode_get_ignore_case_len(hpair_t *pair, 
+  const char *key, int len)
+{
+  if (key == NULL || !len)
+  {
+    log_error("key is NULL");
+    return NULL;
+  }
+
+  while (pair != NULL)
+  {
+    if (pair->key != NULL && pair->key_len == len)
+    {
+      if (!strncasecmp(pair->key, key, len))
+      {
+        return pair;
+      }
+    }
+    pair = pair->next;
+  }
+
+  return NULL;
+}
+
 char *
 hpairnode_get_ignore_case(hpair_t * pair, const char *key)
 {
+  hpair_t *p;
+  p = hpairnode_get_ignore_case_len(pair, key, SAFE_STRLEN(key));
+  if (p == NULL)
+    return NULL;
+  return p->value;
+}
+
+hpair_t *
+hpairnode_get_len(hpair_t *pair, const char *key, int len)
+{
   if (key == NULL)
   {
     log_error("key is NULL");
     return NULL;
   }
-
+  
   while (pair != NULL)
   {
-    if (pair->key != NULL)
+    if (pair->key != NULL && len == pair->key_len)
     {
-      if (!strcasecmp(pair->key, key))
+      if (!memcmp(pair->key, key, len))
       {
-        return pair->value;
+        return pair;
       }
     }
     pair = pair->next;
@@ -302,109 +379,130 @@ hpairnode_get_ignore_case(hpair_t * pair, const char *key)
 }
 
 char *
-hpairnode_get(hpair_t * pair, const char *key)
+hpairnode_get(hpair_t *pair, const char *key)
 {
-  if (key == NULL)
-  {
-    log_error("key is NULL");
+  hpair_t *p;
+  p = hpairnode_get_len(pair, key, SAFE_STRLEN(key));
+  if (p == NULL)
     return NULL;
-  }
-  while (pair != NULL)
-  {
-    if (pair->key != NULL)
-    {
-      if (!strcmp(pair->key, key))
-      {
-        return pair->value;
-      }
-    }
-    pair = pair->next;
-  }
-
-  return NULL;
+  return p->value;
 }
 
-/* Content-type stuff */
+static inline int __rm_ctsp(const char *content_type_str, int i, int len)
+{
+  while (i < len)
+  {
+    int ch = content_type_str[i];
+    if (ch == ' ' || ch == '\t' || ch == '\r')
+      i++;
+    else
+      break;
+  }
+  return i;
+}
 
+/* Content-type multipart/form-data; boundary=----WebKitFormBoundaryn5yeffAJZX0Gx6OA"
+   Content-Type: application/json
+   Content-Type: text/plain; charset=utf-8
+   Content-Type: text/html; charset=ISO-8859-1
+   Content-Type: image/jpeg; quality=80
+   Content-Type: application/json; version=1.0
+   Content-Type: multipart/form-data; boundary=---011000010111000001101001
+   
+   Content-Type: multipart/related; boundary=\"the_boundary\"; type=\"application/json\"; start=\"json\"\r\n"
+*/
 content_type_t *
-content_type_new(const char *content_type_str)
+content_type_new(const char *content_type_str, int len)
 {
   hpair_t *pair = NULL, *last = NULL;
   content_type_t *ct = NULL;
   char ch;
-  char *key, *value;
-  int inQuote = 0, i = 0, c = 0, begin = 0, len;
+  const char *key=NULL, *value=NULL;
+  int key_len, value_len;
+  int inQuote = 0, i, c = 0;
   int mode = 0;
+  
   /* 0: searching ';' 1: process key 2: process value */
 
-#define __KV_SIZE 256
-  key = (char *)http_malloc(__KV_SIZE*2+2);
-  if (key == NULL)
-  {
-    log_fatal("Failed to malloc temp buffer.");
-    goto clean0;
-  }
-  value = key + __KV_SIZE+1;
-  
   /* Create object */
   ct = (content_type_t *) http_malloc(sizeof(content_type_t));
   if (ct == NULL)
   {
     log_fatal("Failed to malloc content_type_t.");
-    goto clean1;
+    goto clean0;
   }
   ct->params = NULL;
 
-  len = strlen(content_type_str);
+  i = 0;
+  key_len = value_len = 0;
   while (i <= len)
   {
-    if (i != len)
-      ch = content_type_str[i++];
+    if (i == len)
+      ch = ';';
     else
-    {
-      ch = ' ';
-      i++;
-    }
-
+      ch = content_type_str[i++];
+    
     switch (mode)
     {
     case 0:
-
       if (ch == ';')
       {
+        ct->type_len = c;
         ct->type[c] = '\0';
         c = 0;
         mode = 1;
+        i = __rm_ctsp(content_type_str, i, len);
+        key = content_type_str+i;
+        if (i == len)
+          i++;
       }
-      else if (ch != ' ' && ch != '\t' && ch != '\r')
-        ct->type[c++] = ch;
+      else
+      {
+        if (c >= sizeof(ct->type))
+        {
+          log_warn("content_type_t->Type is too small.");
+          goto clean1;
+        }
+        if (ch != ' ' && ch != '\t' && ch != '\r')
+          ct->type[c++] = ch;
+        else if (c)
+        {
+          log_warn("Bad char in content_type_t->Type %02X.", ch);
+          goto clean1;
+        }
+      }
       break;
 
     case 1:
-
       if (ch == '=')
       {
-        key[c%__KV_SIZE] = '\0';
+        key_len = c;
         c = 0;
         mode = 2;
+        i = __rm_ctsp(content_type_str, i, len);
+        value = content_type_str+i;
       }
       else if (ch != ' ' && ch != '\t' && ch != '\r')
       {
-        key[c%__KV_SIZE] = ch;
         c++;
+      }
+      else if (c)
+      {
+        log_warn("Bad char in content_type_t->Key %02X.", ch);
+        goto clean1;
       }
       break;
 
     case 2:
-
-      if (ch != ' ')
-        begin = 1;
-
-      if ((ch == ' ' || ch == ';') && !inQuote && begin)
+      if (ch == ';' && !inQuote)
       {
-        value[c%__KV_SIZE] = '\0';
-
-        pair = hpairnode_new(key, value, NULL);
+        value_len = c;
+        pair = hpairnode_new_len(key, key_len, value, value_len, NULL);
+        if (pair == NULL)
+        {
+          log_fatal("Failed hpairnode_new_len.");
+          goto clean1;
+        }
         if (ct->params == NULL)
           ct->params = pair;
         else
@@ -412,26 +510,31 @@ content_type_new(const char *content_type_str)
         last = pair;
 
         c = 0;
-        begin = 0;
         mode = 1;
+        i = __rm_ctsp(content_type_str, i, len);
+        key = content_type_str+i;
+        key_len = value_len = 0;
+        if (i == len)
+          i++;
       }
       else if (ch == '"')
-        inQuote = !inQuote;
-      else if (begin && ch != '\r')
       {
-        value[c%__KV_SIZE] = ch;
+        inQuote = c == 0;
+      }
+      else
+      {
         c++;
       }
       break;
 
     }
   }
-#undef __KV_SIZE
+  return ct;
 
 clean1:
-  http_free(key);
+  content_type_free(ct);
 clean0: 
-  return ct;
+  return NULL;
 }
 
 void
@@ -442,12 +545,12 @@ content_type_free(content_type_t * ct)
 
   hpairnode_free_deep(ct->params);
   http_free(ct);
-
   return;
 }
 
 struct part_t *
-part_new(const char *id, const char *filename, const char *content_type, const char *transfer_encoding, struct part_t * next)
+part_new(const char *id, const char *filename, const char *content_type, 
+  const char *transfer_encoding, struct part_t * next)
 {
   struct part_t *part;
  

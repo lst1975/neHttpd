@@ -308,7 +308,7 @@ extern int hsocket_get_timeout(void);
 extern void hsocket_set_timeout(int secs);
 
 
-extern herror_t http_header_recv(struct hsocket_t *sock, char *buffer, size_t size);
+extern herror_t http_header_recv(struct hsocket_t *sock, char *buffer, size_t size, size_t *hdrlen, size_t *rcvbytes);
 
 #ifdef __cplusplus
 }

@@ -137,8 +137,9 @@ _hresponse_new(void)
 }
 
 static hresponse_t *
-_hresponse_parse_header(const char *buffer)
+_hresponse_parse_header(const char *buffer, size_t len)
 {
+  hpair_t *pair;
   hresponse_t *res;
   char *s1, *s2, *str;
 
@@ -202,13 +203,13 @@ _hresponse_parse_header(const char *buffer)
       break;
     }
     str[strlen(str) - 1] = '\0';
-    res->header = hpairnode_parse(str, ":", res->header);
+    res->header = hpairnode_parse(str, 0, ':', res->header);
   }
 
   /* Check Content-type */
-  str = hpairnode_get(res->header, HEADER_CONTENT_TYPE);
-  if (str != NULL)
-    res->content_type = content_type_new(str);
+  pair = hpairnode_get_ignore_case_len(res->header, HEADER_CONTENT_TYPE, 12);
+  if (pair != NULL)
+    res->content_type = content_type_new(pair->value, pair->value_len);
 
   /* return response object */
   return res;
@@ -217,6 +218,8 @@ _hresponse_parse_header(const char *buffer)
 herror_t
 hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t ** out)
 {
+  size_t hdrlen;
+  size_t rcvbytes;
   herror_t status;
   hresponse_t *res;
   struct attachments_t *mimeMessage;
@@ -224,13 +227,13 @@ hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t ** out)
 
 read_header:                   /* for errorcode: 100 (continue) */
   /* Read header */
-  if ((status = http_header_recv(sock, buffer, MAX_HEADER_SIZE)) != H_OK)
+  if ((status = http_header_recv(sock, buffer, MAX_HEADER_SIZE, &hdrlen, &rcvbytes)) != H_OK)
   {
     return status;
   }
 
   /* Create response */
-  res = _hresponse_parse_header(buffer);
+  res = _hresponse_parse_header(buffer, hdrlen);
   if (res == NULL)
   {
     log_error("Header parse error");

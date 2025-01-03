@@ -352,10 +352,23 @@ hsocket_free(struct hsocket_t * sock)
   return;
 }
 
+static herror_t
+hsocket_setexec(int sock)
+{
+  // Set FD_CLOEXEC on the file descriptor
+  int flags = fcntl(sock, F_GETFD);
+  if (flags == -1 || fcntl(sock, F_SETFD, flags | FD_CLOEXEC) == -1) {
+    return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
+                      "Socket error (%s)", strerror(errno));
+  }
+  return H_OK;
+}
+
 herror_t
 hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
 {
   int s;
+  herror_t status;
   struct sockaddr_in address;
 
   if ((dsock->sock = socket(AF_INET, SOCK_STREAM, 0)) <= 0)
@@ -363,11 +376,9 @@ hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
                       "Socket error (%s)", strerror(errno));
 
   // Set FD_CLOEXEC on the file descriptor
-  int flags = fcntl(dsock->sock, F_GETFD);
-  if (flags == -1 || fcntl(dsock->sock, F_SETFD, flags | FD_CLOEXEC) == -1) {
-    return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
-                      "Socket error (%s)", strerror(errno));
-  }
+  status = hsocket_setexec(dsock->sock);
+  if (status != H_OK)
+    return status;
 
   /* Get host data */
   s = inet_pton(AF_INET, hostname, &address.sin_addr);
@@ -410,9 +421,9 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
 {
   struct hsocket_t sock;
   int salen;
+  herror_t status;
   struct sockaddr *addr;
-  
-  int opt = 1, flags;
+  int opt = 1;
 
   /* create socket */
   if ((sock.sock = socket(fam, SOCK_STREAM, 0)) == -1)
@@ -423,16 +434,12 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
   }
 
   // Set FD_CLOEXEC on the file descriptor
-  flags = fcntl(sock.sock, F_GETFD);
-  if (flags == -1 || fcntl(sock.sock, F_SETFD, flags | FD_CLOEXEC) == -1) {
-    close(sock.sock);
-    return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
-                      "Socket error (%s)", strerror(errno));
-  }
+  status = hsocket_setexec(sock.sock);
+  if (status != H_OK)
+    return status;
   
   if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
   {
-    close(sock.sock);
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
                       "Socket SOL_SOCKET SO_REUSEADDR (%s)", 
                       strerror(errno));
@@ -441,7 +448,6 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
 #ifdef SO_REUSEPORT  
   if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0)
   {
-    close(sock.sock);
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
                       "Socket SOL_SOCKET SO_REUSEPORT (%s)", 
                       strerror(errno));
@@ -470,11 +476,11 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
 
   if (bind(sock.sock, (struct sockaddr *)addr, salen) == -1)
   {
-    close(sock.sock);
     log_error("Cannot bind socket (%s)", strerror(errno));
     return herror_new("hsocket_bind", HSOCKET_ERROR_BIND, "Socket error (%s)",
                       strerror(errno));
   }
+  
   dsock->sock = sock.sock;
   return H_OK;
 }
@@ -804,7 +810,8 @@ hsocket_set_timeout(int secs)
   return;
 }
 
-herror_t http_header_recv(struct hsocket_t *sock, char *buffer, size_t size)
+herror_t http_header_recv(struct hsocket_t *sock, char *buffer, 
+  size_t size, size_t *hdrlen, size_t *rcvbytes)
 {
   size_t readed=0;
   herror_t status;
@@ -826,15 +833,24 @@ herror_t http_header_recv(struct hsocket_t *sock, char *buffer, size_t size)
     BUF_GO(&p, readed);
 
     /* log_error("buffer=\"%s\"", buffer); */
-    if (BUF_CUR_PTR(&p) - ptr < 4)
+    if (BUF_CUR_PTR(&p) - ptr < 3)
       continue;
     
     BUF_SET_CHR(&p, '\0');
     pln = strstr(ptr, "\n\r\n");
-    if (pln == NULL)
-      pln = strstr(ptr, "\n\n");
     if (pln != NULL)
+    {
+      *rcvbytes = BUF_LEN(&p); 
+      *hdrlen = pln + 3 - buffer;
       break;
+    }
+    pln = strstr(ptr, "\n\n");
+    if (pln != NULL)
+    {
+      *rcvbytes = BUF_LEN(&p); 
+      *hdrlen = pln + 2 - buffer;
+      break;
+    }
     ptr = BUF_CUR_PTR(&p) - 3;
   }
 

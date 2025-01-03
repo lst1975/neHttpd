@@ -351,7 +351,7 @@ struct hrequest_t
   hpair_t *header;
   void    *conn;
   int     userLevel;
-  int     code;
+  httpd_buf_t data;
   struct request_statistics *statistics;
 
   struct http_input_stream_t *in;

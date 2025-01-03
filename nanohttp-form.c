@@ -162,234 +162,234 @@ const uint8_t __isValidToken[256] = {
 
 void multipartparser_init(multipartparser* parser, void *arg, const char* boundary)
 {
-    memset(parser, 0, sizeof(*parser));
+  memset(parser, 0, sizeof(*parser));
 
-    strncpy(parser->boundary, boundary, sizeof(parser->boundary)-1);
-    parser->boundary_length = strlen(parser->boundary);
-    parser->arg = arg;
-    parser->state = s_preamble;
+  strncpy(parser->boundary, boundary, sizeof(parser->boundary)-1);
+  parser->boundary_length = strlen(parser->boundary);
+  parser->arg = arg;
+  parser->state = s_preamble;
 }
 
 void multipartparser_callbacks_init(multipartparser_callbacks* callbacks)
 {
-    memset(callbacks, 0, sizeof(*callbacks));
+  memset(callbacks, 0, sizeof(*callbacks));
 }
 
 size_t multipartparser_execute(multipartparser* parser,
-                               multipartparser_callbacks* callbacks,
-                               const char* data,
-                               size_t size)
+                 multipartparser_callbacks* callbacks,
+                 const char* data,
+                 size_t size)
 {
-    const char*   mark;
-    const char*   p;
-    unsigned char c;
+  const char*   mark;
+  const char*   p;
+  unsigned char c;
 
-    for (p = data; p < data + size; ++p) {
-        c = *p;
+  for (p = data; p < data + size; ++p) {
+    c = *p;
 
 reexecute:
-        switch (parser->state) {
+    switch (parser->state) {
 
-            case s_preamble:
-                if (c == HYPHEN)
-                    parser->state = s_preamble_hy_hy;
-                // else ignore everything before first boundary
-                break;
+      case s_preamble:
+        if (c == HYPHEN)
+          parser->state = s_preamble_hy_hy;
+        // else ignore everything before first boundary
+        break;
 
-            case s_preamble_hy_hy:
-                if (c == HYPHEN)
-                    parser->state = s_first_boundary;
-                else
-                    parser->state = s_preamble;
-                break;
+      case s_preamble_hy_hy:
+        if (c == HYPHEN)
+          parser->state = s_first_boundary;
+        else
+          parser->state = s_preamble;
+        break;
 
-            case s_first_boundary:
-                if (parser->index == parser->boundary_length) {
-                    if (c != CR)
-                        goto error;
-                    parser->index++;
-                    break;
-                }
-                if (parser->index == parser->boundary_length + 1) {
-                    if (c != LF)
-                        goto error;
-                    CALLBACK_NOTIFY(body_begin);
-                    CALLBACK_NOTIFY(part_begin);
-                    parser->index = 0;
-                    parser->state = s_header_field_start;
-                    break;
-                }
-                if (c == parser->boundary[parser->index]) {
-                    parser->index++;
-                    break;
-                }
-                goto error;
-
-            case s_header_field_start:
-                if (c == CR) {
-                    parser->state = s_headers_done;
-                    break;
-                }
-                parser->state = s_header_field;
-                // fallthrough;
-
-            case s_header_field:
-                mark = p;
-                while (p != data + size) {
-                    c = *p;
-                    if ((__isValidToken[c]&0x1) == 0)
-                        break;
-                    ++p;
-                }
-                if (p > mark) {
-                    CALLBACK_DATA(header_field, mark, p - mark);
-                }
-                if (p == data + size) {
-                    break;
-                }
-                if (c == ':') {
-                    parser->state = s_header_value_start;
-                    break;
-                }
-                goto error;
-
-            case s_header_value_start:
-                if (c == SP || c == HT) {
-                    break;
-                }
-                parser->state = s_header_value;
-                // fallthrough;
-
-            case s_header_value:
-                mark = p;
-                while (p != data + size) {
-                    c = *p;
-                    if (c == CR) {
-                        parser->state = s_header_value_cr;
-                        break;
-                    }
-                    if ((__isValidToken[c]&0x2) == 0)
-                        break;
-                    ++p;
-                }
-                if (p > mark) {
-                    CALLBACK_DATA(header_value, mark, p - mark);
-                }
-                break;
-
-            case s_header_value_cr:
-                if (c == LF) {
-                    parser->state = s_header_field_start;
-                    break;
-                }
-                goto error;
-
-            case s_headers_done:
-                if (c == LF) {
-                    CALLBACK_NOTIFY(headers_complete);
-                    parser->state = s_data;
-                    break;
-                }
-                goto error;
-
-            case s_data:
-                mark = p;
-                while (p != data + size) {
-                    c = *p;
-                    if (c == CR) {
-                        parser->state = s_data_cr;
-                        break;
-                    }
-                    ++p;
-                }
-                if (p > mark) {
-                    CALLBACK_DATA(data, mark, p - mark);
-                }
-                break;
-
-            case s_data_cr:
-                if (c == LF) {
-                    parser->state = s_data_cr_lf;
-                    break;
-                }
-                CALLBACK_DATA(data, "\r", 1);
-                parser->state = s_data;
-                goto reexecute;
-
-            case s_data_cr_lf:
-                if (c == HYPHEN) {
-                    parser->state = s_data_cr_lf_hy;
-                    break;
-                }
-                CALLBACK_DATA(data, "\r\n", 2);
-                parser->state = s_data;
-                goto reexecute;
-
-            case s_data_cr_lf_hy:
-                if (c == HYPHEN) {
-                    parser->state = s_data_boundary_start;
-                    break;
-                }
-                CALLBACK_DATA(data, "\r\n-", 3);
-                parser->state = s_data;
-                goto reexecute;
-
-            case s_data_boundary_start:
-                parser->index = 0;
-                parser->state = s_data_boundary;
-                // fallthrough;
-
-            case s_data_boundary:
-                if (parser->index == parser->boundary_length) {
-                    parser->index = 0;
-                    parser->state = s_data_boundary_done;
-                    goto reexecute;
-                }
-                if (c == parser->boundary[parser->index]) {
-                    parser->index++;
-                    break;
-                }
-                CALLBACK_DATA(data, "\r\n--", 4);
-                CALLBACK_DATA(data, parser->boundary, parser->index);
-                parser->state = s_data;
-                goto reexecute;
-
-            case s_data_boundary_done:
-                if (c == CR) {
-                    parser->state = s_data_boundary_done_cr_lf;
-                    break;
-                }
-                if (c == HYPHEN) {
-                    parser->state = s_data_boundary_done_hy_hy;
-                    break;
-                }
-                goto error;
-
-            case s_data_boundary_done_cr_lf:
-                if (c == LF) {
-                    CALLBACK_NOTIFY(part_end);
-                    CALLBACK_NOTIFY(part_begin);
-                    parser->state = s_header_field_start;
-                    break;
-                }
-                goto error;
-
-            case s_data_boundary_done_hy_hy:
-                if (c == HYPHEN) {
-                    CALLBACK_NOTIFY(part_end);
-                    CALLBACK_NOTIFY(body_end);
-                    parser->state = s_epilogue;
-                    break;
-                }
-                goto error;
-
-            case s_epilogue:
-                // Must be ignored according to rfc 1341.
-                break;
+      case s_first_boundary:
+        if (parser->index == parser->boundary_length) {
+          if (c != CR)
+            goto error;
+          parser->index++;
+          break;
         }
+        if (parser->index == parser->boundary_length + 1) {
+          if (c != LF)
+            goto error;
+          CALLBACK_NOTIFY(body_begin);
+          CALLBACK_NOTIFY(part_begin);
+          parser->index = 0;
+          parser->state = s_header_field_start;
+          break;
+        }
+        if (c == parser->boundary[parser->index]) {
+          parser->index++;
+          break;
+        }
+        goto error;
+
+      case s_header_field_start:
+        if (c == CR) {
+          parser->state = s_headers_done;
+          break;
+        }
+        parser->state = s_header_field;
+        // fallthrough;
+
+      case s_header_field:
+        mark = p;
+        while (p != data + size) {
+          c = *p;
+          if ((__isValidToken[c]&0x1) == 0)
+            break;
+          ++p;
+        }
+        if (p > mark) {
+          CALLBACK_DATA(header_field, mark, p - mark);
+        }
+        if (p == data + size) {
+          break;
+        }
+        if (c == ':') {
+          parser->state = s_header_value_start;
+          break;
+        }
+        goto error;
+
+      case s_header_value_start:
+        if (c == SP || c == HT) {
+          break;
+        }
+        parser->state = s_header_value;
+        // fallthrough;
+
+      case s_header_value:
+        mark = p;
+        while (p != data + size) {
+          c = *p;
+          if (c == CR) {
+            parser->state = s_header_value_cr;
+            break;
+          }
+          if ((__isValidToken[c]&0x2) == 0)
+            break;
+          ++p;
+        }
+        if (p > mark) {
+          CALLBACK_DATA(header_value, mark, p - mark);
+        }
+        break;
+
+      case s_header_value_cr:
+        if (c == LF) {
+          parser->state = s_header_field_start;
+          break;
+        }
+        goto error;
+
+      case s_headers_done:
+        if (c == LF) {
+          CALLBACK_NOTIFY(headers_complete);
+          parser->state = s_data;
+          break;
+        }
+        goto error;
+
+      case s_data:
+        mark = p;
+        while (p != data + size) {
+          c = *p;
+          if (c == CR) {
+            parser->state = s_data_cr;
+            break;
+          }
+          ++p;
+        }
+        if (p > mark) {
+          CALLBACK_DATA(data, mark, p - mark);
+        }
+        break;
+
+      case s_data_cr:
+        if (c == LF) {
+          parser->state = s_data_cr_lf;
+          break;
+        }
+        CALLBACK_DATA(data, "\r", 1);
+        parser->state = s_data;
+        goto reexecute;
+
+      case s_data_cr_lf:
+        if (c == HYPHEN) {
+          parser->state = s_data_cr_lf_hy;
+          break;
+        }
+        CALLBACK_DATA(data, "\r\n", 2);
+        parser->state = s_data;
+        goto reexecute;
+
+      case s_data_cr_lf_hy:
+        if (c == HYPHEN) {
+          parser->state = s_data_boundary_start;
+          break;
+        }
+        CALLBACK_DATA(data, "\r\n-", 3);
+        parser->state = s_data;
+        goto reexecute;
+
+      case s_data_boundary_start:
+        parser->index = 0;
+        parser->state = s_data_boundary;
+        // fallthrough;
+
+      case s_data_boundary:
+        if (parser->index == parser->boundary_length) {
+          parser->index = 0;
+          parser->state = s_data_boundary_done;
+          goto reexecute;
+        }
+        if (c == parser->boundary[parser->index]) {
+          parser->index++;
+          break;
+        }
+        CALLBACK_DATA(data, "\r\n--", 4);
+        CALLBACK_DATA(data, parser->boundary, parser->index);
+        parser->state = s_data;
+        goto reexecute;
+
+      case s_data_boundary_done:
+        if (c == CR) {
+          parser->state = s_data_boundary_done_cr_lf;
+          break;
+        }
+        if (c == HYPHEN) {
+          parser->state = s_data_boundary_done_hy_hy;
+          break;
+        }
+        goto error;
+
+      case s_data_boundary_done_cr_lf:
+        if (c == LF) {
+          CALLBACK_NOTIFY(part_end);
+          CALLBACK_NOTIFY(part_begin);
+          parser->state = s_header_field_start;
+          break;
+        }
+        goto error;
+
+      case s_data_boundary_done_hy_hy:
+        if (c == HYPHEN) {
+          CALLBACK_NOTIFY(part_end);
+          CALLBACK_NOTIFY(body_end);
+          parser->state = s_epilogue;
+          break;
+        }
+        goto error;
+
+      case s_epilogue:
+        // Must be ignored according to rfc 1341.
+        break;
     }
-    return size;
+  }
+  return size;
 
 error:
-    return p - data;
+  return p - data;
 }
