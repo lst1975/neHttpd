@@ -458,7 +458,7 @@ content_type_new(const char *content_type_str, int len)
     switch (mode)
     {
     case 0:
-      if (ch == ';')
+      if (ch == ';' || ch == ' ' || ch == '\t')
       {
         ct->type_len = c;
         ct->type[c] = '\0';
@@ -507,7 +507,7 @@ content_type_new(const char *content_type_str, int len)
       break;
 
     case 2:
-      if (ch == ';' && !inQuote)
+      if ((ch == ';' || ch == ' ' || ch == '\t') && !inQuote)
       {
         value_len = c;
         pair = hpairnode_new_len(key, key_len, value, value_len, NULL);
@@ -534,7 +534,22 @@ content_type_new(const char *content_type_str, int len)
       {
         if (c==0)
           inQuote = 1;
-        else if (i == len || content_type_str[i]==';')
+        else if (i == len)
+        {
+          if (inQuote)
+          {
+            value++;
+            c--;
+            inQuote = 0;
+          }
+          else
+          {
+            c++;
+          }
+        }
+        else if (content_type_str[i]==';' 
+          || content_type_str[i]==' ' 
+          || content_type_str[i] == '\t')
         {
           if (inQuote)
           {

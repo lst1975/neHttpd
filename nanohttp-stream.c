@@ -106,6 +106,8 @@
 #include <netinet/in.h>
 #endif
 
+#include <stdarg.h>
+
 #include "nanohttp-logging.h"
 #include "nanohttp-error.h"
 #include "nanohttp-common.h"
@@ -648,6 +650,26 @@ http_output_stream_write_string(struct http_output_stream_t * stream,
                                 const char *str)
 {
   return http_output_stream_write(stream, (const unsigned char *)str, strlen(str));
+}
+
+/**
+  Writes 'strlen()' bytes of 'str' into stream.
+  Returns socket error flags or H_OK.
+*/
+herror_t
+http_output_stream_write_printf(struct http_output_stream_t * stream, 
+  const char *format, ...)
+{
+  herror_t status;
+  char buf[1024];
+  int n;
+  va_list ap;
+
+  va_start(ap, format);
+  n = vsnprintf(buf, sizeof buf, format, ap);
+  status = http_output_stream_write(stream, (const unsigned char *)buf, n);
+  va_end(ap);
+  return status;
 }
 
 

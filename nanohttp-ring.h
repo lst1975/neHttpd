@@ -362,19 +362,15 @@ static inline void rte_pause(void)
 #define rte_smp_mb()  rte_mb()
 #define rte_smp_wmb()  rte_mb()
 #define rte_smp_rmb()  rte_mb()
-extern int ng_os_usleep(int usec);
 static inline void rte_pause(void)
 {
-  ng_os_usleep(1);
 }
 #else
 #define rte_smp_mb()  ng_smp_mb()
 #define rte_smp_wmb()  ng_smp_wmb()
 #define rte_smp_rmb()  ng_smp_rmb()
-extern int ng_os_usleep(int usec);
 static inline void rte_pause(void)
 {
-  ng_os_usleep(1);
 }
 #endif
 

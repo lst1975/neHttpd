@@ -276,6 +276,10 @@ extern herror_t
 http_output_stream_write(struct http_output_stream_t *stream, 
                   const unsigned char *bytes, size_t size);
 
+extern herror_t
+http_output_stream_write_printf(struct http_output_stream_t *stream, 
+  const char *format, ...);
+
 /**
   Writes 'size' bytes of 'bytes' into stream.
   Returns socket error flags or H_OK.

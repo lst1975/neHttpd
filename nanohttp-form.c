@@ -160,14 +160,22 @@ const uint8_t __isValidToken[256] = {
   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
 };
 
-void multipartparser_init(multipartparser* parser, void *arg, const char* boundary)
+int multipartparser_init(multipartparser *parser, void *arg, 
+  const char *boundary, int boundaryLen)
 {
-  memset(parser, 0, sizeof(*parser));
-
-  strncpy(parser->boundary, boundary, sizeof(parser->boundary)-1);
-  parser->boundary_length = strlen(parser->boundary);
-  parser->arg = arg;
-  parser->state = s_preamble;
+  if (boundaryLen > sizeof(parser->boundary))
+    return -1;
+  
+  memcpy(parser->boundary, boundary, boundaryLen);
+  parser->boundary_length = boundaryLen;
+  parser->arg   = arg;
+  parser->data  = NULL;
+  parser->index = 0;
+  parser->state        = s_preamble;
+  parser->value_length = 0;
+  parser->field_length = 0;
+  parser->content_disposition_parsed = 0;
+  return 0;
 }
 
 void multipartparser_callbacks_init(multipartparser_callbacks* callbacks)

@@ -98,12 +98,15 @@ simple_authenticator(struct hrequest_t *req, const char *user, const char *passw
 /**********************************************************************************
 *  ADD JSON FILE HERE
 **********************************************************************************/
+#define ___(x) { .cptr=x, .len=sizeof(x)-1 }
+static const httpd_buf_t __TEST_DEV_FILE  =___("/device.json");
+#undef ___
 static void
 default_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   char buf[REQUEST_MAX_PATH_SIZE+256+1];
 
-  if (!strcmp(req->path, "/device.json"))
+  if (BUF_isequal(&__TEST_DEV_FILE, req->path, req->path_len))
   {
     httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
     http_output_stream_write_string(conn->out,
@@ -322,7 +325,13 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       return __post_internal_error(conn, r);
     }
 
-    multipartparser_init(&p, NULL, pair->value);
+    if (multipartparser_init(&p, NULL, pair->value, pair->value_len))
+    {
+      r = herror_new("post_service", GENERAL_ERROR, 
+        "Failed to do multipartparser for 'multipart/form-data'");
+      return __post_internal_error(conn, r);
+    }
+    
     while (http_input_stream_is_ready(req->in))
     {
       char *buffer;
@@ -505,6 +514,8 @@ static const httpd_buf_t __MIB_FILE=__("setmib.json");
 static const httpd_buf_t __ADD_FILE=__("add.json");
 static const httpd_buf_t __DEL_FILE=__("del.json");
 static const httpd_buf_t __SAV_FILE=__("save.json");
+static const httpd_buf_t __TMP_USR_FILE  =__("templateUser.json");
+static const httpd_buf_t __TMP_INT_FILE  =__("templateInterface.json");
 static const httpd_buf_t __FAVOR_FILE =___("/favicon.ico");
 static const httpd_buf_t __ROOT_FILE  =___("/");
 #undef ___
@@ -588,12 +599,9 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
           r = nanohttp_file_read(file, __root_service_read, conn);
           if (r != NULL)
           {
-            char buf[1024];
-            size_t n = snprintf(buf, sizeof buf, 
-              "Failed to readfile %s: %s", req->path, herror_message(r));
-            log_error("%s", buf);
             herror_release(r);
-            r = http_output_stream_write(conn->out, (const unsigned char *)buf, n-1);
+            r = http_output_stream_write_printf(conn->out, 
+                  "Failed to readfile %s: %s", req->path, herror_message(r));
           }
         }
         nanohttp_file_close(file);
@@ -1064,8 +1072,13 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
           goto finished;
         }
-        snprintf(req->path, sizeof(req->path)-1, 
-          _nanoConfig_HTTPD_DATA_SERVICE"templateUser.json");
+        if (req->path) http_free(req->path);
+        req->path = http_strdup_size(__TMP_USR_FILE.buf,__TMP_USR_FILE.len);
+        if (req->path == NULL)
+        {
+          n = snprintf(buf, sizeof buf, CFG_RET0("Malloc Failed."), id);
+          goto finished;
+        }
       }
       else if (p->valueLength > 2 && !memcmp(p->value,"1.",2))
       {
@@ -1075,8 +1088,13 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
           goto finished;
         }
-        snprintf(req->path, sizeof(req->path)-1, 
-          _nanoConfig_HTTPD_DATA_SERVICE"templateInterface.json");
+        if (req->path) http_free(req->path);
+        req->path = http_strdup_size(__TMP_INT_FILE.buf,__TMP_INT_FILE.len);
+        if (req->path == NULL)
+        {
+          n = snprintf(buf, sizeof buf, CFG_RET0("Malloc Failed."), id);
+          goto finished;
+        }
       }
       else
       {

@@ -104,7 +104,7 @@ struct _multipartparser_callbacks {
     multipart_cb      on_body_end;
 };
 
-void multipartparser_init(multipartparser* parser, void *arg, const char* boundary);
+int multipartparser_init(multipartparser *parser, void *arg, const char *boundary, int boundaryLen);
 
 void multipartparser_callbacks_init(multipartparser_callbacks* callbacks);
 

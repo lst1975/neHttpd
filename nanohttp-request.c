@@ -118,37 +118,47 @@
 #include "nanohttp-mime.h"
 #include "nanohttp-request.h"
 
-static struct hrequest_t *
-hrequest_new(void)
+static struct hrequest_t *hrequest_new(void)
 {
   struct hrequest_t *req;
  
   if (!(req = (struct hrequest_t *)http_malloc(sizeof(*req))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
-    return NULL;
+    goto clean0;
   }
 
   if (!(req->statistics = (struct request_statistics *)
     http_malloc(sizeof(*req->statistics))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
-    http_free(req);
-    return NULL;
+    goto clean1;
   }
 
   if (gettimeofday(&(req->statistics->time), NULL) < 0)
+  {
     log_error("gettimeofday failed (%s)", strerror(errno));
-
-  req->method = HTTP_REQUEST_GET;
-  req->version = HTTP_1_1;
-  req->query = NULL;
-  req->header = NULL;
-  req->in = NULL;
-  req->attachments = NULL;
+    goto clean2;
+  }
+  req->method       = HTTP_REQUEST_GET;
+  req->version      = HTTP_1_1;
+  req->query        = NULL;
+  req->path         = NULL;
+  req->header       = NULL;
+  req->in           = NULL;
+  req->attachments  = NULL;
   req->content_type = NULL;
+  req->data.buf     = NULL;
+  req->data.len     = 0;
 
   return req;
+  
+clean2:
+  http_free(req->statistics);
+clean1:
+  http_free(req);
+clean0:
+  return NULL;
 }
 
 static struct hrequest_t *
@@ -209,10 +219,10 @@ _hrequest_parse_header(char *data, size_t len)
       
       /* save method (get or post) */
       key_len = result - key;
-      if (key_len == 4 && !memcmp(key, "POST", 4))
-        req->method = HTTP_REQUEST_POST;
-      else if (key_len == 3 && !memcmp(key, "GET", 3))
+      if (key_len == 3 && !memcmp(key, "GET", 3))
         req->method = HTTP_REQUEST_GET;
+      else if (key_len == 4 && !memcmp(key, "POST", 4))
+        req->method = HTTP_REQUEST_POST;
       else if (key_len == 7 && !memcmp(key, "OPTIONS", 7))
         req->method = HTTP_REQUEST_OPTIONS;
       else if (key_len == 4 && !memcmp(key, "HEAD", 4))
@@ -271,8 +281,20 @@ _hrequest_parse_header(char *data, size_t len)
       /* save path */
       /* req->path = (char *) http_malloc(strlen(key) + 1); */
       req->path_len = opt_key == NULL ? key-result : opt_key - result;
-      memcpy(req->path, result, RTE_MIN(req->path_len, sizeof(req->path)-1));
-      req->path[req->path_len] = '\0';
+      if (req->path_len >= REQUEST_MAX_PATH_SIZE - 1)
+      {
+        log_error("Request path length is too large (%d), MAX:", 
+          req->path_len, REQUEST_MAX_PATH_SIZE);
+        goto clean1;
+      }
+      req->path = http_strdup_size(result, req->path_len);
+      if (req->path == NULL)
+      {
+        req->path_len = 0;
+        log_error("Failed to malloc buffer for path (%s)", 
+          strerror(errno));
+        goto clean1;
+      }
 
       /* parse options */
       result = opt_key;
@@ -394,6 +416,9 @@ hrequest_free(struct hrequest_t * req)
   if (req->attachments)
     attachments_free(req->attachments);
 
+  if (req->path)
+    http_free(req->path);
+
   if (req->statistics)
     http_free(req->statistics);
 
@@ -404,7 +429,8 @@ hrequest_free(struct hrequest_t * req)
 }
 
 herror_t
-hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t **out)
+hrequest_new_from_socket(struct hsocket_t *sock, 
+  struct hrequest_t **out)
 {
   size_t hdrlen;
   size_t rcvbytes;
@@ -422,7 +448,8 @@ hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t **out)
     goto clean0;
   }
   
-  if ((status = http_header_recv(sock, buffer, MAX_HEADER_SIZE, &hdrlen, &rcvbytes)) != H_OK)
+  if ((status = http_header_recv(sock, buffer, MAX_HEADER_SIZE, 
+    &hdrlen, &rcvbytes)) != H_OK)
   {
     goto clean1;
   }
@@ -431,7 +458,8 @@ hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t **out)
   req = _hrequest_parse_header(buffer, hdrlen);
   if (req == NULL)
   {
-    status = herror_new("hrequest_new_from_socket", GENERAL_HEADER_PARSE_ERROR, 
+    status = herror_new("hrequest_new_from_socket", 
+      GENERAL_HEADER_PARSE_ERROR, 
       "_hrequest_parse_header failed.");
     goto clean1;
   }
@@ -444,9 +472,11 @@ hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t **out)
   
   /* Check for MIME message */
   ct = req->content_type;
-  if ((ct != NULL && ct->type_len == 17 && !memcmp(ct->type, "multipart/related", 17)))
+  if ((ct != NULL && ct->type_len == 17 && 
+    !memcmp(ct->type, "multipart/related", 17)))
   {
-    status = mime_get_attachments(req->content_type, req->in, &mimeMessage);
+    status = mime_get_attachments(req->content_type, 
+      req->in, &mimeMessage);
     if (status != H_OK)
     {
       /* TODO (#1#): Handle error */
