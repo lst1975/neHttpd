@@ -175,16 +175,19 @@ void multipartparser_callbacks_init(multipartparser_callbacks* callbacks)
   memset(callbacks, 0, sizeof(*callbacks));
 }
 
-size_t multipartparser_execute(multipartparser* parser,
-                 multipartparser_callbacks* callbacks,
-                 const char* data,
+size_t multipartparser_execute(multipartparser *parser,
+                 multipartparser_callbacks *callbacks,
+                 const char *data,
                  size_t size)
 {
-  const char*   mark;
-  const char*   p;
+  const char *mark;
+  const char *end;
+  const char *p;
   unsigned char c;
 
-  for (p = data; p < data + size; ++p) {
+  end = data + size;
+  
+  for (p = data; p < end; ++p) {
     c = *p;
 
 reexecute:
@@ -235,7 +238,8 @@ reexecute:
 
       case s_header_field:
         mark = p;
-        while (p != data + size) {
+        while (p != end) 
+        {
           c = *p;
           if ((__isValidToken[c]&0x1) == 0)
             break;
@@ -244,7 +248,8 @@ reexecute:
         if (p > mark) {
           CALLBACK_DATA(header_field, mark, p - mark);
         }
-        if (p == data + size) {
+        if (p == end) 
+        {
           break;
         }
         if (c == ':') {
@@ -262,7 +267,7 @@ reexecute:
 
       case s_header_value:
         mark = p;
-        while (p != data + size) {
+        while (p != end) {
           c = *p;
           if (c == CR) {
             parser->state = s_header_value_cr;
@@ -294,7 +299,7 @@ reexecute:
 
       case s_data:
         mark = p;
-        while (p != data + size) {
+        while (p != end) {
           c = *p;
           if (c == CR) {
             parser->state = s_data_cr;

@@ -181,7 +181,8 @@ extern "C" {
  *
  * @see http_input_stream_free()
  */
-extern struct http_input_stream_t *http_input_stream_new(struct hsocket_t *sock, hpair_t *header);
+extern struct http_input_stream_t *
+http_input_stream_new(struct hsocket_t *sock, hpair_t *header);
 
 /** This function creates a new input stream from file. It was added
  * for MIME messages and for debugging purposes. The transfer style
@@ -194,14 +195,16 @@ extern struct http_input_stream_t *http_input_stream_new(struct hsocket_t *sock,
  *
  * @see http_input_stream_free()
  */
-extern struct http_input_stream_t *http_input_stream_new_from_file(const char *filename);
+extern struct http_input_stream_t *
+http_input_stream_new_from_file(const char *filename);
 
 /** Free input stream. Note that the socket will not be closed by this
  * functions.
  *
  * @param stream the input stream to http_free.
  */
-extern void http_input_stream_free(struct http_input_stream_t * stream);
+extern void 
+http_input_stream_free(struct http_input_stream_t * stream);
 
 /** This function returns the actual status of the stream.
  *
@@ -210,7 +213,8 @@ extern void http_input_stream_free(struct http_input_stream_t * stream);
  * @return - 1, if there is still data to read. 
  *         - 0, if no more data exists.
  */
-extern int http_input_stream_is_ready(struct http_input_stream_t * stream);
+extern int 
+http_input_stream_is_ready(struct http_input_stream_t * stream);
 
 /** This function tries to read 'size' bytes from the stream. Check
  * always with http_input_stream_is_ready() if there are some data to
@@ -230,7 +234,9 @@ extern int http_input_stream_is_ready(struct http_input_stream_t * stream);
  *
  * @return the actual read bytes or -1 on error.
  */
-extern size_t http_input_stream_read(struct http_input_stream_t * stream, unsigned char *dest, size_t size);
+extern size_t 
+http_input_stream_read(struct http_input_stream_t * stream, 
+                  unsigned char *dest, size_t size);
 
 /** Creates a new output stream. Transfer style will be found from the
  * given header.
@@ -244,7 +250,8 @@ extern size_t http_input_stream_read(struct http_input_stream_t * stream, unsign
  *
  * @see http_output_stream_free()
  */
-extern struct http_output_stream_t *http_output_stream_new(struct hsocket_t *sock, hpair_t * header);
+extern struct http_output_stream_t *
+http_output_stream_new(struct hsocket_t *sock, hpair_t * header);
 
 
 /** This function frees the given output stream. Note that this
@@ -252,7 +259,8 @@ extern struct http_output_stream_t *http_output_stream_new(struct hsocket_t *soc
  *
  * @param stream The stream to http_free.
  */
-extern void http_output_stream_free(struct http_output_stream_t *stream);
+extern void 
+http_output_stream_free(struct http_output_stream_t *stream);
 
 /** This function writes 'size' bytes of 'bytes' into stream.
  *
@@ -264,7 +272,9 @@ extern void http_output_stream_free(struct http_output_stream_t *stream);
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_SEND
  */
-extern herror_t http_output_stream_write(struct http_output_stream_t *stream, const unsigned char *bytes, size_t size);
+extern herror_t 
+http_output_stream_write(struct http_output_stream_t *stream, 
+                  const unsigned char *bytes, size_t size);
 
 /**
   Writes 'size' bytes of 'bytes' into stream.
@@ -286,7 +296,9 @@ http_output_stream_write_buffer(struct http_output_stream_t * stream,
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_SEND
  */
-extern herror_t http_output_stream_write_string(struct http_output_stream_t *stream, const char *str);
+extern herror_t 
+http_output_stream_write_string(struct http_output_stream_t *stream, 
+                        const char *str);
 
 /** This function sends finish flags if nesseccary (like in chunked
  * transport). Call always this function before closing the connections.
@@ -297,7 +309,8 @@ extern herror_t http_output_stream_write_string(struct http_output_stream_t *str
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_SEND
  */
-extern herror_t http_output_stream_flush(struct http_output_stream_t *stream);
+extern herror_t 
+http_output_stream_flush(struct http_output_stream_t *stream);
 
 #ifdef __cplusplus
 }

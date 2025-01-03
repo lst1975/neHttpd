@@ -318,6 +318,12 @@ _httpd_term(DWORD sig)
   return TRUE;
 }
 
+int ng_os_usleep(int usec)
+{
+  Sleep(usec);
+  return 0;
+}
+
 static void _httpd_sys_sleep(int secs)
 {
   Sleep(secs*1000);
@@ -337,10 +343,17 @@ _httpd_term(int sig)
   return;
 }
 
+int ng_os_usleep(int usec)
+{
+  struct timespec duration;
+  duration.tv_sec = usec/1000;
+  duration.tv_nsec = (usec%1000) * 1000000;
+  return nanosleep(&duration, NULL);
+}
+
 static inline void _httpd_sys_sleep(int secs)
 {
-  sleep(secs);
-
+  ng_os_usleep(secs * 1000);
   return;
 }
 #endif
@@ -1019,7 +1032,7 @@ httpd_new(struct hsocket_t * sock)
 }
 
 void
-httpd_free(httpd_conn_t * conn)
+httpd_free(httpd_conn_t *conn)
 {
   if (!conn)
     return;
@@ -1138,16 +1151,26 @@ httpd_session_main(void *data)
   struct timeval start, end, duration;
   int done;
 
+  rconn = NULL;
+  conn = (conndata_t *)data;
   if (gettimeofday(&start, NULL) == -1)
+  {
     log_error("gettimeofday failed (%s)", strerror(errno));
+    done = 1;
+  }
+  else
+  {
+    log_verbose("starting new httpd session on socket %d", conn->sock);
+    rconn = httpd_new(&(conn->sock));
+    if (rconn == NULL)
+    {
+      log_fatal("httpd_new failed (%s)", strerror(errno));
+      done = 1;
+    }
+    else
+      done = 0;
+  }
 
-  conn = (conndata_t *) data;
-
-  log_verbose("starting new httpd session on socket %d", conn->sock);
-
-  rconn = httpd_new(&(conn->sock));
-
-  done = 0;
   while (!done)
   {
     log_verbose("starting HTTP request on socket %d (%p)", conn->sock, conn->sock.sock);
@@ -1193,7 +1216,8 @@ httpd_session_main(void *data)
 
       if ((service = httpd_find_service(req->path, req->path_len)))
       {
-        log_verbose("service '%s' for '%s'(%s) found", service->context, req->path, service->name);
+        log_debug("service '%s' for '%s'(%s) found", 
+                service->context, req->path, service->name);
 
       	if (service->status == NHTTPD_SERVICE_UP)
       	{
@@ -1227,7 +1251,7 @@ httpd_session_main(void *data)
             {
               snprintf(buffer, sizeof(buffer), 
                 "service '%s' is not registered properly (service function is NULL)", req->path);
-              log_verbose("%s", buffer);
+              log_warn("%s", buffer);
               httpd_send_not_implemented(rconn, buffer);
             }
       	  }
@@ -1240,14 +1264,14 @@ httpd_session_main(void *data)
         else
         {
           snprintf(buffer, sizeof(buffer), "service for '%s' is disabled", req->path);
-          log_verbose("%s", buffer);
+          log_warn("%s", buffer);
           httpd_send_internal_error(rconn, buffer);
         }
       }
       else
       {
         snprintf(buffer, sizeof(buffer), "no service for '%s' found", req->path);
-        log_verbose("%s", buffer);
+        log_warn("%s", buffer);
       	httpd_send_not_implemented(rconn, buffer);
         done = 1;
       }
@@ -1255,7 +1279,8 @@ httpd_session_main(void *data)
     }
   }
 
-  httpd_free(rconn);
+  if (rconn)
+    httpd_free(rconn);
 
   hsocket_close(&(conn->sock));
 
@@ -1266,6 +1291,8 @@ httpd_session_main(void *data)
 #endif
 
   conn->flag = CONNECTION_FREE;
+  ng_smp_mb();
+  
 #if __HTTP_USE_CONN_RING
   if (rte_ring_mp_enqueue(_httpd_connection_ring, conn) < 0)
   {

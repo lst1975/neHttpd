@@ -178,7 +178,7 @@ hpairnode_parse(const char *str, int _size, char delim, hpair_t *next)
     goto clean0;
   }
   
-  pair = (hpair_t *) http_malloc(sizeof(hpair_t));
+  pair = (hpair_t *)http_malloc(sizeof(hpair_t));
   if (pair == NULL)
   {
     log_error("http_malloc hpair_t failed.");
@@ -557,7 +557,6 @@ content_type_new(const char *content_type_str, int len)
         c++;
       }
       break;
-
     }
   }
   return ct;

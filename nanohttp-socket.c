@@ -672,7 +672,10 @@ hsocket_select_recv(struct hsocket_t *sock,
     else
     {
       if (event.events & (EPOLLRDHUP|EPOLLERR))
+      {
+        log_verbose("Socket %d EPOLLRDHUP|EPOLLERR", sock);
         return -1;
+      }
       if ((event.events & EPOLLIN) 
           && event.data.fd == sock->sock)
         break;

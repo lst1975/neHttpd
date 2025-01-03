@@ -344,11 +344,9 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
         buffer = req->data.p;
         len = req->data.len;
         req->data.len = 0;
-        if (req->in->type == HTTP_TRANSFER_CONTENT_LENGTH)
-        {
-          req->in->received = len;
-        }
+        req->in->received = len;
       }
+      
       if (len != multipartparser_execute(&p, &settings, buffer, len))
       {
         nanohttp_file_close(p.arg);
@@ -358,11 +356,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       }
     }
 
-    if (req->data.buf != NULL)
-    {
-      http_free(req->data.buf);
-      req->data.buf = NULL;
-    }
+    hrequest_free_data(req);
     nanohttp_file_close(p.arg);
     return httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
   }

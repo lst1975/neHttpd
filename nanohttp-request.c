@@ -369,6 +369,16 @@ static inline void __buf_free(httpd_buf_t *b)
 }
 
 void
+hrequest_free_data(struct hrequest_t *req)
+{
+  if (req->data.buf != NULL)
+  {
+    http_free(req->data.buf);
+    req->data.buf = NULL;
+  }
+}
+
+void
 hrequest_free(struct hrequest_t * req)
 {
   if (req == NULL)
@@ -389,9 +399,7 @@ hrequest_free(struct hrequest_t * req)
   if (req->statistics)
     http_free(req->statistics);
 
-  if (req->data.data)
-    http_free(req->data.data);
-  
+  hrequest_free_data(req);
   http_free(req);
 
   return;
@@ -404,6 +412,7 @@ hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t **out)
   size_t rcvbytes;
   herror_t status = H_OK;
   char *buffer;
+  content_type_t *ct;
   struct hrequest_t *req;
   struct attachments_t *mimeMessage;
 
@@ -436,15 +445,14 @@ hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t **out)
   hpairnode_dump_deep(req->header);
   
   /* Check for MIME message */
-  if ((req->content_type &&
-       !strcmp(req->content_type->type, "multipart/related")))
+  ct = req->content_type;
+  if ((ct != NULL && ct->type_len == 17 && !memcmp(ct->type, "multipart/related", 17)))
   {
     status = mime_get_attachments(req->content_type, req->in, &mimeMessage);
     if (status != H_OK)
     {
       /* TODO (#1#): Handle error */
-      hrequest_free(req);
-      return status;
+      goto clean2;
     }
     else
     {
@@ -461,14 +469,23 @@ hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t **out)
 
   if (req->in == NULL)
   {
-    hrequest_free(req);
-    return herror_new("hrequest_new_from_socket", GENERAL_ERROR, 
+    status = herror_new("hrequest_new_from_socket", GENERAL_ERROR, 
       "http_input_stream_new failed.");
+    goto clean2;
   }
 
+  if (ct == NULL || ct->type_len != 19 
+    || memcmp(ct->type, "multipart/form-data", 19))
+  {
+    hrequest_free_data(req);
+  }
+  
   *out = req;
   return H_OK;
   
+clean2:  
+  hrequest_free(req);
+  return status;
 clean1:  
   http_free(buffer);
 clean0:  

@@ -294,21 +294,44 @@ typedef uint64_t unaligned_uint64_t __rte_aligned(1);
 typedef int rte_memory_order;
 
 #if defined(aarch64)
+#define rte_mb() asm volatile("dmb osh" : : : "memory")
+#define rte_wmb() asm volatile("dmb oshst" : : : "memory")
+#define rte_rmb() asm volatile("dmb oshld" : : : "memory")
+#define rte_smp_mb() asm volatile("dmb ish" : : : "memory")
+#define rte_smp_wmb() asm volatile("dmb ishst" : : : "memory")
+#define rte_smp_rmb() asm volatile("dmb ishld" : : : "memory")
 static inline void rte_pause(void)
 {
 }
 #elif defined(__arm__)
+#define  rte_mb()  __sync_synchronize()
+#define  rte_wmb() do { asm volatile ("dmb st" : : : "memory"); } while (0)
+#define  rte_rmb() __sync_synchronize()
+#define rte_smp_mb() rte_mb()
+#define rte_smp_wmb() rte_wmb()
+#define rte_smp_rmb() rte_rmb()
 static inline void rte_pause(void)
 {
   asm volatile("yield" ::: "memory");
 }
 #elif defined(__i386__) || defined(__x86_64__)
 #include <emmintrin.h>
+#define  rte_mb() _mm_mfence()
+#define  rte_wmb() _mm_sfence()
+#define  rte_rmb() _mm_lfence()
+#define rte_smp_wmb() rte_compiler_barrier()
+#define rte_smp_rmb() rte_compiler_barrier()
 static inline void rte_pause(void)
 {
   _mm_pause();
 }
 #elif defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__)
+#define  rte_mb()  asm volatile("sync" : : : "memory")
+#define  rte_wmb() asm volatile("sync" : : : "memory")
+#define  rte_rmb() asm volatile("sync" : : : "memory")
+#define rte_smp_mb() rte_mb()
+#define rte_smp_wmb() rte_wmb()
+#define rte_smp_rmb() rte_rmb()
 static inline void rte_pause(void)
 {
   /* Set hardware multi-threading low priority */
@@ -318,6 +341,12 @@ static inline void rte_pause(void)
   rte_compiler_barrier();
 }
 #elif defined(__riscv__) || defined(__riscv) || defined(__RISCV64__) || defined(__riscv64__)
+#define rte_mb()  asm volatile("fence rw, rw" : : : "memory")
+#define rte_wmb()  asm volatile("fence w, w" : : : "memory")
+#define rte_rmb()  asm volatile("fence r, r" : : : "memory")
+#define rte_smp_mb()  rte_mb()
+#define rte_smp_wmb()  rte_wmb()
+#define rte_smp_rmb()  rte_rmb()
 static inline void rte_pause(void)
 {
   /* Insert pause hint directly to be compatible with old compilers.
@@ -327,12 +356,25 @@ static inline void rte_pause(void)
   asm volatile(".int 0x0100000F" : : : "memory");
 }
 #elif defined(__loongarch__)
+#define rte_mb()  do { asm volatile("dbar 0":::"memory"); } while (0)
+#define rte_wmb()  rte_mb()
+#define rte_rmb()  rte_mb()
+#define rte_smp_mb()  rte_mb()
+#define rte_smp_wmb()  rte_mb()
+#define rte_smp_rmb()  rte_mb()
+extern int ng_os_usleep(int usec);
 static inline void rte_pause(void)
 {
+  ng_os_usleep(1);
 }
 #else
+#define rte_smp_mb()  ng_smp_mb()
+#define rte_smp_wmb()  ng_smp_wmb()
+#define rte_smp_rmb()  ng_smp_rmb()
+extern int ng_os_usleep(int usec);
 static inline void rte_pause(void)
 {
+  ng_os_usleep(1);
 }
 #endif
 
@@ -536,7 +578,8 @@ __rte_ring_enqueue_elems_128(struct rte_ring *r, uint32_t prod_head,
   uint32_t idx = prod_head & r->mask;
   rte_int128_t *ring = (rte_int128_t *)&r[1];
   const rte_int128_t *obj = (const rte_int128_t *)obj_table;
-  if (likely(idx + n <= size)) {
+  if (likely(idx + n <= size)) 
+  {
     for (i = 0; i < (n & ~0x1); i += 2, idx += 2)
       memcpy((void *)(ring + idx),
         (const void *)(obj + i), 32);
@@ -545,7 +588,9 @@ __rte_ring_enqueue_elems_128(struct rte_ring *r, uint32_t prod_head,
       memcpy((void *)(ring + idx),
         (const void *)(obj + i), 16);
     }
-  } else {
+  } 
+  else 
+  {
     for (i = 0; idx < size; i++, idx++)
       memcpy((void *)(ring + idx),
         (const void *)(obj + i), 16);
@@ -571,7 +616,8 @@ __rte_ring_enqueue_elems(struct rte_ring *r, uint32_t prod_head,
     __rte_ring_enqueue_elems_64(r, prod_head, obj_table, num);
   else if (esize == 16)
     __rte_ring_enqueue_elems_128(r, prod_head, obj_table, num);
-  else {
+  else 
+  {
     uint32_t idx, scale, nr_idx, nr_num, nr_size;
 
     /* Normalize to uint32_t */
@@ -592,8 +638,10 @@ __rte_ring_dequeue_elems_32(struct rte_ring *r, const uint32_t size,
   unsigned int i;
   uint32_t *ring = (uint32_t *)&r[1];
   uint32_t *obj = (uint32_t *)obj_table;
-  if (likely(idx + n <= size)) {
-    for (i = 0; i < (n & ~0x7); i += 8, idx += 8) {
+  if (likely(idx + n <= size)) 
+  {
+    for (i = 0; i < (n & ~0x7); i += 8, idx += 8) 
+    {
       obj[i] = ring[idx];
       obj[i + 1] = ring[idx + 1];
       obj[i + 2] = ring[idx + 2];
@@ -603,7 +651,8 @@ __rte_ring_dequeue_elems_32(struct rte_ring *r, const uint32_t size,
       obj[i + 6] = ring[idx + 6];
       obj[i + 7] = ring[idx + 7];
     }
-    switch (n & 0x7) {
+    switch (n & 0x7) 
+    {
     case 7:
       obj[i++] = ring[idx++]; /* fallthrough */
     case 6:
@@ -619,7 +668,9 @@ __rte_ring_dequeue_elems_32(struct rte_ring *r, const uint32_t size,
     case 1:
       obj[i++] = ring[idx++]; /* fallthrough */
     }
-  } else {
+  }
+  else 
+  {
     for (i = 0; idx < size; i++, idx++)
       obj[i] = ring[idx];
     /* Start at the beginning */
@@ -894,53 +945,6 @@ __rte_ring_move_cons_head(struct rte_ring *r, int is_sc,
   return n;
 }
 #else
-#if defined(aarch64)
-#define rte_mb() asm volatile("dmb osh" : : : "memory")
-#define rte_wmb() asm volatile("dmb oshst" : : : "memory")
-#define rte_rmb() asm volatile("dmb oshld" : : : "memory")
-#define rte_smp_mb() asm volatile("dmb ish" : : : "memory")
-#define rte_smp_wmb() asm volatile("dmb ishst" : : : "memory")
-#define rte_smp_rmb() asm volatile("dmb ishld" : : : "memory")
-#elif defined(__arm__)
-#define  rte_mb()  __sync_synchronize()
-#define  rte_wmb() do { asm volatile ("dmb st" : : : "memory"); } while (0)
-#define  rte_rmb() __sync_synchronize()
-#define rte_smp_mb() rte_mb()
-#define rte_smp_wmb() rte_wmb()
-#define rte_smp_rmb() rte_rmb()
-#elif defined(__i386__) || defined(__x86_64__)
-#include <emmintrin.h>
-#define  rte_mb() _mm_mfence()
-#define  rte_wmb() _mm_sfence()
-#define  rte_rmb() _mm_lfence()
-#define rte_smp_wmb() rte_compiler_barrier()
-#define rte_smp_rmb() rte_compiler_barrier()
-#elif defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__)
-#define  rte_mb()  asm volatile("sync" : : : "memory")
-#define  rte_wmb() asm volatile("sync" : : : "memory")
-#define  rte_rmb() asm volatile("sync" : : : "memory")
-#define rte_smp_mb() rte_mb()
-#define rte_smp_wmb() rte_wmb()
-#define rte_smp_rmb() rte_rmb()
-#elif defined(__riscv__) || defined(__riscv) || defined(__RISCV64__) || defined(__riscv64__)
-#define rte_mb()  asm volatile("fence rw, rw" : : : "memory")
-#define rte_wmb()  asm volatile("fence w, w" : : : "memory")
-#define rte_rmb()  asm volatile("fence r, r" : : : "memory")
-#define rte_smp_mb()  rte_mb()
-#define rte_smp_wmb()  rte_wmb()
-#define rte_smp_rmb()  rte_rmb()
-#elif defined(__loongarch__)
-#define rte_mb()  do { asm volatile("dbar 0":::"memory"); } while (0)
-#define rte_wmb()  rte_mb()
-#define rte_rmb()  rte_mb()
-#define rte_smp_mb()  rte_mb()
-#define rte_smp_wmb()  rte_mb()
-#define rte_smp_rmb()  rte_mb()
-#else
-#define rte_smp_mb()  ng_smp_mb()
-#define rte_smp_wmb()  ng_smp_wmb()
-#define rte_smp_rmb()  ng_smp_rmb()
-#endif
 
 /**
  * The atomic counter structure.
