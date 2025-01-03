@@ -276,10 +276,9 @@ _hrequest_parse_header(char *data, size_t len)
 
       /* parse options */
       result = opt_key;
+      t = key;
       if (result != NULL)
       {
-        t = memchr(result, ' ', t - result);
-        
         for (;result;)
         {
           result++;
@@ -365,15 +364,6 @@ clean1:
   hrequest_free(req);
 clean0:
   return NULL;
-}
-
-static inline void __buf_free(httpd_buf_t *b)
-{
-  if (b->data)
-  {
-    http_free(b->data);
-    b->data = NULL;
-  }
 }
 
 void
