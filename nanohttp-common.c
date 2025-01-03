@@ -401,6 +401,19 @@ static inline int __rm_ctsp(const char *content_type_str, int i, int len)
   return i;
 }
 
+void
+content_type_print(content_type_t *ct)
+{
+  hpair_t *pair;
+  if (ct != NULL)
+  {
+    log_verbose(" ++++++ Parsed Content-Type :");
+    log_verbose(" Content-Type : %s", ct->type);
+    for (pair =ct->params; pair; pair = pair->next)
+      log_verbose("    %s = '%s'", pair->key, pair->value);
+  }
+}
+
 /* Content-type multipart/form-data; boundary=----WebKitFormBoundaryn5yeffAJZX0Gx6OA"
    Content-Type: application/json
    Content-Type: text/plain; charset=utf-8
@@ -519,7 +532,25 @@ content_type_new(const char *content_type_str, int len)
       }
       else if (ch == '"')
       {
-        inQuote = c == 0;
+        if (c==0)
+          inQuote = 1;
+        else if (i == len || content_type_str[i]==';')
+        {
+          if (inQuote)
+          {
+            value++;
+            c--;
+            inQuote = 0;
+          }
+          else
+          {
+            c++;
+          }
+        }
+        else
+        {
+          c++;
+        }
       }
       else
       {
@@ -535,6 +566,25 @@ clean1:
   content_type_free(ct);
 clean0: 
   return NULL;
+}
+
+void test_content_type(void)
+{
+#define __T1  "multipart/form-data; boundary=---011000010111000001101001"
+#define __T2  "multipart/related; boundary=\"the_boundary\"; type=\"application/json\"; start=\"json\""
+  content_type_t *ct;
+  ct = content_type_new(__T1, sizeof(__T1)-1);
+  if (ct != NULL)
+  {
+    content_type_print(ct);
+    content_type_free(ct);
+  }
+  ct = content_type_new(__T2, sizeof(__T2)-1);
+  if (ct != NULL)
+  {
+    content_type_print(ct);
+    content_type_free(ct);
+  }
 }
 
 void

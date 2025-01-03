@@ -989,15 +989,7 @@ _httpd_request_print(struct hrequest_t * req)
   for (pair = req->header; pair; pair = pair->next)
     log_verbose(" %s = '%s'", pair->key, pair->value);
 
-  log_verbose(" ++++++ Parsed Content-Type :");
-  if (req->content_type != NULL)
-  {
-    pair = req->content_type->params;
-    if (pair != NULL)
-      log_verbose(" Content-Type : %s; %s", req->content_type->type, pair->value);
-    else
-      log_verbose(" Content-Type : %s", req->content_type->type);
-  }
+  content_type_print(req->content_type);
   log_verbose("++++++++++++++++++++++++");
 
   level = __nanohttp_level2string(req->userLevel);

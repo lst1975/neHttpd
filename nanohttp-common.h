@@ -1335,6 +1335,8 @@ extern content_type_t *content_type_new(const char *content_type_str, int size);
  *
  */
 extern void content_type_free(content_type_t * ct);
+extern void content_type_print(content_type_t *ct);
+extern void test_content_type(void);
 
 extern struct part_t *part_new(const char *id, const char *filename, const char *content_type, const char *transfer_encoding, struct part_t * next);
 

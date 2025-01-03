@@ -1333,6 +1333,7 @@ main(int argc, char **argv)
     goto error1;
   }
 
+  test_content_type();
   main_print_license();
 
   fprintf(stderr, "\nneHTTPd is listening on PORT %d\n\n\n", 
