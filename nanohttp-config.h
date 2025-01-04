@@ -104,6 +104,7 @@
 #define __NHTTP_DEBUG 0
 #define __NHTTP_MEM_DEBUG 1
 #define __NG_RING_DEBUG 0
+#define __HTTP_SMALL_SIZE 0
 
 #if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) 
 #define __NHTTP_USE_EPOLL 0

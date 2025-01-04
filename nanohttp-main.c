@@ -78,6 +78,7 @@
 #include "nanohttp-user.h"
 #include "nanohttp-ring.h"
 #include "nanohttp-data.h"
+#include "nanohttp-system.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const char *user, const char *password)
@@ -1254,6 +1255,7 @@ static int json_test(void)
 void main_print_license(void)
 {
   fprintf(stderr, "\n%s\n", __HTTPD_LICENSE);
+  fprintf(stderr, "Ver: %s, running on OS: %s\n\n", NG_VER_BUILD, ng_os_info.ng_os_version);
 }
 
 int
@@ -1263,10 +1265,16 @@ main(int argc, char **argv)
 
   nanohttp_log_set_loglevel(_nanoConfig_HTTPD_LOG_LEVEL);
     
+  if (ng_os_init() != ng_ERR_NONE)
+  {
+    fprintf(stderr, "Cannot init OS\n");
+    goto error0;
+  }
+    
   if (httpd_init(argc, argv))
   {
     fprintf(stderr, "Cannot init httpd\n");
-    goto error0;
+    goto error1;
   }
 
 #if __NG_RING_DEBUG
@@ -1284,7 +1292,7 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register service (%s)\n", 
       herror_message(status));
-    goto error1;
+    goto error2;
   }
 
   if ((status = httpd_register(_nanoConfig_HTTPD_FILE_SERVICE, 
@@ -1292,7 +1300,7 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register service (%s)\n", 
       herror_message(status));
-    goto error1;
+    goto error2;
   }
 
   if ((status = httpd_register_secure("/secure", secure_service, 
@@ -1300,7 +1308,7 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register secure service (%s)\n", 
       herror_message(status));
-    goto error1;
+    goto error2;
   }
 
   if ((status = httpd_register_secure("/headers", headers_service, 
@@ -1308,7 +1316,7 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register headers service (%s)\n", 
       herror_message(status));
-    goto error1;
+    goto error2;
   }
 
   if ((status = httpd_register_secure("/mime", mime_service, 
@@ -1316,7 +1324,7 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register MIME service (%s)\n", 
       herror_message(status));
-    goto error1;
+    goto error2;
   }
 
   if ((status = httpd_register_secure("/post/wia.bin", post_service, 
@@ -1324,7 +1332,7 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register POST service (%s)\n", 
       herror_message(status));
-    goto error1;
+    goto error2;
   }
 
   if ((status = httpd_register("/favicon.ico", root_service, 
@@ -1332,7 +1340,7 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register default service (%s)\n", 
       herror_message(status));
-    goto error1;
+    goto error2;
   }
 
   if ((status = httpd_register_secure(_nanoConfig_HTTPD_DATA_SERVICE, 
@@ -1340,7 +1348,7 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register DATA service (%s)\n", 
       herror_message(status));
-    goto error1;
+    goto error2;
   }
 
   if ((status = httpd_register_default_secure("/error", default_service, 
@@ -1348,7 +1356,7 @@ main(int argc, char **argv)
   {
     fprintf(stderr, "Cannot register default service (%s)\n", 
       herror_message(status));
-    goto error1;
+    goto error2;
   }
 
   test_content_type();
@@ -1360,17 +1368,20 @@ main(int argc, char **argv)
   if ((status = httpd_run()) != H_OK)
   {
     fprintf(stderr, "Cannot run httpd (%s)\n", herror_message(status));
-    goto error1;
+    goto error2;
   }
 
   httpd_destroy();
+  ng_os_deinit();
   main_print_license();
 
   return 0;
     
-error1:
+error2:
   herror_release(status);
-error0:
   httpd_destroy();
+error1:
+  ng_os_deinit();
+error0:
   return 1;
 }

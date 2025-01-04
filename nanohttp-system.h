@@ -60,74 +60,50 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef MULTIPARTPARSER_H
-#define MULTIPARTPARSER_H
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifndef __nanohttp_system_h
+#define __nanohttp_system_h
 
-#include <stddef.h>
-#include <stdint.h>
-#include "nanohttp-buffer.h"
+#include "nanohttp-defs.h"
+#include "nanohttp-time.h"
 
-typedef struct _multipartparser multipartparser;
-typedef struct _multipartparser_callbacks multipartparser_callbacks;
+#define ng_version      2000002
+#define NG_VERSION      "2.0.2"
+#define NG_VER          "ng/" NG_VERSION
 
-typedef size_t (*multipart_cb) (multipartparser*);
-typedef size_t (*multipart_data_cb) (multipartparser*, const char* data, size_t size);
-
-struct _multipartparser {
-  /** PRIVATE **/
-  char        boundary[128];
-  int         boundary_length;
-  int         index;
-  uint16_t    state;
-  uint16_t    content_disposition_parsed;
-  uint16_t    value_length;
-  uint16_t    field_length;
-  char field[112];
-  char value[246];
-
-  /** PUBLIC **/
-  void* data;
-  void* arg;
-};
-
-struct _multipartparser_callbacks {
-  multipart_cb      on_body_begin;
-  multipart_cb      on_part_begin;
-  multipart_data_cb on_header_field;
-  multipart_data_cb on_header_value;
-  multipart_cb      on_headers_complete;
-  multipart_data_cb on_data;
-  multipart_cb      on_part_end;
-  multipart_cb      on_body_end;
-};
-
-int multipartparser_init(multipartparser *parser, void *arg, const char *boundary, int boundaryLen);
-
-void multipartparser_callbacks_init(multipartparser_callbacks* callbacks);
-
-size_t multipartparser_execute(
-    multipartparser* parser, 
-    multipartparser_callbacks* callbacks,
-    const char* data,
-    size_t size);
-
-typedef uint8_t ng_uint8_t;
-
-#if __HTTP_SMALL_SIZE
-extern const ng_uint8_t __isValidToken[256];
-#define ng_isValidFieldName(c) (__isValidToken[c]&0x1)
-#define ng_isValidFieldValue(c) (__isValidToken[c]&0x2)
+#ifdef NG_BUILD
+#define NG_VER_BUILD    NG_VER " (" NG_BUILD ")"
 #else
-extern const ng_uint8_t __isValidFieldValue[256];
-extern const ng_uint8_t __isValidFieldName[256];
-#define ng_isValidFieldName(c) (__isValidFieldName[c])
-#define ng_isValidFieldValue(c) (__isValidFieldValue[c])
+#define NG_VER_BUILD    NG_VER
 #endif
 
-#ifdef __cplusplus
-}
+#define NG_OS_VER_NAME_LEN_MAX 256
+
+struct _ng_os_info {
+  uint64_t   ngx_pid;
+  uint64_t   ngx_ppid;
+  uint64_t   ngx_ncpu;
+  uint64_t   ngx_max_sockets;
+  char       ng_os_version[NG_OS_VER_NAME_LEN_MAX + 1];
+  size_t     ngx_pagesize;
+  size_t     ngx_pagesize_shift;
+  size_t     ngx_cacheline_size;
+  ng_uint_t  ngx_allocation_granularity;
+  double     freq;
+  uint64_t   tsc_hz;
+  size_t     cacheline_size;
+  uint64_t timer_freq;
+  uint64_t tz_offset;
+};
+
+typedef struct _ng_os_info ng_os_info_s;
+extern ng_os_info_s ng_os_info;
+
+#define ng_ALIGN_SIZE RTE_CACHE_LINE_SIZE
+
+void ng_os_deinit(void);
+ng_result_t ng_os_init(void);
+int ng_os_usleep(int usec);
+void ng_gettimeofday(ng_tmv_s *tp);
+uint64_t ng_get_freq(void);
+
 #endif
-#endif // MULTIPARTPARSER_H

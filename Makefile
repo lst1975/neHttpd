@@ -87,6 +87,8 @@ objects = \
 	nanohttp-user.o \
 	nanohttp-ring.o \
 	nanohttp-mem.o \
+	nanohttp-system.o \
+	nanohttp-time.o \
 	nanohttp-urlencode.o
 
 release:  $(objects)

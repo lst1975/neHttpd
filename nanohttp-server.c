@@ -154,6 +154,8 @@ static inline int hssl_enabled(void) { return 0; }
 #include "nanohttp-user.h"
 #include "nanohttp-ring.h"
 #include "nanohttp-data.h"
+#include "nanohttp-system.h"
+#include "nanohttp-time.h"
 
 #ifndef timeradd
 #define timeradd(tvp, uvp, vvp)						\
@@ -318,18 +320,6 @@ _httpd_term(DWORD sig)
   return TRUE;
 }
 
-int ng_os_usleep(int usec)
-{
-  Sleep(usec);
-  return 0;
-}
-
-static void _httpd_sys_sleep(int secs)
-{
-  Sleep(secs*1000);
-
-  return;
-}
 #else
 static void
 _httpd_term(int sig)
@@ -342,21 +332,13 @@ _httpd_term(int sig)
 
   return;
 }
+#endif
 
-int ng_os_usleep(int usec)
+static void _httpd_sys_sleep(int secs)
 {
-  struct timespec duration;
-  duration.tv_sec = usec/1000;
-  duration.tv_nsec = (usec%1000) * 1000000;
-  return nanosleep(&duration, NULL);
-}
-
-static inline void _httpd_sys_sleep(int secs)
-{
-  ng_os_usleep(secs * 1000);
+  ng_os_usleep(secs*1000);
   return;
 }
-#endif
 
 static void
 _httpd_parse_arguments(int argc, char **argv)
@@ -778,8 +760,6 @@ httpd_response_set_content_type(httpd_conn_t * res, const char *content_type)
 herror_t
 httpd_send_header(httpd_conn_t * res, int code, const char *text)
 {
-  struct tm stm;
-  time_t nw;
   char *header;
   hpair_t *cur;
   herror_t status = H_OK;
@@ -802,12 +782,27 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
   /* set status code */
   n = snprintf(__BUF, "HTTP/1.1 %d %s\r\n", code, text);
   BUF_GO(&b, n);
-  
-  /* set date */
+
+#if 0  
+  struct tm stm;
+  time_t nw;
   nw = time(NULL);
   localtime_r(&nw, &stm);
   n = strftime(__BUF, "Date: %a, %d %b %Y %H:%M:%S GMT\r\n", &stm);
   BUF_GO(&b, n);
+#else
+  /* set date */
+  n = __ng_http_date(__BUF, 1);
+  if (n < 0)
+  {
+    log_warn("Tempary buffer size is too small: %d", __BUF_SZ);
+    status = herror_new("httpd_send_header", GENERAL_ERROR,
+                      "Create HTTP header Date failed: buffer size %d", 
+                      BUF_REMAIN(&b));
+    goto clean1;
+  }
+  BUF_GO(&b, n);
+#endif
 
   /* set content-type */
   /* 
@@ -1301,7 +1296,8 @@ httpd_session_main(void *data)
 #endif
 
   log_debug("Connection used is: %d", httpd_get_conncount());
-
+  ng_date_print();
+  
 #ifdef WIN32
   _endthread();
   return 0;

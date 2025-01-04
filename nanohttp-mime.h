@@ -90,6 +90,9 @@
 #ifndef __nanohttp_mime_h
 #define __nanohttp_mime_h
 
+#include "nanohttp-defs.h"
+#include "nanohttp-buffer.h"
+
 /** @page nanohttp_mime_page nanoHTTP MIME attachments
  *
  * @section nanohttp_mime_toc_sec Table of contents
@@ -170,7 +173,10 @@ extern "C" {
 /** "multipart/related"  MIME Message Builder
  *
  */
-extern herror_t mime_get_attachments(content_type_t * ctype, struct http_input_stream_t * in, struct attachments_t ** dest);
+extern herror_t mime_get_attachments(content_type_t * ctype, 
+  struct http_input_stream_t * in, struct attachments_t ** dest);
+extern const ng_str_s *ng_http_get_mime_type(ng_str_s *ext);
+extern ng_result_t ng_http_mime_type_init(void);
 
 #ifdef __cplusplus
 }

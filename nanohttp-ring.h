@@ -78,19 +78,6 @@
 
 #define RTE_USE_C11_MEM_MODEL 0
 
-/* Workaround for toolchain issues with missing C11 macro in FreeBSD */
-#if !defined(static_assert) && !defined(__cplusplus)
-#define	static_assert	_Static_assert
-#endif
-
-/**
- * Triggers an error at compilation time if the condition is true.
- *
- * The do { } while(0) exists to workaround a bug in clang (#55821)
- * where it would not handle _Static_assert in a switch case.
- */
-#define RTE_BUILD_BUG_ON(condition) do { static_assert(!(condition), #condition); } while (0)
-
 #ifdef __KERNEL__
 #define __LN "\n"
 #define NG_RING_DEBUG(x,...) kprintf(x,__VA_ARGS__)
@@ -262,7 +249,9 @@ ng_singlerw_ring_dump(ng_singlerw_ring_s *ring)
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
 typedef uint64_t unaligned_uint64_t __rte_aligned(1);
 #define RTE_CACHE_GUARD_LINES 1
+#ifndef RTE_ASSERT
 #define RTE_ASSERT(x) ng_assert(x)
+#endif
 #define rte_memory_order_relaxed __ATOMIC_RELAXED
 #define rte_memory_order_consume __ATOMIC_CONSUME
 #define rte_memory_order_acquire __ATOMIC_ACQUIRE

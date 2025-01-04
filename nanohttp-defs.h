@@ -63,9 +63,68 @@
 #ifndef __nanohttp_defs_h
 #define __nanohttp_defs_h
 
+#include <stdint.h>
+#include <time.h>
 #include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+
+#define ng_snprintf snprintf
+#define ng_strcmp strcmp
+#define ng_bzero(s,l) memset(s, 0, l)
+#define ng_memcpy(d,s,l) memcpy(d,s,l)
+#define ng_memcmp(d,s,l) memset(d,s,l)
+
+/* Workaround for toolchain issues with missing C11 macro in FreeBSD */
+#if !defined(static_assert) && !defined(__cplusplus)
+#define	static_assert	_Static_assert
+#endif
+
+/**
+ * Triggers an error at compilation time if the condition is true.
+ *
+ * The do { } while(0) exists to workaround a bug in clang (#55821)
+ * where it would not handle _Static_assert in a switch case.
+ */
+#define RTE_BUILD_BUG_ON(condition) do { static_assert(!(condition), #condition); } while (0)
+
+#if defined(_MSC_VER)
+#define RTE_TOOLCHAIN_MSVC
+#endif
+
+#if defined(__linux__)
+#define RTE_ENV_LINUX
+#define RTE_EXEC_ENV_LINUX
+#endif
+
+#define NG_ITEMS(ar) (sizeof(ar)/sizeof((ar)[0]))
+#ifndef RTE_ASSERT
+#define RTE_ASSERT assert
+#endif
+#define NG_ASSERT RTE_ASSERT
+
+typedef int ng_int_t;
+typedef unsigned int ng_uint_t;
+typedef int int_t;
+typedef size_t ng_size_t;
+
+/**
+ * Force a function to be inlined
+ */
+#if defined(_MSC_VER)
+#define __rte_always_inline inline
+#else
+#define __rte_always_inline inline __attribute__((always_inline))
+#endif
+#define __ng_inline__ __rte_always_inline
+/**
+ * Force a function to be noinlined
+ */
+#define __rte_noinline __attribute__((noinline))
 
 #define HTTPD_UNUSED(x) (void)(x)
+#define NG_UNUSED(x) HTTPD_UNUSED(x)
+typedef int ng_result_t;
 
 /**
  * Check if a branch is likely to be taken.
@@ -162,6 +221,34 @@
  */
 #define RTE_ALIGN(val, align) RTE_ALIGN_CEIL(val, align)
 
+/**
+ * Macro to align a value to the multiple of given value. The resultant
+ * value will be of the same type as the first parameter and will be no lower
+ * than the first parameter.
+ */
+#define RTE_ALIGN_MUL_CEIL(v, mul) \
+	((((v) + (typeof(v))(mul) - 1) / ((typeof(v))(mul))) * (typeof(v))(mul))
+
+/**
+ * Macro to align a value to the multiple of given value. The resultant
+ * value will be of the same type as the first parameter and will be no higher
+ * than the first parameter.
+ */
+#define RTE_ALIGN_MUL_FLOOR(v, mul) \
+	(((v) / ((typeof(v))(mul))) * (typeof(v))(mul))
+
+/**
+ * Macro to align value to the nearest multiple of the given value.
+ * The resultant value might be greater than or less than the first parameter
+ * whichever difference is the lowest.
+ */
+#define RTE_ALIGN_MUL_NEAR(v, mul)				\
+	__extension__ ({					\
+		typeof(v) ceil = RTE_ALIGN_MUL_CEIL(v, mul);	\
+		typeof(v) floor = RTE_ALIGN_MUL_FLOOR(v, mul);	\
+		(ceil - (v)) > ((v) - floor) ? floor : ceil;	\
+	})
+
 /** Force alignment to cache line. */
 #define __rte_cache_aligned __rte_aligned(RTE_CACHE_LINE_SIZE)
 
@@ -200,5 +287,37 @@
 #define HSERVER_ERROR_2SHORT		      (HSERVER_ERROR + 4)
 
 #define RTE_MIN(x,y) ((x)<(y) ? (x) : (y))
+
+static __ng_inline__ uint32_t 
+ng_hash_string(const char *s, size_t length) 
+{
+  uint32_t h=0;
+  for (int i = 0; i < length; i++) 
+  {
+    /* h = 31 * h + s[i]; */
+    h = ((h << 5) + h) + s[i];
+  }
+  return h;
+}
+
+#define NG_NET_U32_HASH(u32t) \
+  ((u32t) ^ ((u32t) >> 7) ^ ((u32t) >> 17))
+
+static __ng_inline__ uint32_t 
+ng_hash_ipv4(void *ip) 
+{
+  uint32_t u = *(uint32_t *)ip;
+  return NG_NET_U32_HASH(u);
+}
+  
+static __ng_inline__ uint32_t 
+ng_hash_ipv6(void *ip) 
+{
+  uint32_t *u = (uint32_t *)ip;
+  return  NG_NET_U32_HASH(u[0]) 
+        ^ NG_NET_U32_HASH(u[1]) 
+        ^ NG_NET_U32_HASH(u[2]) 
+        ^ NG_NET_U32_HASH(u[3]); 
+}
 
 #endif

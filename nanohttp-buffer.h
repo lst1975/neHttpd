@@ -75,8 +75,17 @@ typedef struct {
   char *p;
   size_t size;
   size_t len;
-  size_t nbytes;
+  union{
+    int n;
+    size_t nbytes;
+  };
 } httpd_buf_t;
+
+typedef httpd_buf_t ng_str_s;
+
+#define DECL_CONST_STR_N(n,v) { .n=n, .cptr=v, .len=sizeof(v)-1 }
+#define DECL_CONST_STR_NULL() { .cptr=NULL, .len=0 }
+#define DECL_CONST_STR(v) { .cptr=v, .len=sizeof(v)-1 }
 
 #define __HTTPD_BUF_INIT_DECL() \
   { .data = NULL, .p = NULL, .len = 0, .size = 0, .nbytes= 0}
@@ -125,6 +134,11 @@ static inline void BUF_SIZE_INIT(httpd_buf_t *b, char *buf, size_t size)
 static inline int BUF_isequal(const httpd_buf_t *b, char *buf, size_t size)
 {
   return b->len == size && !memcmp(b->data, buf, size);
+}
+
+static inline int ng_str_isequal(const httpd_buf_t *a, const httpd_buf_t *b)
+{
+  return BUF_isequal(a, b->buf, b->len);
 }
 
 #endif
