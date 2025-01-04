@@ -141,4 +141,6 @@ static inline int ng_str_isequal(const httpd_buf_t *a, const httpd_buf_t *b)
   return BUF_isequal(a, b->buf, b->len);
 }
 
+extern void ng_free_data_buffer(httpd_buf_t *data);
+
 #endif

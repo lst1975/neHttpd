@@ -367,7 +367,6 @@ extern "C" {
 #ifdef __NHTTP_INTERNAL
 extern herror_t hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t **out);
 extern void hrequest_free(struct hrequest_t *req);
-extern void hrequest_free_data(struct hrequest_t *req);
 #endif
 
 #ifdef __cplusplus

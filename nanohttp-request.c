@@ -389,16 +389,6 @@ clean0:
 }
 
 void
-hrequest_free_data(struct hrequest_t *req)
-{
-  if (req->data.buf != NULL)
-  {
-    http_free(req->data.buf);
-    req->data.buf = NULL;
-  }
-}
-
-void
 hrequest_free(struct hrequest_t * req)
 {
   if (req == NULL)
@@ -422,7 +412,7 @@ hrequest_free(struct hrequest_t * req)
   if (req->statistics)
     http_free(req->statistics);
 
-  hrequest_free_data(req);
+  ng_free_data_buffer(&req->data);
   http_free(req);
 
   return;
@@ -505,7 +495,7 @@ hrequest_new_from_socket(struct hsocket_t *sock,
   if (ct == NULL || ct->type_len != 19 
     || memcmp(ct->type, "multipart/form-data", 19))
   {
-    hrequest_free_data(req);
+    ng_free_data_buffer(&req->data);
   }
   
   *out = req;

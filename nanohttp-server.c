@@ -1052,22 +1052,17 @@ _httpd_decode_authorization(const char *_value, char **user, char **pass)
 
   inlen = strlen(value);
   len = inlen * 2;
-  if (!(tmp = (unsigned char *)http_calloc(1, len)))
+  if (!(tmp = (unsigned char *)http_malloc(len)))
   {
     log_error("http_calloc failed (%s)", strerror(errno));
     return -1;
   }
 
   value = strstr(_value, " ") + 1;
-
   log_verbose("Authorization (base64) = \"%s\"", value);
 
 #if __configUseStreamBase64
-  ng_buffer_s in, out;
-  in.cptr = value;
-  in.len  = inlen - (value - _value);
-  out.ptr = tmp;
-  if (b64Decode(&in, &out) < 0)
+  if (b64Decode_with_len(value, inlen - (value - _value), (char *)tmp, len) < 0)
   {
     log_error("b64Decode failed");
     http_free(tmp);

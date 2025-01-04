@@ -310,7 +310,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       || ct->type_len != 19
       || memcmp(ct->type, "multipart/form-data", 19))
     {
-      hrequest_free_data(req);
+      ng_free_data_buffer(&req->data);
       log_warn("Bad POST data format, must 'multipart/form-data' for %s", req->path);
       return httpd_send_not_implemented(conn, "post_service");
     }
@@ -322,7 +322,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       || pair->value == NULL
       || !pair->value_len)
     {
-      hrequest_free_data(req);
+      ng_free_data_buffer(&req->data);
       r = herror_new("post_service", FILE_ERROR_READ, 
         "Bad POST data format, must 'multipart/form-data' for %s", req->path);
       return __post_internal_error(conn, r);
@@ -330,7 +330,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
 
     if (multipartparser_init(&p, NULL, pair->value, pair->value_len))
     {
-      hrequest_free_data(req);
+      ng_free_data_buffer(&req->data);
       r = herror_new("post_service", GENERAL_ERROR, 
         "Failed to do multipartparser for 'multipart/form-data'");
       return __post_internal_error(conn, r);
@@ -345,7 +345,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
         len = http_input_stream_read(req->in, req->data.ptr, req->data.size);
         if (len == -1)
         {
-          hrequest_free_data(req);
+          ng_free_data_buffer(&req->data);
           nanohttp_file_close(p.arg);
           r = herror_new("post_service", FILE_ERROR_READ, 
             "Failed to read stream %s", req->path);
@@ -363,7 +363,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       
       if (len != multipartparser_execute(&p, &settings, buffer, len))
       {
-        hrequest_free_data(req);
+        ng_free_data_buffer(&req->data);
         nanohttp_file_close(p.arg);
         r = herror_new("post_service", FILE_ERROR_WRITE, 
           "Failed to read stream %s", req->path);
@@ -371,13 +371,13 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       }
     }
 
-    hrequest_free_data(req);
+    ng_free_data_buffer(&req->data);
     nanohttp_file_close(p.arg);
     return httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
   }
   else
   {
-    hrequest_free_data(req);
+    ng_free_data_buffer(&req->data);
     return httpd_send_not_implemented(conn, "post_service");
   }
 }
@@ -549,15 +549,15 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       unsigned char *bf=NULL;
       do
       {
-        int len;
-        bf = (unsigned char *)http_malloc(B64_DECLEN(sizeof(favorICON)-1)+1);
-        if (bf == NULL) break;
+        int len = B64_DECLEN(sizeof(favorICON)-1)+1;
+        bf = (unsigned char *)http_malloc(len);
+        if (bf == NULL) 
+        {
+          log_error("http_malloc failed");
+          break;
+        }
 #if __configUseStreamBase64
-        ng_buffer_s in, out;
-        in.cptr = favorICON;
-        in.len  = sizeof(favorICON)-1;
-        out.ptr = bf;
-        len = b64Decode(&in, &out);
+        len = b64Decode_with_len(favorICON, sizeof(favorICON)-1, (char *)bf, len);
         if (len < 0)
         {
           log_error("b64Decode failed");
@@ -676,7 +676,8 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     
     log_debug("decoded query is : %.*s", in.len, in.cptr);
 
-    query = (unsigned char *)http_malloc(B64_DECLEN(in.len) + 1);
+    len = B64_DECLEN(in.len) + 1;
+    query = (unsigned char *)http_malloc(len);
     if (query == NULL)
     {
       http_free(in.ptr);
@@ -686,9 +687,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     
     {
 #if __configUseStreamBase64
-      ng_buffer_s out;
-      out.ptr = query;
-      len = b64Decode(&in, &out);
+      len = b64Decode_with_len(in.buf, in.len, (char *)query, len);
       if (len < 0)
       {
         http_free(in.ptr);
@@ -1360,6 +1359,7 @@ main(int argc, char **argv)
   }
 
   test_content_type();
+  ng_os_dump(NULL, NULL);
   main_print_license();
 
   fprintf(stderr, "\nneHTTPd is listening on PORT %d\n\n\n", 

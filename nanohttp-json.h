@@ -423,6 +423,8 @@ JSONStatus_t JSON_Iterate( const char * buf,
                            JSONPair_t * outPair );
 /* @[declare_json_iterate] */
 
+extern int json_printer_default(httpd_buf_t *b, const char *fmt, ...);
+
 /* *INDENT-OFF* */
 #ifdef __cplusplus
     }

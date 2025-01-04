@@ -127,12 +127,13 @@ _hresponse_new(void)
 
   res->version = HTTP_1_1;
   res->errcode = -1;
-  res->desc[0] = '\0';
+  res->desc   = NULL;
   res->header = NULL;
   res->in = NULL;
   res->content_type = NULL;
   res->attachments = NULL;
-
+  res->data.buf = NULL;
+  res->data.len = 0;
   return res;
 }
 
@@ -145,17 +146,21 @@ _hresponse_parse_header(const char *buffer, size_t len)
 
   /* create response object */
   res = _hresponse_new();
-
+  if (res == NULL)
+  {
+    log_error("_hresponse_new Failed");
+    goto clean0;
+  }
   /* *** parse spec *** */
   /* [HTTP/1.1 | 1.2] [CODE] [DESC] */
 
   /* stage 1: HTTP spec */
-  str = (char *) strtok_r((char *) buffer, " ", &s2);
+  str = (char *)strtok_r((char *) buffer, " ", &s2);
   s1 = s2;
   if (str == NULL)
   {
     log_error("Parse error reading HTTP spec");
-    return NULL;
+    goto clean1;
   }
 
   if (!strcmp(str, "HTTP/1.0"))
@@ -169,7 +174,7 @@ _hresponse_parse_header(const char *buffer, size_t len)
   if (str == NULL)
   {
     log_error("Parse error reading HTTP code");
-    return NULL;
+    goto clean1;
   }
   res->errcode = atoi(str);
 
@@ -179,11 +184,16 @@ _hresponse_parse_header(const char *buffer, size_t len)
   if (str == NULL)
   {
     log_error("Parse error reading HTTP description");
-    return NULL;
+    goto clean1;
   }
-/*	res->desc = (char *) http_malloc(strlen(str) + 1);*/
-  strncpy(res->desc, str, RESPONSE_MAX_DESC_SIZE-1);
-  res->desc[strlen(str)] = '\0';
+
+  /*	res->desc = (char *) http_malloc(strlen(str) + 1);*/
+  res->desc = http_strdup_len(str, &res->desc_len);
+  if (res->desc == NULL)
+  {
+    log_error("Parse error reading HTTP description");
+    goto clean1;
+  }
 
   /* *** parse header *** */
   /* [key]: [value] */
@@ -209,27 +219,47 @@ _hresponse_parse_header(const char *buffer, size_t len)
   /* Check Content-type */
   pair = hpairnode_get_ignore_case_len(res->header, HEADER_CONTENT_TYPE, 12);
   if (pair != NULL)
+  {
     res->content_type = content_type_new(pair->value, pair->value_len);
-
+    if (res->content_type == NULL)
+    {
+      log_error("content_type_new failed.");
+      goto clean1;
+    }
+  }
   /* return response object */
   return res;
+  
+clean1:
+  hresponse_free(res);
+clean0:
+  return NULL;
 }
 
 herror_t
-hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t ** out)
+hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t **out)
 {
   size_t hdrlen;
   size_t rcvbytes;
   herror_t status;
   hresponse_t *res;
   struct attachments_t *mimeMessage;
-  char buffer[MAX_HEADER_SIZE + 1];
+  char *buffer;
+
+  buffer = http_malloc(MAX_HEADER_SIZE + 1);
+  if (buffer == NULL)
+  {
+    status = herror_new("hresponse_new_from_socket", GENERAL_ERROR, 
+      "http_malloc failed.");
+    goto clean0;
+  }
 
 read_header:                   /* for errorcode: 100 (continue) */
   /* Read header */
-  if ((status = http_header_recv(sock, buffer, MAX_HEADER_SIZE, &hdrlen, &rcvbytes)) != H_OK)
+  status = http_header_recv(sock, buffer, MAX_HEADER_SIZE, &hdrlen, &rcvbytes);
+  if (status != H_OK)
   {
-    return status;
+    goto clean1;
   }
 
   /* Create response */
@@ -237,10 +267,17 @@ read_header:                   /* for errorcode: 100 (continue) */
   if (res == NULL)
   {
     log_error("Header parse error");
-    return herror_new("hresponse_new_from_socket",
+    status = herror_new("hresponse_new_from_socket",
                       GENERAL_HEADER_PARSE_ERROR,
                       "Can not parse response header");
+    goto clean1;
   }
+
+  res->data.buf  = buffer;
+  res->data.p    = buffer + hdrlen;
+  res->data.len  = rcvbytes - hdrlen;
+  res->data.size = MAX_HEADER_SIZE + 1;
+  hpairnode_dump_deep(res->header);
 
   /* Chec for Errorcode: 100 (continue) */
   if (res->errcode == 100)
@@ -250,8 +287,6 @@ read_header:                   /* for errorcode: 100 (continue) */
   }
 
   /* Create input stream */
-  res->in = http_input_stream_new(sock, res->header);
-
   /* Check for MIME message */
   if ((res->content_type &&
        !strcmp(res->content_type->type, "multipart/related")))
@@ -260,35 +295,46 @@ read_header:                   /* for errorcode: 100 (continue) */
     if (status != H_OK)
     {
       /* TODO (#1#): Handle error */
-      hresponse_free(res);
-      return status;
+      goto clean2;
     }
     else
     {
       res->attachments = mimeMessage;
-      http_input_stream_free(res->in);
-      res->in =
-        http_input_stream_new_from_file(mimeMessage->root_part->filename);
-      if (!res->in)
-      {
-        /* TODO (#1#): Handle error */
-
-      }
-      else
-      {
-        /* res->in->deleteOnExit = 1; */
-      }
+      res->in = http_input_stream_new_from_file(mimeMessage->root_part->filename);
     }
   }
+  else
+  {
+    res->in = http_input_stream_new(sock, res->header);
+  }
+
+  if (res->in == NULL)
+  {
+    status = herror_new("hresponse_new_from_socket", GENERAL_ERROR, 
+      "http_input_stream_new failed.");
+    goto clean2;
+  }
+
   *out = res;
   return H_OK;
+  
+clean2:  
+  hresponse_free(res);
+  return status;
+clean1:  
+  http_free(buffer);
+clean0:  
+  return status;
 }
 
 void
-hresponse_free(hresponse_t * res)
+hresponse_free(hresponse_t *res)
 {
   if (res)
   {
+    if (res->desc)
+      http_free(res->desc);
+    
     if (res->header)
       hpairnode_free_deep(res->header);
 
@@ -301,6 +347,7 @@ hresponse_free(hresponse_t * res)
     if (res->attachments)
       attachments_free(res->attachments);
 
+    ng_free_data_buffer(&res->data);
     http_free(res);
   }
   return;

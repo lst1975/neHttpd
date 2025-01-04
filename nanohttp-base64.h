@@ -172,6 +172,13 @@ void b64Encode_Start(b64_state_s *s);
 void b64Encode_Finish(b64_state_s *state, ng_buffer_s *out);
 void b64Encode_Process(b64_state_s *state, const ng_buffer_s *in, ng_buffer_s *out);
 
+static inline int b64Encode_with_len(const char *in, size_t inlen, char *out, size_t outlen)
+{
+  const ng_buffer_s   _in = { .cptr =  in, .len = inlen};
+        ng_buffer_s  _out = { .buf  = out, .len = outlen};
+  return b64Encode(&_in, &_out);
+}
+
 #if __configUseBase64Decode
 /*
  * return values is out length
@@ -180,6 +187,13 @@ int b64Decode(const ng_buffer_s *in, ng_buffer_s *out);
 static inline void b64Decode_Start(b64_state_s *s) { return b64Encode_Start(s); }
 static inline void b64Decode_Finish(b64_state_s *state, ng_buffer_s *out) { HTTPD_UNUSED(state); HTTPD_UNUSED(out);}
 int b64Decode_Process(b64_state_s *state, const ng_buffer_s *in, ng_buffer_s *out);
+
+static inline int b64Decode_with_len(const char *in, size_t inlen, char *out, size_t outlen)
+{
+  const ng_buffer_s   _in = { .cptr =  in, .len = inlen};
+        ng_buffer_s  _out = { .buf  = out, .len = outlen};
+  return b64Decode(&_in, &_out);
+}
 #endif
 
 #endif

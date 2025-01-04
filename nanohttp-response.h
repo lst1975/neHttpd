@@ -231,10 +231,12 @@ typedef struct hresponse
 {
   http_version_t version;
   int errcode;
-  char desc[RESPONSE_MAX_DESC_SIZE];
+  char *desc;
+  int desc_len;
 
   hpair_t *header;
 
+  httpd_buf_t data;
   struct http_input_stream_t *in;
   content_type_t *content_type;
   struct attachments_t *attachments;

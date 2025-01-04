@@ -2135,7 +2135,7 @@ static int __json_pad_print(JSON_PRINTER_f printer,
   return k;
 }
 
-static inline int json_printer_default(httpd_buf_t *b, const char *fmt, ...)
+int json_printer_default(httpd_buf_t *b, const char *fmt, ...)
 {
   size_t n;
   va_list args;

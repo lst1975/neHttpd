@@ -60,59 +60,17 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef __nanohttp_system_h
-#define __nanohttp_system_h
 
-#include "nanohttp-defs.h"
-#include "nanohttp-time.h"
+#include "nanohttp-buffer.h"
+#include "nanohttp-mem.h"
 
-#define ng_version      2000002
-#define NG_VERSION      "2.0.2"
-#define NG_VER          "neHTTPd/" NG_VERSION
+void
+ng_free_data_buffer(httpd_buf_t *data)
+{
+  if (data->buf != NULL)
+  {
+    http_free(data->buf);
+    data->buf = NULL;
+  }
+}
 
-#ifdef NG_BUILD
-#define NG_VER_BUILD    NG_VER " (" NG_BUILD ")"
-#else
-#define NG_VER_BUILD    NG_VER
-#endif
-
-#define NG_OS_VER_NAME_LEN_MAX 256
-
-struct _ng_os_info {
-  uint64_t   ngx_pid;
-  uint64_t   ngx_ppid;
-  uint64_t   ngx_ncpu;
-  uint64_t   ngx_max_sockets;
-  char       ng_os_version[NG_OS_VER_NAME_LEN_MAX + 1];
-  size_t     ngx_pagesize;
-  size_t     ngx_pagesize_shift;
-  size_t     ngx_cacheline_size;
-  ng_uint_t  ngx_allocation_granularity;
-  double     freq;
-  uint64_t   tsc_hz;
-  size_t     cacheline_size;
-  uint64_t timer_freq;
-  uint64_t tz_offset;
-};
-
-struct _meminfo {
-  uint64_t ullTotalPhys;
-  uint64_t ullAvailPhys;
-  uint64_t ullTotalVirtual;
-  uint64_t ullAvailVirtual;
-};
-typedef struct _meminfo mg_mem_info_s;
-
-typedef struct _ng_os_info ng_os_info_s;
-extern ng_os_info_s ng_os_info;
-
-#define ng_ALIGN_SIZE RTE_CACHE_LINE_SIZE
-
-void ng_os_deinit(void);
-ng_result_t ng_os_init(void);
-int ng_os_usleep(int usec);
-void ng_gettimeofday(ng_tmv_s *tp);
-uint64_t ng_get_freq(void);
-void ng_os_dump(httpd_buf_t *b, void *printer);
-
-#endif

@@ -66,6 +66,7 @@
 #include "nanohttp-time.h"
 #include "nanohttp-system.h"
 #include "nanohttp-mem.h"
+#include "nanohttp-json.h"
 
 #define NG_SOCKET_MAXCONN 0xfffffff
 
@@ -1072,26 +1073,25 @@ static size_t CacheLineSize(void) {
 static __ng_inline__ void
 __os_cpuid(uint32_t i, uint32_t *buf)
 {
+  /*
+   * we could not use %ebx as output parameter if gcc builds PIC,
+   * and we could not save %ebx on stack, because %esp is used,
+   * when the -fomit-frame-pointer optimization is specified.
+   */
 
-    /*
-     * we could not use %ebx as output parameter if gcc builds PIC,
-     * and we could not save %ebx on stack, because %esp is used,
-     * when the -fomit-frame-pointer optimization is specified.
-     */
+  __asm__ (
 
-    __asm__ (
+  "    mov    %%ebx, %%esi;  "
 
-    "    mov    %%ebx, %%esi;  "
+  "    cpuid;                "
+  "    mov    %%eax, (%1);   "
+  "    mov    %%ebx, 4(%1);  "
+  "    mov    %%edx, 8(%1);  "
+  "    mov    %%ecx, 12(%1); "
 
-    "    cpuid;                "
-    "    mov    %%eax, (%1);   "
-    "    mov    %%ebx, 4(%1);  "
-    "    mov    %%edx, 8(%1);  "
-    "    mov    %%ecx, 12(%1); "
+  "    mov    %%esi, %%ebx;  "
 
-    "    mov    %%esi, %%ebx;  "
-
-    : : "a" (i), "D" (buf) : "ecx", "edx", "esi", "memory" );
+  : : "a" (i), "D" (buf) : "ecx", "edx", "esi", "memory" );
 }
 
 
@@ -1231,6 +1231,20 @@ ng_result_t ng_os_init(void)
     goto clean1;
 
   ng_update_time();
+
+  if (ng_os_info.cacheline_size &&
+    ng_os_info.cacheline_size != RTE_CACHE_LINE_SIZE)
+  {
+    fprintf(stderr, 
+      "System cachelinesize is %ld, but defined "
+      "RTE_CACHE_LINE_SIZE as %d", 
+      ng_os_info.cacheline_size, 
+      (int)RTE_CACHE_LINE_SIZE);
+    fprintf(stderr, 
+      "Please redefine RTE_CACHE_LINE_SIZE as %ld",
+      ng_os_info.cacheline_size);
+    goto clean1;
+  }
   
   return ng_ERR_NONE;
   
@@ -1240,8 +1254,75 @@ clean0:
   return r;
 }
 
+#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
+#include <windows.h>
+int ng_os_get_meminfo(mg_mem_info_s *m) {
+  MEMORYSTATUSEX statex;
+  statex.dwLength = sizeof(statex);
+  if (GlobalMemoryStatusEx(&statex)) 
+  {
+    m->ullTotalPhys    = statex.ullTotalPhys;
+    m->ullAvailPhys    = statex.ullAvailPhys;
+    m->ullTotalVirtual = statex.ullTotalVirtual;
+    m->ullAvailVirtual = statex.ullAvailVirtual;
+  } 
+  else 
+  {
+    log_warn("Error retrieving memory status.\n");
+    return -1;
+  }
+
+  return 0;
+}
+#else
+#include <sys/sysinfo.h>
+int ng_os_get_meminfo(mg_mem_info_s *m) {
+  struct sysinfo info;
+
+  // Retrieve system information
+  if (sysinfo(&info) != 0) {
+    log_warn("Error retrieving memory status.\n");
+    return -1;
+  }
+
+  // Calculate remaining physical and virtual memory
+  m->ullTotalPhys    = info.totalram;
+  m->ullAvailPhys    = info.freeram;
+  m->ullTotalVirtual = info.totalswap;
+  m->ullAvailVirtual = info.freeswap;
+  return 0;
+}
+#endif
+
 void ng_os_deinit(void)
 {
   __ng_os_deinit(NULL);
 }
 
+void ng_os_dump(httpd_buf_t *b, void *printer)
+{
+  mg_mem_info_s m;
+  JSON_PRINTER_f pr = (JSON_PRINTER_f)printer;
+  if (pr == NULL)
+    pr = json_printer_default;
+  
+  pr(b, "%-16s: %"PRIu64"\n", "Process ID", ng_os_info.ngx_pid);
+  pr(b, "%-16s: %"PRIu64"\n", "Parent ID", ng_os_info.ngx_ppid);
+  pr(b, "%-16s: %"PRIu64"\n", "CPU Count", ng_os_info.ngx_ncpu);
+  pr(b, "%-16s: %"PRIu64"\n", "Socket Max", ng_os_info.ngx_max_sockets);
+  pr(b, "%-16s: %lu\n", "Page Size", ng_os_info.ngx_pagesize);
+  pr(b, "%-16s: %lu\n", "Cacheline Size", ng_os_info.ngx_cacheline_size);
+  if (ng_os_info.freq/1000000 > 999.0)
+    pr(b, "%-16s: %.2f GHz\n", "CPU Frequency", ng_os_info.freq/1000000000);
+  else
+    pr(b, "%-16s: %.2f MHz\n", "CPU Frequency", ng_os_info.freq/1000000);
+  pr(b, "%-16s: %"PRIu64"\n", "Timezone Offset", ng_os_info.tz_offset);
+
+  if (!ng_os_get_meminfo(&m))
+  {
+    pr(b, "%-28s: %"PRIu64"\n", "Total Physical Memory", m.ullTotalPhys / (1024 * 1024));
+    pr(b, "%-28s: %"PRIu64"\n", "Available Physical Memory", m.ullAvailPhys / (1024 * 1024));
+    pr(b, "%-28s: %"PRIu64"\n", "Total Virtual Memory", m.ullTotalVirtual / (1024 * 1024));
+    pr(b, "%-28s: %"PRIu64"\n", "Available Virtual Memory", m.ullAvailVirtual / (1024 * 1024));
+  }
+}

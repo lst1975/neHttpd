@@ -1044,22 +1044,25 @@ int __ng_http_date(char *buf, int len, int isHttp)
   char *p;
   ng_tmv_s tv;
   ng_rtc_time_s tm;
-
+  long tz_offset;
+  
   if (isHttp)
   {
     if (len < HTTPD_DATE_STRLEN_MIN+sizeof("Date: ")-1+2)
       return -1;
+    tz_offset = 0;
   }
   else
   {
     if (len < HTTPD_DATE_STRLEN_MIN)
       return -1;
+    tz_offset = ng_os_info.tz_offset;
   }
 
   p = buf;
   tv.tv_sec = ng_get_time();
   tv.tv_usec = 0;
-  ng_unix2tm_time(&tm, &tv, ng_os_info.tz_offset);
+  ng_unix2tm_time(&tm, &tv, tz_offset);
   
   if (isHttp)
   {
@@ -1095,7 +1098,7 @@ int __ng_http_date(char *buf, int len, int isHttp)
 
 int ng_http_date(httpd_buf_t *b)
 {
-  return __ng_http_date(b->buf, b->len, 0);
+  return __ng_http_date(b->buf, b->len, 1);
 }
 
 void ng_date_print(void)
@@ -1103,7 +1106,7 @@ void ng_date_print(void)
   char date[HTTPD_DATE_STRLEN_MIN];
   httpd_buf_t b;
   BUF_SET(&b, date, sizeof(date));
-  ng_http_date(&b);
+  __ng_http_date(b.buf, b.len, 0);
   fprintf(stdout, "\nSystem is already running %"PRIu64" seconds\n", 
     ng_get_time() - (uint64_t)startime);
   fprintf(stdout, "Date   : %.*s\n\n", (int)b.len, b.cptr);

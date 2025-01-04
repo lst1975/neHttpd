@@ -89,6 +89,7 @@ objects = \
 	nanohttp-mem.o \
 	nanohttp-system.o \
 	nanohttp-time.o \
+	nanohttp-buffer.o \
 	nanohttp-urlencode.o
 
 release:  $(objects)
