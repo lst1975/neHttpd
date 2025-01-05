@@ -117,18 +117,19 @@
 static int
 _http_stream_has_content_length(hpair_t * header)
 {
-  return hpairnode_get_ignore_case(header, HEADER_CONTENT_LENGTH) != NULL;
+  return hpairnode_get_ignore_case_len(header, HEADER_CONTENT_LENGTH, 
+    sizeof(HEADER_CONTENT_LENGTH)-1) != NULL;
 }
 
 static int
 _http_stream_is_chunked(hpair_t * header)
 {
-  char *chunked;
-
-  chunked = hpairnode_get_ignore_case(header, HEADER_TRANSFER_ENCODING);
+  hpair_t *chunked = hpairnode_get_ignore_case_len(header, HEADER_TRANSFER_ENCODING,
+    sizeof(HEADER_TRANSFER_ENCODING)-1);
   if (chunked != NULL)
   {
-    if (!strcmp(chunked, TRANSFER_ENCODING_CHUNKED))
+    if (chunked->value_len == (sizeof(TRANSFER_ENCODING_CHUNKED)-1)
+      && !memcmp(chunked->value, TRANSFER_ENCODING_CHUNKED, chunked->value_len))
     {
       return 1;
     }
@@ -143,7 +144,6 @@ struct http_input_stream_t *
 http_input_stream_new(struct hsocket_t *sock, hpair_t * header)
 {
   struct http_input_stream_t *result;
-  char *content_length;
 
   if (!(result = (struct http_input_stream_t *) http_malloc(sizeof(struct http_input_stream_t))))
   {
@@ -159,9 +159,12 @@ http_input_stream_new(struct hsocket_t *sock, hpair_t * header)
   /* Check if Content-type */
   if (_http_stream_has_content_length(header))
   {
+    hpair_t *cl;
     log_verbose("Stream transfer with 'Content-length'");
-    content_length = hpairnode_get_ignore_case(header, HEADER_CONTENT_LENGTH);
-    result->content_length = atol(content_length);
+    cl = hpairnode_get_ignore_case_len(header, 
+      HEADER_CONTENT_LENGTH, sizeof(HEADER_CONTENT_LENGTH)-1);
+    assert(cl != NULL);
+    result->content_length = ng_atoi(cl->value, cl->value_len);
     result->received = 0;
     result->type = HTTP_TRANSFER_CONTENT_LENGTH;
   }
@@ -558,7 +561,6 @@ struct http_output_stream_t *
 http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
 {
   struct http_output_stream_t *result;
-  char *content_length;
 
   /* Create object */
   result = (struct http_output_stream_t *)http_malloc(sizeof(*result));
@@ -576,9 +578,12 @@ http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
   /* Check if Content-type */
   if (_http_stream_has_content_length(header))
   {
+    hpair_t *cl;
     log_verbose("Stream transfer with 'Content-length'");
-    content_length = hpairnode_get_ignore_case(header, HEADER_CONTENT_LENGTH);
-    result->content_length = atol(content_length);
+    cl = hpairnode_get_ignore_case_len(header, 
+      HEADER_CONTENT_LENGTH, sizeof(HEADER_CONTENT_LENGTH)-1);
+    assert(cl != NULL);
+    result->content_length = ng_atoi(cl->value, cl->value_len);
     result->type = HTTP_TRANSFER_CONTENT_LENGTH;
   }
   /* Check if Chunked */

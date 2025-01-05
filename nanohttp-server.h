@@ -242,6 +242,12 @@
 					         pending connections for listen*/
 #define NHTTPD_ARG_TIMEOUT   "-NHTTPtimeout" /**< Timeout on reads */
 #define NHTTPD_ARG_DAEMONIZE "-NHTTPDaemon" /**< Run as a daemon */
+#define NHTTPD_ARG_HELP "--help" /**< Run as a daemon */
+
+#define HTTP_INIT_PARSE_RESULT_OK     0
+#define HTTP_INIT_PARSE_RESULT_DAEMON 1
+#define HTTP_INIT_PARSE_RESULT_HELP   2
+
 /**@}*/
 /**@}*/
 

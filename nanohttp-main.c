@@ -1287,10 +1287,15 @@ main(int argc, char **argv)
   nanohttp_log_set_loglevel(_nanoConfig_HTTPD_LOG_LEVEL);
     
   daemonize = httpd_parse_arguments(argc, argv);
-  if (daemonize)
+  if (daemonize == HTTP_INIT_PARSE_RESULT_DAEMON)
   {
     nanohttp_log_set_logtype(NANOHTTP_LOG_SYSLOG);
     http_daemonize(1,0);
+  }
+  else if (daemonize == HTTP_INIT_PARSE_RESULT_HELP)
+  {
+    fprintf(stdout, __nanohttp_help);
+    return EXIT_SUCCESS;
   }
   
   if (ng_os_init() != ng_ERR_NONE)
@@ -1407,7 +1412,7 @@ main(int argc, char **argv)
   ng_os_deinit();
   main_print_license(daemonize);
 
-  return 0;
+  return EXIT_SUCCESS;
     
 error2:
   herror_release(status);
@@ -1417,5 +1422,5 @@ error1:
 error0:
   if (daemonize)
     closelog();
-  return 1;
+  return EXIT_FAILURE;
 }

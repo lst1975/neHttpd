@@ -354,7 +354,7 @@ static void _httpd_sys_sleep(int secs)
 int
 httpd_parse_arguments(int argc, char **argv)
 {
-  int daemon = 0;
+  int parse_result = HTTP_INIT_PARSE_RESULT_OK;
   
   for (int i = 1; i < argc; i++)
   {
@@ -381,13 +381,16 @@ httpd_parse_arguments(int argc, char **argv)
     else if (!strcmp(argv[i], NHTTPD_ARG_DAEMONIZE)
       || !strcmp(argv[i], "-d"))
     {
-      daemon = 1;
+      parse_result = HTTP_INIT_PARSE_RESULT_DAEMON;
+    }
+    else if (!strcmp(argv[i], NHTTPD_ARG_HELP)
+      || !strcmp(argv[i], "-h"))
+    {
+      parse_result = HTTP_INIT_PARSE_RESULT_HELP;
     }
   }
 
-  log_verbose("socket bind to port '%d'", _httpd_port);
-
-  return daemon;
+  return parse_result;
 }
 
 static herror_t
@@ -579,6 +582,8 @@ httpd_init(int argc, char **argv)
     log_error("hsocket_bind failed (%s)", herror_message(status));
     return status;
   }
+
+  log_verbose("socket bind to port '%d'", _httpd_port);
 
   return H_OK;
 }

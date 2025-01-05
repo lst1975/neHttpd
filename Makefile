@@ -94,19 +94,22 @@ objects = \
 	nanohttp-buffer.o \
 	nanohttp-urlencode.o
 
+CFLAGS = -Wall -O3 -g3 -MD
+LDFLAGS = 
+
 release:  $(objects)
 	$(CC) $^ -o httpd -lpthread -lc
 	$(STRIP) httpd
 
 all: $(objects)
-	$(CC) $^ -o httpd -lpthread -lc
+	$(CC) $(LDFLAGS) $^ -o httpd -lpthread -lc
 
 # Syntax - targets ...: target-pattern: prereq-patterns ...
 # In the case of the first target, foo.o, the target-pattern matches foo.o and sets the "stem" to be "foo".
 # It then replaces the '%' in prereq-patterns with that stem
 $(objects): %.o: %.c
-	$(CC) -Wall -O3 -g3 -c $^ -o $@
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 clean: 
-	rm -f $(objects) httpd httpd.exe
+	rm -f $(objects) *.d httpd httpd.exe
 
