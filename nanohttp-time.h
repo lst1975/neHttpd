@@ -539,7 +539,7 @@ int ng_unix2tm_time(ng_rtc_time_s *tm, ng_tmv_s *tv, int tz_offset);
 int ng_http_date(httpd_buf_t *b);
 int rte_eal_timer_init(void);
 void ng_date_print(void);
-int __ng_http_date(char *buf, int len, int isHttp);
+int __ng_http_date(char *buf, int len, int isHttp, const char *tz);
 
 #ifdef __cplusplus
 }

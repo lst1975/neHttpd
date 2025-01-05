@@ -88,6 +88,8 @@
 
 #include "nanohttp-buffer.h"
 #include "nanohttp-mem.h"
+#include "nanohttp-ctype.h"
+#include "nanohttp-atoi.h"
 
 #define HEADER_CONTENT_ID		"Content-Id"
 #define HEADER_CONTENT_TRANSFER_ENCODING "Content-Transfer-Encoding"

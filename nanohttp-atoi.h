@@ -60,57 +60,126 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef __NanoHttpConfig_H_
-#define __NanoHttpConfig_H_
+#ifndef __nanohttp_atoi_h
+#define __nanohttp_atoi_h
 
-#define HAVE_STDIO_H
-#define HAVE_STDLIB_H
-#define HAVE_SYS_TIME_H
-#define HAVE_STRING_H
-#define HAVE_ERRNO_H
-#define HAVE_NETINET_IN_H
-#define HAVE_PTHREAD_H
-#define HAVE_STDARG_H
-#define HAVE_CTYPE_H
-
-#define HAVE_SYS_SELECT_H
-#define HAVE_SOCKET_H
-#define HAVE_SYS_TYPES_H
-#define HAVE_SIGNAL_H
-#define HAVE_UNISTD_H
-
-#define HAVE_SYS_SOCKET_H
-#define HAVE_ARPA_INET_H
-#define HAVE_FCNTL_H
-#define HAVE_SYS_WAIT_H
-#define HAVE_TIME_H
-#define HAVE_SYSLOG_H
-
-#define __NHTTP_INTERNAL
-
-#define __NHTTP_TEST 1
-
-#undef WIN32
-#undef HAVE_SSL
-
-#define _nanoConfig_HTTPD_PORT            8080
-#define _nanoConfig_HTTPD_MAX_CONNECTIONS 128
-#define _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS 256
-#define _nanoConfig_HTTPD_FILE_BLOCK      2048
-#define _nanoConfig_HTTPD_FILE_SERVICE    "/config/"
-#define _nanoConfig_HTTPD_DATA_SERVICE    "/data/"
-#define _nanoConfig_HTTPD_LOG_LEVEL NANOHTTP_LOG_VERBOSE
-
-#define DEBUG_MULTIPART
-#define __NHTTP_DEBUG 0
-#define __NHTTP_MEM_DEBUG 1
-#define __NG_RING_DEBUG 0
-#define __HTTP_SMALL_SIZE 0
-
-#if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) 
-#define __NHTTP_USE_EPOLL 0
-#else
-#define __NHTTP_USE_EPOLL 1
+#ifdef __cplusplus
+extern "C" {
 #endif
 
+uint64_t ng_atou64_s(const char *s, const char **end);
+uint32_t ng_atou32_s(const char *s, const char **end);
+uint64_t ng_atou64(const char *str, uint8_t len, const char **end);
+uint32_t ng_atou32(const char *str, uint8_t len, const char **end);
+
+uint32_t ng_htou32(const char *str, uint8_t len, const char **end);
+uint64_t ng_htou64(const char *str, uint8_t len, const char **end);
+void ng_u64toh(uint64_t v, char *str, uint8_t len);
+void ng_u32toh(uint32_t v, char *str, uint8_t len);
+
+void test_perf_atoi(void);
+
+static __ng_inline__ int64_t 
+ng_atoi64(const char *str, uint8_t len, const char **end)
+{
+  if (len > NG_INT64_STR_LEN_MAX)
+  {
+    *end = str;
+    return 0;
+  } 
+  
+  if (*str == '-')
+  {
+    return -ng_atou64(str+1, len-1, end);
+  }
+  else if (*str == '+')
+  {
+    return ng_atou64(str+1, len-1, end);
+  }
+  else
+  {
+    return ng_atou64(str, len, end);
+  }
+}
+
+static __ng_inline__ int32_t 
+ng_atoi32(const char *str, uint8_t len, const char **end)
+{
+  if (len > NG_INT32_STR_LEN_MAX)
+  {
+    *end = str;
+    return 0;
+  } 
+  
+  if (*str == '-')
+  {
+    return -ng_atou32(str+1, len-1, end);
+  }
+  else if (*str == '+')
+  {
+    return ng_atou32(str+1, len-1, end);
+  }
+  else
+  {
+    return ng_atou32(str, len, end);
+  }
+}
+
+static __ng_inline__ int64_t 
+ng_atoi64_s(const char *s, const char **end)
+{
+  if (*s == '-')
+  {
+    return -ng_atou64_s(s+1, end);
+  }
+  else if (*s == '+')
+  {
+    return ng_atou64_s(s+1, end);
+  }
+  else
+  {
+    return ng_atou64_s(s, end);
+  }
+}
+
+static __ng_inline__ int32_t 
+ng_atoi32_s(const char *s, const char **end)
+{
+  if (*s == '-')
+  {
+    return -ng_atou32_s(s+1, end);
+  }
+  else if (*s == '+')
+  {
+    return ng_atou32_s(s+1, end);
+  }
+  else
+  {
+    return ng_atou32_s(s, end);
+  }
+}
+
+static __ng_inline__ int64_t 
+ng_atoi(const char *str, uint8_t len)
+{
+  const char *end;
+  if (len == 0)
+    len = strlen(str);
+  return ng_atoi64(str, len, &end);
+}
+
+static __ng_inline__ uint64_t 
+ng_atoui(const char *str, uint8_t len)
+{
+  const char *end;
+  return ng_atou64(str, len, &end);
+}
+
+#ifdef __cplusplus
+}
 #endif
+
+/**@}*/
+
+#endif
+

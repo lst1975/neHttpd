@@ -245,7 +245,6 @@ ng_singlerw_ring_dump(ng_singlerw_ring_s *ring)
 #define RTE_MEMZONE_NAMESIZE 64
 #define RTE_ATOMIC(t) NG_ATOMIC_T(t)
 #define RTE_TAILQ_RING_NAME "RTE_RING"
-#define RTE_CACHE_LINE_SIZE 64
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
 typedef uint64_t unaligned_uint64_t __rte_aligned(1);
 #define RTE_CACHE_GUARD_LINES 1

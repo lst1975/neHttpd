@@ -176,7 +176,7 @@ _hresponse_parse_header(const char *buffer, size_t len)
     log_error("Parse error reading HTTP code");
     goto clean1;
   }
-  res->errcode = atoi(str);
+  res->errcode = ng_atoi(str, 0);
 
   /* stage 3: description text */
   str = (char *) strtok_r(s1, "\r\n", &s2);
@@ -315,6 +315,7 @@ read_header:                   /* for errorcode: 100 (continue) */
     goto clean2;
   }
 
+  ng_free_data_buffer(&res->data);
   *out = res;
   return H_OK;
   

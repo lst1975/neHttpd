@@ -101,6 +101,7 @@
 
 #include "nanohttp-json.h"
 #include "nanohttp-user.h"
+#include "nanohttp-logging.h"
 
 /** @cond DO_NOT_DOCUMENT */
 
@@ -2137,15 +2138,14 @@ static int __json_pad_print(JSON_PRINTER_f printer,
 
 int json_printer_default(httpd_buf_t *b, const char *fmt, ...)
 {
-  size_t n;
   va_list args;
 
   HTTPD_UNUSED(b);
 
   va_start(args, fmt);
-  n = vprintf(fmt, args);
+  _vnanohttp_log_printf(NANOHTTP_LOG_INFO, fmt, args);
   va_end(args);
-  return n;
+  return 0;
 }
 
 static int 

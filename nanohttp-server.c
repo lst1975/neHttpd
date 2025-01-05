@@ -312,6 +312,11 @@ void httpd_thread_init(THREAD_T *tid)
 BOOL WINAPI
 _httpd_term(DWORD sig)
 {
+  if (sig == SIGSEGV)
+  {
+    signal_handler_segfault(sig);
+    return TRUE;
+  }
   /* log_debug ("Got signal %d", sig); */
   if (sig == _httpd_terminate_signal
     || sig == SIGTERM || sig == SIGABRT)
@@ -325,6 +330,12 @@ static void
 _httpd_term(int sig)
 {
   log_debug("Got signal %d", sig);
+
+  if (sig == SIGSEGV)
+  {
+    signal_handler_segfault(sig);
+    return;
+  }
 
   if (sig == _httpd_terminate_signal
     || sig == SIGTERM || sig == SIGABRT)
@@ -340,38 +351,43 @@ static void _httpd_sys_sleep(int secs)
   return;
 }
 
-static void
-_httpd_parse_arguments(int argc, char **argv)
+int
+httpd_parse_arguments(int argc, char **argv)
 {
-  int i;
+  int daemon = 0;
   
-  for (i = 1; i < argc; i++)
+  for (int i = 1; i < argc; i++)
   {
-    if (!strcmp(argv[i - 1], NHTTPD_ARG_PORT))
+    if (!strcmp(argv[i], NHTTPD_ARG_PORT))
     {
-      _httpd_port = atoi(argv[i]);
+      _httpd_port = ng_atoi(argv[i], 0);
     }
-    else if (!strcmp(argv[i - 1], NHTTPD_ARG_TERMSIG))
+    else if (!strcmp(argv[i], NHTTPD_ARG_TERMSIG))
     {
-      _httpd_terminate_signal = atoi(argv[i]);
+      _httpd_terminate_signal = ng_atoi(argv[i], 0);
     }
-    else if (!strcmp(argv[i - 1], NHTTPD_ARG_MAXCONN))
+    else if (!strcmp(argv[i], NHTTPD_ARG_MAXCONN))
     {
-      _httpd_max_connections = atoi(argv[i]);
+      _httpd_max_connections = ng_atoi(argv[i], 0);
     }
-    else if (!strcmp(argv[i - 1], NHTTPD_ARG_MAXCONN_PEND))
+    else if (!strcmp(argv[i], NHTTPD_ARG_MAXCONN_PEND))
     {
-      _httpd_max_pending_connections = atoi(argv[i]);
+      _httpd_max_pending_connections = ng_atoi(argv[i], 0);
     }
-    else if (!strcmp(argv[i - 1], NHTTPD_ARG_TIMEOUT))
+    else if (!strcmp(argv[i], NHTTPD_ARG_TIMEOUT))
     {
-      hsocket_set_timeout(atoi(argv[i]));
+      hsocket_set_timeout(ng_atoi(argv[i], 0));
+    }
+    else if (!strcmp(argv[i], NHTTPD_ARG_DAEMONIZE)
+      || !strcmp(argv[i], "-d"))
+    {
+      daemon = 1;
     }
   }
 
   log_verbose("socket bind to port '%d'", _httpd_port);
 
-  return;
+  return daemon;
 }
 
 static herror_t
@@ -503,8 +519,6 @@ herror_t
 httpd_init(int argc, char **argv)
 {
   herror_t status;
-
-  _httpd_parse_arguments(argc, argv);
 
   if (http_memcache_init() < 0)
   {
@@ -792,7 +806,7 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
   BUF_GO(&b, n);
 #else
   /* set date */
-  n = __ng_http_date(__BUF, 1);
+  n = __ng_http_date(__BUF, 1, NULL);
   if (n < 0)
   {
     log_warn("Tempary buffer size is too small: %d", __BUF_SZ);
@@ -1043,59 +1057,75 @@ httpd_free(httpd_conn_t *conn)
   return;
 }
 
-static int
-_httpd_decode_authorization(const char *_value, char **user, char **pass)
+static void *
+_httpd_decode_authorization(int *tmplen, 
+  const char *_value, size_t inlen, httpd_buf_t *user, 
+  httpd_buf_t *pass)
 {
+  size_t len, value_len;
   unsigned char *tmp, *tmp2;
-  size_t len, inlen;
-  const char *value = _value;
+  const char *value;
 
-  inlen = strlen(value);
-  len = inlen * 2;
+  len = B64_DECLEN(inlen);
   if (!(tmp = (unsigned char *)http_malloc(len)))
   {
     log_error("http_calloc failed (%s)", strerror(errno));
-    return -1;
+    return NULL;
   }
-
-  value = strstr(_value, " ") + 1;
-  log_verbose("Authorization (base64) = \"%s\"", value);
+  value = memchr(_value, ' ', inlen);
+  if (value == NULL)
+  {
+    log_error("Authorization malformed.");
+    http_free(tmp);
+    return NULL;
+  }
+  value++;
+  value_len = inlen - (value - _value);
+  log_verbose("Authorization (base64) = \"%.*s\"", value_len, value);
 
 #if __configUseStreamBase64
-  if (b64Decode_with_len(value, inlen - (value - _value), (char *)tmp, len) < 0)
+  len = b64Decode_with_len(value, value_len, (char *)tmp, len);
+#else
+  len = base64_decode_string((const unsigned char *)value, tmp);
+#endif
+  if (len < 0)
   {
     log_error("b64Decode failed");
     http_free(tmp);
-    return -1;
+    return NULL;
   }
-#else
-  base64_decode_string((const unsigned char *)value, tmp);
-#endif
 
-  log_verbose("Authorization (ascii) = \"%s\"", tmp);
+  log_verbose("Authorization (ascii) = \"%.*s\"", len, tmp);
 
-  if ((tmp2 = (unsigned char *)strstr((char *)tmp, ":")))
+  *tmplen = len;
+  tmp2 = (unsigned char *)memchr((char *)tmp, ':', len);
+  if (tmp2 != NULL)
   {
-    *tmp2++ = '\0';
-    *pass = http_strdup((char *)tmp2);
+    user->len = tmp2 - tmp;
+    user->ptr = tmp;
+
+    tmp2++;
+    pass->len = tmp + len - tmp2;
+    pass->ptr = tmp2;
   }
   else
   {
-    *pass = http_strdup("");
+    pass->len = 0;
+    pass->cptr = "";
+    user->len = len;
+    user->ptr = tmp;
   }
-  *user = http_strdup((char *)tmp);
-
-  http_free(tmp);
-
-  return 0;
+  
+  return tmp;
 }
 
 static int
 _httpd_authenticate_request(struct hrequest_t * req, httpd_auth auth)
 {
-  char *user, *pass;
+  httpd_buf_t user, pass;
   hpair_t *authorization_pair;
-  int ret;
+  int ret, tmplen;
+  void *tmp;
 
   if (!auth)
     return 1;
@@ -1108,20 +1138,21 @@ _httpd_authenticate_request(struct hrequest_t * req, httpd_auth auth)
     return 0;
   }
 
-  if (_httpd_decode_authorization(authorization_pair->value, &user, &pass))
+  tmp = _httpd_decode_authorization(&tmplen, authorization_pair->value, 
+    authorization_pair->value_len, &user, &pass);
+  if (tmp == NULL)
   {
     log_error("httpd_base64_decode_failed");
     return 0;
   }
 
-  if ((ret = auth(req, user, pass)))
-    log_debug("Access granted for user=\"%s\"", user);
+  if ((ret = auth(req, &user, &pass)))
+    log_debug("Access granted for user=\"%.*s\"", user.len, user.cptr);
   else
-    log_info("Authentication failed for user=\"%s\"", user);
+    log_info("Authentication failed for user=\"%s\"", user.len, user.cptr);
 
-  http_free(user);
-  http_free(pass);
-
+  ng_bzero(tmp, tmplen);
+  http_free(tmp);
   return ret;
 }
 
@@ -1806,7 +1837,8 @@ herror_t httpd_run(void)
   _httpd_register_signal_handler(_httpd_terminate_signal);
   _httpd_register_signal_handler(SIGTERM);
   _httpd_register_signal_handler(SIGABRT);
-
+  _httpd_register_signal_handler(SIGSEGV);
+ 
   if (httpd_create_cond(&main_cond))
   {
     log_error("httpd_create_cond failed");

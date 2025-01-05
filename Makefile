@@ -89,6 +89,8 @@ objects = \
 	nanohttp-mem.o \
 	nanohttp-system.o \
 	nanohttp-time.o \
+	nanohttp-ctype.o \
+	nanohttp-atoi.o \
 	nanohttp-buffer.o \
 	nanohttp-urlencode.o
 

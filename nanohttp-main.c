@@ -67,6 +67,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <limits.h>  // For PATH_MAX
+#include <syslog.h>
 
 #include "nanohttp-logging.h"
 #include "nanohttp-server.h"
@@ -81,12 +82,14 @@
 #include "nanohttp-system.h"
 
 static int
-simple_authenticator(struct hrequest_t *req, const char *user, const char *password)
+simple_authenticator(struct hrequest_t *req, const httpd_buf_t *user, 
+  const httpd_buf_t *password)
 {
   httpd_user_t *auth_user;
-  log_debug("logging in user=\"%s\" password=\"%s\"\n", user, password);
+  log_debug("logging in user=\"%.*s\" password=\"%.*s\"\n", 
+    user->len, user->cptr, password->len, password->cptr);
 
-  auth_user = nanohttp_users_match(user, strlen(user), password, strlen(password));
+  auth_user = nanohttp_users_match(user->buf, user->len, password->buf, password->len);
   if (auth_user == NULL) {
     log_error("authenticate failed\n");
     return 0;
@@ -1251,28 +1254,54 @@ static int json_test(void)
 }
 #endif
 
-void main_print_license(void)
+void main_print_license(int daemonize)
 {
-  fprintf(stderr, "\n%s\n", __HTTPD_LICENSE);
-  fprintf(stderr, "Ver: %s, running on OS: %s\n\n", NG_VER_BUILD, ng_os_info.ng_os_version);
+  const char *p;
+  const char *s = __HTTPD_LICENSE;
+  int len = sizeof(__HTTPD_LICENSE)-1;
+  const char *e = s + len;
+
+  log_print("\n");
+  while (1) {
+    p = memchr(s, '\n', len);
+    if (p == NULL)
+      break;
+    if (daemonize)
+      log_print("%.*s", p - s, s);
+    else
+      log_print("%.*s", p + 1 - s, s);
+    s = p + 1;
+    len = e - s;
+  };
+  log_print("\n");
+  
+  log_print("Ver: %s, running on OS: %s\n\n", NG_VER_BUILD, ng_os_info.ng_os_version);
 }
 
 int
 main(int argc, char **argv)
 {
+  int daemonize; 
   herror_t status;
 
   nanohttp_log_set_loglevel(_nanoConfig_HTTPD_LOG_LEVEL);
     
+  daemonize = httpd_parse_arguments(argc, argv);
+  if (daemonize)
+  {
+    nanohttp_log_set_logtype(NANOHTTP_LOG_SYSLOG);
+    http_daemonize(1,0);
+  }
+  
   if (ng_os_init() != ng_ERR_NONE)
   {
-    fprintf(stderr, "Cannot init OS\n");
+    log_stderr("Cannot init OS\n");
     goto error0;
   }
     
   if (httpd_init(argc, argv))
   {
-    fprintf(stderr, "Cannot init httpd\n");
+    log_stderr("Cannot init httpd\n");
     goto error1;
   }
 
@@ -1289,7 +1318,7 @@ main(int argc, char **argv)
   if ((status = httpd_register_secure("/", root_service, 
     simple_authenticator, "ROOT")) != H_OK)
   {
-    fprintf(stderr, "Cannot register service (%s)\n", 
+    log_stderr("Cannot register service (%s)\n", 
       herror_message(status));
     goto error2;
   }
@@ -1297,7 +1326,7 @@ main(int argc, char **argv)
   if ((status = httpd_register(_nanoConfig_HTTPD_FILE_SERVICE, 
     file_service, "FILE")) != H_OK)
   {
-    fprintf(stderr, "Cannot register service (%s)\n", 
+    log_stderr("Cannot register service (%s)\n", 
       herror_message(status));
     goto error2;
   }
@@ -1305,7 +1334,7 @@ main(int argc, char **argv)
   if ((status = httpd_register_secure("/secure", secure_service, 
     simple_authenticator, "SECURE")) != H_OK)
   {
-    fprintf(stderr, "Cannot register secure service (%s)\n", 
+    log_stderr("Cannot register secure service (%s)\n", 
       herror_message(status));
     goto error2;
   }
@@ -1313,7 +1342,7 @@ main(int argc, char **argv)
   if ((status = httpd_register_secure("/headers", headers_service, 
     simple_authenticator, "HEAD")) != H_OK)
   {
-    fprintf(stderr, "Cannot register headers service (%s)\n", 
+    log_stderr("Cannot register headers service (%s)\n", 
       herror_message(status));
     goto error2;
   }
@@ -1321,7 +1350,7 @@ main(int argc, char **argv)
   if ((status = httpd_register_secure("/mime", mime_service, 
     simple_authenticator, "MIME")) != H_OK)
   {
-    fprintf(stderr, "Cannot register MIME service (%s)\n", 
+    log_stderr("Cannot register MIME service (%s)\n", 
       herror_message(status));
     goto error2;
   }
@@ -1329,7 +1358,7 @@ main(int argc, char **argv)
   if ((status = httpd_register_secure("/post/wia.bin", post_service, 
     simple_authenticator, "POST")) != H_OK)
   {
-    fprintf(stderr, "Cannot register POST service (%s)\n", 
+    log_stderr("Cannot register POST service (%s)\n", 
       herror_message(status));
     goto error2;
   }
@@ -1337,7 +1366,7 @@ main(int argc, char **argv)
   if ((status = httpd_register("/favicon.ico", root_service, 
     "FAVICON")) != H_OK)
   {
-    fprintf(stderr, "Cannot register default service (%s)\n", 
+    log_stderr("Cannot register default service (%s)\n", 
       herror_message(status));
     goto error2;
   }
@@ -1345,7 +1374,7 @@ main(int argc, char **argv)
   if ((status = httpd_register_secure(_nanoConfig_HTTPD_DATA_SERVICE, 
     data_service, simple_authenticator, "DATA")) != H_OK)
   {
-    fprintf(stderr, "Cannot register DATA service (%s)\n", 
+    log_stderr("Cannot register DATA service (%s)\n", 
       herror_message(status));
     goto error2;
   }
@@ -1353,27 +1382,30 @@ main(int argc, char **argv)
   if ((status = httpd_register_default_secure("/error", default_service, 
     simple_authenticator)) != H_OK)
   {
-    fprintf(stderr, "Cannot register default service (%s)\n", 
+    log_stderr("Cannot register default service (%s)\n", 
       herror_message(status));
     goto error2;
   }
 
   test_content_type();
   ng_os_dump(NULL, NULL);
-  main_print_license();
+  main_print_license(daemonize);
 
-  fprintf(stderr, "\nneHTTPd is listening on PORT %d\n\n\n", 
+  log_print("neHTTPd is listening on PORT %d\n", 
     _nanoConfig_HTTPD_PORT);
 
   if ((status = httpd_run()) != H_OK)
   {
-    fprintf(stderr, "Cannot run httpd (%s)\n", herror_message(status));
+    log_stderr("Cannot run httpd (%s)\n", herror_message(status));
     goto error2;
   }
 
+  if (daemonize)
+    closelog();
+    
   httpd_destroy();
   ng_os_deinit();
-  main_print_license();
+  main_print_license(daemonize);
 
   return 0;
     
@@ -1383,5 +1415,7 @@ error2:
 error1:
   ng_os_deinit();
 error0:
+  if (daemonize)
+    closelog();
   return 1;
 }

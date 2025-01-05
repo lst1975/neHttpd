@@ -106,6 +106,7 @@
 #include <errno.h>
 #endif
 
+#include "nanohttp-common.h"
 #include "nanohttp-logging.h"
 #include "nanohttp-error.h"
 #include "nanohttp-url.h"
@@ -230,7 +231,7 @@ hurl_parse(struct hurl_t *url, const char *urlstr)
   {
     size = iport - ihost;
     strncpy(tmp, &urlstr[ihost + 1], size);
-    url->port = atoi(tmp);
+    url->port = ng_atoi(tmp, 0);
   }
 
   /* find path */

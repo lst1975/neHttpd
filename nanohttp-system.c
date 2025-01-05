@@ -1215,6 +1215,14 @@ uint64_t ng_get_freq(void)
   return (uint64_t)freq;
 }
 
+static void __ng_get_tzname(void) 
+{
+  time_t now = time(NULL);
+  struct tm *local = localtime(&now);
+  snprintf(ng_os_info.tz+1, sizeof(ng_os_info.tz)-1, "%s", local->tm_zone);
+  ng_os_info.tz[0]=' ';
+}
+
 ng_result_t ng_os_init(void)
 {
   ng_result_t r;
@@ -1231,6 +1239,7 @@ ng_result_t ng_os_init(void)
     goto clean1;
 
   ng_update_time();
+  __ng_get_tzname();
 
   if (ng_os_info.cacheline_size &&
     ng_os_info.cacheline_size != RTE_CACHE_LINE_SIZE)
@@ -1316,6 +1325,7 @@ void ng_os_dump(httpd_buf_t *b, void *printer)
     pr(b, "%-16s: %.2f GHz\n", "CPU Frequency", ng_os_info.freq/1000000000);
   else
     pr(b, "%-16s: %.2f MHz\n", "CPU Frequency", ng_os_info.freq/1000000);
+  pr(b, "%-16s: %s\n", "Timezone Name", ng_os_info.tz+1);
   pr(b, "%-16s: %"PRIu64"\n", "Timezone Offset", ng_os_info.tz_offset);
 
   if (!ng_os_get_meminfo(&m))
@@ -1326,3 +1336,93 @@ void ng_os_dump(httpd_buf_t *b, void *printer)
     pr(b, "%-28s: %"PRIu64"\n", "Available Virtual Memory", m.ullAvailVirtual / (1024 * 1024));
   }
 }
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <execinfo.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <syslog.h>
+
+void http_daemonize(int nochdir, int noclose) {
+  pid_t pid;
+  
+  // Fork off the parent process
+  pid = fork();
+  
+  // If the fork failed, exit
+  if (pid < 0) {
+    exit(EXIT_FAILURE);
+  }
+  
+  // If we got a good PID, exit the parent process
+  if (pid > 0) {
+    exit(EXIT_SUCCESS);
+  }
+  
+  // Change the file mode mask
+  umask(0);
+  
+  // Open any logs here
+  openlog("httpd", LOG_PID, LOG_DAEMON);
+  
+  // Create a new SID for the child process
+  if (setsid() < 0) {
+    // Log the failure
+    syslog(LOG_ERR, "Could not create new SID for child process");
+    exit(EXIT_FAILURE);
+  }
+  
+  // Change the current working directory
+  if (!nochdir){
+    if ((chdir("/")) < 0) {
+      // Log the failure
+      syslog(LOG_ERR, "Could not change working directory to /");
+      exit(EXIT_FAILURE);
+    }
+  }
+  
+  if (!noclose){
+    // Close out the standard file descriptors
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+    
+    // Optionally, redirect standard file descriptors to /dev/null
+    open("/dev/null", O_RDONLY); // stdin
+    open("/dev/null", O_RDWR);   // stdout
+    open("/dev/null", O_RDWR);   // stderr
+  }
+  
+  // Daemon-specific initialization goes here
+  syslog(LOG_INFO, "Daemon started successfully");
+}
+
+// Maximum number of stack frames to capture
+#define MAX_FRAMES 64
+void signal_handler_segfault(int sig) {
+  void *buffer[MAX_FRAMES];
+  char **symbols;
+  int num_frames;
+  
+  // Get the stack frames
+  num_frames = backtrace(buffer, MAX_FRAMES);
+  
+  // Get the symbols (function names, file names, line numbers)
+  symbols = backtrace_symbols(buffer, num_frames);
+  
+  // Print the stack trace
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  for (int i = 0; i < num_frames; i++) {
+      fprintf(stderr, "%s\n", symbols[i]);
+  }
+  
+  // Free the allocated memory for symbols
+  free(symbols);
+  
+  // Exit the program
+  exit(1);
+}
+

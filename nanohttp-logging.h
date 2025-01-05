@@ -85,6 +85,8 @@
 #ifndef __nanohttp_logging_h
 #define __nanohttp_logging_h
 
+#include <stdarg.h>
+
 /** @file nanohttp-logging.h Logging definitions and prototypes
  *
  * @defgroup NANOHTTP_LOGGING Logging interface
@@ -103,18 +105,17 @@
 /** Loglevel definition */
 typedef enum nanohttp_loglevel
 {
-  NANOHTTP_LOG_OFF,     /**< Logging completely turned off (use at your
-			     own risk). */
-  NANOHTTP_LOG_VERBOSE, /**< Debugging messages that may overflow the
-			     log */
+  NANOHTTP_LOG_OFF,     /**< Logging completely turned off (use at your own risk). */
+  NANOHTTP_LOG_VERBOSE, /**< Debugging messages that may overflow the log */
   NANOHTTP_LOG_DEBUG,   /**< Message that contain information normally
-			     of use only when debugging the library */
+                  			     of use only when debugging the library */
   NANOHTTP_LOG_INFO,    /**< Informaional messages */
   NANOHTTP_LOG_WARN,    /**< Warning messages */
   NANOHTTP_LOG_ERROR,   /**< A condition that should be corrected
-			     immediately, such as a broken network
-			     connection */
-  NANOHTTP_LOG_FATAL    /**< A panic condition */
+                  			     immediately, such as a broken network
+                  			     connection */
+  NANOHTTP_LOG_FATAL,   /**< A panic condition */
+  NANOHTTP_LOG_STDERR   /**< Use syslog or stderr */
 } nanohttp_loglevel_t;
 
 #define NANOHTTP_LOG_LEVEL_OFF_STRING     "OFF"
@@ -124,6 +125,7 @@ typedef enum nanohttp_loglevel
 #define NANOHTTP_LOG_LEVEL_WARN_STRING    "WARN"
 #define NANOHTTP_LOG_LEVEL_ERROR_STRING   "ERROR"
 #define NANOHTTP_LOG_LEVEL_FATAL_STRING   "FATAL"
+#define NANOHTTP_LOG_LEVEL_STDERR_STRING  "ERROR"
 #define NANOHTTP_LOG_LEVEL_UNKNOWN_STRING "UNKNOWN"
 
 #ifdef __cplusplus
@@ -182,6 +184,7 @@ extern char *VisualC_funcname(const char *file, int line); /* not thread safe! *
 }
 #endif
 
+void _vnanohttp_log_printf(nanohttp_loglevel_t level, const char *format, va_list ap);
 void _nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...);
 
 #define log_verbose(fmt, ...) _nanohttp_log_printf(NANOHTTP_LOG_VERBOSE, \
@@ -207,31 +210,35 @@ void _nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...);
 #define log_fatal(fmt, ...)   _nanohttp_log_printf(NANOHTTP_LOG_FATAL, \
                              NANOHTTP_LOG_LEVEL_FATAL_STRING " %s: " fmt "\n", \
                              __FUNCTION__, ## __VA_ARGS__)
+#define log_stderr(fmt, ...)  _nanohttp_log_printf(NANOHTTP_LOG_STDERR, \
+                             NANOHTTP_LOG_LEVEL_STDERR_STRING " %s: " fmt "\n", \
+                             __FUNCTION__, ## __VA_ARGS__)
+#define log_print(fmt, ...)  _nanohttp_log_printf(NANOHTTP_LOG_INFO, fmt, ## __VA_ARGS__)
 /**@}*/
 
-#define log_LOG_VERBOSE  log_verbose
-#define log_LOG_DEBUG    log_debug
-#define log_NG_LOG_INFO  log_info
-#define log_NG_LOG_WARN  log_warn
-#define log_NG_LOG_ERROR log_error
-#define log_NG_LOG_FATAL log_fatal
+#define log_LOG_VERBOSE   log_verbose
+#define log_LOG_DEBUG     log_debug
+#define log_NG_LOG_INFO   log_info
+#define log_NG_LOG_WARN   log_warn
+#define log_NG_LOG_ERROR  log_error
+#define log_NG_LOG_FATAL  log_fatal
+#define log_NG_LOG_SYSLOG log_stderr
 
 /** Loglevel definition */
 typedef enum __ng_loglevel ng_loglevel_e;
 enum __ng_loglevel
 {
-  NG_LOG_OFF,     /**< Logging completely turned off (use at your
-			     own risk). */
-  NG_LOG_VERBOSE, /**< Debugging messages that may overflow the
-			     log */
+  NG_LOG_OFF,     /**< Logging completely turned off (use at your own risk). */
+  NG_LOG_VERBOSE, /**< Debugging messages that may overflow the log */
   NG_LOG_DEBUG,   /**< Message that contain information normally
-			     of use only when debugging the library */
+            			     of use only when debugging the library */
   NG_LOG_INFO,    /**< Informaional messages */
   NG_LOG_WARN,    /**< Warning messages */
   NG_LOG_ERROR,   /**< A condition that should be corrected
-			     immediately, such as a broken network
-			     connection */
-  NG_LOG_FATAL    /**< A panic condition */
+            			     immediately, such as a broken network
+            			     connection */
+  NG_LOG_FATAL,   /**< A panic condition */
+  NG_LOG_STDERR   /**< Use syslog or stderr */
 };
 
 #define NG_LOG_OFF_STRING     "OFF"
@@ -241,6 +248,7 @@ enum __ng_loglevel
 #define NG_LOG_WARN_STRING    "WARN"
 #define NG_LOG_ERROR_STRING   "ERROR"
 #define NG_LOG_FATAL_STRING   "FATAL"
+#define NG_LOG_STDERR_STRING  "STDERR"
 #define NG_LOG_UNKNOWN_STRING "UNKNOWN"
 
 #define ng_log_errno(type, __log, errno, fmt, ...) do { \

@@ -93,6 +93,7 @@ struct _ng_os_info {
   size_t     cacheline_size;
   uint64_t timer_freq;
   uint64_t tz_offset;
+  char       tz[8];
 };
 
 struct _meminfo {
@@ -114,5 +115,7 @@ int ng_os_usleep(int usec);
 void ng_gettimeofday(ng_tmv_s *tp);
 uint64_t ng_get_freq(void);
 void ng_os_dump(httpd_buf_t *b, void *printer);
+void signal_handler_segfault(int sig);
+void http_daemonize(int nochdir, int noclose);
 
 #endif

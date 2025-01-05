@@ -240,7 +240,8 @@
 					         simultanous connections */
 #define NHTTPD_ARG_MAXCONN_PEND  "-NHTTPmaxconnPend" /**< Maximum number of
 					         pending connections for listen*/
-#define NHTTPD_ARG_TIMEOUT  "-NHTTPtimeout" /**< Timeout on reads */
+#define NHTTPD_ARG_TIMEOUT   "-NHTTPtimeout" /**< Timeout on reads */
+#define NHTTPD_ARG_DAEMONIZE "-NHTTPDaemon" /**< Run as a daemon */
 /**@}*/
 /**@}*/
 
@@ -262,7 +263,8 @@ httpd_conn_t;
 typedef void (*httpd_service) (httpd_conn_t *conn, struct hrequest_t *req);
 
 /** Authentication callback function for a nanoHTTP service. */
-typedef int (*httpd_auth) (struct hrequest_t *req, const char *user, const char *pass);
+typedef int (*httpd_auth) (struct hrequest_t *req, 
+                    const httpd_buf_t *user, const httpd_buf_t *pass);
 
 #ifdef __NHTTP_INTERNAL
 /** Service statistics per nanoHTTP service. */
@@ -476,6 +478,8 @@ extern herror_t httpd_send_internal_error(httpd_conn_t * conn, const char *msg);
  * @return H_OK on success.
  */
 extern herror_t httpd_send_not_implemented(httpd_conn_t *conn, const char *msg);
+
+extern int httpd_parse_arguments(int argc, char **argv);
 
 extern httpd_buf_t __nanohttp_html[];
 #define nanohttp_index_html_head_JS_MENU_GUEST &__nanohttp_html[0]

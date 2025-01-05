@@ -175,44 +175,45 @@ nanohttp_log_set_logfile(const char *filename)
 }
 
 void
-_nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...)
+_vnanohttp_log_printf(nanohttp_loglevel_t level, const char *format, va_list ap)
 {
   const char *filename;
-  va_list ap;
 
   if (level < _nanohttp_log_loglevel)
     return;
 
-  va_start(ap, format);
-
   if (_nanohttp_logtype & NANOHTTP_LOG_FOREGROUND)
-    vfprintf(stdout, format, ap);
-
+    vfprintf(level==NANOHTTP_LOG_STDERR ?stderr:stdout, format, ap);
 #ifdef HAVE_SYSLOG_H
-  if (_nanohttp_logtype & NANOHTTP_LOG_SYSLOG)
+  else if (_nanohttp_logtype & NANOHTTP_LOG_SYSLOG)
   {
     int syslog_level;
 
     switch (level)
     {
-      case NANOHTTP_LOGLEVEL_VERBOSE:
-      case NANOHTTP_LOGLEVEL_DEBUG:
+      case NANOHTTP_LOG_VERBOSE:
+      case NANOHTTP_LOG_DEBUG:
         syslog_level = LOG_DEBUG;
-	break;
-      case NANOHTTP_LOGLEVEL_INFO:
-	syslog_level = LOG_INFO;
-	break;
-      case NANOHTTP_LOGLEVEL_WARN:
-	syslog_level = LOG_WARNING;
-	break;
-      case NANOHTTP_LOGLEVEL_ERROR:
-	syslog_level = LOG_ERR;
+      	break;
+      case NANOHTTP_LOG_INFO:
+        syslog_level = LOG_INFO;
+      	break;
+      case NANOHTTP_LOG_WARN:
+      	syslog_level = LOG_WARNING;
+      	break;
+      case NANOHTTP_LOG_STDERR:
+      case NANOHTTP_LOG_ERROR:
+      	syslog_level = LOG_ERR;
         break;
-      case NANOHTTP_LOGLEVEL_FATAL:
-	syslog_level = LOG_CRIT;
-	break;
+      case NANOHTTP_LOG_FATAL:
+      	syslog_level = LOG_CRIT;
+      	break;
+      default:
+        syslog_level = 0;
+        break;
     }
-    vsyslog(syslog_level, format, ap);
+    if (syslog_level)
+      vsyslog(syslog_level, format, ap);
   }
 #endif
 
@@ -230,6 +231,17 @@ _nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...)
       fclose(fp);
     }
   }
+}
 
+void
+_nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...)
+{
+  va_list ap;
+
+  if (level < _nanohttp_log_loglevel)
+    return;
+
+  va_start(ap, format);
+  _vnanohttp_log_printf(level, format, ap);
   va_end(ap);
 }

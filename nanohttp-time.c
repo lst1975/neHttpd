@@ -1039,7 +1039,8 @@ static const char *min_sec_hour_day_name[] =
     " 54 "," 55 "," 56 "," 57 "," 58 "," 59 "," 60 "
   };
 
-int __ng_http_date(char *buf, int len, int isHttp)
+int __ng_http_date(char *buf, int len, int isHttp, 
+  const char *tz)
 {
   char *p;
   ng_tmv_s tv;
@@ -1086,7 +1087,8 @@ int __ng_http_date(char *buf, int len, int isHttp)
   p += 3;
   *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm.tm_sec]+1);
   p += 2;
-  *(uint32_t*)p = *(const uint32_t*)" GMT";
+  if (tz == NULL) tz = " GMT";
+  *(uint32_t*)p = *(const uint32_t*)tz;
   p += 4;
   if (isHttp)
   {
@@ -1098,7 +1100,7 @@ int __ng_http_date(char *buf, int len, int isHttp)
 
 int ng_http_date(httpd_buf_t *b)
 {
-  return __ng_http_date(b->buf, b->len, 1);
+  return __ng_http_date(b->buf, b->len, 1, NULL);
 }
 
 void ng_date_print(void)
@@ -1106,7 +1108,7 @@ void ng_date_print(void)
   char date[HTTPD_DATE_STRLEN_MIN];
   httpd_buf_t b;
   BUF_SET(&b, date, sizeof(date));
-  __ng_http_date(b.buf, b.len, 0);
+  __ng_http_date(b.buf, b.len, 0, ng_os_info.tz);
   fprintf(stdout, "\nSystem is already running %"PRIu64" seconds\n", 
     ng_get_time() - (uint64_t)startime);
   fprintf(stdout, "Date   : %.*s\n\n", (int)b.len, b.cptr);
