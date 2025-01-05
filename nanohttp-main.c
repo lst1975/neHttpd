@@ -569,8 +569,12 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
 #else      
         len = base64_decode_string((const unsigned char *)favorICON, bf);
 #endif
-        if (httpd_set_header(conn, HEADER_CONTENT_TYPE, "image/png")) break;
-
+        if (httpd_set_header(conn, HEADER_CONTENT_TYPE, 
+          sizeof(HEADER_CONTENT_TYPE)-1, "image/png", 9)) 
+        {
+          log_error("httpd_set_header failed");
+          break;
+        }
         r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
         if (r != NULL) break;
         r = http_output_stream_write(conn->out, bf, len);

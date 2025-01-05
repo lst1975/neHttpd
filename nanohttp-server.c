@@ -826,14 +826,6 @@ httpd_find_service(const char *context, int context_len)
   return _httpd_services_default;
 }
 
-void
-httpd_response_set_content_type(httpd_conn_t * res, const char *content_type)
-{
-  strncpy(res->content_type, content_type, sizeof(res->content_type)-1);
-
-  return;
-}
-
 herror_t
 httpd_send_header(httpd_conn_t * res, int code, const char *text)
 {
@@ -943,6 +935,9 @@ _httpd_send_html_message(httpd_conn_t *conn, int reason,
   const char *phrase, const char *msg)
 {
   herror_t r;
+  char *buf;
+  char slen[5];
+  size_t len, n;
   
   const char *tmpl =
     "<html>"
@@ -955,18 +950,38 @@ _httpd_send_html_message(httpd_conn_t *conn, int reason,
         "<div>Message: '%s'</div>"
       "</body>"
     "</html>";
-  char buf[4096];
-  char slen[5];
-  size_t len;
 
-  len = snprintf(buf, 4096, tmpl, phrase, phrase, msg);
-  snprintf(slen, 5, "%lu", len);
-  httpd_set_header(conn, HEADER_CONTENT_LENGTH, slen);
+#define __BUF_SZ 4096
+  buf = http_malloc(__BUF_SZ);
+  if (buf == NULL)
+  {
+    r = herror_new("_httpd_send_html_message", GENERAL_ERROR,
+                      "Failed to malloc tempary buffer!");
+    goto clean0;
+  }
+  
+  len = snprintf(buf, __BUF_SZ, tmpl, phrase, phrase, msg);
+  n = snprintf(slen, 5, "%lu", len);
+  if (httpd_set_header(conn, HEADER_CONTENT_LENGTH, 
+    sizeof(HEADER_CONTENT_LENGTH)-1, slen, n))
+  {
+    r = herror_new("_httpd_send_html_message", GENERAL_ERROR,
+                      "Failed to httpd_set_header!");
+    goto clean1;
+  }
 
-  r = httpd_send_header(conn, reason, phrase);
-  if (r != H_OK)
-    return r;
-  return http_output_stream_write(conn->out, (unsigned char *)buf, len);
+  if ((r = httpd_send_header(conn, reason, phrase)) != H_OK)
+  {
+    goto clean1;
+  }
+  
+  r = http_output_stream_write(conn->out, (unsigned char *)buf, len);
+#undef __BUF_SZ
+
+clean1:
+  http_free(buf);
+clean0:
+  return r;
 }
 
 herror_t
@@ -1019,10 +1034,17 @@ httpd_send_unauthorized(httpd_conn_t *conn, const char *realm)
   }
   else
   {
+    int n;
     char buf[128];
     
-    snprintf(buf, 128, "Basic realm=\"%s\"", realm);
-    httpd_set_header(conn, HEADER_WWW_AUTHENTICATE, buf);
+    n = snprintf(buf, 128, "Basic realm=\"%s\"", realm);
+    if (httpd_set_header(conn, HEADER_WWW_AUTHENTICATE, 
+      sizeof(HEADER_WWW_AUTHENTICATE)-1, buf, n));
+    {
+      r = herror_new("httpd_send_unauthorized", GENERAL_ERROR,
+                        "Failed to httpd_set_header!");
+      return r;
+    }
     
     r = httpd_send_header(conn, 401, HTTP_STATUS_401_REASON_PHRASE);
     if (r != H_OK)
@@ -1397,7 +1419,8 @@ httpd_session_main(void *data)
 }
 
 int
-httpd_set_header(httpd_conn_t * conn, const char *key, const char *value)
+httpd_set_header(httpd_conn_t *conn, const char *key, int keylen, 
+  const char *value, int valuelen)
 {
   hpair_t *p;
 
@@ -1407,30 +1430,39 @@ httpd_set_header(httpd_conn_t * conn, const char *key, const char *value)
     return 0;
   }
 
-  for (p = conn->header; p; p = p->next)
+  p = hpairnode_get_len(conn->header, key, keylen);
+  if (p == NULL)
   {
-    if (p->key && !strcmp(p->key, key))
-    {
-      http_free(p->value);
-      p->value = http_strdup(value);
-      return 1;
-    }
+    p = hpairnode_new(key, value, conn->header);
+    if (p != NULL)
+      conn->header = p;
+    else
+      return -1;
   }
-
-  conn->header = hpairnode_new(key, value, conn->header);
+  else
+  {
+    http_free(p->value);
+    p->value = http_strdup_size(value, valuelen);
+    if (p->value == NULL)
+      return -1;
+  }
 
   return 0;
 }
 
-void
-httpd_set_headers(httpd_conn_t * conn, hpair_t * header)
+int
+httpd_set_headers(httpd_conn_t * conn, hpair_t *header)
 {
   while (header)
   {
-    httpd_set_header(conn, header->key, header->value);
+    int r = httpd_set_header(conn, header->key, header->key_len, 
+      header->value, header->value_len);
+    if (r < 0)
+      return r;
     header = header->next;
   }
-  return;
+  
+  return 0;
 }
 
 int
@@ -2045,41 +2077,68 @@ httpd_mime_send_header(httpd_conn_t * conn, const char *related_start,
                        const char *related_start_info,
                        const char *related_type, int code, const char *text)
 {
-  char buffer[1024];
-  char temp[512];
-  char boundary[250];
+  int n;
+  herror_t r;
+  char *buffer;
+  char *boundary;
+  httpd_buf_t b;
+  
+#define __BUF BUF_CUR_PTR(&b), BUF_REMAIN(&b)
+  buffer = (char *)http_malloc(1024+250+2);
+  if (buffer == NULL)
+  {
+    r = herror_new("httpd_mime_send_header", GENERAL_ERROR,
+                      "Failed to malloc tempary buffer!");
+    goto clean0;
+  }
+  boundary = buffer + 1024 + 1;
 
+  BUF_SIZE_INIT(&b, buffer, 1024);
+  
   /* Set Content-type Set multipart/related parameter type=..; start=.. ;
      start-info= ..; boundary=... using sprintf instead of snprintf because 
      visual c does not support snprintf */
-
-  sprintf(buffer, "multipart/related;");
+  memcpy(buffer, "multipart/related;", 18);
+  BUF_GO(&b, 18);
 
   if (related_type)
   {
-    snprintf(temp, 75, " type=\"%s\";", related_type);
-    strcat(buffer, temp);
+    n = snprintf(__BUF, " type=\"%s\";", related_type);
+    BUF_GO(&b, n);
   }
 
   if (related_start)
   {
-    snprintf(temp, 250, " start=\"%s\";", related_start);
-    strcat(buffer, temp);
+    n = snprintf(__BUF, " start=\"%s\";", related_start);
+    BUF_GO(&b, n);
   }
 
   if (related_start_info)
   {
-    snprintf(temp, 250, " start-info=\"%s\";", related_start_info);
-    strcat(buffer, temp);
+    n = snprintf(__BUF, " start-info=\"%s\";", related_start_info);
+    BUF_GO(&b, n);
   }
 
   _httpd_mime_get_boundary(conn, boundary);
-  snprintf(temp, sizeof temp, " boundary=\"%s\"", boundary);
-  strcat(buffer, temp);
+  n = snprintf(__BUF, " boundary=\"%s\"", boundary);
+  BUF_GO(&b, n);
 
-  httpd_set_header(conn, HEADER_CONTENT_TYPE, buffer);
+  if (httpd_set_header(conn, HEADER_CONTENT_TYPE, 
+    sizeof(HEADER_CONTENT_TYPE)-1, 
+    buffer, BUF_LEN(&b)))
+  {
+    r = herror_new("httpd_mime_send_header", GENERAL_ERROR,
+                      "Failed to httpd_set_header!");
+    goto clean1;
+  }
 
-  return httpd_send_header(conn, code, text);
+  r = httpd_send_header(conn, code, text);
+#undef __BUF
+
+clean1:
+  http_free(buffer);
+clean0:
+  return r;
 }
 
 

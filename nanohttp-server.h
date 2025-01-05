@@ -401,12 +401,20 @@ extern hservice_t *httpd_find_service(const char *name, int context_len);
 extern int httpd_enable_service(hservice_t *service);
 extern int httpd_disable_service(hservice_t *service);
 
-extern void httpd_response_set_content_type(httpd_conn_t * res, const char *content_type);
+static inline void
+httpd_response_set_content_type(httpd_conn_t *res, const char *content_type, int len)
+{
+  len = RTE_MIN(sizeof(res->content_type)-1, len);
+  memcpy(res->content_type, content_type, len);
+  res->content_type[len] = 0;
+  return;
+}
 
 extern herror_t httpd_send_header(httpd_conn_t * res, int code, const char *text);
 
-extern int httpd_set_header(httpd_conn_t * conn, const char *key, const char *value);
-extern void httpd_set_headers(httpd_conn_t * conn, hpair_t * header);
+extern int httpd_set_header(httpd_conn_t *conn, const char *key, int keylen, 
+                  const char *value, int valuelen);
+extern int httpd_set_headers(httpd_conn_t * conn, hpair_t *header);
 
 extern int httpd_add_header(httpd_conn_t * conn, const char *key, const char *value);
 extern void httpd_add_headers(httpd_conn_t * conn, const hpair_t * values);
