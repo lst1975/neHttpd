@@ -158,8 +158,8 @@ static inline int hssl_enabled(void) { return 0; }
 #include "nanohttp-time.h"
 #include "nanohttp-ctype.h"
 
-#ifndef timeradd
-#define timeradd(tvp, uvp, vvp)						\
+#ifndef ng_timeradd
+#define ng_timeradd(tvp, uvp, vvp)						\
 	do {								\
 		(vvp)->tv_sec = (tvp)->tv_sec + (uvp)->tv_sec;		\
 		(vvp)->tv_usec = (tvp)->tv_usec + (uvp)->tv_usec;	\
@@ -170,8 +170,8 @@ static inline int hssl_enabled(void) { return 0; }
 	} while (0)
 #endif
 
-#ifndef timersub
-#define timersub(tvp, uvp, vvp)						\
+#ifndef ng_timersub
+#define ng_timersub(tvp, uvp, vvp)						\
 	do {								\
 		(vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;		\
 		(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;	\
@@ -1389,12 +1389,12 @@ httpd_session_main(void *data)
 
               if (gettimeofday(&end, NULL) == -1)
                 log_error("gettimeofday failed (%s)", strerror(errno));
-              timersub(&end, &start, &duration);
+              ng_timersub(&end, &start, &duration);
 
               stat_pthread_rwlock_wrlock(&(service->statistics.lock));
               STAT_u64_add(service->statistics.bytes_received, rconn->sock->bytes_received);
               STAT_u64_add(service->statistics.bytes_transmitted, rconn->sock->bytes_transmitted);
-              timeradd(&(service->statistics.time), &duration, &(service->statistics.time));
+              ng_timeradd(&(service->statistics.time), &duration, &(service->statistics.time));
               stat_pthread_rwlock_unlock(&(service->statistics.lock));
 
               if (rconn->out && rconn->out->type == HTTP_TRANSFER_CONNECTION_CLOSE)

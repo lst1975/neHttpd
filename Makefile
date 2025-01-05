@@ -89,6 +89,7 @@ objects = \
 	nanohttp-time.o \
 	nanohttp-ctype.o \
 	nanohttp-atoi.o \
+	nanohttp-itoa.o \
 	nanohttp-buffer.o \
 	nanohttp-urlencode.o
 

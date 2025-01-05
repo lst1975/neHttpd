@@ -884,4 +884,170 @@ static inline void rte_atomic64_clear(rte_atomic64_t *v)
 	rte_atomic64_set(v, 0);
 }
 
+#if defined(aarch64)
+static inline void rte_prefetch0(const volatile void *p)
+{
+	asm volatile ("PRFM PLDL1KEEP, [%0]" : : "r" (p));
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+	asm volatile ("PRFM PLDL2KEEP, [%0]" : : "r" (p));
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+	asm volatile ("PRFM PLDL3KEEP, [%0]" : : "r" (p));
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	asm volatile ("PRFM PLDL1STRM, [%0]" : : "r" (p));
+}
+#elif defined(__arm__)
+static inline void rte_prefetch0(const volatile void *p)
+{
+	asm volatile ("pld [%0]" : : "r" (p));
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+	asm volatile ("pld [%0]" : : "r" (p));
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+	asm volatile ("pld [%0]" : : "r" (p));
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	/* non-temporal version not available, fallback to rte_prefetch0 */
+	rte_prefetch0(p);
+}
+#elif defined(__i386__) || defined(__x86_64__)
+#ifdef RTE_TOOLCHAIN_MSVC
+#include <emmintrin.h>
+#endif
+static inline void rte_prefetch0(const volatile void *p)
+{
+#ifdef RTE_TOOLCHAIN_MSVC
+	_mm_prefetch((const char *)(uintptr_t)p, _MM_HINT_T0);
+#else
+	asm volatile ("prefetcht0 %[p]" : : [p] "m" (*(const volatile char *)p));
+#endif
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+#ifdef RTE_TOOLCHAIN_MSVC
+	_mm_prefetch((const char *)(uintptr_t)p, _MM_HINT_T1);
+#else
+	asm volatile ("prefetcht1 %[p]" : : [p] "m" (*(const volatile char *)p));
+#endif
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+#ifdef RTE_TOOLCHAIN_MSVC
+	_mm_prefetch((const char *)(uintptr_t)p, _MM_HINT_T2);
+#else
+	asm volatile ("prefetcht2 %[p]" : : [p] "m" (*(const volatile char *)p));
+#endif
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+#ifdef RTE_TOOLCHAIN_MSVC
+	_mm_prefetch((const char *)(uintptr_t)p, _MM_HINT_NTA);
+#else
+	asm volatile ("prefetchnta %[p]" : : [p] "m" (*(const volatile char *)p));
+#endif
+}
+#elif defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__)
+static inline void rte_prefetch0(const volatile void *p)
+{
+	asm volatile ("dcbt 0,%[p],0" : : [p] "r" (p));
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+	asm volatile ("dcbt 0,%[p],0" : : [p] "r" (p));
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+	asm volatile ("dcbt 0,%[p],0" : : [p] "r" (p));
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	/* non-temporal version not available, fallback to rte_prefetch0 */
+	rte_prefetch0(p);
+}
+#elif defined(__riscv__) || defined(__riscv) || defined(__RISCV64__) || defined(__riscv64__)
+static inline void rte_prefetch0(const volatile void *p)
+{
+	RTE_SET_USED(p);
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+	RTE_SET_USED(p);
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+	RTE_SET_USED(p);
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	/* non-temporal version not available, fallback to rte_prefetch0 */
+	rte_prefetch0(p);
+}
+#elif defined(__loongarch__)
+static inline void rte_prefetch0(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(uintptr_t)p, 0, 3);
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(uintptr_t)p, 0, 2);
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(uintptr_t)p, 0, 1);
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	/* non-temporal version not available, fallback to rte_prefetch0 */
+	rte_prefetch0(p);
+}
+#else
+static inline void rte_prefetch0(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(uintptr_t)p, 0, 3);
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(uintptr_t)p, 0, 2);
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(uintptr_t)p, 0, 1);
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	/* non-temporal version not available, fallback to rte_prefetch0 */
+	rte_prefetch0(p);
+}
+#endif
+
 #endif

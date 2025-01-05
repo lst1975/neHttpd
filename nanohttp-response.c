@@ -142,7 +142,7 @@ _hresponse_parse_header(const char *buffer, size_t len)
 {
   hpair_t *pair;
   hresponse_t *res;
-  char *s1, *s2, *str;
+  const char *s1, *str, *end, *endp;
 
   /* create response object */
   res = _hresponse_new();
@@ -151,73 +151,99 @@ _hresponse_parse_header(const char *buffer, size_t len)
     log_error("_hresponse_new Failed");
     goto clean0;
   }
+
   /* *** parse spec *** */
   /* [HTTP/1.1 | 1.2] [CODE] [DESC] */
 
+  end = buffer + len;
+  
   /* stage 1: HTTP spec */
-  str = (char *)strtok_r((char *) buffer, " ", &s2);
-  s1 = s2;
+  str = memchr(buffer, ' ', len);
   if (str == NULL)
   {
     log_error("Parse error reading HTTP spec");
     goto clean1;
   }
 
-  if (!strcmp(str, "HTTP/1.0"))
-    res->version = HTTP_1_0;
-  else
-    res->version = HTTP_1_1;
+  res->version = -1;
+  if (str - buffer == 8)
+  {
+    if (*(uint64_t *)buffer == *(const uint64_t *)"HTTP/1.0")
+      res->version = HTTP_1_0;
+    else if (*(uint64_t *)buffer == *(const uint64_t *)"HTTP/1.1")
+      res->version = HTTP_1_1;
+  }
+  if (res->version == -1)
+  {
+    log_error("Not supported http version (%.*s)", 
+      str - buffer, buffer);
+    goto clean1;
+  }
 
   /* stage 2: http code */
-  str = (char *) strtok_r(s1, " ", &s2);
-  s1 = s2;
+  s1 = str+1;
+  str = memchr(s1, ' ', end - s1);
   if (str == NULL)
   {
     log_error("Parse error reading HTTP code");
     goto clean1;
   }
-  res->errcode = ng_atoi(str, 0);
+  res->errcode = ng_atoi32(str, str-s1, &endp);
+  if (res->errcode < 0 || endp != str)
+  {
+    log_error("Invalid HTTP code");
+    goto clean1;
+  }
 
   /* stage 3: description text */
-  str = (char *) strtok_r(s1, "\r\n", &s2);
-  s1 = s2;
-  if (str == NULL)
+  s1 = str+1;
+  str = memchr(s1, '\r', end - s1);
+  if (unlikely(str == NULL || str + 1 >= end || str[1] != '\n'))
   {
     log_error("Parse error reading HTTP description");
     goto clean1;
   }
 
   /*	res->desc = (char *) http_malloc(strlen(str) + 1);*/
-  res->desc = http_strdup_len(str, &res->desc_len);
+  res->desc_len = str - s1;
+  res->desc = http_strdup_size(str, res->desc_len);
   if (res->desc == NULL)
   {
     log_error("Parse error reading HTTP description");
     goto clean1;
   }
 
+  s1 = str + 2;
   /* *** parse header *** */
   /* [key]: [value] */
   for (;;)
   {
-    str = strtok_r(s1, "\n", &s2);
-    s1 = s2;
-
     /* check if header ends without body */
+    str = memchr(s1, '\r', end - s1);
     if (str == NULL)
-    {
-      return res;
-    }
-    /* check also for end of header */
-    if (!strcmp(str, "\r"))
     {
       break;
     }
-    str[strlen(str) - 1] = '\0';
-    res->header = hpairnode_parse(str, 0, ':', res->header);
+    /* check also for end of header */
+    if (unlikely(str + 1 >= end || str[1] != '\n'))
+    {
+      log_error("Parse error HTTP header, need LF after CR.");
+      goto clean1;
+    }
+
+    pair = hpairnode_parse(s1, str - s1, ':', NULL);
+    if (pair == NULL)
+    {
+      log_error("hpairnode_parse failed.");
+      goto clean1;
+    }
+    pair->next  = res->header;
+    res->header = pair;
   }
 
   /* Check Content-type */
-  pair = hpairnode_get_ignore_case_len(res->header, HEADER_CONTENT_TYPE, 12);
+  pair = hpairnode_get_ignore_case_len(res->header, 
+            HEADER_CONTENT_TYPE, 12);
   if (pair != NULL)
   {
     res->content_type = content_type_new(pair->value, pair->value_len);
@@ -227,6 +253,7 @@ _hresponse_parse_header(const char *buffer, size_t len)
       goto clean1;
     }
   }
+  
   /* return response object */
   return res;
   
