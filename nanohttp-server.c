@@ -156,6 +156,7 @@ static inline int hssl_enabled(void) { return 0; }
 #include "nanohttp-data.h"
 #include "nanohttp-system.h"
 #include "nanohttp-time.h"
+#include "nanohttp-ctype.h"
 
 #ifndef timeradd
 #define timeradd(tvp, uvp, vvp)						\
@@ -361,22 +362,72 @@ httpd_parse_arguments(int argc, char **argv)
   {
     if (!strcmp(argv[i], NHTTPD_ARG_PORT))
     {
-      _httpd_port = ng_atoi(argv[++i], 0);
+      if (++i >= argc)
+      {
+        log_print("Need port for %s\n", NHTTPD_ARG_PORT);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
+      if (!ng_str_isdigit(argv[i]))
+      {
+        log_print("Bad port for %s\n", NHTTPD_ARG_PORT);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
+      _httpd_port = ng_atoi(argv[i], 0);
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_TERMSIG))
     {
+      if (++i >= argc)
+      {
+        log_print("Need signal number for %s\n", NHTTPD_ARG_TERMSIG);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
+      if (!ng_str_isdigit(argv[i]))
+      {
+        log_print("Bad signal number for %s\n", NHTTPD_ARG_TERMSIG);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
       _httpd_terminate_signal = ng_atoi(argv[++i], 0);
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_MAXCONN))
     {
+      if (++i >= argc)
+      {
+        log_print("Need number for %s\n", NHTTPD_ARG_MAXCONN);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
+      if (!ng_str_isdigit(argv[i]))
+      {
+        log_print("Bad number for %s\n", NHTTPD_ARG_MAXCONN);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
       _httpd_max_connections = ng_atoi(argv[++i], 0);
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_MAXCONN_PEND))
     {
+      if (++i >= argc)
+      {
+        log_print("Need number for %s\n", NHTTPD_ARG_MAXCONN_PEND);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
+      if (!ng_str_isdigit(argv[i]))
+      {
+        log_print("Bad number for %s\n", NHTTPD_ARG_MAXCONN_PEND);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
       _httpd_max_pending_connections = ng_atoi(argv[++i], 0);
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_TIMEOUT))
     {
+      if (++i >= argc)
+      {
+        log_print("Need number for %s\n", NHTTPD_ARG_TIMEOUT);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
+      if (!ng_str_isdigit(argv[i]))
+      {
+        log_print("Bad number for %s\n", NHTTPD_ARG_TIMEOUT);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
       hsocket_set_timeout(ng_atoi(argv[++i], 0));
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_DAEMONIZE)
@@ -388,6 +439,11 @@ httpd_parse_arguments(int argc, char **argv)
       || !strcmp(argv[i], "-h"))
     {
       parse_result = HTTP_INIT_PARSE_RESULT_HELP;
+    }
+    else
+    {
+      log_print("Unknown option %s\n", argv[i]);
+      return HTTP_INIT_PARSE_RESULT_ERR;
     }
     i++;
   }

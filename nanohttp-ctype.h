@@ -37,6 +37,8 @@
 extern "C" {
 #endif
 
+#include <string.h>
+
 /*
  * NOTE! This ctype does not handle EOF like the standard C
  * library is required to.
@@ -103,6 +105,25 @@ static inline unsigned char ng_toupper(unsigned char c)
 static inline int ng_isodigit(const char c)
 {
 	return c >= '0' && c <= '7';
+}
+    
+static inline int 
+ng_str_isdigit_s(const char *cptr, int len)
+{
+
+  for (int i=0; i<len;i++)
+  {
+    if (!__ng_isdigit(cptr[i]))
+      return 0;
+  }
+
+  return 1;
+}
+    
+static inline int 
+ng_str_isdigit(const char *cptr)
+{
+  return ng_str_isdigit_s(cptr, strlen(cptr));
 }
 
 #ifdef __cplusplus

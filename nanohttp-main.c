@@ -1297,6 +1297,10 @@ main(int argc, char **argv)
     fprintf(stdout, __nanohttp_help);
     return EXIT_SUCCESS;
   }
+  else if (daemonize == HTTP_INIT_PARSE_RESULT_ERR)
+  {
+    goto error0;
+  }
   
   if (ng_os_init() != ng_ERR_NONE)
   {
@@ -1396,8 +1400,7 @@ main(int argc, char **argv)
   ng_os_dump(NULL, NULL);
   main_print_license(daemonize);
 
-  log_print("neHTTPd is listening on PORT %d\n", 
-    _nanoConfig_HTTPD_PORT);
+  log_print("neHTTPd is listening on PORT %d\n\n", httpd_get_port());
 
   if ((status = httpd_run()) != H_OK)
   {
