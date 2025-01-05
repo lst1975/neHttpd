@@ -2279,50 +2279,39 @@ buffsize:
   return status;
 }
 
+static herror_t 
+__file_send(void *arg, const char *buf, size_t length) 
+{
+  httpd_conn_t *conn = (httpd_conn_t *)arg;
+  return http_output_stream_write(conn->out, (unsigned char *)buf, length);
+}
 /**
   Send boundary and part header and continue 
   with next part
 */
 herror_t
-httpd_mime_send_file(httpd_conn_t * conn, const char *content_id,
+httpd_mime_send_file(httpd_conn_t *conn, const char *content_id,
                      const char *content_type, const char *transfer_encoding,
                      const char *filename)
 {
-  unsigned char buffer[MAX_FILE_BUFFER_SIZE];
   herror_t status;
-  FILE *fd;
-  size_t size;
-
-  if ((fd = fopen(filename, "rb")) == NULL)
-    return herror_new("httpd_mime_send_file", FILE_ERROR_OPEN,
-                      "Can not open file '%d'", filename);
 
   status = httpd_mime_next(conn, content_id, content_type, transfer_encoding);
   if (status != H_OK)
   {
-    fclose(fd);
-    return status;
+    log_verbose("%s", herror_message(status));
+    goto clean0;
   }
 
-  while (!feof(fd))
+  status = nanohttp_file_read_all(filename, __file_send, conn);
+  if (status != H_OK)
   {
-    size = fread(buffer, 1, MAX_FILE_BUFFER_SIZE, fd);
-    if (size == -1)
-    {
-      fclose(fd);
-      return herror_new("httpd_mime_send_file", FILE_ERROR_READ,
-                        "Can not read from file '%d'", filename);
-    }
-
-    if ((status = http_output_stream_write(conn->out, buffer, size)) != H_OK)
-    {
-      fclose(fd);
-      return status;
-    }
+    log_verbose("%s", herror_message(status));
+    goto clean0;
   }
 
-  fclose(fd);
-  return H_OK;
+clean0:  
+  return status;
 }
 
 /**

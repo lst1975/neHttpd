@@ -62,8 +62,6 @@
  #
 
 STRIP ?= strip
-
-PHONY: all
  
 objects = \
 	nanohttp-main.o \
@@ -94,10 +92,14 @@ objects = \
 	nanohttp-buffer.o \
 	nanohttp-urlencode.o
 
-dep_files := $(patsubst %,.%.d, $(objects))
-dep_files := $(wildcard $(dep_files))
+depends:= $(objects:.o=.d)
+sources:= $(objects:.o=.c)
 
--include dep_files
+.PHONY: all clean
+
+all: httpd
+
+-include $(depends)
 
 CFLAGS = -Wall -O3 -g3 -I.
 LDFLAGS = 
@@ -106,14 +108,14 @@ release:  $(objects)
 	$(CC) $^ -o httpd -lpthread -lc
 	$(STRIP) httpd
 
-all: $(objects)
-	$(CC) $(LDFLAGS) $^ -o httpd -lpthread -lc
+httpd: $(objects)
+	$(CC) $(LDFLAGS) $^ -o $@ -lpthread -lc
 
 # Syntax - targets ...: target-pattern: prereq-patterns ...
 # In the case of the first target, foo.o, the target-pattern matches foo.o and sets the "stem" to be "foo".
 # It then replaces the '%' in prereq-patterns with that stem
-$(objects): %.o: %.c
-	$(CC) $(CFLAGS) -c $^ -o $@ -MD -MF .$@.d 
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@ -MMD -MF $*.d -MP
 
 clean: 
-	rm -f $(objects) *.o.d httpd httpd.exe
+	rm -f $(objects) *.o.d *.d httpd httpd.exe
