@@ -273,16 +273,44 @@ typedef void (*httpd_service) (httpd_conn_t *conn, struct hrequest_t *req);
 typedef int (*httpd_auth) (struct hrequest_t *req, 
                     const httpd_buf_t *user, const httpd_buf_t *pass);
 
+#define __NHTTP_USE_STAT_RWLOCK 0
 #ifdef __NHTTP_INTERNAL
 /** Service statistics per nanoHTTP service. */
 struct service_statistics
 {
-  unsigned long requests;
-  unsigned long bytes_transmitted;
-  unsigned long bytes_received;
   struct timeval time;
+#if __NHTTP_USE_STAT_RWLOCK
+  volatile uint64_t requests;
+  volatile uint64_t bytes_transmitted;
+  volatile uint64_t bytes_received;
   pthread_rwlock_t lock;
+#else
+  rte_atomic64_t requests;
+  rte_atomic64_t bytes_transmitted;
+  rte_atomic64_t bytes_received;
+  char lock[0];
+#endif
 };
+#endif
+
+#if __NHTTP_USE_STAT_RWLOCK
+#define STAT_u64_read(a)  (a)
+#define STAT_u64_add(a,i) (a) += i
+#define STAT_u64_set(a,i) (a) = i
+#define STAT_u64_inc(a)   (a)++
+#define stat_pthread_rwlock_init(l,a) pthread_rwlock_init(l, a)
+#define stat_pthread_rwlock_rdlock(l) pthread_rwlock_rdlock(l)
+#define stat_pthread_rwlock_unlock(l) pthread_rwlock_unlock(l)
+#define stat_pthread_rwlock_wrlock(l) pthread_rwlock_wrlock(l)
+#else
+#define STAT_u64_read(a) rte_atomic64_read(&(a))
+#define STAT_u64_add(a,i) rte_atomic64_add(&(a), i)
+#define STAT_u64_set(a,i) rte_atomic64_set(&(a), i)
+#define STAT_u64_inc(a) rte_atomic64_inc(&(a))
+#define stat_pthread_rwlock_init(l,a) NG_UNUSED(l);NG_UNUSED(a)
+#define stat_pthread_rwlock_rdlock(l) NG_UNUSED(l)
+#define stat_pthread_rwlock_unlock(l) NG_UNUSED(l)
+#define stat_pthread_rwlock_wrlock(l) NG_UNUSED(l)
 #endif
 
 /** @defgroup NANOHTTP_SERVICE_STATUS Service status
@@ -312,7 +340,8 @@ typedef struct tag_hservice
   httpd_service func;                    /**< Service function */
   httpd_auth auth;                       /**< Authentication function */
   struct tag_hservice *next;             /**< Next service in service list */
-  struct service_statistics *statistics; /**< Service statistics */
+  struct service_statistics __stat;      /**< Service statistics */
+  struct service_statistics *statistics; /**< Service statistics pointing to __stat */
   int name_len;
   int context_len;
 }

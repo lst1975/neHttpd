@@ -179,9 +179,13 @@ _vnanohttp_log_printf(nanohttp_loglevel_t level, const char *format, va_list ap)
 {
   const char *filename;
 
-  if (level < _nanohttp_log_loglevel)
-    return;
-
+  if (level < _nanohttp_log_loglevel 
+    || _nanohttp_log_loglevel == NANOHTTP_LOG_OFF)
+  {
+    if (level < NANOHTTP_LOG_ERROR)
+      return;
+  }
+  
   if (_nanohttp_logtype & NANOHTTP_LOG_FOREGROUND)
     vfprintf(level==NANOHTTP_LOG_STDERR ?stderr:stdout, format, ap);
 #ifdef HAVE_SYSLOG_H
@@ -209,11 +213,10 @@ _vnanohttp_log_printf(nanohttp_loglevel_t level, const char *format, va_list ap)
       	syslog_level = LOG_CRIT;
       	break;
       default:
-        syslog_level = 0;
+        syslog_level = LOG_INFO;
         break;
     }
-    if (syslog_level)
-      vsyslog(syslog_level, format, ap);
+    vsyslog(syslog_level, format, ap);
   }
 #endif
 

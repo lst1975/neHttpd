@@ -102,6 +102,7 @@
 #ifdef HAVE_PTHREAD_H
 #include <pthread.h>
 #endif
+#include <inttypes.h>
 
 #include "nanohttp-error.h"
 #include "nanohttp-logging.h"
@@ -129,7 +130,6 @@ _httpd_admin_send_title(httpd_conn_t *conn, const char *title)
          " font-size: 36px;"
          "}"
        "</style>");
-
   http_output_stream_write_string(conn->out,
      "</head>"
      "<body>"
@@ -144,7 +144,7 @@ _httpd_admin_send_footer(httpd_conn_t *conn)
   http_output_stream_write_string(conn->out,
         "<hr />"
         "<a href=\"" NHTTPD_ADMIN_CONTEXT "\">Admin page</a> "
-	"<a href=\"http://csoap.sf.net/\">cSOAP Home</a>"
+      	"<a href=\"http://csoap.sf.net/\">cSOAP Home</a>"
       "</body>"
     "</html>");
 }
@@ -195,6 +195,7 @@ _httpd_admin_list_statistics(httpd_conn_t *conn,
 {
   char buffer[1024];
   hservice_t *service;
+  int n;
   
   log_verbose("Client requested statistics for \"%s\"", service_name);
 
@@ -212,22 +213,21 @@ _httpd_admin_list_statistics(httpd_conn_t *conn,
     return;
   }
 
-  pthread_rwlock_rdlock(&(service->statistics->lock));
-  sprintf(buffer, "<ul>"
-                    "<li>Requests served: %lu</li>"
-                    "<li>Bytes read: %lu</li>"
-                    "<li>Bytes sent: %lu</li>"
+  stat_pthread_rwlock_rdlock(&(service->statistics->lock));
+  n = sprintf(buffer, "<ul>"
+                    "<li>Requests served: %"PRIu64"</li>"
+                    "<li>Bytes read: %"PRIu64"</li>"
+                    "<li>Bytes sent: %"PRIu64"</li>"
                     "<li>Time used: %li.%li sec</li>"
                   "</ul>",
-                  service->statistics->requests,
-                  service->statistics->bytes_received,
-                  service->statistics->bytes_transmitted,
+                  STAT_u64_read(service->statistics->requests),
+                  STAT_u64_read(service->statistics->bytes_received),
+                  STAT_u64_read(service->statistics->bytes_transmitted),
 		  service->statistics->time.tv_sec,
 		  service->statistics->time.tv_usec);
-  pthread_rwlock_unlock(&(service->statistics->lock));
+  stat_pthread_rwlock_unlock(&(service->statistics->lock));
 
-  http_output_stream_write_string(conn->out, buffer);
-
+  http_output_stream_write(conn->out, (unsigned char *)buffer, n);
   _httpd_admin_send_footer(conn);
 }
 
@@ -411,15 +411,15 @@ _httpd_admin_handle_get(httpd_conn_t * conn, struct hrequest_t *req)
         "<li>"
           "<a href=\"?" NHTTPD_ADMIN_QUERY_STATISTICS "\">Statistics</a>"
         "</li>"
-	"<li>Set loglevel: "
-	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_OFF_STRING "\">OFF</a> "
-	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_VERBOSE_STRING "\">VERBOSE</a> "
-	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_DEBUG_STRING "\">DEBUG</a> "
-	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_INFO_STRING "\">INFO</a> "
-	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_WARN_STRING "\">WARN</a> "
-	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_ERROR_STRING "\">ERROR</a> "
-	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_FATAL_STRING "\">FATAL</a> "
-	"</li>"
+      	"<li>Set loglevel: "
+      	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_OFF_STRING "\">OFF</a> "
+      	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_VERBOSE_STRING "\">VERBOSE</a> "
+      	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_DEBUG_STRING "\">DEBUG</a> "
+      	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_INFO_STRING "\">INFO</a> "
+      	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_WARN_STRING "\">WARN</a> "
+      	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_ERROR_STRING "\">ERROR</a> "
+      	  "<a href=\"?" NHTTPD_ADMIN_QUERY_SET_LOGLEVEL "=" NANOHTTP_LOG_LEVEL_FATAL_STRING "\">FATAL</a> "
+      	"</li>"
       "</ul>");
 
     _httpd_admin_send_footer(conn);

@@ -251,31 +251,7 @@ typedef uint64_t unaligned_uint64_t __rte_aligned(1);
 #ifndef RTE_ASSERT
 #define RTE_ASSERT(x) ng_assert(x)
 #endif
-#define rte_memory_order_relaxed __ATOMIC_RELAXED
-#define rte_memory_order_consume __ATOMIC_CONSUME
-#define rte_memory_order_acquire __ATOMIC_ACQUIRE
-#define rte_memory_order_release __ATOMIC_RELEASE
-#define rte_memory_order_acq_rel __ATOMIC_ACQ_REL
-#define rte_memory_order_seq_cst __ATOMIC_SEQ_CST
-#define rte_atomic_thread_fence(x) __atomic_thread_fence(x)
-#define  rte_compiler_barrier() do {    \
-  asm volatile ("" : : : "memory");  \
-} while(0)
 
-#define rte_atomic_load_explicit(ptr, memorder) \
-  __atomic_load_n(ptr, memorder)
-#define rte_atomic_store_explicit(ptr, val, memorder) \
-  __atomic_store_n(ptr, val, memorder)
-#define rte_atomic_compare_exchange_strong_explicit(ptr, expected, desired, \
-    succ_memorder, fail_memorder) \
-  __atomic_compare_exchange_n(ptr, expected, desired, 0, \
-    succ_memorder, fail_memorder)
-#define rte_atomic_fetch_sub_explicit(ptr, val, memorder) \
-  __atomic_fetch_sub(ptr, val, memorder)
-  
-#define rte_atomic_fetch_add_explicit(ptr, val, memorder) \
-  __atomic_fetch_add(ptr, val, memorder)
-    
 /* The memory order is an integer type in GCC built-ins,
  * not an enumerated type like in C11.
  */

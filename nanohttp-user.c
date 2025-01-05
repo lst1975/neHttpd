@@ -328,13 +328,12 @@ nanohttp_users_match(const char *name, int nameLen,
       continue;
     if (memcmp(name, entry->name.cptr, nameLen))
       continue;
-    if (pswd)
-    {
-      if (entry->pswd.len != pswdLen)
-        continue;
-      if (memcmp(entry->pswd.cptr, pswd, pswdLen))
-        continue;
-    }
+    if ((!pswd || !pswdLen) && entry->pswd.len)
+      continue;
+    if (entry->pswd.len != pswdLen)
+      continue;
+    if (memcmp(entry->pswd.cptr, pswd, pswdLen))
+      continue;
     return entry;
   }
   

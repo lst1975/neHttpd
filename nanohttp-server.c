@@ -652,25 +652,20 @@ httpd_register_secure(const char *context, httpd_service func,
 {
   hservice_t *service;
 
-  if (!(service = (hservice_t *) http_malloc(sizeof(hservice_t))))
+  if (!(service = (hservice_t *)http_malloc(sizeof(hservice_t))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
     return herror_new("httpd_register_secure", 0, 
       "http_malloc failed (%s)", strerror(errno));
   }
 
-  if (!(service->statistics = (struct service_statistics *)
-    http_malloc(sizeof(struct service_statistics))))
-  {
-    log_error("http_malloc failed (%s)", strerror(errno));
-    http_free(service);
-    return herror_new("httpd_register_secure", 0, 
-      "http_malloc failed (%s)", strerror(errno));
-  }    	
-  memset(service->statistics, 0, sizeof(struct service_statistics));
+  service->statistics = &service->__stat;
+  STAT_u64_set(service->statistics->bytes_received, 0);
+  STAT_u64_set(service->statistics->bytes_transmitted, 0);
+  STAT_u64_set(service->statistics->requests, 0);
   service->statistics->time.tv_sec = 0;
   service->statistics->time.tv_usec = 0;
-  pthread_rwlock_init(&(service->statistics->lock), NULL);
+  stat_pthread_rwlock_init(&(service->statistics->lock), NULL);
 
   service->name = service_name;
   service->next = NULL;
@@ -775,9 +770,6 @@ hservice_free(hservice_t * service)
 {
   if (!service)
     return;
-
-  if (service->statistics)
-    http_free(service->statistics);
 
   http_free(service);
 
@@ -890,8 +882,25 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
   /* add pairs */
   for (cur = res->header; cur; cur = cur->next)
   {
-    n = snprintf(__BUF, "%s: %s\r\n", cur->key, cur->value);
-    BUF_GO(&b, n);
+    if (BUF_REMAIN(&b) > cur->key_len + cur->value_len + 4)
+    {
+      memcpy(BUF_CUR_PTR(&b), cur->key, cur->key_len);
+      BUF_GO(&b, cur->key_len);
+      *(uint16_t*)BUF_CUR_PTR(&b) = *(const uint16_t*)": ";
+      BUF_GO(&b, 2);
+      memcpy(BUF_CUR_PTR(&b), cur->value, cur->value_len);
+      BUF_GO(&b, cur->value_len);
+      *(uint16_t*)BUF_CUR_PTR(&b) = *(const uint16_t*)"\r\n";
+      BUF_GO(&b, 2);
+    }
+    else
+    {
+      log_warn("Tempary buffer size is too small: %d", __BUF_SZ);
+      status = herror_new("httpd_send_header", GENERAL_ERROR,
+                        "Tempary buffer size is too small: %d", 
+                        __BUF_SZ);
+      goto clean1;
+    }
   }
 
   /* set end of header */
@@ -1327,9 +1336,9 @@ httpd_session_main(void *data)
 
       	if (service->status == NHTTPD_SERVICE_UP)
       	{
-          pthread_rwlock_wrlock(&(service->statistics->lock));
-          service->statistics->requests++;
-          pthread_rwlock_unlock(&(service->statistics->lock));
+          stat_pthread_rwlock_wrlock(&(service->statistics->lock));
+          STAT_u64_inc(service->statistics->requests);
+          stat_pthread_rwlock_unlock(&(service->statistics->lock));
 
           if (service->auth == NULL || _httpd_authenticate_request(req, service->auth))
           {
@@ -1341,11 +1350,11 @@ httpd_session_main(void *data)
                 log_error("gettimeofday failed (%s)", strerror(errno));
               timersub(&end, &start, &duration);
 
-              pthread_rwlock_wrlock(&(service->statistics->lock));
-              service->statistics->bytes_received += rconn->sock->bytes_received;
-              service->statistics->bytes_transmitted += rconn->sock->bytes_transmitted;
+              stat_pthread_rwlock_wrlock(&(service->statistics->lock));
+              STAT_u64_add(service->statistics->bytes_received, rconn->sock->bytes_received);
+              STAT_u64_add(service->statistics->bytes_transmitted, rconn->sock->bytes_transmitted);
               timeradd(&(service->statistics->time), &duration, &(service->statistics->time));
-              pthread_rwlock_unlock(&(service->statistics->lock));
+              stat_pthread_rwlock_unlock(&(service->statistics->lock));
 
               if (rconn->out && rconn->out->type == HTTP_TRANSFER_CONNECTION_CLOSE)
               {
