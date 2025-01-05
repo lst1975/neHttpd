@@ -355,28 +355,29 @@ int
 httpd_parse_arguments(int argc, char **argv)
 {
   int parse_result = HTTP_INIT_PARSE_RESULT_OK;
+  int i = 1;
   
-  for (int i = 1; i < argc; i++)
+  while (i < argc)
   {
     if (!strcmp(argv[i], NHTTPD_ARG_PORT))
     {
-      _httpd_port = ng_atoi(argv[i], 0);
+      _httpd_port = ng_atoi(argv[++i], 0);
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_TERMSIG))
     {
-      _httpd_terminate_signal = ng_atoi(argv[i], 0);
+      _httpd_terminate_signal = ng_atoi(argv[++i], 0);
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_MAXCONN))
     {
-      _httpd_max_connections = ng_atoi(argv[i], 0);
+      _httpd_max_connections = ng_atoi(argv[++i], 0);
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_MAXCONN_PEND))
     {
-      _httpd_max_pending_connections = ng_atoi(argv[i], 0);
+      _httpd_max_pending_connections = ng_atoi(argv[++i], 0);
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_TIMEOUT))
     {
-      hsocket_set_timeout(ng_atoi(argv[i], 0));
+      hsocket_set_timeout(ng_atoi(argv[++i], 0));
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_DAEMONIZE)
       || !strcmp(argv[i], "-d"))
@@ -388,6 +389,7 @@ httpd_parse_arguments(int argc, char **argv)
     {
       parse_result = HTTP_INIT_PARSE_RESULT_HELP;
     }
+    i++;
   }
 
   return parse_result;
