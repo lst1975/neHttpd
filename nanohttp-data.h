@@ -258,12 +258,17 @@
 
 #define __S_ "     %-32s%s"
 #define __nanohttp_help  \
-      ""__S_ __S_ __S_ __S_ __S_ __S_, \
-      NHTTPD_ARG_PORT" [port]",": Port the server is listening on\n", \
-      NHTTPD_ARG_TERMSIG" [signal]",": Signal which may used to terminate the server\n", \
-      NHTTPD_ARG_MAXCONN" [count]",": Maximum number of simultanous connections\n", \
-      NHTTPD_ARG_MAXCONN_PEND" [count]",": Maximum number of pending connections for listen\n", \
-      NHTTPD_ARG_TIMEOUT" [time]",": Timeout on reads\n", \
-      NHTTPD_ARG_DAEMONIZE,": Run as a daemon\n" \
+      __S_ __S_ __S_ __S_ __S_ __S_ __S_ __S_ __S_ __S_ __S_, \
+              NHTTPD_ARG_PORT" [port]",   ": Port the server is listening on\n", \
+           NHTTPD_ARG_TERMSIG" [signal]", ": Signal which may used to terminate the server\n", \
+           NHTTPD_ARG_MAXCONN" [count]",  ": Maximum number of simultanous connections\n", \
+      NHTTPD_ARG_MAXCONN_PEND" [count]",  ": Maximum number of pending connections for listen\n", \
+           NHTTPD_ARG_TIMEOUT" [time]",   ": Timeout on reads\n", \
+          NHTTPD_ARG_LOGLEVEL" [level]",  ": fatal, error, warn, event, debug, verbose|-v, off.\n", \
+         NHTTPD_ARG_DAEMONIZE,            ": Run as a daemon\n", \
+                          "-d",           ": Run as a daemon\n", \
+                          "-v",           ": Logging verbose\n", \
+                          "-h",           ": Help\n", \
+                NHTTPD_ARG_HELP,          ": Help\n"
 
 #endif

@@ -94,7 +94,12 @@ objects = \
 	nanohttp-buffer.o \
 	nanohttp-urlencode.o
 
-CFLAGS = -Wall -O3 -g3 -MD
+dep_files := $(patsubst %,.%.d, $(objects))
+dep_files := $(wildcard $(dep_files))
+
+-include dep_files
+
+CFLAGS = -Wall -O3 -g3 -I.
 LDFLAGS = 
 
 release:  $(objects)
@@ -108,8 +113,7 @@ all: $(objects)
 # In the case of the first target, foo.o, the target-pattern matches foo.o and sets the "stem" to be "foo".
 # It then replaces the '%' in prereq-patterns with that stem
 $(objects): %.o: %.c
-	$(CC) $(CFLAGS) -c $^ -o $@
+	$(CC) $(CFLAGS) -c $^ -o $@ -MD -MF .$@.d 
 
 clean: 
-	rm -f $(objects) *.d httpd httpd.exe
-
+	rm -f $(objects) *.o.d httpd httpd.exe

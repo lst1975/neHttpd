@@ -242,6 +242,7 @@
 					         pending connections for listen*/
 #define NHTTPD_ARG_TIMEOUT   "-NHTTPtimeout" /**< Timeout on reads */
 #define NHTTPD_ARG_DAEMONIZE "-NHTTPDaemon" /**< Run as a daemon */
+#define NHTTPD_ARG_LOGLEVEL  "-NHTTPLoglevel" /**< log level */
 #define NHTTPD_ARG_HELP "--help" /**< Run as a daemon */
 
 #define HTTP_INIT_PARSE_RESULT_OK     0
@@ -340,8 +341,7 @@ typedef struct tag_hservice
   httpd_service func;                    /**< Service function */
   httpd_auth auth;                       /**< Authentication function */
   struct tag_hservice *next;             /**< Next service in service list */
-  struct service_statistics __stat;      /**< Service statistics */
-  struct service_statistics *statistics; /**< Service statistics pointing to __stat */
+  struct service_statistics statistics; /**< Service statistics */
   int name_len;
   int context_len;
 }

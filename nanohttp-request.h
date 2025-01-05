@@ -352,7 +352,7 @@ struct hrequest_t
   void    *conn;
   int      userLevel;
   httpd_buf_t data;
-  struct request_statistics *statistics;
+  struct request_statistics statistics;
 
   struct http_input_stream_t *in;
   content_type_t *content_type;

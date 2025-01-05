@@ -416,6 +416,44 @@ httpd_parse_arguments(int argc, char **argv)
       }
       _httpd_max_pending_connections = ng_atoi(argv[++i], 0);
     }
+    else if (!strcmp(argv[i], NHTTPD_ARG_LOGLEVEL))
+    {
+      if (++i >= argc)
+      {
+        log_print("Need number for %s\n", NHTTPD_ARG_TIMEOUT);
+        return HTTP_INIT_PARSE_RESULT_ERR;
+      }
+      if (!strcmp(argv[i], "fatal"))
+      {
+        nanohttp_log_set_loglevel(NANOHTTP_LOG_FATAL);
+      }
+      else if (!strcmp(argv[i], "error"))
+      {
+        nanohttp_log_set_loglevel(NANOHTTP_LOG_ERROR);
+      }
+      else if (!strcmp(argv[i], "warn"))
+      {
+        nanohttp_log_set_loglevel(NANOHTTP_LOG_WARN);
+      }
+      else if (!strcmp(argv[i], "event"))
+      {
+        nanohttp_log_set_loglevel(NANOHTTP_LOG_INFO);
+      }
+      else if (!strcmp(argv[i], "debug"))
+      {
+        nanohttp_log_set_loglevel(NANOHTTP_LOG_DEBUG);
+      }
+      else if (!strcmp(argv[i], "verbose"))
+      {
+        nanohttp_log_set_loglevel(NANOHTTP_LOG_VERBOSE);
+      }
+      else if (!strcmp(argv[i], "off"))
+      {
+        nanohttp_log_set_loglevel(NANOHTTP_LOG_OFF);
+      }
+      else
+        return HTTP_INIT_PARSE_RESULT_ERR;
+    }
     else if (!strcmp(argv[i], NHTTPD_ARG_TIMEOUT))
     {
       if (++i >= argc)
@@ -439,6 +477,10 @@ httpd_parse_arguments(int argc, char **argv)
       || !strcmp(argv[i], "-h"))
     {
       parse_result = HTTP_INIT_PARSE_RESULT_HELP;
+    }
+    else if (!strcmp(argv[i], "-v"))
+    {
+      nanohttp_log_set_loglevel(NANOHTTP_LOG_VERBOSE);
     }
     else
     {
@@ -659,13 +701,12 @@ httpd_register_secure(const char *context, httpd_service func,
       "http_malloc failed (%s)", strerror(errno));
   }
 
-  service->statistics = &service->__stat;
-  STAT_u64_set(service->statistics->bytes_received, 0);
-  STAT_u64_set(service->statistics->bytes_transmitted, 0);
-  STAT_u64_set(service->statistics->requests, 0);
-  service->statistics->time.tv_sec = 0;
-  service->statistics->time.tv_usec = 0;
-  stat_pthread_rwlock_init(&(service->statistics->lock), NULL);
+  STAT_u64_set(service->statistics.bytes_received, 0);
+  STAT_u64_set(service->statistics.bytes_transmitted, 0);
+  STAT_u64_set(service->statistics.requests, 0);
+  service->statistics.time.tv_sec = 0;
+  service->statistics.time.tv_usec = 0;
+  stat_pthread_rwlock_init(&(service->statistics.lock), NULL);
 
   service->name = service_name;
   service->next = NULL;
@@ -1336,9 +1377,9 @@ httpd_session_main(void *data)
 
       	if (service->status == NHTTPD_SERVICE_UP)
       	{
-          stat_pthread_rwlock_wrlock(&(service->statistics->lock));
-          STAT_u64_inc(service->statistics->requests);
-          stat_pthread_rwlock_unlock(&(service->statistics->lock));
+          stat_pthread_rwlock_wrlock(&(service->statistics.lock));
+          STAT_u64_inc(service->statistics.requests);
+          stat_pthread_rwlock_unlock(&(service->statistics.lock));
 
           if (service->auth == NULL || _httpd_authenticate_request(req, service->auth))
           {
@@ -1350,11 +1391,11 @@ httpd_session_main(void *data)
                 log_error("gettimeofday failed (%s)", strerror(errno));
               timersub(&end, &start, &duration);
 
-              stat_pthread_rwlock_wrlock(&(service->statistics->lock));
-              STAT_u64_add(service->statistics->bytes_received, rconn->sock->bytes_received);
-              STAT_u64_add(service->statistics->bytes_transmitted, rconn->sock->bytes_transmitted);
-              timeradd(&(service->statistics->time), &duration, &(service->statistics->time));
-              stat_pthread_rwlock_unlock(&(service->statistics->lock));
+              stat_pthread_rwlock_wrlock(&(service->statistics.lock));
+              STAT_u64_add(service->statistics.bytes_received, rconn->sock->bytes_received);
+              STAT_u64_add(service->statistics.bytes_transmitted, rconn->sock->bytes_transmitted);
+              timeradd(&(service->statistics.time), &duration, &(service->statistics.time));
+              stat_pthread_rwlock_unlock(&(service->statistics.lock));
 
               if (rconn->out && rconn->out->type == HTTP_TRANSFER_CONNECTION_CLOSE)
               {
@@ -2067,15 +2108,16 @@ httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req,
   MIME support httpd_mime_* function set
 */
 
-static void
-_httpd_mime_get_boundary(httpd_conn_t * conn, char *dest)
+static int
+_httpd_mime_get_boundary(httpd_conn_t *conn, char *dest, int len)
 {
-  sprintf(dest, "---=.Part_NH_%p", conn);
-  log_verbose("boundary= \"%s\"", dest);
-
-  return;
+  if (len < 29)
+    return -1;
+  memcpy(dest, "---=.Part_NH_", 13);
+  ng_u64toh((uintptr_t)conn, dest+13, len-13);
+  log_verbose("boundary= \"%.*s\"", 29, dest);
+  return 29;
 }
-
 
 /**
   Begin MIME multipart/related POST 
@@ -2089,7 +2131,6 @@ httpd_mime_send_header(httpd_conn_t * conn, const char *related_start,
   int n;
   herror_t r;
   char *buffer;
-  char *boundary;
   httpd_buf_t b;
   
 #define __BUF BUF_CUR_PTR(&b), BUF_REMAIN(&b)
@@ -2100,7 +2141,6 @@ httpd_mime_send_header(httpd_conn_t * conn, const char *related_start,
                       "Failed to malloc tempary buffer!");
     goto clean0;
   }
-  boundary = buffer + 1024 + 1;
 
   BUF_SIZE_INIT(&b, buffer, 1024);
   
@@ -2128,25 +2168,43 @@ httpd_mime_send_header(httpd_conn_t * conn, const char *related_start,
     BUF_GO(&b, n);
   }
 
-  _httpd_mime_get_boundary(conn, boundary);
-  n = snprintf(__BUF, " boundary=\"%s\"", boundary);
+  n = sizeof(" boundary=\"") - 1;
+  if (BUF_REMAIN(&b) < n)
+  {
+    goto buffsize;
+  }
+  memcpy(BUF_CUR_PTR(&b), " boundary=\"", n);
   BUF_GO(&b, n);
-
+    
+  n = _httpd_mime_get_boundary(conn, __BUF);
+  if (n < 0)
+  {
+    goto buffsize;
+  }
+  if (BUF_REMAIN(&b) < 1)
+  {
+    goto buffsize;
+  }
+  BUF_SET_CHR(&b, '\"');
+  BUF_GO(&b, 1);
+  
   if (httpd_set_header(conn, HEADER_CONTENT_TYPE, 
     sizeof(HEADER_CONTENT_TYPE)-1, 
     buffer, BUF_LEN(&b)))
   {
-    r = herror_new("httpd_mime_send_header", GENERAL_ERROR,
-                      "Failed to httpd_set_header!");
-    goto clean1;
+    goto buffsize;
   }
 
   r = httpd_send_header(conn, code, text);
 #undef __BUF
 
-clean1:
-  http_free(buffer);
 clean0:
+  return r;
+  
+buffsize:
+  r = herror_new("httpd_mime_send_header", GENERAL_ERROR,
+                    "Failed to httpd_set_header!");
+  http_free(buffer);
   return r;
 }
 
@@ -2160,27 +2218,65 @@ httpd_mime_next(httpd_conn_t * conn, const char *content_id,
                 const char *content_type, const char *transfer_encoding)
 {
   herror_t status;
-  char buffer[512];
-  char boundary[75];
+  char *buffer;
   size_t len;
+  httpd_buf_t b;
 
+#define __BUF_SZ  512+75+2
+#define __BUF BUF_CUR_PTR(&b), BUF_REMAIN(&b)
+  buffer = http_malloc(__BUF_SZ);
+  if (buffer == NULL)
+  {
+    status = herror_new("httpd_mime_send_header", GENERAL_ERROR,
+                      "Failed to malloc tempary buffer!");
+    goto clean0;
+  }
+
+  BUF_SIZE_INIT(&b,buffer,__BUF_SZ);
+  *(uint32_t *)buffer = *(const uint32_t *)"\r\n--";
+  BUF_GO(&b, 4);
+  
   /* Get the boundary string */
-  _httpd_mime_get_boundary(conn, boundary);
-  len = sprintf(buffer, "\r\n--%s\r\n", boundary);
+  len = _httpd_mime_get_boundary(conn, __BUF);
+  if (len < 0)
+  {
+    goto buffsize;
+  }
+  if (BUF_REMAIN(&b) < 2)
+  {
+    goto buffsize;
+  }
+  *(uint16_t *)BUF_CUR_PTR(&b) = *(const uint16_t *)"\r\n";
+  BUF_GO(&b, 2);
 
   /* Send boundary */
-  if ((status = http_output_stream_write(conn->out, (unsigned char *)buffer, len)) != H_OK)
-    return status;
+  status = http_output_stream_write(conn->out, b.ptr, BUF_LEN(&b));
+  if (status != H_OK)
+  {
+    goto clean1;
+  }
 
   /* Send Content header */
-  len = sprintf(buffer, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
+  len = snprintf(buffer,__BUF_SZ, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
             HEADER_CONTENT_TYPE, content_type ? content_type : "text/plain",
             HEADER_CONTENT_TRANSFER_ENCODING,
             transfer_encoding ? transfer_encoding : "binary",
             HEADER_CONTENT_ID,
             content_id ? content_id : "<content-id-not-set>");
-
-  return http_output_stream_write(conn->out, (unsigned char *)buffer, len);
+  status = http_output_stream_write(conn->out, b.ptr, len);
+  
+#undef __BUF
+#undef __BUF_SZ
+  
+clean1:
+  http_free(buffer);
+clean0:
+  return status;
+buffsize:
+  status = herror_new("httpd_mime_send_header", GENERAL_ERROR,
+                    "Failed to httpd_set_header!");
+  http_free(buffer);
+  return status;
 }
 
 /**
@@ -2237,17 +2333,57 @@ herror_t
 httpd_mime_end(httpd_conn_t * conn)
 {
   herror_t status;
-  char buffer[512];
-  char boundary[75];
+  char *buffer;
   size_t len;
+  httpd_buf_t b;
+
+#define __BUF_SZ  512+75+2
+#define __BUF BUF_CUR_PTR(&b), BUF_REMAIN(&b)
+
+  buffer = http_malloc(__BUF_SZ);
+  if (buffer == NULL)
+  {
+    status = herror_new("httpd_mime_send_header", GENERAL_ERROR,
+                      "Failed to malloc tempary buffer!");
+    goto clean0;
+  }
+
+  BUF_SIZE_INIT(&b,buffer,__BUF_SZ);
+  *(uint32_t *)buffer = *(const uint32_t *)"\r\n--";
+  BUF_GO(&b, 4);
 
   /* Get the boundary string */
-  _httpd_mime_get_boundary(conn, boundary);
-  len = sprintf(buffer, "\r\n--%s--\r\n\r\n", boundary);
+  len = _httpd_mime_get_boundary(conn, __BUF);
+  if (len < 0)
+  {
+    goto buffsize;
+  }
+  if (BUF_REMAIN(&b) < 8)
+  {
+    goto buffsize;
+  }
+  *(uint64_t *)BUF_CUR_PTR(&b) = *(const uint64_t *)"--\r\n\r\n  ";
+  BUF_GO(&b, 6);
+
+#undef __BUF
+#undef __BUF_SZ
 
   /* Send boundary */
-  if ((status = http_output_stream_write(conn->out, (unsigned char *)buffer, len)) != H_OK)
-    return status;
+  status = http_output_stream_write(conn->out, b.ptr, BUF_LEN(&b));
+  if (status != H_OK)
+  {
+    goto clean1;
+  }
 
-  return http_output_stream_flush(conn->out);
+  status = http_output_stream_flush(conn->out);
+  
+clean1:
+  http_free(buffer);
+clean0:
+  return status;
+buffsize:
+  status = herror_new("httpd_mime_send_header", GENERAL_ERROR,
+                    "Failed to httpd_set_header!");
+  http_free(buffer);
+  return status;
 }

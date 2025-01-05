@@ -128,18 +128,12 @@ static struct hrequest_t *hrequest_new(void)
     goto clean0;
   }
 
-  if (!(req->statistics = (struct request_statistics *)
-    http_malloc(sizeof(*req->statistics))))
-  {
-    log_error("http_malloc failed (%s)", strerror(errno));
-    goto clean1;
-  }
-
-  if (gettimeofday(&(req->statistics->time), NULL) < 0)
+  if (gettimeofday(&(req->statistics.time), NULL) < 0)
   {
     log_error("gettimeofday failed (%s)", strerror(errno));
-    goto clean2;
+    goto clean1;
   }
+  
   req->method       = HTTP_REQUEST_GET;
   req->version      = HTTP_1_1;
   req->query        = NULL;
@@ -150,11 +144,11 @@ static struct hrequest_t *hrequest_new(void)
   req->content_type = NULL;
   req->data.buf     = NULL;
   req->data.len     = 0;
-
+  req->statistics.bytes_transmitted = 0;
+  req->statistics.bytes_received    = 0;
+  
   return req;
   
-clean2:
-  http_free(req->statistics);
 clean1:
   http_free(req);
 clean0:
@@ -408,9 +402,6 @@ hrequest_free(struct hrequest_t * req)
 
   if (req->path)
     http_free(req->path);
-
-  if (req->statistics)
-    http_free(req->statistics);
 
   ng_free_data_buffer(&req->data);
   http_free(req);

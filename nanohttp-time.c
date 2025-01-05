@@ -1109,8 +1109,8 @@ void ng_date_print(void)
   httpd_buf_t b;
   BUF_SET(&b, date, sizeof(date));
   __ng_http_date(b.buf, b.len, 0, ng_os_info.tz);
-  fprintf(stdout, "\nSystem is already running %"PRIu64" seconds\n", 
+  log_print("\nSystem is already running %"PRIu64" seconds\n", 
     ng_get_time() - (uint64_t)startime);
-  fprintf(stdout, "Date   : %.*s\n\n", (int)b.len, b.cptr);
+  log_print("Date   : %.*s\n\n", (int)b.len, b.cptr);
   
 }
