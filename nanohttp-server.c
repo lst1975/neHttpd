@@ -1212,7 +1212,7 @@ _httpd_authenticate_request(struct hrequest_t * req, httpd_auth auth)
   if ((ret = auth(req, &user, &pass)))
     log_debug("Access granted for user=\"%.*s\"", user.len, user.cptr);
   else
-    log_info("Authentication failed for user=\"%s\"", user.len, user.cptr);
+    log_info("Authentication failed for user=\"%.*s\"", user.len, user.cptr);
 
   ng_bzero(tmp, tmplen);
   http_free(tmp);
