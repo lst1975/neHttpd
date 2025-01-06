@@ -94,6 +94,9 @@
 #else
 #include <sys/select.h>
 #endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
 #else
 #include <Windows.h>
 #include <Winsock2.h>

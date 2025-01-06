@@ -147,6 +147,7 @@
 #include "nanohttp-socket.h"
 #include "nanohttp-file.h"
 #include "nanohttp-system.h"
+#include "nanohttp-inet.h"
 #ifdef HAVE_SSL
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
@@ -557,9 +558,9 @@ hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
   }
 #endif
 
-  log_verbose("accepting connection from '%s' socket=%d",
-               SAVE_STR(((char *) inet_ntoa(dest->addr.sin_addr))),
-               dest->sock);
+  char buf[128];
+  ng_inet_ntop_su(&dest->addr, buf, sizeof(buf));
+  log_verbose("accepting connection from '%s' socket=%d", buf, dest->sock);
 
   return H_OK;
 }

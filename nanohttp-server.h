@@ -425,6 +425,11 @@ extern const char *httpd_get_protocol(void);
  */
 extern int httpd_get_conncount(void);
 
+int httpd_create_mutex(void *mutex);
+void httpd_destroy_mutex(void *mutex);
+int httpd_enter_mutex(void *mutex);
+void httpd_leave_mutex(void *mutex);
+
 extern hservice_t *httpd_get_services(void);
 extern hservice_t *httpd_find_service(const char *name, int context_len);
 

@@ -111,6 +111,7 @@
 
 #include "nanohttp-logging.h"
 #include "nanohttp-mem.h"
+#include "nanohttp-server.h"
 
 static int _nanohttp_logtype = NANOHTTP_LOG_FOREGROUND;
 static nanohttp_loglevel_t _nanohttp_log_loglevel = NANOHTTP_LOG_DEBUG;
@@ -129,6 +130,8 @@ VisualC_funcname(const char *file, int line)
   return buffer;
 }
 #endif
+
+static void *log_mutex=NULL;
 
 nanohttp_loglevel_t
 nanohttp_log_set_loglevel(nanohttp_loglevel_t loglevel)
@@ -175,7 +178,8 @@ nanohttp_log_set_logfile(const char *filename)
 }
 
 void
-_vnanohttp_log_printf(nanohttp_loglevel_t level, const char *format, va_list ap)
+_vnanohttp_log_printf(nanohttp_loglevel_t level, 
+  const char *format, va_list ap)
 {
   const char *filename;
 
@@ -187,7 +191,11 @@ _vnanohttp_log_printf(nanohttp_loglevel_t level, const char *format, va_list ap)
   }
   
   if (_nanohttp_logtype & NANOHTTP_LOG_FOREGROUND)
+  {
+    httpd_enter_mutex((void *)&log_mutex);
     vfprintf(level==NANOHTTP_LOG_STDERR ?stderr:stdout, format, ap);
+    httpd_leave_mutex((void *)&log_mutex);
+  }
 #ifdef HAVE_SYSLOG_H
   else if (_nanohttp_logtype & NANOHTTP_LOG_SYSLOG)
   {
@@ -216,7 +224,9 @@ _vnanohttp_log_printf(nanohttp_loglevel_t level, const char *format, va_list ap)
         syslog_level = LOG_INFO;
         break;
     }
+    httpd_enter_mutex((void *)&log_mutex);
     vsyslog(syslog_level, format, ap);
+    httpd_leave_mutex((void *)&log_mutex);
   }
 #endif
 
@@ -229,7 +239,9 @@ _vnanohttp_log_printf(nanohttp_loglevel_t level, const char *format, va_list ap)
 
     if (fp)
     {
+      httpd_enter_mutex((void *)&log_mutex);
       vfprintf(fp, format, ap);
+      httpd_leave_mutex((void *)&log_mutex);
       fflush(fp);
       fclose(fp);
     }
@@ -248,3 +260,17 @@ _nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...)
   _vnanohttp_log_printf(level, format, ap);
   va_end(ap);
 }
+
+int http_log_init(void)
+{
+  if (httpd_create_mutex((void *)&log_mutex))
+    return -1;
+  else
+    return 0;
+}
+
+void http_log_free(void)
+{
+  httpd_destroy_mutex((void *)&log_mutex);
+}
+

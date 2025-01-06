@@ -265,14 +265,15 @@ hpairnode_dump(const hpair_t * pair)
     log_verbose("(NULL)[]");
     return;
   }
-  log_verbose("(%p)['%s','%s','%p']", pair,
-               SAVE_STR(pair->key), SAVE_STR(pair->value), pair->next);
+  log_verbose("%s:%s",
+               SAVE_STR(pair->key), 
+               SAVE_STR(pair->value));
 
   return;
 }
 
 void
-__hpairnode_dump_deep(const hpair_t * pairs)
+__hpairnode_dump_deep(const hpair_t *pairs)
 {
   const hpair_t *p;
 
@@ -281,7 +282,7 @@ __hpairnode_dump_deep(const hpair_t * pairs)
   {
     hpairnode_dump(p);
   }
-  log_verbose("-- END dump_deep hpair_t --\n");
+  log_verbose("-- END dump_deep hpair_t --");
 
   return;
 }

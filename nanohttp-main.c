@@ -1428,8 +1428,8 @@ main(int argc, char **argv)
     
 error2:
   herror_release(status);
-  httpd_destroy();
 error1:
+  httpd_destroy();
   ng_os_deinit();
 error0:
   if (daemonize)

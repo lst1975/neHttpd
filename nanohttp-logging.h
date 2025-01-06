@@ -227,4 +227,7 @@ void _nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...);
 #endif
 /**@}*/
 
+int http_log_init(void);
+void http_log_free(void);
+
 #endif

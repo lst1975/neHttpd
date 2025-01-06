@@ -1337,11 +1337,18 @@ static void __ng_get_tzname(void)
       ng_os_info.tz[i]='\0';
       ng_os_info.tz[0]=' ';
     }
+    else
+    {
+      int err = GetLastError();
+      log_error("Error accessing the registry. (%d:%s)", err, os_strerror(err));
+    }
     RegCloseKey(hKey);
   } 
-  
-  int err = GetLastError();
-  log_error("Error accessing the registry. (%d:%s)", err, os_strerror(err));
+  else
+  {
+    int err = GetLastError();
+    log_error("Error accessing the registry. (%d:%s)", err, os_strerror(err));
+  }
 }
 #else
 static void __ng_get_tzname(void) 

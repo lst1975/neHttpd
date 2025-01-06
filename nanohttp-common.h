@@ -360,6 +360,7 @@
 
 #ifndef SAVE_STR
 #define SAVE_STR(str) ((str==0)?("(null)"):(str))
+#define SAVE_STR_LEN(str) ((str==0)?("(null)"):(str))
 #endif
 
 #define BOUNDARY_LENGTH 18

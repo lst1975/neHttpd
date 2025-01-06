@@ -93,6 +93,7 @@ objects = \
 	nanohttp-buffer.o \
 	nanohttp-signal.o \
 	nanohttp-utils.o \
+	nanohttp-inet.o \
 	nanohttp-urlencode.o
 
 depends:= $(objects:.o=.d)

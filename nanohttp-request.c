@@ -442,6 +442,7 @@ hrequest_new_from_socket(struct hsocket_t *sock,
   req->data.p    = buffer + hdrlen;
   req->data.len  = rcvbytes - hdrlen;
   req->data.size = MAX_HEADER_SIZE + 1;
+  
   hpairnode_dump_deep(req->header);
   
   /* Check for MIME message */

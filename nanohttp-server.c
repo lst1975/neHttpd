@@ -162,7 +162,7 @@ static inline int hssl_enabled(void) { return 0; }
 #ifndef WIN32
 #define __NHTTP_LISTEN_DUAL_STACK 1
 #else
-#define __NHTTP_LISTEN_DUAL_STACK 0
+#define __NHTTP_LISTEN_DUAL_STACK 1
 #endif
 
 #ifndef ng_timeradd
@@ -262,37 +262,38 @@ static pthread_mutex_t _httpd_connection_lock = PTHREAD_MUTEX_INITIALIZER;;
 #endif
 #endif
 
-int httpd_create_mutex(MUTEXT_T *mutex)
+int httpd_create_mutex(void *mutex)
 {
   int err = 0;
 #ifdef WIN32
-  *mutex = CreateMutex(NULL, FALSE, NULL);
-  if (*mutex == NULL)
+  *(MUTEXT_T *)mutex = CreateMutex(NULL, FALSE, NULL);
+  if (*(MUTEXT_T *)mutex == NULL)
     err = 1;
 #else
-  pthread_mutex_init(mutex, NULL);
+  pthread_mutex_init((MUTEXT_T *)mutex, NULL);
 #endif
   if (err)
     log_error("httpd_create_mutex failed");
   return err;
 }
-void httpd_destroy_mutex(MUTEXT_T *mutex)
+void httpd_destroy_mutex(void *mutex)
 {
 #ifdef WIN32
-  if (*mutex != NULL)
+  if (*(MUTEXT_T *)mutex != NULL)
   {
-    CloseHandle(*mutex);
-    *mutex = NULL;
+    CloseHandle(*(MUTEXT_T *)mutex);
+    *(MUTEXT_T *)mutex = NULL;
   }
 #else
-  pthread_mutex_destroy(mutex);
+  if (mutex != NULL)
+    pthread_mutex_destroy((MUTEXT_T *)mutex);
 #endif
 }
-int httpd_enter_mutex(MUTEXT_T *mutex)
+int httpd_enter_mutex(void *mutex)
 {
 #ifdef WIN32
   DWORD dwWaitResult; 
-  dwWaitResult = WaitForSingleObject(*mutex, INFINITE);
+  dwWaitResult = WaitForSingleObject(*(MUTEXT_T *)mutex, INFINITE);
   switch (dwWaitResult) 
   {
     // The thread got ownership of the mutex
@@ -305,17 +306,17 @@ int httpd_enter_mutex(MUTEXT_T *mutex)
       return -1; 
   }
 #else
-  pthread_mutex_lock(mutex);
+  pthread_mutex_lock((MUTEXT_T *)mutex);
   return 0;
 #endif
 }
 
-void httpd_leave_mutex(MUTEXT_T *mutex)
+void httpd_leave_mutex(void *mutex)
 {
 #ifdef WIN32
-  ReleaseMutex(*mutex);
+  ReleaseMutex(*(MUTEXT_T *)mutex);
 #else
-  pthread_mutex_unlock(mutex);
+  pthread_mutex_unlock((MUTEXT_T *)mutex);
 #endif
 }
 
@@ -635,6 +636,12 @@ httpd_init(int argc, char **argv)
     return herror_new("http_memcache_init",HSOCKET_ERROR_INIT,"failed");
   }
 
+  if (http_log_init() < 0)
+  {
+    log_error("Cannot init http_log.");
+    return herror_new("http_log_init",HSOCKET_ERROR_INIT,"failed");
+  }
+  
   if ((status = nanohttp_dir_init(argv[0])) != H_OK)
   {
     log_error("nanohttp_dir_init failed (%s)", herror_message(status));
@@ -1305,11 +1312,13 @@ httpd_session_main(void *data)
   tid = conn->tid;
 #endif
   start = ng_get_time();
-  log_verbose("starting new httpd session on socket %d", conn->sock);
+
+  log_debug("starting new httpd session on socket %d.", conn->sock.sock);
+
   rconn = httpd_new(&(conn->sock));
   if (rconn == NULL)
   {
-    log_fatal("httpd_new failed (%s)", strerror(errno));
+    log_fatal("httpd_new failed.");
     done = 1;
   }
   else
@@ -1319,7 +1328,8 @@ httpd_session_main(void *data)
   {
     struct hrequest_t *req;
 
-    log_verbose("starting HTTP request on socket %d (%p)", conn->sock, conn->sock.sock);
+    log_verbose("starting HTTP request on socket %d (%p).", 
+      conn->sock.sock, conn);
 
     if ((status = hrequest_new_from_socket(&(conn->sock), &req)) != H_OK)
     {
@@ -1333,7 +1343,8 @@ httpd_session_main(void *data)
 #endif			
 #endif			
         case HSOCKET_ERROR_RECEIVE:
-          log_error("hrequest_new_from_socket failed (%s)", herror_message(status));
+          log_error("hrequest_new_from_socket failed (%s)", 
+            herror_message(status));
           break;
         default:
           httpd_send_bad_request(rconn, herror_message(status));
@@ -1362,8 +1373,9 @@ httpd_session_main(void *data)
 
       if ((service = httpd_find_service(req->path, req->path_len)))
       {
-        log_debug("service '%s' for '%s'(%s) found", 
-                service->context, req->path, service->name);
+        log_debug("service '%s' for '%.*s'(%s) found", 
+                service->context, req->path_len, 
+                req->path, service->name);
 
       	if (service->status == NHTTPD_SERVICE_UP)
       	{
@@ -1393,7 +1405,8 @@ httpd_session_main(void *data)
             else
             {
               snprintf(buffer, sizeof(buffer), 
-                "service '%s' is not registered properly (service function is NULL)", req->path);
+                "service '%.*s' is not registered properly (service function is NULL)", 
+                req->path_len, req->path);
               log_warn("%s", buffer);
               httpd_send_not_implemented(rconn, buffer);
             }
@@ -1406,14 +1419,16 @@ httpd_session_main(void *data)
         }
         else
         {
-          snprintf(buffer, sizeof(buffer), "service for '%s' is disabled", req->path);
+          snprintf(buffer, sizeof(buffer), "service for '%.*s' is disabled", 
+            req->path_len, req->path);
           log_warn("%s", buffer);
           httpd_send_internal_error(rconn, buffer);
         }
       }
       else
       {
-        snprintf(buffer, sizeof(buffer), "no service for '%s' found", req->path);
+        snprintf(buffer, sizeof(buffer), "no service for '%.*s' found", 
+          req->path_len, req->path);
         log_warn("%s", buffer);
       	httpd_send_not_implemented(rconn, buffer);
         done = 1;
@@ -1434,7 +1449,8 @@ httpd_session_main(void *data)
 
   _httpd_release_finished_conn(conn);
 
-  log_debug("Connection used is: %d", httpd_get_conncount());
+  int count = httpd_get_conncount();
+  log_debug("Connection used is: %d", count);
   ng_date_print();
   
 #ifdef WIN32
@@ -1722,9 +1738,8 @@ __httpd_run(struct hsocket_t *sock, int is_ipv6)
     if (err != H_OK)
     {
       log_error("hsocket_accept failed (%s)", herror_message(err));
-    
       hsocket_close(&(conn->sock));
-    
+      _httpd_release_finished_conn(conn);
       continue;
     }
     
@@ -1813,6 +1828,7 @@ __httpd_run(struct hsocket_t *sock, int is_ipv6)
     {
       log_error("hsocket_accept failed (%s)", herror_message(err));
       hsocket_close(&(conn->sock));
+      _httpd_release_finished_conn(conn);
       continue;
     }
 
@@ -1844,7 +1860,7 @@ int httpd_create_cond(COND_T *cond)
   ng_atomic_set(&condition_met, 0);
   
 #ifdef WIN32
-  *cond = CreateEvent(NULL, FALSE, FALSE, NULL);
+  *cond = CreateEvent(NULL, TRUE, FALSE, NULL);
   if (*cond == NULL)
   {
     err = 1;
@@ -2051,6 +2067,7 @@ httpd_destroy(void)
 
   nanohttp_users_free();
   nanohttp_dir_free();
+  http_log_free();
   http_memcache_free();
   return;
 }
