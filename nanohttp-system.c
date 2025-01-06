@@ -564,25 +564,37 @@ __os_sys_status(void *log)
      */
     osviex_stub = (ngx_osviex_stub_t *) &osvi.wServicePackMinor;
 
-    ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-      "OS: Windows %ui build:%ud, \"%s\", suite:%Xd, type:%ud",
-      ngx_win32_version, osvi.dwBuildNumber, osvi.szCSDVersion,
-      osviex_stub->wSuiteMask, osviex_stub->wProductType);
+    if (strlen(osvi.szCSDVersion))
+      ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
+        "OS: Windows %u build:%u, \"%s\", suite:%X, type:%u",
+        ngx_win32_version, osvi.dwBuildNumber, osvi.szCSDVersion,
+        osviex_stub->wSuiteMask, osviex_stub->wProductType);
+    else
+      ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
+        "OS: Windows %u build:%u, suite:%X, type:%u",
+        ngx_win32_version, osvi.dwBuildNumber, 
+        osviex_stub->wSuiteMask, osviex_stub->wProductType);
   } 
   else 
   {
     if (osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) 
     {
       /* Win9x build */
-
-      ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-          "OS: Windows %ui build:%ud.%ud.%ud, \"%s\"",
-          ngx_win32_version,
-          osvi.dwBuildNumber >> 24,
-          (osvi.dwBuildNumber >> 16) & 0xff,
-          osvi.dwBuildNumber & 0xffff,
-          osvi.szCSDVersion);
-
+      if (strlen(osvi.szCSDVersion))
+        ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
+            "OS: Windows %u build:%u.%u.%u, \"%s\"",
+            ngx_win32_version,
+            osvi.dwBuildNumber >> 24,
+            (osvi.dwBuildNumber >> 16) & 0xff,
+            osvi.dwBuildNumber & 0xffff,
+            osvi.szCSDVersion);
+      else
+        ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
+            "OS: Windows %u build:%u.%u.%u",
+            ngx_win32_version,
+            osvi.dwBuildNumber >> 24,
+            (osvi.dwBuildNumber >> 16) & 0xff,
+            osvi.dwBuildNumber & 0xffff);
     } 
     else 
     {
@@ -592,11 +604,15 @@ __os_sys_status(void *log)
        * we do not currently support VER_PLATFORM_WIN32_CE
        * and we do not support VER_PLATFORM_WIN32s at all
        */
-
-      ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-          "OS: Windows %ui build:%ud, \"%s\"",
-          ngx_win32_version, osvi.dwBuildNumber,
-          osvi.szCSDVersion);
+      if (strlen(osvi.szCSDVersion))
+        ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
+            "OS: Windows %u build:%u, \"%s\"",
+            ngx_win32_version, osvi.dwBuildNumber,
+            osvi.szCSDVersion);
+      else
+        ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
+            "OS: Windows %u build:%u",
+            ngx_win32_version, osvi.dwBuildNumber);
     }
   }
   
@@ -950,7 +966,7 @@ __os_specific_init(void *log)
 
   ng_snprintf(ng_os_info.ng_os_version, 
     sizeof(ng_os_info.ng_os_version),
-    "%s %s", u.sysname, u.release);
+    "OS: %s build:%s", u.sysname, u.release);
 #endif
 
   return ng_ERR_NONE;

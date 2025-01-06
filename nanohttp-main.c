@@ -1280,7 +1280,7 @@ void main_print_license(int daemonize)
   };
   json_printer_default(NULL, "\n");
   
-  json_printer_default(NULL, "Ver: %s, running on OS: %s\n\n", 
+  json_printer_default(NULL, "Ver: %s, running on %s\n\n", 
     NG_VER_BUILD, ng_os_info.ng_os_version);
 }
 
