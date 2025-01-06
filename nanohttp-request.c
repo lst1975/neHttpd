@@ -117,6 +117,7 @@
 #include "nanohttp-stream.h"
 #include "nanohttp-mime.h"
 #include "nanohttp-request.h"
+#include "nanohttp-time.h"
 
 static struct hrequest_t *hrequest_new(void)
 {
@@ -128,12 +129,7 @@ static struct hrequest_t *hrequest_new(void)
     goto clean0;
   }
 
-  if (gettimeofday(&(req->statistics.time), NULL) < 0)
-  {
-    log_error("gettimeofday failed (%s)", strerror(errno));
-    goto clean1;
-  }
-  
+  req->statistics.time = ng_get_time();
   req->method       = HTTP_REQUEST_GET;
   req->version      = HTTP_1_1;
   req->query        = NULL;
@@ -146,13 +142,10 @@ static struct hrequest_t *hrequest_new(void)
   req->data.len     = 0;
   req->statistics.bytes_transmitted = 0;
   req->statistics.bytes_received    = 0;
+  req->content_length = -1;
   
-  return req;
-  
-clean1:
-  http_free(req);
 clean0:
-  return NULL;
+  return req;
 }
 
 static struct hrequest_t *

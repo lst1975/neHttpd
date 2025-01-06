@@ -68,16 +68,91 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>  // For PATH_MAX
+#include <errno.h>
 
-#include "nanohttp-config.h"
 #include "nanohttp-common.h"
 #include "nanohttp-defs.h"
 #include "nanohttp-file.h"
 #include "nanohttp-error.h"
 #include "nanohttp-mem.h"
 #include "nanohttp-logging.h"
+#include "nanohttp-system.h"
 
 static httpd_buf_t httpd_base_path = __HTTPD_BUF_INIT_DECL();
+
+#ifdef WIN32
+herror_t
+hsocket_setexec(int sock, int err)
+{
+  return H_OK;
+}
+
+herror_t
+nanohttp_dir_init(const char *pfile)
+{
+  int plen;
+  
+  if (pfile == NULL)
+  {
+    log_error("pfile is NULL");
+    return herror_new("nanohttp_dir_init", HSERVER_ERROR_INVAL,
+                      "Parameter pfile is NULL");
+  }
+  
+  char *d = http_malloc(PATH_MAX);
+  if (d == NULL)
+  {
+    log_error("hsocket_dir_init failed");
+    return herror_new("nanohttp_dir_init", HSERVER_ERROR_MALLOC,
+                      "Unable to malloc tempary buffer");
+  }
+
+  const char *pwd = ng_get_pwd(d, PATH_MAX);
+  if (pwd == NULL)  
+  {
+    http_free(d);
+    log_error("hsocket_dir_init failed");
+    return herror_new("nanohttp_dir_init", HSERVER_ERROR_SYSTEM,
+                      "Unable to execute getcwd");
+  }
+  
+  log_debug("Current path: %s", pwd);
+  char *p = strrchr(pwd, __PATH_DLIM);
+  if (p == NULL)
+  {
+    http_free(d);
+    log_error("bad parameter pfile: %s", pfile);
+    return herror_new("nanohttp_dir_init", HSERVER_ERROR_INVAL,
+                      "bad parameter pfile: %s", pfile);
+  }
+
+  plen = p - pwd + 1;
+  httpd_base_path.buf = d;
+  httpd_base_path.len = p - pwd + 1;
+  httpd_base_path.buf[httpd_base_path.len]='\0';
+  
+  for (p=d; p != NULL; )
+  {
+    p = memchr(p, __PATH_DLIM, plen);
+    if (p != NULL)
+      *p++='/';
+  }
+
+  log_info("[OK]");
+  return H_OK;
+}
+#else
+herror_t
+hsocket_setexec(int sock, int err)
+{
+  // Set FD_CLOEXEC on the file descriptor
+  int flags = fcntl(sock, F_GETFD);
+  if (flags == -1 || fcntl(sock, F_SETFD, flags | FD_CLOEXEC) == -1) {
+    return herror_new("hsocket_open", err,
+                      "Socket error (%s)", strerror(errno));
+  }
+  return H_OK;
+}
 
 herror_t
 nanohttp_dir_init(const char *pfile)
@@ -96,7 +171,7 @@ nanohttp_dir_init(const char *pfile)
     return herror_new("nanohttp_dir_init", HSERVER_ERROR_MALLOC,
                       "Unable to malloc tempary buffer");
   }
-  const char *pwd = getcwd(d, PATH_MAX);
+  const char *pwd = ng_get_pwd(d, PATH_MAX);
   if (pwd == NULL)  
   {
     http_free(d);
@@ -105,6 +180,7 @@ nanohttp_dir_init(const char *pfile)
                       "Unable to execute getcwd");
   }
 
+  log_debug("Current path: %s", pwd);
   const char *p = strrchr(pfile, __PATH_DLIM);
   if (p == NULL)
   {
@@ -116,7 +192,7 @@ nanohttp_dir_init(const char *pfile)
 
   size_t plen = strlen(pwd);
   size_t flen = p + 1 - pfile;
-  if (pfile[0] == __PATH_DLIM 
+  if (pfile[0] == __PATH_DLIM
     ||(flen >= plen 
         && (!memcmp(pwd, pfile, plen))))
   {
@@ -147,6 +223,7 @@ nanohttp_dir_init(const char *pfile)
   log_info("[OK]");
   return H_OK;
 }
+#endif
 
 void
 nanohttp_dir_free(void)
@@ -301,6 +378,7 @@ static char *nanohttp_file_get_path(const char *file)
     return NULL;
   }
   log_debug("Get path: %s", path);
+
   return path;
 }
 

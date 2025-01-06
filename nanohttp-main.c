@@ -80,6 +80,7 @@
 #include "nanohttp-ring.h"
 #include "nanohttp-data.h"
 #include "nanohttp-system.h"
+#include "nanohttp-signal.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const httpd_buf_t *user, 
@@ -1265,43 +1266,45 @@ void main_print_license(int daemonize)
   int len = sizeof(__HTTPD_LICENSE)-1;
   const char *e = s + len;
 
-  log_print("\n");
+  json_printer_default(NULL, "\n");
   while (1) {
     p = memchr(s, '\n', len);
     if (p == NULL)
       break;
     if (daemonize)
-      log_print("%.*s", p - s, s);
+      json_printer_default(NULL, "%.*s", p - s, s);
     else
-      log_print("%.*s", p + 1 - s, s);
+      json_printer_default(NULL, "%.*s", p + 1 - s, s);
     s = p + 1;
     len = e - s;
   };
-  log_print("\n");
+  json_printer_default(NULL, "\n");
   
-  log_print("Ver: %s, running on OS: %s\n\n", NG_VER_BUILD, ng_os_info.ng_os_version);
+  json_printer_default(NULL, "Ver: %s, running on OS: %s\n\n", 
+    NG_VER_BUILD, ng_os_info.ng_os_version);
 }
 
 int
 main(int argc, char **argv)
 {
-  int daemonize; 
+  int daemonize = 0, result; 
   herror_t status;
 
   nanohttp_log_set_loglevel(_nanoConfig_HTTPD_LOG_LEVEL);
     
-  daemonize = httpd_parse_arguments(argc, argv);
-  if (daemonize == HTTP_INIT_PARSE_RESULT_DAEMON)
+  result = httpd_parse_arguments(argc, argv);
+  if (result == HTTP_INIT_PARSE_RESULT_DAEMON)
   {
     nanohttp_log_set_logtype(NANOHTTP_LOG_SYSLOG);
+    daemonize = 1;
     http_daemonize(1,0);
   }
-  else if (daemonize == HTTP_INIT_PARSE_RESULT_HELP)
+  else if (result == HTTP_INIT_PARSE_RESULT_HELP)
   {
     fprintf(stdout, __nanohttp_help);
     return EXIT_SUCCESS;
   }
-  else if (daemonize == HTTP_INIT_PARSE_RESULT_ERR)
+  else if (result == HTTP_INIT_PARSE_RESULT_ERR)
   {
     goto error0;
   }

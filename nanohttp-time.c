@@ -66,6 +66,7 @@
 #include "nanohttp-time.h"
 #include "nanohttp-system.h"
 #include "nanohttp-error.h"
+#include "nanohttp-utils.h"
 
 /* Pointer to user delay function */
 void (*rte_delay_us)(unsigned int) = NULL;
@@ -202,6 +203,7 @@ check_model_gdm_dnv(uint8_t model)
 	return 0;
 }
 
+#ifndef WIN32
 #ifdef RTE_TOOLCHAIN_MSVC
 int
 __get_cpuid_max(unsigned int e, unsigned int *s)
@@ -214,11 +216,12 @@ __get_cpuid_max(unsigned int e, unsigned int *s)
 	return cpuinfo[0];
 }
 #endif
+#endif
 
 uint64_t
 get_tsc_freq_arch(void)
 {
-#ifdef RTE_TOOLCHAIN_MSVC
+#if defined(RTE_TOOLCHAIN_MSVC) || defined(WIN32)
 	int cpuinfo[4];
 #endif
 	uint64_t tsc_hz = 0;
@@ -226,7 +229,7 @@ get_tsc_freq_arch(void)
 	uint8_t mult, model;
 	int32_t ret;
 
-#ifdef RTE_TOOLCHAIN_MSVC
+#if defined(RTE_TOOLCHAIN_MSVC) || defined(WIN32)
 	__cpuid(cpuinfo, 0);
 	a = cpuinfo[0];
 	b = cpuinfo[1];
@@ -245,7 +248,7 @@ get_tsc_freq_arch(void)
 	maxleaf = __get_cpuid_max(0, NULL);
 
 	if (maxleaf >= 0x15) {
-#ifdef RTE_TOOLCHAIN_MSVC
+#if defined(RTE_TOOLCHAIN_MSVC) || defined(WIN32)
 		__cpuid(cpuinfo, 0x15);
 		a = cpuinfo[0];
 		b = cpuinfo[1];
@@ -260,7 +263,7 @@ get_tsc_freq_arch(void)
 			return c * (b / a);
 	}
 
-#ifdef RTE_TOOLCHAIN_MSVC
+#if defined(RTE_TOOLCHAIN_MSVC) || defined(WIN32)
 	__cpuid(cpuinfo, 0x1);
 	a = cpuinfo[0];
 	b = cpuinfo[1];
@@ -480,47 +483,57 @@ set_tsc_freq(void)
 	if (!freq)
 		freq = estimate_tsc_freq();
 
-	log_debug("TSC frequency is ~%" PRIu64 " KHz", freq / 1000);
+  ng_print_cpufreq("TSC frequency", freq / 1000000.0);
 	eal_tsc_resolution_hz = freq;
 	ng_os_info.tsc_hz = freq;
 }
 
 #if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
+#include <windows.h>
 #define US_PER_SEC 1E6
 #define CYC_PER_10MHZ 1E7
 
 void
 rte_delay_us_sleep(unsigned int us)
 {
-	HANDLE timer;
-	LARGE_INTEGER due_time;
+  HANDLE timer;
+  LARGE_INTEGER due_time;
 
-	/* create waitable timer */
-	timer = CreateWaitableTimer(NULL, TRUE, NULL);
-	if (!timer) {
-		RTE_LOG_WIN32_ERR("CreateWaitableTimer()");
-		rte_errno = ENOMEM;
-		return;
-	}
+  /* create waitable timer */
+  timer = CreateWaitableTimer(NULL, TRUE, NULL);
+  if (!timer) 
+  {
+    int err = GetLastError();
+  	log_error("CreateWaitableTimer() failed. (%d:%s).", err, os_strerror(err));
+  	ng_set_errno(ERROR_NOT_ENOUGH_MEMORY);
+  	goto clean0;
+  }
 
-	/*
-	 * due_time's uom is 100 ns, multiply by 10 to convert to microseconds
-	 * set us microseconds time for timer
-	 */
-	due_time.QuadPart = -((int64_t)us * 10);
-	if (!SetWaitableTimer(timer, &due_time, 0, NULL, NULL, FALSE)) {
-		RTE_LOG_WIN32_ERR("SetWaitableTimer()");
-		rte_errno = EINVAL;
-		goto end;
-	}
-	/* start wait for timer for us microseconds */
-	if (WaitForSingleObject(timer, INFINITE) == WAIT_FAILED) {
-		RTE_LOG_WIN32_ERR("WaitForSingleObject()");
-		rte_errno = EINVAL;
-	}
+  /*
+   * due_time's uom is 100 ns, multiply by 10 to convert to microseconds
+   * set us microseconds time for timer
+   */
+  due_time.QuadPart = -((int64_t)us * 10);
+  if (!SetWaitableTimer(timer, &due_time, 0, NULL, NULL, FALSE)) 
+  {
+    int err = GetLastError();
+    log_error("SetWaitableTimer() failed. (%d:%s).", err, os_strerror(err));
+    ng_set_errno(WSAEINVAL);
+    goto clean1;
+  }
+  /* start wait for timer for us microseconds */
+  if (WaitForSingleObject(timer, INFINITE) == WAIT_FAILED) 
+  {
+    int err = GetLastError();
+  	log_error("WaitForSingleObject() failed. (%d:%s).", err, os_strerror(err));
+  	ng_set_errno(WSAEINVAL);
+  	goto clean1;
+  }
 
-end:
+clean1:
 	CloseHandle(timer);
+clean0:
+  return;
 }
 
 uint64_t
@@ -538,7 +551,7 @@ get_tsc_freq(void)
 
 	rte_delay_us_sleep(US_PER_SEC / 10); /* 1/10 second */
 
-	if (rte_errno != 0)
+	if (ng_errno != 0)
 		return 0;
 
 	QueryPerformanceCounter(&t_end);
@@ -667,24 +680,6 @@ rte_eal_timer_init(void)
 
 #endif
 
-/**
- * This call is easily portable to any architecture, however,
- * it may require a system call and imprecise for some tasks.
- */
-uint64_t
-os__rte_rdtsc_syscall(void)
-{
-	struct timespec val;
-	uint64_t v;
-
-	while (clock_gettime(CLOCK_MONOTONIC_RAW, &val) != 0)
-		/* no body */;
-
-	v  = (uint64_t) val.tv_sec * 1000000000LL;
-	v += (uint64_t) val.tv_nsec;
-	return v;
-}
-
 uint64_t
 rte_get_tsc_hz(void)
 {
@@ -721,9 +716,7 @@ uint64_t ng_get_time(void)
 {
   uint64_t endCycles;
   endCycles = rte_get_timer_cycles();
-  return startime+round(
-    ng_cycles2sec(ng_difftime(endCycles,starcycles), 
-      ng_os_info.freq));
+  return startime+round(ng_cycles2sec(ng_difftime(endCycles, starcycles), 0));
 }
 
 void ng_update_time(void)
@@ -883,8 +876,8 @@ ng_unix2tm_time(ng_rtc_time_s *tm, ng_tmv_s *tv, int tz_offset)
 {
   int i, leap = 0;
   const uint32_t *m;
-  time_t day_in_epoch;
-  time_t t = tv->tv_sec;
+  ng_time_t day_in_epoch;
+  ng_time_t t = tv->tv_sec;
   
   t += tz_offset;
 
@@ -1063,7 +1056,8 @@ int __ng_http_date(char *buf, int len, int isHttp,
   p = buf;
   tv.tv_sec = ng_get_time();
   tv.tv_usec = 0;
-  ng_unix2tm_time(&tm, &tv, tz_offset);
+  if (ng_unix2tm_time(&tm, &tv, tz_offset) != ng_ERR_NONE)
+    return -1;
   
   if (isHttp)
   {

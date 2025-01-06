@@ -214,17 +214,17 @@ _httpd_admin_list_statistics(httpd_conn_t *conn,
   }
 
   stat_pthread_rwlock_rdlock(&(service->statistics.lock));
+  uint64_t secs = STAT_u64_read(service->statistics.time);
   n = sprintf(buffer, "<ul>"
                     "<li>Requests served: %"PRIu64"</li>"
                     "<li>Bytes read: %"PRIu64"</li>"
                     "<li>Bytes sent: %"PRIu64"</li>"
-                    "<li>Time used: %li.%li sec</li>"
+                    "<li>Time used: %li second%s</li>"
                   "</ul>",
                   STAT_u64_read(service->statistics.requests),
                   STAT_u64_read(service->statistics.bytes_received),
                   STAT_u64_read(service->statistics.bytes_transmitted),
-		  service->statistics.time.tv_sec,
-		  service->statistics.time.tv_usec);
+                  secs, secs ? "s":"");
   stat_pthread_rwlock_unlock(&(service->statistics.lock));
 
   http_output_stream_write(conn->out, (unsigned char *)buffer, n);

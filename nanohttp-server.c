@@ -86,7 +86,7 @@
 ******************************************************************/
 #include "nanohttp-config.h"
 
-#ifdef HAVE_SOCKET_H
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
 
@@ -157,6 +157,7 @@ static inline int hssl_enabled(void) { return 0; }
 #include "nanohttp-system.h"
 #include "nanohttp-time.h"
 #include "nanohttp-ctype.h"
+#include "nanohttp-signal.h"
 
 #ifndef ng_timeradd
 #define ng_timeradd(tvp, uvp, vvp)						\
@@ -227,30 +228,27 @@ int nanohttpd_is_running(void)
 {
   return _httpd_run;
 }
+void nanohttpd_stop_running(void)
+{
+  _httpd_run = 0;
+}
 
 #ifdef WIN32
 #undef errno
 #define errno GetLastError()
-static DWORD _httpd_terminate_signal = CTRL_C_EVENT;
-static int _httpd_max_idle = 120;
 typedef HANDLE MUTEXT_T;
 typedef HANDLE THREAD_T;
-typedef DWORD SIGNAL_T;
 typedef DWORD WINAPI (*HTTP_THREAD_EXEFUNC_T)(LPVOID arg);
 #if !__HTTP_USE_CONN_RING
 HANDLE _httpd_connection_lock = NULL;
 #endif
 #define strncasecmp(s1, s2, num) strncmp(s1, s2, num)
-#define snprintf(buffer, num, s1, s2) sprintf(buffer, s1,s2)
 
 #else
 
 typedef pthread_mutex_t MUTEXT_T;
 typedef pthread_t THREAD_T;
 typedef void * (*HTTP_THREAD_EXEFUNC_T)(void *data);
-typedef int SIGNAL_T;
-static int _httpd_terminate_signal = SIGINT;
-static sigset_t thrsigset;
 #if !__HTTP_USE_CONN_RING
 static pthread_mutex_t _httpd_connection_lock = PTHREAD_MUTEX_INITIALIZER;;
 #endif
@@ -275,7 +273,7 @@ void httpd_destroy_mutex(MUTEXT_T *mutex)
 #ifdef WIN32
   if (*mutex != NULL)
   {
-    closeHandle(*mutex);
+    CloseHandle(*mutex);
     *mutex = NULL;
   }
 #else
@@ -296,7 +294,7 @@ void httpd_thread_kill(THREAD_T *tid)
 {
 #ifdef WIN32
 #else
-  pthread_kill(*tid, _httpd_terminate_signal);
+  pthread_kill(*tid, httpd_get_terminate_signal());
 #endif
 }
 
@@ -308,43 +306,6 @@ void httpd_thread_init(THREAD_T *tid)
   *tid = NULL;
 #endif
 }
-
-#ifdef WIN32
-BOOL WINAPI
-_httpd_term(DWORD sig)
-{
-  if (sig == SIGSEGV)
-  {
-    signal_handler_segfault(sig);
-    return TRUE;
-  }
-  /* log_debug ("Got signal %d", sig); */
-  if (sig == _httpd_terminate_signal
-    || sig == SIGTERM || sig == SIGABRT)
-    _httpd_run = 0;
-
-  return TRUE;
-}
-
-#else
-static void
-_httpd_term(int sig)
-{
-  log_debug("Got signal %d", sig);
-
-  if (sig == SIGSEGV)
-  {
-    signal_handler_segfault(sig);
-    return;
-  }
-
-  if (sig == _httpd_terminate_signal
-    || sig == SIGTERM || sig == SIGABRT)
-    _httpd_run = 0;
-
-  return;
-}
-#endif
 
 static void _httpd_sys_sleep(int secs)
 {
@@ -386,7 +347,7 @@ httpd_parse_arguments(int argc, char **argv)
         log_print("Bad signal number for %s\n", NHTTPD_ARG_TERMSIG);
         return HTTP_INIT_PARSE_RESULT_ERR;
       }
-      _httpd_terminate_signal = ng_atoi(argv[++i], 0);
+      httpd_set_terminate_signal(ng_atoi(argv[++i], 0));
     }
     else if (!strcmp(argv[i], NHTTPD_ARG_MAXCONN))
     {
@@ -704,8 +665,7 @@ httpd_register_secure(const char *context, httpd_service func,
   STAT_u64_set(service->statistics.bytes_received, 0);
   STAT_u64_set(service->statistics.bytes_transmitted, 0);
   STAT_u64_set(service->statistics.requests, 0);
-  service->statistics.time.tv_sec = 0;
-  service->statistics.time.tv_usec = 0;
+  STAT_u64_set(service->statistics.time, 0);
   stat_pthread_rwlock_init(&(service->statistics.lock), NULL);
 
   service->name = service_name;
@@ -1292,43 +1252,36 @@ _httpd_authenticate_request(struct hrequest_t * req, httpd_auth auth)
 }
 
 #ifdef WIN32
-static unsigned _stdcall
-httpd_session_main(void *data)
+DWORD WINAPI httpd_session_main(LPVOID data) 
 #else
 static void *
 httpd_session_main(void *data)
 #endif
 {
-  struct hrequest_t *req;
   conndata_t *conn;
   httpd_conn_t *rconn;
   hservice_t *service;
   herror_t status;
-  struct timeval start, end, duration;
+  uint64_t start, duration;
   int done;
 
   rconn = NULL;
   conn = (conndata_t *)data;
-  if (gettimeofday(&start, NULL) == -1)
+  start = ng_get_time();
+  log_verbose("starting new httpd session on socket %d", conn->sock);
+  rconn = httpd_new(&(conn->sock));
+  if (rconn == NULL)
   {
-    log_error("gettimeofday failed (%s)", strerror(errno));
+    log_fatal("httpd_new failed (%s)", strerror(errno));
     done = 1;
   }
   else
-  {
-    log_verbose("starting new httpd session on socket %d", conn->sock);
-    rconn = httpd_new(&(conn->sock));
-    if (rconn == NULL)
-    {
-      log_fatal("httpd_new failed (%s)", strerror(errno));
-      done = 1;
-    }
-    else
-      done = 0;
-  }
+    done = 0;
 
   while (!done)
   {
+    struct hrequest_t *req;
+
     log_verbose("starting HTTP request on socket %d (%p)", conn->sock, conn->sock.sock);
 
     if ((status = hrequest_new_from_socket(&(conn->sock), &req)) != H_OK)
@@ -1387,14 +1340,11 @@ httpd_session_main(void *data)
             {
               service->func(rconn, req);
 
-              if (gettimeofday(&end, NULL) == -1)
-                log_error("gettimeofday failed (%s)", strerror(errno));
-              ng_timersub(&end, &start, &duration);
-
+              duration = ng_get_time() - start;
               stat_pthread_rwlock_wrlock(&(service->statistics.lock));
               STAT_u64_add(service->statistics.bytes_received, rconn->sock->bytes_received);
               STAT_u64_add(service->statistics.bytes_transmitted, rconn->sock->bytes_transmitted);
-              ng_timeradd(&(service->statistics.time), &duration, &(service->statistics.time));
+              STAT_u64_add(service->statistics.time, duration);
               stat_pthread_rwlock_unlock(&(service->statistics.lock));
 
               if (rconn->out && rconn->out->type == HTTP_TRANSFER_CONNECTION_CLOSE)
@@ -1460,7 +1410,7 @@ httpd_session_main(void *data)
   ng_date_print();
   
 #ifdef WIN32
-  _endthread();
+  ExitThread(0);
   return 0;
 #else
   /* pthread_exits automagically */
@@ -1546,35 +1496,6 @@ httpd_add_headers(httpd_conn_t * conn, const hpair_t * values)
   return;
 }
 
-/*
- * -----------------------------------------------------
- * FUNCTION: _httpd_register_signal_handler
- * -----------------------------------------------------
- */
-static void
-_httpd_register_signal_handler(SIGNAL_T sig)
-{
-
-#ifndef WIN32
-  sigemptyset(&thrsigset);
-  sigaddset(&thrsigset, SIGALRM);
-#endif
-
-  log_verbose("registering termination signal handler (SIGNAL:%d)",
-               sig);
-#ifdef WIN32
-  if (SetConsoleCtrlHandler((PHANDLER_ROUTINE) _httpd_term, TRUE) == FALSE)
-  {
-    log_error("Unable to install console event handler!");
-  }
-
-#else
-  signal(sig, _httpd_term);
-#endif
-
-  return;
-}
-
 static conndata_t *
 _httpd_wait_for_empty_conn(void)
 {
@@ -1631,19 +1552,20 @@ _httpd_wait_for_empty_conn(void)
 static void
 _httpd_start_thread(conndata_t *conn)
 {
+#ifdef WIN32
+  conn->tid = CreateThread(NULL, 65535, httpd_session_main, conn, 0, NULL);
+  if (conn->tid == NULL)
+    log_error("CreateThread failed (%d:%s)", os_strerror(GetLastError()));
+#else
   int err;
 
-#ifdef WIN32
-  conn->tid =
-    (HANDLE) _beginthreadex(NULL, 65535, httpd_session_main, conn, 0, &err);
-#else
   pthread_attr_init(&(conn->attr));
 
 #ifdef PTHREAD_CREATE_DETACHED
   pthread_attr_setdetachstate(&(conn->attr), PTHREAD_CREATE_DETACHED);
 #endif
 
-  pthread_sigmask(SIG_BLOCK, &thrsigset, NULL);
+  httpd_pthread_sigmask();
   if ((err =
        pthread_create(&(conn->tid), &(conn->attr), httpd_session_main, conn)))
     log_error("pthread_create failed (%s)", strerror(err));
@@ -1654,13 +1576,13 @@ _httpd_start_thread(conndata_t *conn)
 
 #if __NHTTP_USE_EPOLL
 static inline herror_t
-__httpd_run(struct hsocket_t *sock, const char *name)
+__httpd_run(struct hsocket_t *sock, int is_ipv6)
 {
   conndata_t *conn;
   herror_t err;
   struct epoll_event event;
   
-  log_verbose("starting run routine: %s", name);
+  log_verbose("starting run routine: %s", is_ipv6 ? "ipv6":"ipv4");
 
   if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
@@ -1741,14 +1663,18 @@ __httpd_run(struct hsocket_t *sock, const char *name)
 }
 #else
 static inline herror_t
-__httpd_run(struct hsocket_t *sock, const char *name)
+__httpd_run(struct hsocket_t *sock, int is_ipv6)
 {
-  struct timeval timeout;
+#ifdef WIN32
+ TIMEVAL timeout = {.tv_sec = 1, .tv_usec = 0};
+#else
+  struct timeval timeout = {.tv_sec = 1, .tv_usec = 0};
+#endif
   conndata_t *conn;
   herror_t err;
   fd_set fds;
 
-  log_verbose("starting run routine: %s", name);
+  log_verbose("starting run routine: %s", is_ipv6 ? "ipv6":"ipv4");
 
   if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
@@ -1875,7 +1801,7 @@ void httpd_destroy_cond(COND_T *cond)
 #ifdef WIN32
   if (*cond != NULL)
   {
-    closeHandle(*cond);
+    CloseHandle(*cond);
     *cond = NULL;
   }
 #else
@@ -1921,14 +1847,10 @@ DWORD WINAPI thread_function_ipv4(LPVOID arg)
 static void *thread_function_ipv4(void* arg) 
 #endif
 {
-  __httpd_run(&_httpd_socket4, "ipv4");
+  __httpd_run(&_httpd_socket4, 0);
   ng_smp_mb();
   httpd_signal_cond(&main_cond);
-#ifdef WIN32
-  return NULL;
-#else
   return 0;
-#endif
 }
 
 #ifdef WIN32
@@ -1937,33 +1859,29 @@ DWORD WINAPI thread_function_ipv6(LPVOID arg)
 static void *thread_function_ipv6(void* arg) 
 #endif
 {
-  __httpd_run(&_httpd_socket6, "ipv6");
+  __httpd_run(&_httpd_socket6, 1);
   ng_smp_mb();
   httpd_signal_cond(&main_cond);
-#ifdef WIN32
-  return NULL;
-#else
   return 0;
-#endif
 }
 
 static herror_t
 __start_thread(conndata_t *conn, HTTP_THREAD_EXEFUNC_T exefunc)
 {
-  int err;
+  int err = 0;
   herror_t status = H_OK;
 #ifdef WIN32
   conn->tid = CreateThread(NULL, 65535, exefunc, conn, 0, NULL);
-  if (conn->id == NULL)
+  if (conn->tid == NULL)
   {
-    err = 1;
-    log_error("pthread_create failed (%d)", GetLastError());
+    err = GetLastError();
+    log_error("pthread_create failed (%d:%s)", err, os_strerror(err));
   }
 #else
   pthread_attr_init(&conn->attr);
   err = pthread_create(&conn->tid, &conn->attr, exefunc, conn);
   if (err)
-    log_error("pthread_create failed (%s)", strerror(err));
+    log_error("pthread_create failed (%d:%s)", err, strerror(err));
 #endif
 
   if (err)
@@ -1978,11 +1896,8 @@ herror_t httpd_run(void)
 {
   herror_t status = H_OK;
   conndata_t *c;
-  
-  _httpd_register_signal_handler(_httpd_terminate_signal);
-  _httpd_register_signal_handler(SIGTERM);
-  _httpd_register_signal_handler(SIGABRT);
-  _httpd_register_signal_handler(SIGSEGV);
+
+  httpd_register_signal_handler();
  
   if (httpd_create_cond(&main_cond))
   {
@@ -2006,7 +1921,7 @@ herror_t httpd_run(void)
   status = __start_thread(c, thread_function_ipv6);
   if (status != H_OK)
   {
-  	_httpd_run = 0;
+  	nanohttpd_stop_running();
     ng_smp_mb();
     httpd_thread_kill(&httpd_thread_ipv4.tid);
     httpd_thread_join(&httpd_thread_ipv4.tid);
@@ -2050,10 +1965,10 @@ httpd_destroy(void)
 }
 
 unsigned char *
-httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req, 
+httpd_get_postdata(httpd_conn_t *conn, struct hrequest_t *req, 
   long *received, long max)
 {
-  size_t content_length = 0;
+  size_t content_length = 0, rcved, total_len;
   unsigned char *postdata = NULL;
 
   if (req->method == HTTP_REQUEST_POST)
@@ -2065,7 +1980,11 @@ httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req,
       sizeof(HEADER_CONTENT_LENGTH) - 1);
 
     if (content_length_pair != NULL)
-      content_length = atol(content_length_pair->value);
+    {
+      content_length = ng_atoi(content_length_pair->value, 
+        content_length_pair->value_len);
+      req->content_length = content_length;
+    }
   }
   else
   {
@@ -2093,12 +2012,22 @@ httpd_get_postdata(httpd_conn_t * conn, struct hrequest_t * req,
     log_error("http_malloc failed (%)", strerror(errno));
     return NULL;
   }
-  if (http_input_stream_read(req->in, postdata, content_length) > 0)
-  {
-    *received = content_length;
-    postdata[content_length] = '\0';
-    return postdata;
+
+  total_len = 0;
+  postdata[content_length] = '\0';
+  while(1) {
+    rcved = http_input_stream_read(req->in, postdata + total_len, 
+      content_length - total_len);
+    if (rcved < 0)
+      break;
+    total_len += rcved;
+    if (total_len >= content_length)
+    {
+      *received = content_length;
+      return postdata;
+    }
   }
+  
   http_free(postdata);
   return NULL;
 }

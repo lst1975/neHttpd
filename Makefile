@@ -91,6 +91,8 @@ objects = \
 	nanohttp-atoi.o \
 	nanohttp-itoa.o \
 	nanohttp-buffer.o \
+	nanohttp-signal.o \
+	nanohttp-utils.o \
 	nanohttp-urlencode.o
 
 depends:= $(objects:.o=.d)
@@ -102,15 +104,34 @@ all: httpd
 
 -include $(depends)
 
-CFLAGS = -Wall -O3 -g3 -I.
+CFLAGS = -Wall -O3 -g3 -I. -Wno-attributes
 LDFLAGS = 
 
+# Check if __CYGWIN__ is defined and set a Makefile variable
+CYGWIN_CHECK := $(shell echo | gcc -dM -E - | grep -q "__CYGWIN__" && echo yes || echo no)
+MINGW64_CHECK := $(shell echo | gcc -dM -E - | grep -q "__MINGW64__" && echo yes || echo no)
+MINGW32_CHECK := $(shell echo | gcc -dM -E - | grep -q "__MINGW32__" && echo yes || echo no)
+
+ifeq ($(CYGWIN_CHECK),yes)
+LDLIB = -lws2_32 -lc
+else
+ifeq ($(MINGW64_CHECK),yes)
+LDLIB = -lws2_32 -lc
+else
+ifeq ($(MINGW32_CHECK),yes)
+LDLIB = -lws2_32 -lc
+else
+LDLIB = -lpthread -lc
+endif
+endif
+endif
+
 release:  $(objects)
-	$(CC) $^ -o httpd -lpthread -lc
+	$(CC) $^ -o httpd $(LDLIB)
 	$(STRIP) httpd
 
 httpd: $(objects)
-	$(CC) $(LDFLAGS) $^ -o $@ -lpthread -lc
+	$(CC) $(LDFLAGS) $^ -o $@  $(LDLIB)
 
 # Syntax - targets ...: target-pattern: prereq-patterns ...
 # In the case of the first target, foo.o, the target-pattern matches foo.o and sets the "stem" to be "foo".

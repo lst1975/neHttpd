@@ -60,79 +60,14 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef __NanoHttpConfig_H_
-#define __NanoHttpConfig_H_
+#ifndef __nanohttp_utils_h
+#define __nanohttp_utils_h
 
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
-#ifndef WIN32
-#define WIN32
-#endif
-#endif
-
-#define HAVE_STDIO_H
-#define HAVE_STDLIB_H
-#define HAVE_STRING_H
-#define HAVE_ERRNO_H
-#ifndef WIN32
-#define HAVE_SYS_TIME_H
-#define HAVE_NETINET_IN_H
-#define HAVE_TIME_H
-#define HAVE_SYS_SOCKET_H
-#define HAVE_SOCKET_H
-#define HAVE_SYS_TYPES_H
-#define HAVE_SYS_SELECT_H
-#define HAVE_SIGNAL_H
-#define HAVE_UNISTD_H
-#define HAVE_PTHREAD_H
-#define HAVE_ARPA_INET_H
-#define HAVE_SYS_WAIT_H
-#define HAVE_FCNTL_H
-#else
-#undef HAVE_SYS_TIME_H
-#undef HAVE_NETINET_IN_H
-#undef HAVE_TIME_H
-#undef HAVE_SYS_SOCKET_H
-#undef HAVE_SOCKET_H
-#undef HAVE_SYS_TYPES_H
-#undef HAVE_SYS_SELECT_H
-#undef HAVE_SIGNAL_H
-#undef HAVE_UNISTD_H
-#undef HAVE_PTHREAD_H
-#undef HAVE_ARPA_INET_H
-#undef HAVE_SYS_WAIT_H
-#undef HAVE_FCNTL_H
-#endif
-
-#define HAVE_STDARG_H
-#define HAVE_CTYPE_H
-
-#define HAVE_SYSLOG_H
-
-#define __NHTTP_INTERNAL
-
-#define __NHTTP_TEST 1
-#define __NHTTP_NO_LOGGING 0
-
-#undef HAVE_SSL
-
-#define _nanoConfig_HTTPD_PORT            8080
-#define _nanoConfig_HTTPD_MAX_CONNECTIONS 128
-#define _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS 256
-#define _nanoConfig_HTTPD_FILE_BLOCK      2048
-#define _nanoConfig_HTTPD_FILE_SERVICE    "/config/"
-#define _nanoConfig_HTTPD_DATA_SERVICE    "/data/"
-#define _nanoConfig_HTTPD_LOG_LEVEL NANOHTTP_LOG_VERBOSE
-
-#define DEBUG_MULTIPART
-#define __NHTTP_DEBUG 0
-#define __NHTTP_MEM_DEBUG 1
-#define __NG_RING_DEBUG 0
-#define __HTTP_SMALL_SIZE 0
-
-#if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) 
-#define __NHTTP_USE_EPOLL 0
-#else
-#define __NHTTP_USE_EPOLL 1
-#endif
+void signal_handler_segfault(int sig);
+void http_daemonize(int nochdir, int noclose);
+void ng_print_cpufreq(const char *n, double hz);
+int ng_get_tzname(char *tz, int size);
+void __ng_gettimeofday(void *tp);
 
 #endif
+

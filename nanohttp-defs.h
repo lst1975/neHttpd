@@ -63,12 +63,23 @@
 #ifndef __nanohttp_defs_h
 #define __nanohttp_defs_h
 
+#include "nanohttp-config.h"
+
 #include <stdint.h>
+#ifdef HAVE_TIME_H
 #include <time.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdatomic.h>
+
+#ifdef WIN32
+typedef uint64_t ng_time_t;
+#else
+typedef uint64_t ng_time_t;
+#endif
+typedef unsigned long ng_ulong_t;
 
 #define ng_snprintf snprintf
 #define ng_strcmp strcmp
@@ -80,6 +91,33 @@
 #if !defined(static_assert) && !defined(__cplusplus)
 #define	static_assert	_Static_assert
 #endif
+
+#ifdef WIN32
+#define RTE_DEFINE_PER_LCORE(type, name)			\
+	__declspec(thread) type per_lcore_##name
+
+#define RTE_DECLARE_PER_LCORE(type, name)			\
+	extern __declspec(thread) type per_lcore_##name
+#else
+/**
+ * Macro to define a per lcore variable "var" of type "type", don't
+ * use keywords like "static" or "volatile" in type, just prefix the
+ * whole macro.
+ */
+#define RTE_DEFINE_PER_LCORE(type, name)			\
+	__thread type per_lcore_##name
+
+/**
+ * Macro to declare an extern per lcore variable "var" of type "type"
+ */
+#define RTE_DECLARE_PER_LCORE(type, name)			\
+	extern __thread type per_lcore_##name
+#endif
+
+/**
+ * Read/write the per-lcore variable value
+ */
+#define RTE_PER_LCORE(name) (per_lcore_##name)
 
 /**
  * Triggers an error at compilation time if the condition is true.

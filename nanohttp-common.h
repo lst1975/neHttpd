@@ -1307,7 +1307,12 @@ extern hpair_t *hpairnode_copy_deep(const hpair_t *src);
  * @see hpairnode_dump
  *
  */
-extern void hpairnode_dump_deep(const hpair_t *pairs);
+extern void __hpairnode_dump_deep(const hpair_t *pairs);
+#if __NHTTP_NO_LOGGING
+#define hpairnode_dump_deep(p) NG_UNUSED(p)
+#else
+#define hpairnode_dump_deep(p) __hpairnode_dump_deep(p)
+#endif
 
 /**
  *

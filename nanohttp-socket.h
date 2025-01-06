@@ -88,10 +88,16 @@
 
 #include "nanohttp-config.h"
 
+#ifndef WIN32
 #if __NHTTP_USE_EPOLL
 #include <sys/epoll.h>
 #else
 #include <sys/select.h>
+#endif
+#else
+#include <Windows.h>
+#include <Winsock2.h>
+#include <Ws2tcpip.h>
 #endif
 
 /** @file nanohttp-socket.h Socket wrapper
@@ -129,7 +135,9 @@ struct hsocket_t
 {
 #ifdef WIN32
   SOCKET sock;
+#if __NHTTP_USE_EPOLL 
   SOCKET ep;
+#endif
 #else
   int sock;
 #if __NHTTP_USE_EPOLL 
@@ -143,6 +151,7 @@ struct hsocket_t
   };
   size_t bytes_transmitted;
   size_t bytes_received;
+  int salen;
   void *ssl;
 };
 

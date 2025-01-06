@@ -86,8 +86,6 @@
 #ifndef __nhttp_request_h
 #define __nhttp_request_h
 
-#include <sys/time.h>
-
 /** @file nanohttp-request.h HTTP request handling
  *
  * @defgroup NANOHTTP_REQUEST HTTP request handling
@@ -332,7 +330,7 @@ struct request_statistics
 {
   unsigned long bytes_transmitted;
   unsigned long bytes_received;
-  struct timeval time;
+  uint64_t time;
 };
 #endif
 
@@ -347,10 +345,11 @@ struct hrequest_t
   http_version_t version;
   char *path;
   int   path_len;
+  int   userLevel;
   hpair_t *query;
   hpair_t *header;
   void    *conn;
-  int      userLevel;
+  size_t   content_length;
   httpd_buf_t data;
   struct request_statistics statistics;
 

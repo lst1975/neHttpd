@@ -279,16 +279,17 @@ typedef int (*httpd_auth) (struct hrequest_t *req,
 /** Service statistics per nanoHTTP service. */
 struct service_statistics
 {
-  struct timeval time;
 #if __NHTTP_USE_STAT_RWLOCK
   volatile uint64_t requests;
   volatile uint64_t bytes_transmitted;
   volatile uint64_t bytes_received;
+  volatile uint64_t time;
   pthread_rwlock_t lock;
 #else
   rte_atomic64_t requests;
   rte_atomic64_t bytes_transmitted;
   rte_atomic64_t bytes_received;
+  rte_atomic64_t time;
   char lock[0];
 #endif
 };
@@ -532,6 +533,8 @@ extern httpd_buf_t __nanohttp_html[];
 #define nanohttp_index_html_head_DECL1         &__nanohttp_html[3]
 #define nanohttp_index_html_head_DECL2         &__nanohttp_html[4]
 #define nanohttp_index_html_head_LOGIN         &__nanohttp_html[5]
+
+extern void nanohttpd_stop_running(void);
 
 #ifdef __cplusplus
 }

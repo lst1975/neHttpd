@@ -196,6 +196,7 @@ clean0:
   return -1;
 }
 
+#if !__NHTTP_NO_LOGGING
 #if __NHTTP_MEM_DEBUG  
 static const char *file_base_name(const char *file)
 {
@@ -204,6 +205,7 @@ static const char *file_base_name(const char *file)
     fp = file;
   return fp;
 }
+#endif
 #endif
 
 void http_memcache_free(void)

@@ -187,6 +187,16 @@ extern char *VisualC_funcname(const char *file, int line); /* not thread safe! *
 void _vnanohttp_log_printf(nanohttp_loglevel_t level, const char *format, va_list ap);
 void _nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...);
 
+#if __NHTTP_NO_LOGGING
+#define log_verbose(fmt, ...) NG_UNUSED(fmt)
+#define log_debug  (fmt, ...) NG_UNUSED(fmt)
+#define log_info   (fmt, ...) NG_UNUSED(fmt)
+#define log_warn   (fmt, ...) NG_UNUSED(fmt)
+#define log_error  (fmt, ...) NG_UNUSED(fmt)
+#define log_fatal  (fmt, ...) NG_UNUSED(fmt)
+#define log_stderr (fmt, ...) NG_UNUSED(fmt)
+#define log_print  (fmt, ...) NG_UNUSED(fmt)
+#else
 #define log_verbose(fmt, ...) _nanohttp_log_printf(NANOHTTP_LOG_VERBOSE, \
                              NANOHTTP_LOG_LEVEL_VERBOSE_STRING " %s: " fmt "\n", \
                              __FUNCTION__, ## __VA_ARGS__)
@@ -214,59 +224,7 @@ void _nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...);
                              NANOHTTP_LOG_LEVEL_STDERR_STRING " %s: " fmt "\n", \
                              __FUNCTION__, ## __VA_ARGS__)
 #define log_print(fmt, ...)  _nanohttp_log_printf(NANOHTTP_LOG_INFO, fmt, ## __VA_ARGS__)
+#endif
 /**@}*/
-
-#define log_LOG_VERBOSE   log_verbose
-#define log_LOG_DEBUG     log_debug
-#define log_NG_LOG_INFO   log_info
-#define log_NG_LOG_WARN   log_warn
-#define log_NG_LOG_ERROR  log_error
-#define log_NG_LOG_FATAL  log_fatal
-#define log_NG_LOG_SYSLOG log_stderr
-
-/** Loglevel definition */
-typedef enum __ng_loglevel ng_loglevel_e;
-enum __ng_loglevel
-{
-  NG_LOG_OFF,     /**< Logging completely turned off (use at your own risk). */
-  NG_LOG_VERBOSE, /**< Debugging messages that may overflow the log */
-  NG_LOG_DEBUG,   /**< Message that contain information normally
-            			     of use only when debugging the library */
-  NG_LOG_INFO,    /**< Informaional messages */
-  NG_LOG_WARN,    /**< Warning messages */
-  NG_LOG_ERROR,   /**< A condition that should be corrected
-            			     immediately, such as a broken network
-            			     connection */
-  NG_LOG_FATAL,   /**< A panic condition */
-  NG_LOG_STDERR   /**< Use syslog or stderr */
-};
-
-#define NG_LOG_OFF_STRING     "OFF"
-#define NG_LOG_VERBOSE_STRING "VERBOSE"
-#define NG_LOG_DEBUG_STRING   "DEBUG"
-#define NG_LOG_INFO_STRING    "INFO"
-#define NG_LOG_WARN_STRING    "WARN"
-#define NG_LOG_ERROR_STRING   "ERROR"
-#define NG_LOG_FATAL_STRING   "FATAL"
-#define NG_LOG_STDERR_STRING  "STDERR"
-#define NG_LOG_UNKNOWN_STRING "UNKNOWN"
-
-#define ng_log_errno(type, __log, errno, fmt, ...) do { \
-  NG_UNUSED(__log); \
-  if (errno) log_ ## type("(%d):%s", errno, strerror(errno)); \
-  log_ ## type(fmt,  ## __VA_ARGS__); \
-} while(0)
-  
-#define ng_log_errno_l(type, __log, fmt, ...) do { \
-    NG_UNUSED(__log); \
-    log_ ## type("(%d):%s", errno, strerror(errno)); \
-    log_ ## type(fmt,  ## __VA_ARGS__); \
-  } while(0)
-    
-#define ng_log_errno_internal(type, __log, errno, fmt, ...) do { \
-    NG_UNUSED(__log); \
-    if (errno) log_ ## type("(%d):%s", errno, ng_strerror(errno)); \
-    log_ ## type(fmt,  ## __VA_ARGS__); \
-  } while(0)
 
 #endif

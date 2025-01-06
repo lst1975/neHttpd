@@ -60,6 +60,8 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
+#include "nanohttp-config.h"
+#include "nanohttp-defs.h"
 #include "nanohttp-system.h"
 #include "nanohttp-error.h"
 #include "nanohttp-logging.h"
@@ -67,6 +69,10 @@
 #include "nanohttp-system.h"
 #include "nanohttp-mem.h"
 #include "nanohttp-json.h"
+#include "nanohttp-utils.h"
+#include "nanohttp-time.h"
+
+static long __os_get_tzoffset(void);
 
 #define NG_SOCKET_MAXCONN 0xfffffff
 
@@ -75,84 +81,91 @@ ng_os_info_s ng_os_info = {
   .ngx_ncpu = 0,
 };
 
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
+static void ng_print_version(void *log) 
+{
+#ifdef NG_COMPILER
+  log_print(NG_VER_BUILD" built by " NG_COMPILER"\n");
+#else
+  log_print(NG_VER_BUILD"\n");
+#endif
+}
+
+#ifdef WIN32 
 #include <windows.h>
-#include <time.h>
+#include <Winsock2.h>
 #include <pdh.h>
 #include <pdhmsg.h>
 #include <stdio.h>
-
+#include <locale.h>
+#if defined(_MSC_VER)
 #pragma comment(lib, "pdh.lib")
+#endif
 
-static ng_result_t ng_get_freq_pdh(void *log, double *freq) 
+char *ng_get_pwd(char *path, size_t len) 
 {
-  PDH_HQUERY query;
-  PDH_HCOUNTER counter;
-  PDH_FMT_COUNTERVALUE counterValue;
-  DWORD status;
-
-  // Initialize PDH
-  status = PdhOpenQuery(NULL, 0, &query);
-  if (status != ERROR_SUCCESS) 
+  // Get the current executable path
+  if (!GetModuleFileName(NULL, path, len))
   {
-    ng_log_errno(NG_LOG_ERROR, log, GetLastError(),
-      "PdhOpenQuery failed with status 0x%lx", status);
-    return ng_ERR_ESYSTEM;
+    int err = GetLastError();
+    log_error("GetModuleFileName failed. (%d:%s)", 
+      err, os_strerror(err));
+    return NULL;
   }
 
-  // Add counter for processor frequency
-  status = PdhAddCounter(query, "\\Processor Information(_Total)\\Processor Frequency", 
-    0, &counter);
-  if (status != ERROR_SUCCESS) {
-    ng_log_errno(NG_LOG_ERROR, log, GetLastError(),
-      "PdhAddCounter failed with status 0x%lx", status);
-    return ng_ERR_ESYSTEM;
-  }
-
-  // Collect data
-  status = PdhCollectQueryData(query);
-  if (status != ERROR_SUCCESS) {
-    ng_log_errno(NG_LOG_ERROR, log, GetLastError(),
-      "PdhCollectQueryData failed with status 0x%lx", status);
-    return ng_ERR_ESYSTEM;
-  }
-
-  // Get counter value
-  status = PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, NULL, &counterValue);
-  if (status != ERROR_SUCCESS) {
-    ng_log_errno(NG_LOG_ERROR, log, GetLastError(),
-      "PdhGetFormattedCounterValue failed with status 0x%lx", status);
-    return ng_ERR_ESYSTEM;
-  }
-
-  ng_log_errno(NG_LOG_INFO, log, 0, "CPU Frequency: %f MHz", 
-    counterValue.doubleValue / 1000.0); 
-
-  // Cleanup
-  PdhCloseQuery(query);
-  *freq = counterValue.doubleValue / 1000.0;
-  return ng_ERR_NONE;
-}
-
-static ng_result_t ng_get_freq_query(void *log, double *freq) 
-{
-  LARGE_INTEGER frequency;
-  if (QueryPerformanceFrequency(&frequency)) {
-    ng_log_errno(NG_LOG_INFO, log, 0, 
-      "CPU Frequency: %lld Hz", frequency.QuadPart / 1000.0);
-    *freq = frequency.QuadPart / 1000.0;
-    return ng_ERR_NONE;
-  } else {
-    ng_log_errno(NG_LOG_INFO, log, GetLastError(), 
-      "Failed to query performance frequency.");
-    return ng_ERR_ESYSTEM;
-  }
+  return path;
 }
 
 static ng_result_t __ng_get_freq(void *log, double *freq) 
 {
-  if (ng_get_freq_query(log,freq) != ng_ERR_NONE)
-    return ng_get_freq_pdh(log,freq);
+  *freq = get_tsc_freq();
+  ng_print_cpufreq("CPU Frequency", *freq/1000000.0);
+  return ng_ERR_NONE;
+}
+
+typedef char STRERR_Buffer[1024];
+RTE_DEFINE_PER_LCORE(STRERR_Buffer, ng_strerror_buffer);
+
+const char *__os_strerror(int err)
+{
+  size_t         len;
+  static size_t  lang = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
+  char *errstr = RTE_PER_LCORE(ng_strerror_buffer);
+  size_t size = sizeof(RTE_PER_LCORE(ng_strerror_buffer));
+
+  if (size == 0) {
+    return "";
+  }
+
+  len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
+                      NULL, err, lang, (char *)errstr, size, NULL);
+
+  if (len == 0 && lang && GetLastError() == ERROR_RESOURCE_LANG_NOT_FOUND) {
+
+    /*
+     * Try to use English messages first and fallback to a language,
+     * based on locale: non-English Windows have no English messages
+     * at all.  This way allows to use English messages at least on
+     * Windows with MUI.
+     */
+
+    lang = 0;
+    len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
+                        NULL, err, lang, (char *)errstr, size, NULL);
+  }
+
+  if (len == 0) {
+    snprintf(errstr, size, "FormatMessage() error:(%d)", GetLastError());
+    return errstr;
+  }
+
+  /* remove ".\r\n\0" */
+  while (errstr[len] == '\0' || errstr[len] == '\r'
+         || errstr[len] == '\n' || errstr[len] == '.')
+  {
+    --len;
+  }
+
+  return errstr;
 }
 
 /*
@@ -214,42 +227,6 @@ ng_gettimeofday(ng_tmv_s *tp)
   tp->tv_usec = (long) ((intervals % 10000000) / 10);
 }
 
-/* Set up a workaround for the following problem:
- *   FARPROC addr = GetProcAddress(...);
- *   MY_FUNC func = (MY_FUNC) addr;          <-- GCC 8 warning/error.
- *   MY_FUNC func = (MY_FUNC) (void*) addr;  <-- MSVC  warning/error.
- * To compile cleanly with either compiler, do casts with this "bridge" type:
- *   MY_FUNC func = (MY_FUNC) (nt__fn_ptr_cast_t) addr; */
-#ifdef __GNUC__
-typedef void* nt__fn_ptr_cast_t;
-#else
-typedef FARPROC nt__fn_ptr_cast_t;
-#endif
-
-#define X(return_type, attributes, name, parameters) \
-  WEPOLL_INTERNAL return_type(attributes* name) parameters = NULL;
-NT_NTDLL_IMPORT_LIST(X)
-#undef X
-
-WEPOLL_INTERNAL ng_result_t nt_global_init(void) {
-  HMODULE ntdll;
-  FARPROC fn_ptr;
-
-  ntdll = GetModuleHandleW(L"ntdll.dll");
-  if (ntdll == NULL)
-    return ng_ERR_ESYSTEM;
-
-#define X(return_type, attributes, name, parameters) \
-  fn_ptr = GetProcAddress(ntdll, #name);             \
-  if (fn_ptr == NULL)                                \
-    return ng_ERR_ESYSTEM;                                       \
-  name = (return_type(attributes*) parameters)(nt__fn_ptr_cast_t) fn_ptr;
-  NT_NTDLL_IMPORT_LIST(X)
-#undef X
-
-  return ng_ERR_NONE;
-}
-
 static ng_result_t 
 __os_socket_init_once(void *log)
 {
@@ -258,14 +235,11 @@ __os_socket_init_once(void *log)
   /* init Winsock */
   if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) 
   {
-    if (nt_global_init() != ng_ERR_NONE)
-    {
-      ng_log_errno(NG_LOG_FATAL, log, WSAGetLastError(),
-                    "WSAStartup() failed");
-      return ng_ERR_ESYSTEM;
-    }
+    int err = WSAGetLastError();
+    log_fatal("WSAStartup() failed. (%d:%s)", err, os_strerror(err));
+    goto clean0;
   }
-
+  
   /* Confirm that the WinSock DLL supports 2.2.        */
   /* Note that if the DLL supports versions greater    */
   /* than 2.2 in addition to 2.2, it will still return */
@@ -275,13 +249,13 @@ __os_socket_init_once(void *log)
   {
     /* Tell the user that we could not find a usable */
     /* WinSock DLL.                                  */
-    ng_log_errno(NG_LOG_FATAL, log, WSAGetLastError(), 
-    "Could not find a usable version of Winsock.dll");
+    int err = WSAGetLastError();
+    log_fatal("Could not find a usable version of Winsock.dll. (%d:%s)", 
+      err, os_strerror(err));
     goto clean1;
   }
     
-  ng_log_errno(NG_LOG_INFO, log, 0,
-    "The Winsock 2.2 dll was found okay");  
+  log_info("The Winsock 2.2 dll was found okay");  
   
   return ng_ERR_NONE;
   
@@ -294,8 +268,8 @@ clean0:
 static bool init__done = false;
 static INIT_ONCE init__once = INIT_ONCE_STATIC_INIT;
 
-static BOOL CALLBACK init__once_callback(INIT_ONCE* once,
-                                         void* parameter,
+static BOOL CALLBACK init__once_callback(INIT_ONCE *once,
+                                         void *parameter,
                                          void** context) {
   NG_UNUSED(once);
   NG_UNUSED(context);
@@ -337,8 +311,6 @@ ng_ulong_t ngx_ppid;
 
 static ng_uint_t  ngx_win32_version;
 static ng_uint_t  ngx_max_wsabufs;
-static ng_uint_t  ngx_inherited_nonblocking = 1;
-static ng_uint_t  ngx_tcp_nodelay_and_tcp_nopush;
 
 typedef struct {
   WORD  wServicePackMinor;
@@ -348,6 +320,166 @@ typedef struct {
 
 static u_int               osviex;
 static OSVERSIONINFOEX     osvi;
+
+#ifndef WSAID_ACCEPTEX
+
+typedef BOOL (PASCAL FAR * LPFN_ACCEPTEX)(
+    IN SOCKET sListenSocket,
+    IN SOCKET sAcceptSocket,
+    IN PVOID lpOutputBuffer,
+    IN DWORD dwReceiveDataLength,
+    IN DWORD dwLocalAddressLength,
+    IN DWORD dwRemoteAddressLength,
+    OUT LPDWORD lpdwBytesReceived,
+    IN LPOVERLAPPED lpOverlapped
+    );
+
+#define WSAID_ACCEPTEX                                                       \
+    {0xb5367df1,0xcbac,0x11cf,{0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92}}
+
+#endif
+
+
+#ifndef WSAID_GETACCEPTEXSOCKADDRS
+
+typedef VOID (PASCAL FAR * LPFN_GETACCEPTEXSOCKADDRS)(
+    IN PVOID lpOutputBuffer,
+    IN DWORD dwReceiveDataLength,
+    IN DWORD dwLocalAddressLength,
+    IN DWORD dwRemoteAddressLength,
+    OUT struct sockaddr **LocalSockaddr,
+    OUT LPINT LocalSockaddrLength,
+    OUT struct sockaddr **RemoteSockaddr,
+    OUT LPINT RemoteSockaddrLength
+    );
+
+#define WSAID_GETACCEPTEXSOCKADDRS                                           \
+        {0xb5367df2,0xcbac,0x11cf,{0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92}}
+
+#endif
+
+
+#ifndef WSAID_TRANSMITFILE
+
+#ifndef TF_DISCONNECT
+
+#define TF_DISCONNECT           1
+#define TF_REUSE_SOCKET         2
+#define TF_WRITE_BEHIND         4
+#define TF_USE_DEFAULT_WORKER   0
+#define TF_USE_SYSTEM_THREAD    16
+#define TF_USE_KERNEL_APC       32
+
+typedef struct _TRANSMIT_FILE_BUFFERS {
+    LPVOID Head;
+    DWORD HeadLength;
+    LPVOID Tail;
+    DWORD TailLength;
+} TRANSMIT_FILE_BUFFERS, *PTRANSMIT_FILE_BUFFERS, FAR *LPTRANSMIT_FILE_BUFFERS;
+
+#endif
+
+typedef BOOL (PASCAL FAR * LPFN_TRANSMITFILE)(
+    IN SOCKET hSocket,
+    IN HANDLE hFile,
+    IN DWORD nNumberOfBytesToWrite,
+    IN DWORD nNumberOfBytesPerSend,
+    IN LPOVERLAPPED lpOverlapped,
+    IN LPTRANSMIT_FILE_BUFFERS lpTransmitBuffers,
+    IN DWORD dwReserved
+    );
+
+#define WSAID_TRANSMITFILE                                                   \
+    {0xb5367df0,0xcbac,0x11cf,{0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92}}
+
+#endif
+
+
+#ifndef WSAID_TRANSMITPACKETS
+
+/* OpenWatcom has a swapped TP_ELEMENT_FILE and TP_ELEMENT_MEMORY definition */
+
+#ifndef TP_ELEMENT_FILE
+
+#ifdef _MSC_VER
+#pragma warning(disable:4201) /* Nonstandard extension, nameless struct/union */
+#endif
+
+typedef struct _TRANSMIT_PACKETS_ELEMENT {
+    ULONG dwElFlags;
+#define TP_ELEMENT_MEMORY   1
+#define TP_ELEMENT_FILE     2
+#define TP_ELEMENT_EOP      4
+    ULONG cLength;
+    union {
+        struct {
+            LARGE_INTEGER nFileOffset;
+            HANDLE        hFile;
+        };
+        PVOID             pBuffer;
+    };
+} TRANSMIT_PACKETS_ELEMENT, *PTRANSMIT_PACKETS_ELEMENT,
+    FAR *LPTRANSMIT_PACKETS_ELEMENT;
+
+#ifdef _MSC_VER
+#pragma warning(default:4201)
+#endif
+
+#endif
+
+typedef BOOL (PASCAL FAR * LPFN_TRANSMITPACKETS) (
+    SOCKET hSocket,
+    TRANSMIT_PACKETS_ELEMENT *lpPacketArray,
+    DWORD nElementCount,
+    DWORD nSendSize,
+    LPOVERLAPPED lpOverlapped,
+    DWORD dwFlags
+    );
+
+#define WSAID_TRANSMITPACKETS                                                \
+    {0xd9689da0,0x1f90,0x11d3,{0x99,0x71,0x00,0xc0,0x4f,0x68,0xc8,0x76}}
+
+#endif
+
+
+#ifndef WSAID_CONNECTEX
+
+typedef BOOL (PASCAL FAR * LPFN_CONNECTEX) (
+    IN SOCKET s,
+    IN const struct sockaddr FAR *name,
+    IN int namelen,
+    IN PVOID lpSendBuffer OPTIONAL,
+    IN DWORD dwSendDataLength,
+    OUT LPDWORD lpdwBytesSent,
+    IN LPOVERLAPPED lpOverlapped
+    );
+
+#define WSAID_CONNECTEX \
+    {0x25a207b9,0xddf3,0x4660,{0x8e,0xe9,0x76,0xe5,0x8c,0x74,0x06,0x3e}}
+
+#endif
+
+
+#ifndef WSAID_DISCONNECTEX
+
+typedef BOOL (PASCAL FAR * LPFN_DISCONNECTEX) (
+    IN SOCKET s,
+    IN LPOVERLAPPED lpOverlapped,
+    IN DWORD  dwFlags,
+    IN DWORD  dwReserved
+    );
+
+#define WSAID_DISCONNECTEX                                                   \
+    {0x7fda2e11,0x8630,0x436f,{0xa0,0x31,0xf5,0x36,0xa6,0xee,0xc1,0x57}}
+
+#endif
+
+extern LPFN_ACCEPTEX              ngx_acceptex;
+extern LPFN_GETACCEPTEXSOCKADDRS  ngx_getacceptexsockaddrs;
+extern LPFN_TRANSMITFILE          ngx_transmitfile;
+extern LPFN_TRANSMITPACKETS       ngx_transmitpackets;
+extern LPFN_CONNECTEX             ngx_connectex;
+extern LPFN_DISCONNECTEX          ngx_disconnectex;
 
 /* Should these pointers be per protocol ? */
 LPFN_ACCEPTEX              ngx_acceptex;
@@ -363,11 +495,6 @@ static GUID tf_guid = WSAID_TRANSMITFILE;
 static GUID tp_guid = WSAID_TRANSMITPACKETS;
 static GUID cx_guid = WSAID_CONNECTEX;
 static GUID dx_guid = WSAID_DISCONNECTEX;
-
-#if (NGX_LOAD_WSAPOLL)
-ngx_wsapoll_pt             WSAPoll;
-ngx_uint_t                 ngx_have_wsapoll;
-#endif
 
 static void
 __os_sys_status(void *log)
@@ -389,9 +516,10 @@ __os_sys_status(void *log)
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
     if (GetVersionEx((OSVERSIONINFO *) &osvi) == 0) 
     {
-      ng_log_errno(NG_LOG_FATAL, log, WSAGetLastError(),
-                    "GetVersionEx() failed");
-      return ng_ERR_ESYSTEM;
+      int err = WSAGetLastError();
+      log_fatal("GetVersionEx() failed. (%d:%s)", 
+          err, os_strerror(err));
+      return;
     }
   }
 
@@ -425,11 +553,8 @@ __os_sys_status(void *log)
 #ifdef _MSC_VER
 #pragma warning(default:4996)
 #endif
-  
-  ng_log_errno(NG_LOG_INFO, log, 0, NG_VER_BUILD);
-#ifdef NG_COMPILER
-  ng_log_errno(NG_LOG_INFO, log, 0, "built by " NG_COMPILER);
-#endif
+
+  ng_print_version(log);
 
   if (osviex) 
   {
@@ -475,7 +600,7 @@ __os_sys_status(void *log)
     }
   }
   
-  ng_log_errno(NG_LOG_INFO, log, 0, "%s", ng_os_info.ng_os_version);
+  log_info("%s", ng_os_info.ng_os_version);
 }
 
 static ng_size_t __CacheLineSize(void) 
@@ -505,13 +630,11 @@ __os_sys_init(void *log)
 {
   DWORD         bytes;
   SOCKET        s;
-  WSADATA       wsd;
-  ng_result_t   err;
-  ng_time_t    *tp;
   ng_uint_t     n;
   SYSTEM_INFO   si;
   ngx_pid_t     pid;
-
+  ng_result_t status = ng_ERR_NONE;
+  
   pid = GetCurrentProcessId();
   ng_os_info.ngx_pid = pid;
   ng_os_info.ngx_ppid = 0;
@@ -532,7 +655,7 @@ __os_sys_init(void *log)
   if (ngx_win32_version < NGX_WIN_NT) 
   {
     ngx_max_wsabufs = 16;
-    return ng_ERR_NONE;
+    goto clean0;
   }
 
   /* STUB: ngx_uint_t max */
@@ -546,8 +669,9 @@ __os_sys_init(void *log)
   s = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
   if (s == INVALID_SOCKET) 
   {
-    ng_log_errno(NG_LOG_FATAL, log, WSAGetLastError(),
-                  "WSASocketW failed");
+    int err = WSAGetLastError();
+    log_fatal("WSASocketW failed. (%d:%s).", err, os_strerror(err));
+    status = ng_ERR_ESYSTEM;
     goto clean0;
   }
 
@@ -556,9 +680,9 @@ __os_sys_init(void *log)
               &ngx_acceptex, sizeof(LPFN_ACCEPTEX), 
               &bytes, NULL, NULL))
   {
-    ng_log_errno(NG_LOG_INFO, log, WSAGetLastError(),
-                  "WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-                           "WSAID_ACCEPTEX) failed");
+    int err = WSAGetLastError();
+    log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
+      "WSAID_ACCEPTEX) failed. (%d:%s).", err, os_strerror(err));
   }
 
   if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
@@ -566,95 +690,62 @@ __os_sys_init(void *log)
               &ngx_getacceptexsockaddrs, sizeof(LPFN_GETACCEPTEXSOCKADDRS),
               &bytes, NULL, NULL))
   {
-      ng_log_errno(NG_LOG_INFO, log, WSAGetLastError(),
-                  "WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-                           "WSAID_GETACCEPTEXSOCKADDRS) failed");
+    int err = WSAGetLastError();
+    log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
+      "WSAID_GETACCEPTEXSOCKADDRS) failed. (%d:%s).", err, os_strerror(err));
   }
 
-    if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
-              &tf_guid, sizeof(GUID),
-              &ngx_transmitfile, sizeof(LPFN_TRANSMITFILE), 
-              &bytes, NULL, NULL))
-    {
-        ng_log_errno(NG_LOG_INFO, log, WSAGetLastError(),
-                  "WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-                           "WSAID_TRANSMITFILE) failed");
-    }
+  if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
+            &tf_guid, sizeof(GUID),
+            &ngx_transmitfile, sizeof(LPFN_TRANSMITFILE), 
+            &bytes, NULL, NULL))
+  {
+    int err = WSAGetLastError();
+    log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
+      "WSAID_TRANSMITFILE) failed. (%d:%s).", err, os_strerror(err));
+  }
 
-    if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
-              &tp_guid, sizeof(GUID),
-              &ngx_transmitpackets, sizeof(LPFN_TRANSMITPACKETS), 
-              &bytes, NULL, NULL))
-    {
-        ng_log_errno(NG_LOG_INFO, log, WSAGetLastError(),
-                  "WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-                           "WSAID_TRANSMITPACKETS) failed");
-    }
+  if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
+            &tp_guid, sizeof(GUID),
+            &ngx_transmitpackets, sizeof(LPFN_TRANSMITPACKETS), 
+            &bytes, NULL, NULL))
+  {
+    int err = WSAGetLastError();
+    log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
+      "WSAID_TRANSMITPACKETS) failed. (%d:%s).", err, os_strerror(err));
+  }
 
-    if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
-              &cx_guid, sizeof(GUID),
-              &ngx_connectex, sizeof(LPFN_CONNECTEX), 
-              &bytes, NULL, NULL))
-    {
-        ng_log_errno(NG_LOG_INFO, log, WSAGetLastError(),
-                  "WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-                           "WSAID_CONNECTEX) failed");
-    }
+  if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
+            &cx_guid, sizeof(GUID),
+            &ngx_connectex, sizeof(LPFN_CONNECTEX), 
+            &bytes, NULL, NULL))
+  {
+    int err = WSAGetLastError();
+    log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
+      "WSAID_CONNECTEX) failed. (%d:%s).", err, os_strerror(err));
+  }
 
-    if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
-              &dx_guid, sizeof(GUID),
-              &ngx_disconnectex, sizeof(LPFN_DISCONNECTEX), 
-              &bytes, NULL, NULL))
-    {
-        ng_log_errno(NG_LOG_INFO, log, WSAGetLastError(),
-                  "WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-                           "WSAID_DISCONNECTEX) failed");
-    }
+  if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
+            &dx_guid, sizeof(GUID),
+            &ngx_disconnectex, sizeof(LPFN_DISCONNECTEX), 
+            &bytes, NULL, NULL))
+  {
+    int err = WSAGetLastError();
+    log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
+      "WSAID_DISCONNECTEX) failed. (%d:%s).", err, os_strerror(err));
+  }
 
-    if (closesocket(s) == SOCKET_ERROR) 
-    {
-      ng_log_errno(NG_LOG_WARN, log, WSAGetLastError(),
-                    "closesocket failed");
-    }
-
-#if (NG_LOAD_WSAPOLL)
-    do {
-      HMODULE  hmod;
-
-      hmod = GetModuleHandle("ws2_32.dll");
-      if (hmod == NULL) 
-      {
-          ng_log_errno(NG_LOG_INFO, log, WSAGetLastError(),
-            "GetModuleHandle(\"ws2_32.dll\") failed");
-          goto nopoll;
-      }
-
-      WSAPoll = (ngx_wsapoll_pt) (void *)GetProcAddress(hmod, "WSAPoll");
-      if (WSAPoll == NULL) 
-      {
-        ng_log_errno(NG_LOG_INFO, log, WSAGetLastError(),
-                      "GetProcAddress(\"WSAPoll\") failed");
-        break;
-      }
-
-      ngx_have_wsapoll = 1;
-    }
-    while(0);
-#endif
-
-    return ng_ERR_NONE;
-    
-clean1:
   if (closesocket(s) == SOCKET_ERROR) 
   {
-    ng_log_errno(NG_LOG_WARN, log, WSAGetLastError(),
-                  "closesocket failed");
+    int err = WSAGetLastError();
+    log_warn("closesocket failed. (%d:%s).", err, os_strerror(err));
   }
+
 clean0:
-  return ng_ERR_ESYSTEM;
+  return status;
 }
 
-static ng_result_t
+static void
 __os_sys_deinit(void *log)
 {
   NG_UNUSED(log);
@@ -664,32 +755,22 @@ static ng_result_t __ng_os_init(void *log)
 {
   ng_result_t r;
   ng_tmv_s tp;
-  long seconds;
-
-  r = __os_sys_init(log);
-  if (r != ng_ERR_NONE)
-    goto clean0;
 
   r = __os_socket_init(log);
   if (r != ng_ERR_NONE)
+    goto clean0;
+
+  r = __os_sys_init(log);
+  if (r != ng_ERR_NONE)
     goto clean1;
 
-  if (_get_timezone(&seconds))
-  {
-    ng_log_errno(NG_LOG_WARN, log, errno,
-                  "_get_timezone() failed");
-    goto clean2;
-  }
-
+  ng_os_info.tz_offset = __os_get_tzoffset();
   ng_os_info.ngx_allocation_granularity = 0;
-  ng_os_info.tz_offset = seconds;
   ng_gettimeofday(&tp);
   srand((ng_os_info.ngx_pid << 16) ^ (unsigned) tp.tv_sec ^ tp.tv_usec);
   
   return ng_ERR_NONE;
   
-clean2:
-  __os_socket_deinit(log);
 clean1:
   __os_sys_deinit(log);
 clean0:
@@ -700,6 +781,36 @@ static void __ng_os_deinit(void *log)
 {
   __os_socket_deinit(log);
   __os_sys_deinit(log);
+}
+
+static long
+__os_get_tzoffset(void)
+{
+  // Get the current system time
+  SYSTEMTIME systemTime;
+  GetSystemTime(&systemTime);
+
+  // Convert system time to file time
+  FILETIME fileTime;
+  SystemTimeToFileTime(&systemTime, &fileTime);
+
+  // Convert file time to local file time
+  FILETIME localFileTime;
+  FileTimeToLocalFileTime(&fileTime, &localFileTime);
+
+  // Convert local file time to system time
+  SYSTEMTIME localSystemTime;
+  FileTimeToSystemTime(&localFileTime, &localSystemTime);
+
+  // Calculate the difference in minutes between UTC and local time
+  int offsetHours = localSystemTime.wHour - systemTime.wHour;
+  int offsetMinutes = localSystemTime.wMinute - systemTime.wMinute;
+  int totalOffsetMinutes = (offsetHours * 60) + offsetMinutes;
+
+  // Print the timezone offset
+  log_debug("Local timezone offset from GMT: %02d:%02d\n", offsetHours, offsetMinutes);
+
+  return totalOffsetMinutes*60;
 }
 
 #else
@@ -715,6 +826,11 @@ static void __ng_os_deinit(void *log)
 
 #define BUFFER_SIZE 256
 
+char *ng_get_pwd(char *path, size_t len) 
+{
+  // Get the current executable path
+  return getcwd(path, len);
+}
 static ng_result_t __ng_get_freq(void *log, double *freq) 
 {
   FILE *file;
@@ -725,33 +841,32 @@ static ng_result_t __ng_get_freq(void *log, double *freq)
   
   file = fopen("/proc/cpuinfo", "r");
   if (file == NULL) {
-    ng_log_errno(NG_LOG_ERROR, log, errno, 
-      "fopen failed.");
+    int err = errno;
+    log_fatal("fopen failed. (%d:%s).", err, os_strerror(err));
     return ng_ERR_ESYSTEM;
   }
   
   while (fgets(buffer, sizeof(buffer), file) != NULL) {
-      if (strncmp(buffer, search, strlen(search)) == 0) {
-          line = strchr(buffer, ':');
-          if (line != NULL) {
-              cpu_freq = strtod(line + 1, NULL);
-              break;
-          }
+    if (strncmp(buffer, search, strlen(search)) == 0) {
+      line = strchr(buffer, ':');
+      if (line != NULL) {
+        cpu_freq = strtod(line + 1, NULL);
+        break;
       }
+    }
   }
   
   fclose(file);
   
   if (cpu_freq > 0.0) {
-    ng_log_errno(NG_LOG_INFO, log, 0, 
-      "CPU Frequency: %.2f MHz", cpu_freq);
+    ng_print_cpufreq("CPU Frequency", cpu_freq);
     *freq = cpu_freq * 1000000.0;
     return ng_ERR_NONE;
   }
   else 
   {
-    ng_log_errno(NG_LOG_ERROR, log, errno, 
-      "CPU Frequency not found.");
+    int err = errno;
+    log_error("CPU Frequency not found. (%d:%s).", err, os_strerror(err));
     return ng_ERR_ESYSTEM;
   }
 }
@@ -828,7 +943,8 @@ __os_specific_init(void *log)
   struct utsname  u;
 
   if (uname(&u) == -1) {
-    ng_log_errno(NG_LOG_WARN, log, errno, "uname() failed");
+    int err = errno;
+    log_warn("uname() failed. (%d:%s).", err, os_strerror(err));
     return ng_ERR_ESYSTEM;
   }
 
@@ -844,20 +960,14 @@ static void
 __os_specific_status(void *log)
 {
 #if defined(RTE_ENV_LINUX) || defined(__linux__)
-  ng_log_errno(NG_LOG_INFO, log, 0, "OS: %s",
-                ng_os_info.ng_os_version);
+  log_info("OS: %s", ng_os_info.ng_os_version);
 #endif
 }
 
 static void
 __os_sys_status(void *log)
 {
-  ng_log_errno(NG_LOG_INFO, log, 0, NG_VER_BUILD);
-
-#ifdef NG_COMPILER
-  ng_log_errno(NG_LOG_INFO, log, 0, "built by " NG_COMPILER);
-#endif
-
+  ng_print_version(log);
   __os_specific_status(log);
 }
 
@@ -910,15 +1020,15 @@ __os_sys_init(void *log)
 #endif
 
   if (getrlimit(RLIMIT_NOFILE, &rlmt) == -1) {
-    ng_log_errno(NG_LOG_WARN, log, errno,
-      "getrlimit(RLIMIT_NOFILE) failed");
+    int err = errno;
+    log_error("getrlimit(RLIMIT_NOFILE) failed. (%d:%s).", 
+      err, os_strerror(err));
     goto clean0;
   }
 
   ng_os_info.ngx_max_sockets = (ng_int_t) rlmt.rlim_cur;
 
-  ng_log_errno(NG_LOG_INFO, log, 0,
-                "getrlimit(RLIMIT_NOFILE): %u:%u",
+  log_info("getrlimit(RLIMIT_NOFILE): %u:%u",
                 rlmt.rlim_cur, rlmt.rlim_max);
 
   return ng_ERR_NONE;
@@ -926,39 +1036,9 @@ __os_sys_init(void *log)
 clean0:
   return r;
 }
-
 static long
 __os_get_tzoffset(void)
 {
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
-#include <time.h>
-#include <windows.h>
-  // Get the current system time
-  SYSTEMTIME systemTime;
-  GetSystemTime(&systemTime);
-
-  // Convert system time to file time
-  FILETIME fileTime;
-  SystemTimeToFileTime(&systemTime, &fileTime);
-
-  // Convert file time to local file time
-  FILETIME localFileTime;
-  FileTimeToLocalFileTime(&fileTime, &localFileTime);
-
-  // Convert local file time to system time
-  SYSTEMTIME localSystemTime;
-  FileTimeToSystemTime(&localFileTime, &localSystemTime);
-
-  // Calculate the difference in minutes between UTC and local time
-  int offsetHours = localSystemTime.wHour - systemTime.wHour;
-  int offsetMinutes = localSystemTime.wMinute - systemTime.wMinute;
-  int totalOffsetMinutes = (offsetHours * 60) + offsetMinutes;
-
-  // Print the timezone offset
-  log_debug("Local timezone offset from GMT: %02d:%02d\n", offsetHours, offsetMinutes);
-
-  return totalOffsetMinutes*60;
-#else
   time_t current_time;
   struct tm *local_time;
 
@@ -972,12 +1052,9 @@ __os_get_tzoffset(void)
   long timezone_offset = local_time->tm_gmtoff;
 
   // Convert to hours and minutes
-  int hours = timezone_offset / 3600;
-  int minutes = (timezone_offset % 3600) / 60;
-
-  log_debug("Local timezone offset from GMT: %02d:%02d\n", hours, minutes);
+  log_debug("Local timezone offset from GMT: %02d:%02d\n", 
+      timezone_offset / 3600, (timezone_offset % 3600) / 60);
   return timezone_offset;
-#endif
 }
 
 static void
@@ -1215,13 +1292,48 @@ uint64_t ng_get_freq(void)
   return (uint64_t)freq;
 }
 
+#ifdef WIN32
 static void __ng_get_tzname(void) 
 {
-  time_t now = time(NULL);
-  struct tm *local = localtime(&now);
-  snprintf(ng_os_info.tz+1, sizeof(ng_os_info.tz)-1, "%s", local->tm_zone);
+  HKEY hKey;
+  if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, 
+     "SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation", 
+     0, KEY_READ, &hKey) == ERROR_SUCCESS) 
+  {
+    char tzAbbreviation[256];
+    DWORD size = sizeof(tzAbbreviation);
+    if (RegQueryValueEx(hKey, "TimeZoneKeyName", NULL, NULL, 
+      (LPBYTE)tzAbbreviation, &size) == ERROR_SUCCESS) 
+    {
+      log_info("Time Zone Abbreviation: %s.", tzAbbreviation);
+      char *p = tzAbbreviation;
+      char *e = p + size;
+      int i = 1;
+      while (p != NULL)
+      {
+        if (i < sizeof(ng_os_info.tz))
+          ng_os_info.tz[i++]=*p;
+        p = memchr(p, ' ', e - p);
+        if (p == NULL)
+          break;
+        while (__ng_isspace(*p)){p++;};
+      }
+      ng_os_info.tz[i]='\0';
+      ng_os_info.tz[0]=' ';
+    }
+    RegCloseKey(hKey);
+  } 
+  
+  int err = GetLastError();
+  log_error("Error accessing the registry. (%d:%s)", err, os_strerror(err));
+}
+#else
+static void __ng_get_tzname(void) 
+{
+  ng_get_tzname(ng_os_info.tz+1, sizeof(ng_os_info.tz)-1);
   ng_os_info.tz[0]=' ';
 }
+#endif
 
 ng_result_t ng_os_init(void)
 {
@@ -1336,93 +1448,3 @@ void ng_os_dump(httpd_buf_t *b, void *printer)
     pr(b, "%-28s: %"PRIu64"\n", "Available Virtual Memory", m.ullAvailVirtual / (1024 * 1024));
   }
 }
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <execinfo.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <syslog.h>
-
-void http_daemonize(int nochdir, int noclose) {
-  pid_t pid;
-  
-  // Fork off the parent process
-  pid = fork();
-  
-  // If the fork failed, exit
-  if (pid < 0) {
-    exit(EXIT_FAILURE);
-  }
-  
-  // If we got a good PID, exit the parent process
-  if (pid > 0) {
-    exit(EXIT_SUCCESS);
-  }
-  
-  // Change the file mode mask
-  umask(0);
-  
-  // Open any logs here
-  openlog("httpd", LOG_PID, LOG_DAEMON);
-  
-  // Create a new SID for the child process
-  if (setsid() < 0) {
-    // Log the failure
-    syslog(LOG_ERR, "Could not create new SID for child process");
-    exit(EXIT_FAILURE);
-  }
-  
-  // Change the current working directory
-  if (!nochdir){
-    if ((chdir("/")) < 0) {
-      // Log the failure
-      syslog(LOG_ERR, "Could not change working directory to /");
-      exit(EXIT_FAILURE);
-    }
-  }
-  
-  if (!noclose){
-    // Close out the standard file descriptors
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
-    
-    // Optionally, redirect standard file descriptors to /dev/null
-    open("/dev/null", O_RDONLY); // stdin
-    open("/dev/null", O_RDWR);   // stdout
-    open("/dev/null", O_RDWR);   // stderr
-  }
-  
-  // Daemon-specific initialization goes here
-  syslog(LOG_INFO, "Daemon started successfully");
-}
-
-// Maximum number of stack frames to capture
-#define MAX_FRAMES 64
-void signal_handler_segfault(int sig) {
-  void *buffer[MAX_FRAMES];
-  char **symbols;
-  int num_frames;
-  
-  // Get the stack frames
-  num_frames = backtrace(buffer, MAX_FRAMES);
-  
-  // Get the symbols (function names, file names, line numbers)
-  symbols = backtrace_symbols(buffer, num_frames);
-  
-  // Print the stack trace
-  fprintf(stderr, "Error: signal %d:\n", sig);
-  for (int i = 0; i < num_frames; i++) {
-      fprintf(stderr, "%s\n", symbols[i]);
-  }
-  
-  // Free the allocated memory for symbols
-  free(symbols);
-  
-  // Exit the program
-  exit(1);
-}
-

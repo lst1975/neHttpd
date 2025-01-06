@@ -60,79 +60,184 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef __NanoHttpConfig_H_
-#define __NanoHttpConfig_H_
+#include "nanohttp-config.h"
 
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
-#ifndef WIN32
-#define WIN32
-#endif
-#endif
+#include <signal.h>
 
-#define HAVE_STDIO_H
-#define HAVE_STDLIB_H
-#define HAVE_STRING_H
-#define HAVE_ERRNO_H
-#ifndef WIN32
-#define HAVE_SYS_TIME_H
-#define HAVE_NETINET_IN_H
-#define HAVE_TIME_H
-#define HAVE_SYS_SOCKET_H
-#define HAVE_SOCKET_H
-#define HAVE_SYS_TYPES_H
-#define HAVE_SYS_SELECT_H
-#define HAVE_SIGNAL_H
-#define HAVE_UNISTD_H
-#define HAVE_PTHREAD_H
-#define HAVE_ARPA_INET_H
-#define HAVE_SYS_WAIT_H
-#define HAVE_FCNTL_H
+#include "nanohttp-config.h"
+
+#ifdef WIN32
+#include <windows.h>
 #else
-#undef HAVE_SYS_TIME_H
-#undef HAVE_NETINET_IN_H
-#undef HAVE_TIME_H
-#undef HAVE_SYS_SOCKET_H
-#undef HAVE_SOCKET_H
-#undef HAVE_SYS_TYPES_H
-#undef HAVE_SYS_SELECT_H
-#undef HAVE_SIGNAL_H
-#undef HAVE_UNISTD_H
-#undef HAVE_PTHREAD_H
-#undef HAVE_ARPA_INET_H
-#undef HAVE_SYS_WAIT_H
-#undef HAVE_FCNTL_H
 #endif
 
-#define HAVE_STDARG_H
-#define HAVE_CTYPE_H
+#include "nanohttp-logging.h"
+#include "nanohttp-system.h"
+#include "nanohttp-server.h"
 
-#define HAVE_SYSLOG_H
+extern void signal_handler_segfault(int sig);
+extern void nanohttpd_stop_running(void);
 
-#define __NHTTP_INTERNAL
+#ifdef WIN32
+typedef DWORD SIGNAL_T;
+static DWORD _httpd_terminate_signal = CTRL_C_EVENT;
+static BOOL WINAPI
+_httpd_term(DWORD sig)
+{
+  if (sig == SIGSEGV)
+  {
+    signal_handler_segfault(sig);
+    return TRUE;
+  }
+  /* log_debug ("Got signal %d", sig); */
+  if (sig == _httpd_terminate_signal
+    || sig == SIGTERM || sig == SIGABRT)
+    nanohttpd_stop_running();
 
-#define __NHTTP_TEST 1
-#define __NHTTP_NO_LOGGING 0
-
-#undef HAVE_SSL
-
-#define _nanoConfig_HTTPD_PORT            8080
-#define _nanoConfig_HTTPD_MAX_CONNECTIONS 128
-#define _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS 256
-#define _nanoConfig_HTTPD_FILE_BLOCK      2048
-#define _nanoConfig_HTTPD_FILE_SERVICE    "/config/"
-#define _nanoConfig_HTTPD_DATA_SERVICE    "/data/"
-#define _nanoConfig_HTTPD_LOG_LEVEL NANOHTTP_LOG_VERBOSE
-
-#define DEBUG_MULTIPART
-#define __NHTTP_DEBUG 0
-#define __NHTTP_MEM_DEBUG 1
-#define __NG_RING_DEBUG 0
-#define __HTTP_SMALL_SIZE 0
-
-#if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) 
-#define __NHTTP_USE_EPOLL 0
+  return TRUE;
+}
+void
+httpd_pthread_sigmask(void)
+{
+}
 #else
-#define __NHTTP_USE_EPOLL 1
+typedef int SIGNAL_T;
+static int _httpd_terminate_signal = SIGINT;
+static sigset_t thrsigset;
+static void
+_httpd_term(int sig)
+{
+  log_debug("Got signal %d", sig);
+
+  if (sig == SIGSEGV)
+  {
+    signal_handler_segfault(sig);
+    return;
+  }
+
+  if (sig == _httpd_terminate_signal
+    || sig == SIGTERM || sig == SIGABRT)
+    nanohttpd_stop_running();
+
+  return;
+}
+void
+httpd_pthread_sigmask(void)
+{
+  pthread_sigmask(SIG_BLOCK, &thrsigset, NULL);
+}
 #endif
 
+/*
+ * -----------------------------------------------------
+ * FUNCTION: _httpd_register_signal_handler
+ * -----------------------------------------------------
+ */
+static void
+_httpd_register_signal_handler(SIGNAL_T sig)
+{
+
+#ifndef WIN32
+  sigemptyset(&thrsigset);
+  sigaddset(&thrsigset, SIGALRM);
 #endif
+
+  log_verbose("registering termination signal handler (SIGNAL:%d)",
+               sig);
+#ifdef WIN32
+  if (SetConsoleCtrlHandler((PHANDLER_ROUTINE) _httpd_term, TRUE) == FALSE)
+  {
+    log_error("Unable to install console event handler!");
+  }
+
+#else
+  signal(sig, _httpd_term);
+#endif
+
+  return;
+}
+
+void
+httpd_register_signal_handler(void)
+{
+  _httpd_register_signal_handler(_httpd_terminate_signal);
+  _httpd_register_signal_handler(SIGTERM);
+  _httpd_register_signal_handler(SIGABRT);
+  _httpd_register_signal_handler(SIGSEGV);
+}
+
+void
+httpd_set_terminate_signal(int sig)
+{
+  _httpd_terminate_signal = sig;
+}
+
+int
+httpd_get_terminate_signal(void)
+{
+  return _httpd_terminate_signal;
+}
+
+#ifdef WIN32
+void signal_handler_segfault(int sig) {
+  NG_UNUSED(sig);
+}
+uint64_t
+os__rte_rdtsc_syscall(void)
+{
+  LARGE_INTEGER frequency, start, end;
+  QueryPerformanceFrequency(&frequency);
+  QueryPerformanceCounter(&start);
+
+  // Code to measure goes here
+
+  QueryPerformanceCounter(&end);
+  double elapsedTime = (double)(end.QuadPart - start.QuadPart) / frequency.QuadPart;
+  return elapsedTime*1000000000LL;
+}
+#else
+#include <execinfo.h>
+// Maximum number of stack frames to capture
+#define MAX_FRAMES 64
+void signal_handler_segfault(int sig) {
+  void *buffer[MAX_FRAMES];
+  char **symbols;
+  int num_frames;
+  
+  // Get the stack frames
+  num_frames = backtrace(buffer, MAX_FRAMES);
+  
+  // Get the symbols (function names, file names, line numbers)
+  symbols = backtrace_symbols(buffer, num_frames);
+  
+  // Print the stack trace
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  for (int i = 0; i < num_frames; i++) {
+      fprintf(stderr, "%s\n", symbols[i]);
+  }
+  
+  // Free the allocated memory for symbols
+  free(symbols);
+  
+  // Exit the program
+  exit(1);
+}
+/**
+ * This call is easily portable to any architecture, however,
+ * it may require a system call and imprecise for some tasks.
+ */
+uint64_t
+os__rte_rdtsc_syscall(void)
+{
+  struct timespec val;
+  uint64_t v;
+
+  while (clock_gettime(CLOCK_MONOTONIC_RAW, &val) != 0)
+  /* no body */;
+
+  v  = (uint64_t) val.tv_sec * 1000000000LL;
+  v += (uint64_t) val.tv_nsec;
+  return v;
+}
+#endif
+

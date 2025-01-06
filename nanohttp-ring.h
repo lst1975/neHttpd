@@ -227,6 +227,9 @@ ng_singlerw_ring_set(ng_singlerw_ring_s *ring, void *elem)
   return 0;
 };
 
+#if __NHTTP_NO_LOGGING
+#define ng_singlerw_ring_dump(r) NG_UNUSED(r)
+#else
 static inline void 
 ng_singlerw_ring_dump(ng_singlerw_ring_s *ring)
 {
@@ -238,6 +241,7 @@ ng_singlerw_ring_dump(ng_singlerw_ring_s *ring)
   NG_RING_DEBUG("      W:%u"__LN,  ring->__W & ring->mask);
   return;
 };
+#endif
 
 #define rte_set_errno(n) HTTPD_UNUSED(0)
 #define RTE_SET_USED(x) HTTPD_UNUSED(x)

@@ -65,6 +65,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "nanohttp-config.h"
 #include "nanohttp-json.h"
 #include "nanohttp-file.h"
 #include "nanohttp-user.h"
@@ -328,12 +329,13 @@ nanohttp_users_match(const char *name, int nameLen,
       continue;
     if (memcmp(name, entry->name.cptr, nameLen))
       continue;
-    if ((!pswd || !pswdLen) && entry->pswd.len)
-      continue;
-    if (entry->pswd.len != pswdLen)
-      continue;
-    if (memcmp(entry->pswd.cptr, pswd, pswdLen))
-      continue;
+    if (pswdLen)
+    {
+      if (entry->pswd.len != pswdLen)
+        continue;
+      if (memcmp(entry->pswd.cptr, pswd, pswdLen))
+        continue;
+    }
     return entry;
   }
   

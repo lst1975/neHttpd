@@ -87,7 +87,6 @@
 #define __nanohttp_file_h
 
 #ifdef WIN32
-#include<direct.h>
 #define __PATH_DLIM '\\'
 #define __PATH_DLIM_S "\\"
 #else
@@ -109,6 +108,7 @@ herror_t nanohttp_file_read_all(const char *file,
 size_t nanohttp_file_size(const char *file);
 herror_t nanohttp_dir_init(const char *pfile);
 void nanohttp_dir_free(void);
+herror_t hsocket_setexec(int sock, int err);
 
 #ifdef __cplusplus
 }

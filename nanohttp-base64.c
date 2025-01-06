@@ -264,9 +264,9 @@ b64Encode_Start(b64_state_s *s)
 }
 
 void
-b64Encode_Finish(b64_state_s *state, ng_buffer_s *__out)
+b64Encode_Finish(b64_state_s *state, ng_buffer_s *b_out)
 {
-  unsigned char *out = __out->ptr;
+  unsigned char *out = b_out->ptr;
 
   switch (state->s) {
     case 1:
@@ -282,17 +282,17 @@ b64Encode_Finish(b64_state_s *state, ng_buffer_s *__out)
       break;
   }
   
-  __out->len += state->j;
+  b_out->len += state->j;
 }
 
 void
-b64Encode_Process(b64_state_s *state, const ng_buffer_s *__in, 
-  ng_buffer_s *__out)
+b64Encode_Process(b64_state_s *state, const ng_buffer_s *b_in, 
+  ng_buffer_s *b_out)
 {
   unsigned int i;
-  const unsigned char *in = __in->ptr; 
-  unsigned int inlen = __in->len;
-  unsigned char *out = __out->ptr;
+  const unsigned char *in = b_in->ptr; 
+  unsigned int inlen = b_in->len;
+  unsigned char *out = b_out->ptr;
 
   for (i = state->j = 0; i < inlen; i++) 
   {
@@ -318,7 +318,7 @@ b64Encode_Process(b64_state_s *state, const ng_buffer_s *__in,
     state->l = c;
   }
 
-  __out->len += state->j;
+  b_out->len += state->j;
 }
 
 int
@@ -334,14 +334,14 @@ b64Encode(const ng_buffer_s *in, ng_buffer_s *out)
 
 #if __configUseBase64Decode
 int
-b64Decode_Process(b64_state_s *state, const ng_buffer_s *__in, 
-  ng_buffer_s *__out)
+b64Decode_Process(b64_state_s *state, const ng_buffer_s *b_in, 
+  ng_buffer_s *b_out)
 {
   unsigned int i;
   unsigned char c;
-  const unsigned char *in = __in->ptr; 
-  unsigned int inlen = __in->len;
-  unsigned char *out = __out->ptr;
+  const unsigned char *in = b_in->ptr; 
+  unsigned int inlen = b_in->len;
+  unsigned char *out = b_out->ptr;
 
   for (i = 0; i < inlen; i++) 
   {
@@ -382,7 +382,7 @@ b64Decode_Process(b64_state_s *state, const ng_buffer_s *__in,
     }
   }
 
-  __out->len = state->j;
+  b_out->len = state->j;
   if (i == inlen)
     return i;
   if (i < inlen && i + 1 == inlen && in[i]=='=')

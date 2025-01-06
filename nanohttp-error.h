@@ -336,9 +336,31 @@ enum __ng_errno{
   ng_ERR_MIME_ERROR_NOT_MIME_MESSAGE  = -129,
 };
 
+#ifndef SOCKET_ERROR
 #define SOCKET_ERROR -1
+#endif
+#ifndef INVALID_SOCKET
 #define INVALID_SOCKET -1
+#endif
+#ifndef NO_ERROR
 #define NO_ERROR 0
+#endif
+
+#ifdef WIN32
+#define ng_errno                  GetLastError()
+#define ng_set_errno(err)         SetLastError(err)
+#define ng_socket_errno           WSAGetLastError()
+#define ng_set_socket_errno(err)  WSASetLastError(err)
+#define OS_ERR_ETIMEDOUT          WSAETIMEDOUT
+#define os_strerror               __os_strerror
+#else
+#define ng_errno                  errno
+#define ng_socket_errno           errno
+#define ng_set_errno(err)         errno = err
+#define ng_set_socket_errno(err)  errno = err
+#define OS_ERR_ETIMEDOUT          ETIMEDOUT
+#define os_strerror               strerror
+#endif
 
 const ng_str_s *ng_strerror(ng_errno_e err);
 

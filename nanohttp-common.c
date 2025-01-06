@@ -272,7 +272,7 @@ hpairnode_dump(const hpair_t * pair)
 }
 
 void
-hpairnode_dump_deep(const hpair_t * pairs)
+__hpairnode_dump_deep(const hpair_t * pairs)
 {
   const hpair_t *p;
 

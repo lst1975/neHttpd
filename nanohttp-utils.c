@@ -60,79 +60,96 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef __NanoHttpConfig_H_
-#define __NanoHttpConfig_H_
 
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
-#ifndef WIN32
-#define WIN32
-#endif
-#endif
+#include <signal.h>
+#include <time.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <stdlib.h>
+#include <syslog.h>
+#include <fcntl.h>
 
-#define HAVE_STDIO_H
-#define HAVE_STDLIB_H
-#define HAVE_STRING_H
-#define HAVE_ERRNO_H
-#ifndef WIN32
-#define HAVE_SYS_TIME_H
-#define HAVE_NETINET_IN_H
-#define HAVE_TIME_H
-#define HAVE_SYS_SOCKET_H
-#define HAVE_SOCKET_H
-#define HAVE_SYS_TYPES_H
-#define HAVE_SYS_SELECT_H
-#define HAVE_SIGNAL_H
-#define HAVE_UNISTD_H
-#define HAVE_PTHREAD_H
-#define HAVE_ARPA_INET_H
-#define HAVE_SYS_WAIT_H
-#define HAVE_FCNTL_H
-#else
-#undef HAVE_SYS_TIME_H
-#undef HAVE_NETINET_IN_H
-#undef HAVE_TIME_H
-#undef HAVE_SYS_SOCKET_H
-#undef HAVE_SOCKET_H
-#undef HAVE_SYS_TYPES_H
-#undef HAVE_SYS_SELECT_H
-#undef HAVE_SIGNAL_H
-#undef HAVE_UNISTD_H
-#undef HAVE_PTHREAD_H
-#undef HAVE_ARPA_INET_H
-#undef HAVE_SYS_WAIT_H
-#undef HAVE_FCNTL_H
-#endif
+#include "nanohttp-logging.h"
+#include "nanohttp-time.h"
 
-#define HAVE_STDARG_H
-#define HAVE_CTYPE_H
+void http_daemonize(int nochdir, int noclose) {
+  pid_t pid;
+  
+  // Fork off the parent process
+  pid = fork();
+  
+  // If the fork failed, exit
+  if (pid < 0) {
+    exit(EXIT_FAILURE);
+  }
+  
+  // If we got a good PID, exit the parent process
+  if (pid > 0) {
+    exit(EXIT_SUCCESS);
+  }
+  
+  // Change the file mode mask
+  umask(0);
+  
+  // Open any logs here
+  openlog("httpd", LOG_PID, LOG_DAEMON);
+  
+  // Create a new SID for the child process
+  if (setsid() < 0) {
+    // Log the failure
+    syslog(LOG_ERR, "Could not create new SID for child process");
+    exit(EXIT_FAILURE);
+  }
+  
+  // Change the current working directory
+  if (!nochdir){
+    if ((chdir("/")) < 0) {
+      // Log the failure
+      syslog(LOG_ERR, "Could not change working directory to /");
+      exit(EXIT_FAILURE);
+    }
+  }
+  
+  if (!noclose){
+    // Close out the standard file descriptors
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+    
+    // Optionally, redirect standard file descriptors to /dev/null
+    open("/dev/null", O_RDONLY); // stdin
+    open("/dev/null", O_RDWR);   // stdout
+    open("/dev/null", O_RDWR);   // stderr
+  }
+  
+  // Daemon-specific initialization goes here
+  syslog(LOG_INFO, "Daemon started successfully");
+}
 
-#define HAVE_SYSLOG_H
+int ng_get_tzname(char *tz, int size) 
+{
+  time_t now = time(NULL);
+  struct tm *local = localtime(&now);
+  return snprintf(tz, size, "%s", local->tm_zone);
+}
 
-#define __NHTTP_INTERNAL
+void
+__ng_gettimeofday(void *__tp)
+{
+  ng_tmv_s *tp = (ng_tmv_s *)__tp;
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  tp->tv_sec = tv.tv_sec;
+  tp->tv_usec = tv.tv_usec;
+}
 
-#define __NHTTP_TEST 1
-#define __NHTTP_NO_LOGGING 0
+void ng_print_cpufreq(const char *n, double hz) 
+{
+  if (hz > 999.0)
+    log_info("%s: %.2f GHz", n, hz / 1000.0); 
+  else
+    log_info("%s: %.2f MHz", n, hz); 
+}
 
-#undef HAVE_SSL
-
-#define _nanoConfig_HTTPD_PORT            8080
-#define _nanoConfig_HTTPD_MAX_CONNECTIONS 128
-#define _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS 256
-#define _nanoConfig_HTTPD_FILE_BLOCK      2048
-#define _nanoConfig_HTTPD_FILE_SERVICE    "/config/"
-#define _nanoConfig_HTTPD_DATA_SERVICE    "/data/"
-#define _nanoConfig_HTTPD_LOG_LEVEL NANOHTTP_LOG_VERBOSE
-
-#define DEBUG_MULTIPART
-#define __NHTTP_DEBUG 0
-#define __NHTTP_MEM_DEBUG 1
-#define __NG_RING_DEBUG 0
-#define __HTTP_SMALL_SIZE 0
-
-#if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) 
-#define __NHTTP_USE_EPOLL 0
-#else
-#define __NHTTP_USE_EPOLL 1
-#endif
-
-#endif

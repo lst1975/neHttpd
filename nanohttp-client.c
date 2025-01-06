@@ -122,10 +122,6 @@
 #include <netinet/in.h>
 #endif
 
-#ifdef WIN32
-#define snprintf(buffer, num, s1, s2) sprintf(buffer, s1,s2)
-#endif
-
 #include "nanohttp-logging.h"
 #include "nanohttp-error.h"
 #include "nanohttp-common.h"
@@ -136,6 +132,7 @@
 #include "nanohttp-base64.h"
 #include "nanohttp-url.h"
 #include "nanohttp-client.h"
+#include "nanohttp-time.h"
 
 herror_t
 httpc_init(int argc, char **argv)
@@ -404,13 +401,8 @@ static void
 httpc_header_set_date(httpc_conn_t * conn)
 {
   char buffer[32];
-  time_t ts;
-  struct tm stm;
-
-  ts = time(NULL);
-  localtime_r(&ts, &stm);
-  strftime(buffer, 32, "%a, %d %b %Y %H:%M:%S GMT", &stm);
-
+  int n = __ng_http_date(buffer, 32, 1, NULL);
+  buffer[n]='\0';
   httpc_set_header(conn, HEADER_DATE, buffer);
 
   return;

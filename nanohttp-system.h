@@ -112,10 +112,10 @@ extern ng_os_info_s ng_os_info;
 void ng_os_deinit(void);
 ng_result_t ng_os_init(void);
 int ng_os_usleep(int usec);
-void ng_gettimeofday(ng_tmv_s *tp);
 uint64_t ng_get_freq(void);
 void ng_os_dump(httpd_buf_t *b, void *printer);
-void signal_handler_segfault(int sig);
-void http_daemonize(int nochdir, int noclose);
+const char *__os_strerror(int err);
+char *ng_get_pwd(char *path, size_t len);
+void ng_gettimeofday(ng_tmv_s *tp);
 
 #endif

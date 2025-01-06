@@ -63,6 +63,10 @@
 #ifndef __nanohttp_time_h
 #define __nanohttp_time_h
 
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+
 #include "nanohttp-defs.h"
 #include "nanohttp-buffer.h"
 #include "nanohttp-ring.h"
@@ -71,7 +75,7 @@
 extern "C" {
 #endif
 
-uint64_t os__rte_rdtsc_syscall(void);
+extern uint64_t os__rte_rdtsc_syscall(void);
 
 #define HTTPD_DATE_STRLEN_MIN 29
 
@@ -488,13 +492,13 @@ dminus(double x)
 }
 
 static __ng_inline__ double
-__ng_difftime(time_t time1, time_t time0)
+__ng_difftime(ng_time_t time1, ng_time_t time0)
 {
   /*
   ** If double is large enough, simply convert and subtract
   ** (assuming that the larger type has more precision).
   */
-  if (sizeof(time_t) < sizeof(double)) {
+  if (sizeof(ng_time_t) < sizeof(double)) {
     double t1 = time1, t0 = time0;
     return t1 - t0;
   }
@@ -503,11 +507,11 @@ __ng_difftime(time_t time1, time_t time0)
   ** The difference of two unsigned values can't overflow
   ** if the minuend is greater than or equal to the subtrahend.
   */
-  if (!TYPE_SIGNED(time_t))
+  if (!TYPE_SIGNED(ng_time_t))
     return time0 <= time1 ? time1 - time0 : dminus(time0 - time1);
 
   /* Use uintmax_t if wide enough.  */
-  if (sizeof(time_t) <= sizeof(uintmax_t)) {
+  if (sizeof(ng_time_t) <= sizeof(uintmax_t)) {
     uintmax_t t1 = time1, t0 = time0;
     return time0 <= time1 ? t1 - t0 : dminus(t0 - t1);
   }
@@ -530,9 +534,9 @@ __ng_difftime(time_t time1, time_t time0)
   }
 }
 
-static __ng_inline__ time_t ng_difftime (time_t time1, time_t time0)
+static __ng_inline__ ng_time_t ng_difftime (ng_time_t time1, ng_time_t time0)
 {
-  return (time_t)__ng_difftime(time1, time0);
+  return (ng_time_t)__ng_difftime(time1, time0);
 }
 
 int ng_unix2tm_time(ng_rtc_time_s *tm, ng_tmv_s *tv, int tz_offset);
