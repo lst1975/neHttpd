@@ -1662,12 +1662,12 @@ _httpd_start_thread(conndata_t *conn)
 
 #if __NHTTP_USE_EPOLL
 static inline herror_t
-__httpd_run(struct hsocket_t *sock, int is_ipv6)
+__httpd_run(struct hsocket_t *sock, const char *name)
 {
   herror_t err;
   struct epoll_event event;
   
-  log_verbose("starting run routine: %s", is_ipv6 ? "ipv6":"ipv4");
+  log_verbose("starting run routine: %s", name);
 
   if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
@@ -1755,7 +1755,7 @@ __httpd_run(struct hsocket_t *sock, int is_ipv6)
 }
 #else
 static inline herror_t
-__httpd_run(struct hsocket_t *sock, int is_ipv6)
+__httpd_run(struct hsocket_t *sock, const char *name)
 {
 #ifdef WIN32
  TIMEVAL timeout = {.tv_sec = 1, .tv_usec = 0};
@@ -1765,7 +1765,7 @@ __httpd_run(struct hsocket_t *sock, int is_ipv6)
   herror_t err;
   fd_set fds;
 
-  log_verbose("starting run routine: %s", is_ipv6 ? "ipv6":"ipv4");
+  log_verbose("starting run routine: %s", name);
 
   if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
@@ -1946,7 +1946,7 @@ DWORD WINAPI thread_function_ipv4(LPVOID arg)
 static void *thread_function_ipv4(void* arg) 
 #endif
 {
-  __httpd_run(&_httpd_socket4, 0);
+  __httpd_run(&_httpd_socket4, "ipv4");
   ng_smp_mb();
   httpd_signal_cond(&main_cond);
   return 0;
@@ -1959,7 +1959,11 @@ DWORD WINAPI thread_function_ipv6(LPVOID arg)
 static void *thread_function_ipv6(void* arg) 
 #endif
 {
-  __httpd_run(&_httpd_socket6, 1);
+#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+  __httpd_run(&_httpd_socket6, "ipv6");
+#else
+  __httpd_run(&_httpd_socket6, "ipv4 and ipv6");
+#endif
   ng_smp_mb();
   httpd_signal_cond(&main_cond);
   return 0;
