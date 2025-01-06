@@ -192,6 +192,7 @@ static inline int hssl_enabled(void) { return 0; }
 typedef struct _conndata
 {
   volatile int flag;
+  int index;
   struct hsocket_t sock;
 #ifdef WIN32
   HANDLE tid;
@@ -546,6 +547,7 @@ _httpd_connection_slots_init(void)
     c->flag = CONNECTION_FREE;
     hsocket_init(&c->sock);
     httpd_thread_init(&c->tid);
+    c->index = i;
 #if __HTTP_USE_CONN_RING
     if (rte_ring_mp_enqueue(ring, c) < 0)
     {
@@ -1606,7 +1608,7 @@ _httpd_wait_for_empty_conn(void)
     httpd_thread_init(&conn->tid);
   }
   
-  log_debug("get new connection (%p).", conn);
+  log_debug("get new connection %d, (%p).", conn->index, conn);
   return conn;
 }
 

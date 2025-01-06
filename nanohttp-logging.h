@@ -187,6 +187,8 @@ extern char *VisualC_funcname(const char *file, int line); /* not thread safe! *
 void _vnanohttp_log_printf(nanohttp_loglevel_t level, const char *format, va_list ap);
 void _nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...);
 
+#define PRINT_FUNCTIAON
+
 #if __NHTTP_NO_LOGGING
 #define log_verbose(fmt, ...) NG_UNUSED(fmt)
 #define log_debug  (fmt, ...) NG_UNUSED(fmt)
@@ -196,33 +198,63 @@ void _nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...);
 #define log_fatal  (fmt, ...) NG_UNUSED(fmt)
 #define log_stderr (fmt, ...) NG_UNUSED(fmt)
 #define log_print  (fmt, ...) NG_UNUSED(fmt)
-#else
+#elif defined(PRINT_FUNCTIAON)
+#define __FUNCTION_FMT "[%-7s]: %16.16s... "
 #define log_verbose(fmt, ...) _nanohttp_log_printf(NANOHTTP_LOG_VERBOSE, \
-                             NANOHTTP_LOG_LEVEL_VERBOSE_STRING " %s: " fmt "\n", \
-                             __FUNCTION__, ## __VA_ARGS__)
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_VERBOSE_STRING, __FUNCTION__, ## __VA_ARGS__)
 
 #define log_debug(fmt, ...)   _nanohttp_log_printf(NANOHTTP_LOG_DEBUG, \
-                             NANOHTTP_LOG_LEVEL_DEBUG_STRING " %s: " fmt "\n", \
-                             __FUNCTION__, ## __VA_ARGS__)
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_DEBUG_STRING, __FUNCTION__, ## __VA_ARGS__)
 
 #define log_info(fmt, ...)    _nanohttp_log_printf(NANOHTTP_LOG_INFO, \
-                             NANOHTTP_LOG_LEVEL_INFO_STRING " %s: " fmt "\n", \
-                             __FUNCTION__, ## __VA_ARGS__)
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_INFO_STRING, __FUNCTION__, ## __VA_ARGS__)
 
 #define log_warn(fmt, ...)    _nanohttp_log_printf(NANOHTTP_LOG_WARN, \
-                             NANOHTTP_LOG_LEVEL_WARN_STRING " %s: " fmt "\n", \
-                             __FUNCTION__, ## __VA_ARGS__)
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_WARN_STRING, __FUNCTION__, ## __VA_ARGS__)
 
 #define log_error(fmt, ...)   _nanohttp_log_printf(NANOHTTP_LOG_ERROR, \
-                             NANOHTTP_LOG_LEVEL_ERROR_STRING " %s: " fmt "\n", \
-                             __FUNCTION__, ## __VA_ARGS__)
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_ERROR_STRING, __FUNCTION__, ## __VA_ARGS__)
 
 #define log_fatal(fmt, ...)   _nanohttp_log_printf(NANOHTTP_LOG_FATAL, \
-                             NANOHTTP_LOG_LEVEL_FATAL_STRING " %s: " fmt "\n", \
-                             __FUNCTION__, ## __VA_ARGS__)
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_FATAL_STRING, __FUNCTION__, ## __VA_ARGS__)
 #define log_stderr(fmt, ...)  _nanohttp_log_printf(NANOHTTP_LOG_STDERR, \
-                             NANOHTTP_LOG_LEVEL_STDERR_STRING " %s: " fmt "\n", \
-                             __FUNCTION__, ## __VA_ARGS__)
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_STDERR_STRING, __FUNCTION__, ## __VA_ARGS__)
+#define log_print(fmt, ...)  _nanohttp_log_printf(NANOHTTP_LOG_INFO, fmt, ## __VA_ARGS__)
+#else
+#define __FUNCTION_FMT "[%-7s]: "
+#define log_verbose(fmt, ...) _nanohttp_log_printf(NANOHTTP_LOG_VERBOSE, \
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_VERBOSE_STRING, ## __VA_ARGS__)
+
+#define log_debug(fmt, ...)   _nanohttp_log_printf(NANOHTTP_LOG_DEBUG, \
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_DEBUG_STRING, ## __VA_ARGS__)
+
+#define log_info(fmt, ...)    _nanohttp_log_printf(NANOHTTP_LOG_INFO, \
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_INFO_STRING, ## __VA_ARGS__)
+
+#define log_warn(fmt, ...)    _nanohttp_log_printf(NANOHTTP_LOG_WARN, \
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_WARN_STRING, ## __VA_ARGS__)
+
+#define log_error(fmt, ...)   _nanohttp_log_printf(NANOHTTP_LOG_ERROR, \
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_ERROR_STRING, ## __VA_ARGS__)
+
+#define log_fatal(fmt, ...)   _nanohttp_log_printf(NANOHTTP_LOG_FATAL, \
+                             __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_FATAL_STRING, ## __VA_ARGS__)
+#define log_stderr(fmt, ...)  _nanohttp_log_printf(NANOHTTP_LOG_STDERR, \
+                              __FUNCTION_FMT fmt "\n", \
+                             NANOHTTP_LOG_LEVEL_STDERR_STRING, ## __VA_ARGS__)
 #define log_print(fmt, ...)  _nanohttp_log_printf(NANOHTTP_LOG_INFO, fmt, ## __VA_ARGS__)
 #endif
 /**@}*/
