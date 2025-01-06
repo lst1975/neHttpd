@@ -175,7 +175,8 @@ _hsocket_sys_accept(struct hsocket_t *sock, struct hsocket_t *dest)
   
   while (1)
   {
-    dest->sock = accept(sock->sock, (struct sockaddr *)&dest->addr, &asize);
+    dest->sock = WSAAccept(sock->sock, (struct sockaddr *)&dest->addr, 
+      &asize, NULL, (DWORD_PTR)NULL);
     if (dest->sock != INVALID_SOCKET)
       break;
     if (!_hsocket_should_again(WSAGetLastError()))
@@ -398,11 +399,7 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
   struct hsocket_t sock;
   herror_t status;
   struct sockaddr *addr;
-#ifdef WIN32
-  char opt = 1;
-#else
   int opt = 1;
-#endif
 
   /* create socket */
   if ((sock.sock = socket(fam, SOCK_STREAM, 0)) == -1)
@@ -421,7 +418,7 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
     return status;
   }
   
-  if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+  if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0)
   {
     int err = errno;
     log_error("Socket SOL_SOCKET SO_REUSEADDR (%d:%s)", 
@@ -431,8 +428,19 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
                       err, os_strerror(errno));
   }
 
+#if __NHTTP_LISTEN_DUAL_STACK && defined(IPV6_V6ONLY)
+  if (setsockopt(sock.sock, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, sizeof(opt)) < 0) {
+    int err = errno;
+    log_error("Socket IPPROTO_IPV6 IPV6_V6ONLY (%d:%s)", 
+                      err, os_strerror(errno));
+    return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
+                      "Socket IPPROTO_IPV6 IPV6_V6ONLY (%d:%s)", 
+                      err, os_strerror(errno));
+  }
+#endif
+
 #ifdef SO_REUSEPORT  
-  if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0)
+  if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEPORT, (char *)&opt, sizeof(opt)) < 0)
   {
     int err = errno;
     log_error("Socket SOL_SOCKET SO_REUSEPORT (%d:%s)", 

@@ -597,13 +597,14 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
 #endif      
       )
     {
-      log_debug("Try to open the file %s.", req->path);
+      log_debug("Try to open the file %.*s.", req->path_len, req->path);
 
       void *file = nanohttp_file_open_for_read(req->path+1);
       if (file == NULL)
       {
         // If the file does not exist
-        log_error("Not able to open the file %s for reading.", req->path);
+        log_error("Not able to open the file %.*s for reading.", 
+        req->path_len, req->path);
         r = httpd_send_header(conn, 404, HTTP_STATUS_404_REASON_PHRASE);
       }
       else
@@ -616,7 +617,8 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
           {
             herror_release(r);
             r = http_output_stream_write_printf(conn->out, 
-                  "Failed to readfile %s: %s", req->path, herror_message(r));
+                  "Failed to readfile %.*s: %s", 
+                  req->path_len, req->path, herror_message(r));
           }
         }
         nanohttp_file_close(file);
