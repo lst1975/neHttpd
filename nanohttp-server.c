@@ -160,9 +160,9 @@ static inline int hssl_enabled(void) { return 0; }
 #include "nanohttp-signal.h"
 
 #ifndef WIN32
-#define __NHTTP_LISTEN_DUAL_STACK 1
+#define __NHTTP_LISTEN_DUAL_STACK 0
 #else
-#define __NHTTP_LISTEN_DUAL_STACK 1
+#define __NHTTP_LISTEN_DUAL_STACK 0
 #endif
 
 #ifndef ng_timeradd
@@ -1675,12 +1675,18 @@ _httpd_start_thread(conndata_t *conn)
 
 #define __NHTTP_EPOLL_WAIT_TIMEOUT 1000
 
-static void __httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep)
+static void __httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep, uint64_t rt)
 {
   if (ep != INVALID_SOCKET)
-    log_debug("Epoll [%lu:%lu] wait timeout, running fine ...", ep, sock);
+  {
+    log_debug("Epoll [%lu:%lu]"
+      " wait timeout, running %"PRIu64" seconds fine ...", ep, sock, rt);
+  }
   else
-    log_debug("Epoll [%lu] wait timeout, running fine ...", sock);
+  {
+    log_debug("Epoll [%lu]"
+      " wait timeout, running %"PRIu64" seconds fine ...", sock, rt);
+  }
 }
 
 #if __NHTTP_USE_EPOLL
@@ -1689,6 +1695,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
 {
   herror_t err;
   struct epoll_event event;
+  uint64_t start = ng_get_time();
   
   log_verbose("starting run routine: %s", name);
 
@@ -1740,7 +1747,8 @@ __httpd_run(struct hsocket_t *sock, const char *name)
         }
 		
         /* timeout */
-        __httpd_log_poll_timeout(sock->sock, sock->ep);
+        __httpd_log_poll_timeout(sock->sock, sock->ep, 
+          __ng_difftime(ng_get_time(), start));
         continue;
       }
       else if (n == -1)
@@ -1814,6 +1822,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
 {
   herror_t err;
   WSAPOLLFD event = { 0 };
+  uint64_t start = ng_get_time();
   
   log_verbose("starting run routine: %s", name);
 
@@ -1854,7 +1863,8 @@ __httpd_run(struct hsocket_t *sock, const char *name)
         }
         
         /* timeout */
-        __httpd_log_poll_timeout(sock->sock, INVALID_SOCKET);
+        __httpd_log_poll_timeout(sock->sock, INVALID_SOCKET, 
+          __ng_difftime(ng_get_time(), start));
         continue;
       }
       else if (n == -1)
@@ -1935,6 +1945,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
 #endif
   herror_t err;
   fd_set fds;
+  uint64_t start = ng_get_time();
 
   log_verbose("starting run routine: %s", name);
 
@@ -1978,7 +1989,8 @@ __httpd_run(struct hsocket_t *sock, const char *name)
         }
 
         /* timeout */
-        __httpd_log_poll_timeout(sock->sock, INVALID_SOCKET);
+        __httpd_log_poll_timeout(sock->sock, INVALID_SOCKET, 
+          __ng_difftime(ng_get_time(), start));
         continue;
       }
       else if (n == -1)
