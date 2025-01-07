@@ -378,6 +378,8 @@ void httpd_thread_cancel(conndata_t *conn)
   pthread_attr_destroy(&(conn->attr));
 #endif
 
+  httpd_thread_init(conn);
+
   log_debug("CloseHandle: %s", conn->name);
 }
 
