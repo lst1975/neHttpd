@@ -122,8 +122,15 @@ static ng_result_t __ng_get_freq(void *log, double *freq)
   return ng_ERR_NONE;
 }
 
+#if defined(WIN32) && defined(__GNUC__) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
 typedef char STRERR_Buffer[1024];
 RTE_DEFINE_PER_LCORE(STRERR_Buffer, ng_strerror_buffer);
+#if defined(WIN32) && defined(__GNUC__) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic pop
+#endif
 
 const char *__os_strerror(int err)
 {

@@ -249,6 +249,7 @@ void nanohttpd_stop_running(void)
 #define errno GetLastError()
 typedef HANDLE MUTEXT_T;
 typedef HANDLE THREAD_T;
+typedef SOCKET SOCKET_T;
 typedef DWORD WINAPI (*HTTP_THREAD_EXEFUNC_T)(LPVOID arg);
 #if !__HTTP_USE_CONN_RING
 HANDLE _httpd_connection_lock = NULL;
@@ -259,6 +260,7 @@ HANDLE _httpd_connection_lock = NULL;
 
 typedef pthread_mutex_t MUTEXT_T;
 typedef pthread_t THREAD_T;
+typedef int SOCKET_T;
 typedef void * (*HTTP_THREAD_EXEFUNC_T)(void *data);
 #if !__HTTP_USE_CONN_RING
 static pthread_mutex_t _httpd_connection_lock = PTHREAD_MUTEX_INITIALIZER;;
@@ -1671,9 +1673,12 @@ _httpd_start_thread(conndata_t *conn)
 
 #define __NHTTP_EPOLL_WAIT_TIMEOUT 1000
 
-static void __httpd_log_poll_timeout(int sock)
+static void __httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep)
 {
-  log_debug("Epoll %d wait timeout, running fine ...", sock);
+  if (ep != INVALID_SOCKET)
+    log_debug("Epoll [%lu:%lu] wait timeout, running fine ...", ep, sock);
+  else
+    log_debug("Epoll [%lu] wait timeout, running fine ...", sock);
 }
 
 #if __NHTTP_USE_EPOLL
@@ -1733,7 +1738,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
         }
 		
         /* timeout */
-        __httpd_log_poll_timeout(sock->ep);
+        __httpd_log_poll_timeout(sock->sock, sock->ep);
         continue;
       }
       else if (n == -1)
@@ -1847,7 +1852,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
         }
         
         /* timeout */
-        __httpd_log_poll_timeout(sock->sock);
+        __httpd_log_poll_timeout(sock->sock, INVALID_SOCKET);
         continue;
       }
       else if (n == -1)
@@ -1971,7 +1976,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
         }
 
         /* timeout */
-        __httpd_log_poll_timeout(sock->sock);
+        __httpd_log_poll_timeout(sock->sock, INVALID_SOCKET);
         continue;
       }
       else if (n == -1)

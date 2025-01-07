@@ -105,7 +105,7 @@ all: httpd
 
 -include $(depends)
 
-CFLAGS = -Wall -O3 -g3 -I. -Wno-attributes
+CFLAGS = -Wall -O3 -g3 -I.
 LDFLAGS = 
 
 # Check if __CYGWIN__ is defined and set a Makefile variable

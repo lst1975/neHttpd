@@ -109,9 +109,25 @@
 #include <syslog.h>
 #endif
 
+#include "nanohttp-config.h"
 #include "nanohttp-logging.h"
 #include "nanohttp-mem.h"
 #include "nanohttp-server.h"
+
+#ifdef WIN32
+#define LOG_USE_MUTEX 1
+#else
+#define LOG_USE_MUTEX 0
+#endif
+
+#if LOG_USE_MUTEX
+static void *log_mutex=NULL;
+#define log_enter_mutex() httpd_enter_mutex((void *)&log_mutex)
+#define log_leave_mutex() httpd_leave_mutex((void *)&log_mutex)
+#else
+#define log_enter_mutex() (void)(0)
+#define log_leave_mutex() (void)(0)
+#endif
 
 static int _nanohttp_logtype = NANOHTTP_LOG_FOREGROUND;
 static nanohttp_loglevel_t _nanohttp_log_loglevel = NANOHTTP_LOG_DEBUG;
@@ -130,8 +146,6 @@ VisualC_funcname(const char *file, int line)
   return buffer;
 }
 #endif
-
-static void *log_mutex=NULL;
 
 nanohttp_loglevel_t
 nanohttp_log_set_loglevel(nanohttp_loglevel_t loglevel)
@@ -192,9 +206,9 @@ _vnanohttp_log_printf(nanohttp_loglevel_t level,
   
   if (_nanohttp_logtype & NANOHTTP_LOG_FOREGROUND)
   {
-    httpd_enter_mutex((void *)&log_mutex);
+    log_enter_mutex();
     vfprintf(level==NANOHTTP_LOG_STDERR ?stderr:stdout, format, ap);
-    httpd_leave_mutex((void *)&log_mutex);
+    log_leave_mutex();
   }
 #ifdef HAVE_SYSLOG_H
   else if (_nanohttp_logtype & NANOHTTP_LOG_SYSLOG)
@@ -224,9 +238,9 @@ _vnanohttp_log_printf(nanohttp_loglevel_t level,
         syslog_level = LOG_INFO;
         break;
     }
-    httpd_enter_mutex((void *)&log_mutex);
+    log_enter_mutex();
     vsyslog(syslog_level, format, ap);
-    httpd_leave_mutex((void *)&log_mutex);
+    log_leave_mutex();
   }
 #endif
 
@@ -239,9 +253,9 @@ _vnanohttp_log_printf(nanohttp_loglevel_t level,
 
     if (fp)
     {
-      httpd_enter_mutex((void *)&log_mutex);
+      log_enter_mutex();
       vfprintf(fp, format, ap);
-      httpd_leave_mutex((void *)&log_mutex);
+      log_leave_mutex();
       fflush(fp);
       fclose(fp);
     }
@@ -263,16 +277,20 @@ _nanohttp_log_printf(nanohttp_loglevel_t level, const char *format, ...)
 
 int http_log_init(void)
 {
-  if (httpd_create_mutex((void *)&log_mutex))
-    return -1;
-  else
-    return 0;
-  log_info("[OK] http_log_init.");
+  int err = 0;
+#if LOG_USE_MUTEX
+  err = httpd_create_mutex((void *)&log_mutex);
+#endif
+  if (!err)
+    log_info("[OK] http_log_init.");
+  return err;
 }
 
 void http_log_free(void)
 {
+#if LOG_USE_MUTEX
   httpd_destroy_mutex((void *)&log_mutex);
+#endif
   log_info("[OK] http_log_free.");
 }
 
