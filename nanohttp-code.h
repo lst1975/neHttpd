@@ -60,87 +60,40 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef __nanohttp_buffer_h
-#define __nanohttp_buffer_h
+#ifndef __nanohttp_code_h
+#define __nanohttp_code_h
 
-#include <string.h>
+#include <stdint.h>
+#include "nanohttp-buffer.h"
 
-typedef struct {
-  union{
-    void *data;
-    const char *cptr;
-    unsigned char *ptr;
-    char *buf;
-  };
-  char *p;
-  size_t size;
-  size_t len;
-  union{
-    int n;
-    size_t nbytes;
-  };
-} httpd_buf_t;
+#ifdef __cplusplus
+    extern "C" {
+#endif
 
-typedef httpd_buf_t ng_str_s;
+typedef struct _http_code http_code_s;
+struct _http_code {
+  ng_str_s name;
+  ng_str_s desc;
+  uint32_t code;
+  uint32_t type;
+  ng_str_s code_int_str;
+};
 
-#define DECL_CONST_STR_N(a,v) { .n=a, .cptr=v, .len=sizeof(v)-1 }
-#define DECL_CONST_STR_NULL() { .cptr=NULL, .len=0 }
-#define DECL_CONST_STR(v) { .cptr=v, .len=sizeof(v)-1 }
+#define HTTP_StatusCodeTYpe_NONE                   0
+#define HTTP_StatusCodeTYpe_SuccessfulResponses    1
+#define HTTP_StatusCodeTYpe_Redirects              2
+#define HTTP_StatusCodeTYpe_ClientErrors           3
+#define HTTP_StatusCodeTYpe_ServerErrors           4
+#define HTTP_StatusCodeTYpe_InformationalResponses 5
 
-#define __HTTPD_BUF_INIT_DECL() \
-  { .data = NULL, .p = NULL, .len = 0, .size = 0, .nbytes= 0}
+const ng_str_s *http_int_code2str(unsigned int code);
+const ng_str_s *http_code2name(unsigned int code);
+const ng_str_s *http_int_code2desc(unsigned int code);
 
-static inline void BUF_GO(httpd_buf_t *b, size_t len)
-{
-  b->p   += len;
-  b->len += len;
+#ifdef __cplusplus
 }
+#endif
 
-static inline void BUF_SET_CHR(httpd_buf_t *b, char c)
-{
-  b->p[0] = (char)c;
-}
-
-static inline size_t BUF_LEN(httpd_buf_t *b)
-{
-  return b->len;
-}
-
-static inline char *BUF_CUR_PTR(httpd_buf_t *b)
-{
-  return b->p;
-}
-
-static inline size_t BUF_REMAIN(httpd_buf_t *b)
-{
-  return b->size - b->len;
-}
-
-static inline void BUF_SET(httpd_buf_t *b, char *ptr, size_t len)
-{
-  b->buf = ptr;
-  b->len = len;
-}
-
-static inline void BUF_SIZE_INIT(httpd_buf_t *b, char *buf, size_t size)
-{
-  b->p      = buf;
-  b->data   = buf;
-  b->len    = 0;
-  b->size   = size;
-  b->nbytes = 0;
-}
-
-static inline int BUF_isequal(const httpd_buf_t *b, char *buf, size_t size)
-{
-  return b->len == size && !memcmp(b->data, buf, size);
-}
-
-static inline int ng_str_isequal(const httpd_buf_t *a, const httpd_buf_t *b)
-{
-  return BUF_isequal(a, b->buf, b->len);
-}
-
-extern void ng_free_data_buffer(httpd_buf_t *data);
+/**@}*/
 
 #endif

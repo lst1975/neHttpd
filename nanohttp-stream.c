@@ -113,19 +113,22 @@
 #include "nanohttp-common.h"
 #include "nanohttp-socket.h"
 #include "nanohttp-stream.h"
+#include "nanohttp-header.h"
 
 static int
 _http_stream_has_content_length(hpair_t * header)
 {
-  return hpairnode_get_ignore_case_len(header, HEADER_CONTENT_LENGTH, 
-    sizeof(HEADER_CONTENT_LENGTH)-1) != NULL;
+  return hpairnode_get_ignore_case_len(header, 
+    __HDR_BUF(HEADER_CONTENT_LENGTH)) != NULL;
 }
 
 static int
 _http_stream_is_chunked(hpair_t * header)
 {
-  hpair_t *chunked = hpairnode_get_ignore_case_len(header, HEADER_TRANSFER_ENCODING,
-    sizeof(HEADER_TRANSFER_ENCODING)-1);
+  hpair_t *chunked;
+
+  chunked = hpairnode_get_ignore_case_len(header, 
+    __HDR_BUF(HEADER_TRANSFER_ENCODING));
   if (chunked != NULL)
   {
     if (chunked->value_len == (sizeof(TRANSFER_ENCODING_CHUNKED)-1)
@@ -141,11 +144,12 @@ _http_stream_is_chunked(hpair_t * header)
   Creates a new input stream. 
 */
 struct http_input_stream_t *
-http_input_stream_new(struct hsocket_t *sock, hpair_t * header)
+http_input_stream_new(struct hsocket_t *sock, hpair_t *header)
 {
   struct http_input_stream_t *result;
 
-  if (!(result = (struct http_input_stream_t *) http_malloc(sizeof(struct http_input_stream_t))))
+  if (!(result = (struct http_input_stream_t *) 
+    http_malloc(sizeof(struct http_input_stream_t))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
     return NULL;
@@ -156,13 +160,14 @@ http_input_stream_new(struct hsocket_t *sock, hpair_t * header)
 
   /* Find connection type */
   hpairnode_dump_deep(header);
+  
   /* Check if Content-type */
   if (_http_stream_has_content_length(header))
   {
     hpair_t *cl;
     log_verbose("Stream transfer with 'Content-length'");
     cl = hpairnode_get_ignore_case_len(header, 
-      HEADER_CONTENT_LENGTH, sizeof(HEADER_CONTENT_LENGTH)-1);
+      __HDR_BUF(HEADER_CONTENT_LENGTH));
     assert(cl != NULL);
     result->content_length = ng_atoi(cl->value, cl->value_len);
     result->received = 0;
@@ -205,7 +210,8 @@ http_input_stream_new_from_file(const char *filename)
   }
 
   /* Create object */
-  if (!(result = (struct http_input_stream_t *) http_malloc(sizeof(struct http_input_stream_t)))) 
+  if (!(result = (struct http_input_stream_t *) 
+      http_malloc(sizeof(struct http_input_stream_t)))) 
   {
     log_error("http_malloc failed (%s)", strerror(errno));
     fclose(fd);
@@ -239,7 +245,8 @@ http_input_stream_free(struct http_input_stream_t * stream)
 }
 
 static int
-_http_input_stream_is_content_length_ready(struct http_input_stream_t * stream)
+_http_input_stream_is_content_length_ready(
+  struct http_input_stream_t *stream)
 {
   return (stream->content_length > stream->received);
 }
@@ -251,7 +258,8 @@ _http_input_stream_is_chunked_ready(struct http_input_stream_t * stream)
 }
 
 static int
-_http_input_stream_is_connection_closed_ready(struct http_input_stream_t * stream)
+_http_input_stream_is_connection_closed_ready(
+  struct http_input_stream_t * stream)
 {
   return !stream->connection_closed;
 }
@@ -263,7 +271,8 @@ _http_input_stream_is_file_ready(struct http_input_stream_t * stream)
 }
 
 static int
-_http_input_stream_content_length_read(struct http_input_stream_t * stream, unsigned char *dest, size_t size)
+_http_input_stream_content_length_read(
+  struct http_input_stream_t *stream, unsigned char *dest, size_t size)
 {
   herror_t status;
   size_t read;
@@ -581,7 +590,7 @@ http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
     hpair_t *cl;
     log_verbose("Stream transfer with 'Content-length'");
     cl = hpairnode_get_ignore_case_len(header, 
-      HEADER_CONTENT_LENGTH, sizeof(HEADER_CONTENT_LENGTH)-1);
+      __HDR_BUF(HEADER_CONTENT_LENGTH));
     assert(cl != NULL);
     result->content_length = ng_atoi(cl->value, cl->value_len);
     result->type = HTTP_TRANSFER_CONTENT_LENGTH;
@@ -662,7 +671,7 @@ http_output_stream_write_string(struct http_output_stream_t * stream,
   Returns socket error flags or H_OK.
 */
 herror_t
-http_output_stream_write_printf(struct http_output_stream_t * stream, 
+http_output_stream_write_printf(struct http_output_stream_t *stream, 
   const char *format, ...)
 {
   herror_t status;
@@ -676,7 +685,6 @@ http_output_stream_write_printf(struct http_output_stream_t * stream,
   va_end(ap);
   return status;
 }
-
 
 herror_t
 http_output_stream_flush(struct http_output_stream_t * stream)

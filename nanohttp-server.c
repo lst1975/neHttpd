@@ -159,6 +159,8 @@ static inline int hssl_enabled(void) { return 0; }
 #include "nanohttp-time.h"
 #include "nanohttp-ctype.h"
 #include "nanohttp-signal.h"
+#include "nanohttp-mime-type.h"
+#include "nanohttp-header.h"
 
 #ifndef WIN32
 #define __NHTTP_LISTEN_DUAL_STACK 0
@@ -626,9 +628,13 @@ _httpd_connection_slots_free(void)
 
 #if __HTTP_USE_CONN_RING
   int count = httpd_get_conncount();
-  if (count < _httpd_max_connections){
+  if (count > 0){
     log_warn("Number of active connection thread is (%d)", count);
-  };
+  }
+  else
+  {
+    log_info("Number of active connection thread is (%d)", count);
+  }
   rte_ring_free(_httpd_connection_ring);
   _httpd_connection_ring = NULL;
 #endif
@@ -658,16 +664,22 @@ httpd_init(int argc, char **argv)
 
   httpd_pthread_sigmask();
   
-  if (http_memcache_init() < 0)
-  {
-    log_error("[FAIL]: Cannot init memcache.");
-    return herror_new("http_memcache_init",HSOCKET_ERROR_INIT,"failed");
-  }
-
   if (http_log_init() < 0)
   {
     log_error("[FAIL]: Cannot init http_log.");
-    return herror_new("http_log_init",HSOCKET_ERROR_INIT,"failed");
+    return herror_new("http_log_init",GENERAL_ERROR,"failed");
+  }
+  
+  if (http_memcache_init() < 0)
+  {
+    log_error("[FAIL]: Cannot init memcache.");
+    return herror_new("http_memcache_init",GENERAL_ERROR,"failed");
+  }
+
+  if (ng_http_mime_type_init() != ng_ERR_NONE)
+  {
+    log_error("[FAIL]: ng_http_mime_type_init failed.");
+    return herror_new("ng_http_mime_type_init", GENERAL_ERROR,"failed");
   }
   
   if ((status = nanohttp_dir_init(argv[0])) != H_OK)
@@ -679,7 +691,7 @@ httpd_init(int argc, char **argv)
   if (nanohttp_users_init() < 0)
   {
     log_error("[FAIL]: Cannot init users.");
-    return herror_new("nanohttp_users_init",HSOCKET_ERROR_INIT,"failed");
+    return herror_new("nanohttp_users_init",GENERAL_ERROR,"failed");
   }
 
   if ((status = hsocket_module_init(argc, argv)) != H_OK)
@@ -1057,8 +1069,7 @@ _httpd_send_html_message(httpd_conn_t *conn, int reason,
   
   len = snprintf(buf, __BUF_SZ, tmpl, phrase, phrase, msg);
   n = snprintf(slen, 5, "%lu", len);
-  if (httpd_set_header(conn, HEADER_CONTENT_LENGTH, 
-    sizeof(HEADER_CONTENT_LENGTH)-1, slen, n))
+  if (httpd_set_header(conn, __HDR_BUF(HEADER_CONTENT_LENGTH), slen, n))
   {
     r = herror_new("_httpd_send_html_message", GENERAL_ERROR,
                       "Failed to httpd_set_header!");
@@ -1133,8 +1144,7 @@ httpd_send_unauthorized(httpd_conn_t *conn, const char *realm)
     char buf[128];
     
     n = snprintf(buf, 128, "Basic realm=\"%s\"", realm);
-    if (httpd_set_header(conn, HEADER_WWW_AUTHENTICATE, 
-      sizeof(HEADER_WWW_AUTHENTICATE)-1, buf, n));
+    if (httpd_set_header(conn, __HDR_BUF(HEADER_WWW_AUTHENTICATE), buf, n) < 0)
     {
       r = herror_new("httpd_send_unauthorized", GENERAL_ERROR,
                         "Failed to httpd_set_header!");
@@ -1404,7 +1414,7 @@ httpd_session_main(void *data)
       _httpd_request_print(req);
       
       conn_pair = hpairnode_get_ignore_case_len(req->header, 
-        HEADER_CONNECTION, sizeof(HEADER_CONNECTION)-1);
+        __HDR_BUF(HEADER_CONNECTION));
       if (conn_pair != NULL && 
         (conn_pair->value_len == 6 && !strncasecmp(conn_pair->value, "close", 6)))
         done = 1;
@@ -1598,7 +1608,7 @@ int
 httpd_get_conncount(void)
 {
 #if __HTTP_USE_CONN_RING
-  return rte_ring_count(_httpd_connection_ring);
+  return rte_ring_free_count(_httpd_connection_ring);
 #else
   httpd_enter_mutex(&_httpd_connection_lock);
   int i, ret;
@@ -2395,9 +2405,9 @@ httpd_destroy(void)
   _httpd_connection_slots_free();
   nanohttp_users_free();
   nanohttp_dir_free();
-  http_log_free();
+  ng_http_mime_type_free();
   http_memcache_free();
-  
+  http_log_free();
   return;
 }
 
@@ -2413,8 +2423,7 @@ httpd_get_postdata(httpd_conn_t *conn, struct hrequest_t *req,
     hpair_t *content_length_pair;
     content_length_pair =
       hpairnode_get_ignore_case_len(req->header, 
-      HEADER_CONTENT_LENGTH,
-      sizeof(HEADER_CONTENT_LENGTH) - 1);
+      __HDR_BUF(HEADER_CONTENT_LENGTH));
 
     if (content_length_pair != NULL)
     {
@@ -2554,8 +2563,7 @@ httpd_mime_send_header(httpd_conn_t * conn, const char *related_start,
   BUF_SET_CHR(&b, '\"');
   BUF_GO(&b, 1);
   
-  if (httpd_set_header(conn, HEADER_CONTENT_TYPE, 
-    sizeof(HEADER_CONTENT_TYPE)-1, 
+  if (httpd_set_header(conn, __HDR_BUF(HEADER_CONTENT_TYPE),
     buffer, BUF_LEN(&b)))
   {
     goto buffsize;
@@ -2624,10 +2632,10 @@ httpd_mime_next(httpd_conn_t * conn, const char *content_id,
 
   /* Send Content header */
   len = snprintf(buffer,__BUF_SZ, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
-            HEADER_CONTENT_TYPE, content_type ? content_type : "text/plain",
-            HEADER_CONTENT_TRANSFER_ENCODING,
+            __HDR_BUF_PTR(HEADER_CONTENT_TYPE), content_type ? content_type : "text/plain",
+            __HDR_BUF_PTR(HEADER_CONTENT_TRANSFER_ENCODING),
             transfer_encoding ? transfer_encoding : "binary",
-            HEADER_CONTENT_ID,
+            __HDR_BUF_PTR(HEADER_CONTENT_ID),
             content_id ? content_id : "<content-id-not-set>");
   status = http_output_stream_write(conn->out, b.ptr, len);
   

@@ -113,6 +113,7 @@
 #include "nanohttp-stream.h"
 #include "nanohttp-mime.h"
 #include "nanohttp-response.h"
+#include "nanohttp-header.h"
 
 static hresponse_t *
 _hresponse_new(void)
@@ -243,7 +244,7 @@ _hresponse_parse_header(const char *buffer, size_t len)
 
   /* Check Content-type */
   pair = hpairnode_get_ignore_case_len(res->header, 
-            HEADER_CONTENT_TYPE, 12);
+            __HDR_BUF(HEADER_CONTENT_TYPE));
   if (pair != NULL)
   {
     res->content_type = content_type_new(pair->value, pair->value_len);

@@ -294,7 +294,7 @@ void *__http_malloc(size_t size
     return NULL;
   }
   e = (http_mentry_s *)p;
-  e->iscache = (size >= TSN_MEM_ENTRY_SIZE);
+  e->iscache = 0;
   e->size    = size;
   e->isinq   = 0;
 #if __NHTTP_MEM_DEBUG  
@@ -316,20 +316,12 @@ void __http_free(void *ptr)
   __http_malloced_list_deq(e);
   ng_smp_mb();
 
-  if ((uint8_t *)ptr >= msg_array_ptr && (uint8_t *)ptr < msg_array_end)
+  if ((uint8_t *)e >= msg_array_ptr && (uint8_t *)e < msg_array_end)
   {
-    rte_ring_mp_enqueue(__http_mem_ring, __M2P(ptr));
+    rte_ring_mp_enqueue(__http_mem_ring, e);
     return;
   }
 
-  if (e->iscache)
-  {
-    if (!rte_ring_mp_enqueue(__http_mem_ring, e))
-    {
-      return;
-    }
-  }
-  
   os_free(e);
   return;
 #endif  

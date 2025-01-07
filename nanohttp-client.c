@@ -133,6 +133,7 @@
 #include "nanohttp-url.h"
 #include "nanohttp-client.h"
 #include "nanohttp-time.h"
+#include "nanohttp-header.h"
 
 herror_t
 httpc_init(int argc, char **argv)
@@ -403,7 +404,7 @@ httpc_header_set_date(httpc_conn_t * conn)
   char buffer[32];
   int n = __ng_http_date(buffer, 32, 1, NULL);
   buffer[n]='\0';
-  httpc_set_header(conn, HEADER_DATE, buffer);
+  httpc_set_header(conn, __HDR_BUF_PTR(HEADER_DATE), buffer);
 
   return;
 }
@@ -765,7 +766,7 @@ httpc_mime_begin(httpc_conn_t * conn, const char *url, const char *related_start
     " boundary=\"", 11, boundary, n, "\"", 1);
   if (status != H_OK) goto clean1;
 
-  httpc_set_header(conn, HEADER_CONTENT_TYPE, buffer);
+  httpc_set_header(conn, __HDR_BUF_PTR(HEADER_CONTENT_TYPE), buffer);
   status = httpc_post_begin(conn, url);
   
 #undef ___BUFSZ
@@ -813,9 +814,9 @@ httpc_mime_next(httpc_conn_t * conn, const char *content_id,
 
   /* Send Content header */
   len = snprintf(buffer, ___BUFSZ, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
-            HEADER_CONTENT_TYPE, content_type,
-            HEADER_CONTENT_TRANSFER_ENCODING, transfer_encoding,
-            HEADER_CONTENT_ID, content_id);
+            __HDR_BUF_PTR(HEADER_CONTENT_TYPE), content_type,
+            __HDR_BUF_PTR(HEADER_CONTENT_TRANSFER_ENCODING), transfer_encoding,
+            __HDR_BUF_PTR(HEADER_CONTENT_ID), content_id);
 
   status = http_output_stream_write(conn->out, (unsigned char *)buffer, len);
 

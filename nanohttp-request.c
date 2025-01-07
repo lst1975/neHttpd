@@ -118,6 +118,7 @@
 #include "nanohttp-mime.h"
 #include "nanohttp-request.h"
 #include "nanohttp-time.h"
+#include "nanohttp-header.h"
 
 static struct hrequest_t *hrequest_new(void)
 {
@@ -362,7 +363,7 @@ _hrequest_parse_header(char *data, size_t len)
 
   /* Check Content-type */
   tmppair = hpairnode_get_ignore_case_len(req->header, 
-                      HEADER_CONTENT_TYPE, 12);
+                      __HDR_BUF(HEADER_CONTENT_TYPE));
   if (tmppair != NULL)
   {
     req->content_type = content_type_new(tmppair->value, tmppair->value_len);

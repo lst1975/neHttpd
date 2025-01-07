@@ -81,6 +81,7 @@
 #include "nanohttp-data.h"
 #include "nanohttp-system.h"
 #include "nanohttp-signal.h"
+#include "nanohttp-header.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const httpd_buf_t *user, 
@@ -570,8 +571,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
 #else      
         len = base64_decode_string((const unsigned char *)favorICON, bf);
 #endif
-        if (httpd_set_header(conn, HEADER_CONTENT_TYPE, 
-          sizeof(HEADER_CONTENT_TYPE)-1, "image/png", 9)) 
+        if (httpd_set_header(conn, __HDR_BUF(HEADER_CONTENT_TYPE), "image/png", 9)) 
         {
           log_error("httpd_set_header failed");
           break;

@@ -72,6 +72,7 @@ objects = \
 	nanohttp-logging.o \
 	nanohttp-client.o \
 	nanohttp-mime.o \
+	nanohttp-mime-type.o \
 	nanohttp-request.o \
 	nanohttp-response.o \
 	nanohttp-server.o \
@@ -94,6 +95,8 @@ objects = \
 	nanohttp-signal.o \
 	nanohttp-utils.o \
 	nanohttp-inet.o \
+	nanohttp-header.o \
+	nanohttp-code.o \
 	nanohttp-urlencode.o
 
 depends:= $(objects:.o=.d)

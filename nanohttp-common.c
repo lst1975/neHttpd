@@ -119,6 +119,7 @@
 #include "nanohttp-defs.h"
 #include "nanohttp-common.h"
 #include "nanohttp-ctype.h"
+#include "nanohttp-header.h"
 
 hpair_t *
 hpairnode_new_len(const char *key, int keylen, 
@@ -631,8 +632,8 @@ part_new(const char *id, const char *filename, const char *content_type,
   part->deleteOnExit = 0;
 
   n = ng_snprintf(part->id, sizeof(part->id), "%s", id);
-  pair = hpairnode_new_len(HEADER_CONTENT_ID, sizeof(HEADER_CONTENT_ID)-1, 
-    id, n, part->header);
+  pair = hpairnode_new_len(__HDR_BUF(HEADER_CONTENT_ID), 
+            id, n, part->header);
   if (pair == NULL)
   {
     log_error("hpairnode_new_len failed.");
@@ -651,8 +652,7 @@ part_new(const char *id, const char *filename, const char *content_type,
   if (content_type)
   {
     n = ng_snprintf(part->content_type, sizeof(part->content_type), "%s", content_type);
-    pair = hpairnode_new_len(HEADER_CONTENT_TYPE, sizeof(HEADER_CONTENT_TYPE)-1, 
-      content_type, n, part->header);
+    pair = hpairnode_new_len(__HDR_BUF(HEADER_CONTENT_TYPE), content_type, n, part->header);
     if (pair == NULL)
     {
       log_error("hpairnode_new_len failed.");
