@@ -1669,6 +1669,13 @@ _httpd_start_thread(conndata_t *conn)
   return err;
 }
 
+#define __NHTTP_EPOLL_WAIT_TIMEOUT 1000
+
+static void __httpd_log_poll_timeout(int sock)
+{
+  log_debug("Epoll %d wait timeout, running fine ...", sock);
+}
+
 #if __NHTTP_USE_EPOLL
 static inline int
 __httpd_run(struct hsocket_t *sock, const char *name)
@@ -1715,7 +1722,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
     while (nanohttpd_is_running())
     {
       /* select socket descriptor with proper timeout */
-      int n = epoll_wait(sock->ep, &event, 1, 1000);
+      int n = epoll_wait(sock->ep, &event, 1, __NHTTP_EPOLL_WAIT_TIMEOUT);
       if (n == 0)
       {
         /* descriptor is not ready */
@@ -1724,7 +1731,9 @@ __httpd_run(struct hsocket_t *sock, const char *name)
           _httpd_release_finished_conn(conn);
           return 0;
         }
-        log_debug("Epoll %d wait timeout", sock->ep);
+		
+        /* timeout */
+        __httpd_log_poll_timeout(sock->ep);
         continue;
       }
       else if (n == -1)
@@ -1827,7 +1836,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
     while (nanohttpd_is_running())
     {
       /* select socket descriptor with proper timeout */
-      int n = WSAPoll(&event, 1, 1000);
+      int n = WSAPoll(&event, 1, __NHTTP_EPOLL_WAIT_TIMEOUT);
       if (n == 0)
       {
         /* descriptor is not ready */
@@ -1836,7 +1845,9 @@ __httpd_run(struct hsocket_t *sock, const char *name)
           _httpd_release_finished_conn(conn);
           return 0;
         }
-        log_debug("Epoll %d wait timeout", sock->sock);
+        
+        /* timeout */
+        __httpd_log_poll_timeout(sock->sock);
         continue;
       }
       else if (n == -1)
@@ -1909,7 +1920,9 @@ static inline int
 __httpd_run(struct hsocket_t *sock, const char *name)
 {
 #ifdef WIN32
- TIMEVAL timeout = {.tv_sec = 1, .tv_usec = 0};
+ TIMEVAL timeout = {
+    .tv_sec  = __NHTTP_EPOLL_WAIT_TIMEOUT/1000, 
+    .tv_usec = __NHTTP_EPOLL_WAIT_TIMEOUT%1000};
 #else
   struct timeval timeout = {.tv_sec = 1, .tv_usec = 0};
 #endif
@@ -1950,12 +1963,15 @@ __httpd_run(struct hsocket_t *sock, const char *name)
       n = select(sock->sock + 1, &fds, NULL, NULL, &timeout);
       if (n == 0)
       {
+        /* descriptor is not ready */
         if (!nanohttpd_is_running())
         {
           _httpd_release_finished_conn(conn);
           return 0;
         }
-        /* descriptor is not ready */
+
+        /* timeout */
+        __httpd_log_poll_timeout(sock->sock);
         continue;
       }
       else if (n == -1)
