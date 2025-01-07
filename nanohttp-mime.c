@@ -702,8 +702,8 @@ _mime_part_end(void *data)
 static hpair_t *
 _mime_process_header(char *buffer)
 {
-  int i = 0, c = 0, proc_key, begin = 0;
-  hpair_t *first = NULL, *last = NULL;
+  int i = 0, c = 0, proc_key, begin = 0, key_len = 0;
+  hpair_t *first = NULL, *last = NULL, *pair;
   char *key, *value;
 
 #define __KV_SIZE 912
@@ -711,7 +711,7 @@ _mime_process_header(char *buffer)
   if (key == NULL)
   {
     log_fatal("Failed to malloc temp buffer.");
-    return NULL;
+    goto clean0;
   }
   value = key + __KV_SIZE+1;
   key[0] = '\0';
@@ -723,14 +723,20 @@ _mime_process_header(char *buffer)
     if (buffer[i] == '\r' && buffer[i + 1] == '\n')
     {
       value[c%__KV_SIZE] = '\0';
+      pair = hpairnode_new_len(key, key_len, value, c, NULL);
+      if (pair == NULL)
+      {
+        log_fatal("Failed to hpairnode_new_len.");
+        goto clean1;
+      }
       if (last)
       {
-        last->next = hpairnode_new(key, value, NULL);
+        last->next = pair;
         last = last->next;
       }
       else
       {
-        first = last = hpairnode_new(key, value, NULL);
+        first = last = pair;
       }
       proc_key = 1;
       c = 0;
@@ -739,6 +745,7 @@ _mime_process_header(char *buffer)
     else if (buffer[i] == ':')
     {
       key[c%__KV_SIZE] = '\0';
+      key_len = c;
       c = 0;
       begin = 0;
       proc_key = 0;
@@ -764,8 +771,14 @@ _mime_process_header(char *buffer)
     i++;
   }
 #undef __KV_SIZE
+
   http_free(key);
   return first;
+  
+clean1:
+  hpairnode_free_deep(first);
+clean0:
+  return NULL;
 }
 
 

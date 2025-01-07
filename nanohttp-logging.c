@@ -282,7 +282,7 @@ int http_log_init(void)
   err = httpd_create_mutex((void *)&log_mutex);
 #endif
   if (!err)
-    log_info("[OK] http_log_init.");
+    log_info("[OK]: http_log_init.");
   return err;
 }
 
@@ -291,6 +291,6 @@ void http_log_free(void)
 #if LOG_USE_MUTEX
   httpd_destroy_mutex((void *)&log_mutex);
 #endif
-  log_info("[OK] http_log_free.");
+  log_info("[OK]: http_log_free.");
 }
 

@@ -459,7 +459,8 @@ httpd_admin_init_args(int argc, char **argv)
   {
     if (!strcmp(argv[i], NHTTPD_ARG_ENABLE_ADMIN))
     {
-      httpd_register(NHTTPD_ADMIN_CONTEXT, _httpd_admin_entry, "ADMIN");
+      httpd_register(NHTTPD_ADMIN_CONTEXT, 
+        sizeof(NHTTPD_ADMIN_CONTEXT)-1, _httpd_admin_entry, "ADMIN", 5);
       break;
     }
   }

@@ -633,7 +633,7 @@ _httpd_connection_slots_free(void)
   _httpd_connection_ring = NULL;
 #endif
 
-  log_info("[OK] _httpd_connection_slots_free");
+  log_info("[OK]: _httpd_connection_slots_free");
   return;
 }
 
@@ -732,13 +732,12 @@ httpd_init(int argc, char **argv)
 }
 
 herror_t
-httpd_register_secure(const char *context, httpd_service func, 
-  httpd_auth auth, const char *service_name)
+httpd_register_secure(const char *context, int context_len,
+  httpd_service func, httpd_auth auth, const char *service_name,
+  int service_name_len)
 {
   hservice_t *service;
 
-  int context_len = strlen(context);
-  
   if (!(service = (hservice_t *)http_malloc(sizeof(hservice_t)+context_len+1)))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
@@ -753,7 +752,7 @@ httpd_register_secure(const char *context, httpd_service func,
   stat_pthread_rwlock_init(&(service->statistics.lock), NULL);
 
   service->name = service_name;
-  service->name_len = strlen(service_name);
+  service->name_len = service_name_len;
   service->next = NULL;
   service->auth = auth;
   service->func = func;
@@ -778,19 +777,20 @@ httpd_register_secure(const char *context, httpd_service func,
 }
 
 herror_t
-httpd_register(const char *context, httpd_service service, 
-  const char *service_name)
+httpd_register(const char *context, int context_len, httpd_service service, 
+  const char *service_name, int service_name_len)
 {
-  return httpd_register_secure(context, service, NULL, service_name);
+  return httpd_register_secure(context, context_len, service, 
+    NULL, service_name, service_name_len);
 }
 
 herror_t
-httpd_register_default_secure(const char *context, 
+httpd_register_default_secure(const char *context, int context_len, 
   httpd_service service, httpd_auth auth)
 {
   herror_t ret;
 
-  ret = httpd_register_secure(context, service, auth, "DEFAULT");
+  ret = httpd_register_secure(context, context_len, service, auth, "DEFAULT", 7);
 
   /* XXX: this is broken, but working */
   _httpd_services_default = _httpd_services_tail;
@@ -799,9 +799,9 @@ httpd_register_default_secure(const char *context,
 }
 
 herror_t
-httpd_register_default(const char *context, httpd_service service)
+httpd_register_default(const char *context, int context_len, httpd_service service)
 {
-  return httpd_register_default_secure(context, service, NULL);
+  return httpd_register_default_secure(context, context_len, service, NULL);
 }
 
 short
@@ -846,6 +846,21 @@ hservice_free(hservice_t *service)
   http_free(service);
 
   return;
+}
+
+static void
+_httpd_unregister_services(void)
+{
+  hservice_t *tmp, *cur;
+  
+  for (cur = _httpd_services_head; cur != NULL;)
+  {
+    log_info("service %p:%p.", cur, cur->next);
+    tmp = cur->next;
+    hservice_free(cur);
+    cur = tmp;
+  }
+  log_info("[OK]: _httpd_unregister_services.");
 }
 
 int httpd_enable_service(hservice_t *service)
@@ -1493,18 +1508,23 @@ httpd_set_header(httpd_conn_t *conn, const char *key, int keylen,
   p = hpairnode_get_len(conn->header, key, keylen);
   if (p == NULL)
   {
-    p = hpairnode_new(key, value, conn->header);
-    if (p != NULL)
-      conn->header = p;
-    else
+    p = hpairnode_new_len(key, keylen, value, valuelen, conn->header);
+    if (p == NULL)
+    {
+      log_fatal("hpairnode_new failed.");
       return -1;
+    }
+    conn->header = p;
   }
   else
   {
     http_free(p->value);
     p->value = http_strdup_size(value, valuelen);
     if (p->value == NULL)
+    {
+      log_fatal("http_strdup_size failed.");
       return -1;
+    }
   }
 
   return 0;
@@ -1526,34 +1546,46 @@ httpd_set_headers(httpd_conn_t * conn, hpair_t *header)
 }
 
 int
-httpd_add_header(httpd_conn_t * conn, const char *key, const char *value)
+httpd_add_header(httpd_conn_t *conn, const char *key, const char *value)
 {
+  hpair_t *pair;
+  
   if (!conn)
   {
-    log_warn("Connection object is NULL");
+    log_warn("Connection object is NULL.");
     return 0;
   }
 
-  conn->header = hpairnode_new(key, value, conn->header);
-
+  pair = hpairnode_new(key, value, conn->header);
+  if (pair == NULL)
+  {
+    log_fatal("hpairnode_new failed.");
+    return 0;
+  }
+  conn->header = pair;
   return 1;
 }
 
-void
-httpd_add_headers(httpd_conn_t * conn, const hpair_t * values)
+int
+httpd_add_headers(httpd_conn_t *conn, const hpair_t *values)
 {
   if (!conn)
   {
-    log_warn("Connection object is NULL");
-    return;
+    log_warn("Connection object is NULL.");
+    return -1;
   }
 
   while (values)
   {
-    httpd_add_header(conn, values->key, values->value);
+    if (!httpd_add_header(conn, values->key, values->value))
+    {
+      log_warn("httpd_add_header failed.");
+      return -1;
+    }
     values = values->next;
   }
-  return;
+  
+  return 0;
 }
 
 static __rte_unused void _httpd_sys_sleep(int secs) 
@@ -1566,7 +1598,7 @@ int
 httpd_get_conncount(void)
 {
 #if __HTTP_USE_CONN_RING
-  return rte_ring_free_count(_httpd_connection_ring);
+  return rte_ring_count(_httpd_connection_ring);
 #else
   httpd_enter_mutex(&_httpd_connection_lock);
   int i, ret;
@@ -2351,8 +2383,6 @@ clean0:
 void
 httpd_destroy(void)
 {
-  hservice_t *tmp, *cur;
-
 #if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
   hsocket_close(&_httpd_socket4);
   log_debug("_httpd_socket4 closed.");
@@ -2360,22 +2390,14 @@ httpd_destroy(void)
   hsocket_close(&_httpd_socket6);
   log_debug("_httpd_socket6 closed.");
 
-  for (cur = _httpd_services_head; cur != NULL;)
-  {
-    log_info("service %p:%p.", cur, cur->next);
-    tmp = cur->next;
-    hservice_free(cur);
-    cur = tmp;
-  }
-  log_info("[OK] httpd_services_free.");
-
+  _httpd_unregister_services();
   hsocket_module_destroy();
   _httpd_connection_slots_free();
-
   nanohttp_users_free();
   nanohttp_dir_free();
   http_log_free();
   http_memcache_free();
+  
   return;
 }
 

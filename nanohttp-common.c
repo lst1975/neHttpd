@@ -116,7 +116,9 @@
 
 #include "nanohttp-logging.h"
 #include "nanohttp-error.h"
+#include "nanohttp-defs.h"
 #include "nanohttp-common.h"
+#include "nanohttp-ctype.h"
 
 hpair_t *
 hpairnode_new_len(const char *key, int keylen, 
@@ -160,7 +162,7 @@ hpairnode_new_len(const char *key, int keylen,
 }
 
 hpair_t *
-hpairnode_new(const char *key, const char *value, hpair_t * next)
+hpairnode_new(const char *key, const char *value, hpair_t *next)
 {
   return hpairnode_new_len(key, SAFE_STRLEN(key), value, SAFE_STRLEN(value), next);
 }
@@ -190,7 +192,7 @@ hpairnode_parse(const char *str, int _size, char delim, hpair_t *next)
   pair->key_len = 0;
   pair->value_len = 0;
 
-  value = memchr(str, delim, size);
+  value = ng_memchr(str, delim, size);
   pair->key_len = value == NULL ? size : value - str;
   pair->key = http_strdup_size(str, pair->key_len);
   if (pair->key == NULL)
@@ -202,7 +204,7 @@ hpairnode_parse(const char *str, int _size, char delim, hpair_t *next)
   if (value != NULL)
   {
     /* skip white space */
-    for (value++; isspace((int)*value); value++) ;
+    for (value++; __ng_isspace((int)*value); value++) ;
     pair->value_len = size - (value - str);
     if (pair->value_len)
     {
@@ -225,13 +227,11 @@ clean0:
 hpair_t *
 hpairnode_copy(const hpair_t * src)
 {
-  hpair_t *pair;
-
   if (src == NULL)
     return NULL;
 
-  pair = hpairnode_new(src->key, src->value, NULL);
-  return pair;
+  return hpairnode_new_len(src->key, src->key_len, 
+    src->value, src->value_len, NULL);
 }
 
 hpair_t *
@@ -368,7 +368,7 @@ hpairnode_get_len(hpair_t *pair, const char *key, int len)
   {
     if (pair->key != NULL && len == pair->key_len)
     {
-      if (!memcmp(pair->key, key, len))
+      if (!ng_memcmp(pair->key, key, len))
       {
         return pair;
       }
@@ -615,44 +615,63 @@ content_type_free(content_type_t * ct)
 
 struct part_t *
 part_new(const char *id, const char *filename, const char *content_type, 
-  const char *transfer_encoding, struct part_t * next)
+  const char *transfer_encoding, struct part_t *next)
 {
+  int n;
   struct part_t *part;
+  hpair_t *pair;
  
-  if (!(part = (struct part_t *) http_malloc(sizeof(struct part_t))))
+  if (!(part = (struct part_t *)http_malloc(sizeof(struct part_t))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
-    return NULL;
+    goto clean0;
   }
 
   part->header = NULL;
-  part->next = next;
   part->deleteOnExit = 0;
-  strcpy(part->id, id);
-  strcpy(part->filename, filename);
-  if (content_type)
-    strcpy(part->content_type, content_type);
-  else
-    part->content_type[0] = '\0';
 
-  part->header = hpairnode_new(HEADER_CONTENT_ID, id, part->header);
+  n = ng_snprintf(part->id, sizeof(part->id), "%s", id);
+  pair = hpairnode_new_len(HEADER_CONTENT_ID, sizeof(HEADER_CONTENT_ID)-1, 
+    id, n, part->header);
+  if (pair == NULL)
+  {
+    log_error("hpairnode_new_len failed.");
+    goto clean1;
+  }
+  part->header = pair;
+  
+  part->next = next;
+  ng_snprintf(part->filename, sizeof(part->filename), "%s", filename);
+
   /* TODO (#1#): encoding is always binary. implement also others! */
-/*  part->header = hpairnode_new(HEADER_CONTENT_TRANSFER_ENCODING, "binary", part->header);*/
-
-  strcpy(part->transfer_encoding,
+  /*  part->header = hpairnode_new(HEADER_CONTENT_TRANSFER_ENCODING, "binary", part->header);*/
+  ng_snprintf(part->transfer_encoding, sizeof(part->transfer_encoding), "%s",
          transfer_encoding ? transfer_encoding : "binary");
 
   if (content_type)
   {
-    part->header =
-      hpairnode_new(HEADER_CONTENT_TYPE, content_type, part->header);
+    n = ng_snprintf(part->content_type, sizeof(part->content_type), "%s", content_type);
+    pair = hpairnode_new_len(HEADER_CONTENT_TYPE, sizeof(HEADER_CONTENT_TYPE)-1, 
+      content_type, n, part->header);
+    if (pair == NULL)
+    {
+      log_error("hpairnode_new_len failed.");
+      goto clean1;
+    }
+    part->header = pair;
   }
   else
   {
     /* TODO (#1#): get content-type from mime type list */
+    part->content_type[0] = '\0';
   }
 
   return part;
+  
+clean1:
+  part_free(part);
+clean0:
+  return NULL;
 }
 
 void

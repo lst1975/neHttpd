@@ -807,17 +807,21 @@ hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
   	}
     else
     {
+      n = ng_socket_errno;
       log_verbose("Socket %d select error. (%d:%s)", 
         sock->sock, n, os_strerror(n));
       return -1;
     }
   }
   
-  while (1)
+  if (FD_ISSET(sock->sock, &fds))
   {
-    n = recv(sock->sock, buf, len, 0);
-    if (n != -1 || !_hsocket_should_again(ng_socket_errno))
-      break;
+    while (1)
+    {
+      n = recv(sock->sock, buf, len, 0);
+      if (n != -1 || !_hsocket_should_again(ng_socket_errno))
+        break;
+    }
   }
 
   return n;

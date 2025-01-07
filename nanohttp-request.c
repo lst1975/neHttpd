@@ -319,6 +319,11 @@ _hrequest_parse_header(char *data, size_t len)
           tmppair->key = http_strdup_size(opt_key, tmppair->key_len);
           if (opt_value)
             tmppair->value = http_strdup_size(opt_value+1, tmppair->value_len);
+          if (tmppair->key == NULL || tmppair->value == NULL)
+          {
+            log_error("http_strdup_size failed (%s)", strerror(errno));
+            goto clean1;
+          }
           
           if (req->query == NULL)
           {

@@ -1333,8 +1333,8 @@ main(int argc, char **argv)
   json_test();
 #endif
     
-  if ((status = httpd_register_secure("/", root_service, 
-    simple_authenticator, "ROOT")) != H_OK)
+  if ((status = httpd_register_secure("/", 1, root_service, 
+    simple_authenticator, "ROOT", 4)) != H_OK)
   {
     log_stderr("Cannot register service (%s)\n", 
       herror_message(status));
@@ -1342,47 +1342,48 @@ main(int argc, char **argv)
   }
 
   if ((status = httpd_register(_nanoConfig_HTTPD_FILE_SERVICE, 
-    file_service, "FILE")) != H_OK)
+    sizeof(_nanoConfig_HTTPD_FILE_SERVICE)-1,
+    file_service, "FILE", 4)) != H_OK)
   {
     log_stderr("Cannot register service (%s)\n", 
       herror_message(status));
     goto error2;
   }
 
-  if ((status = httpd_register_secure("/secure", secure_service, 
-    simple_authenticator, "SECURE")) != H_OK)
+  if ((status = httpd_register_secure("/secure", 7, secure_service, 
+    simple_authenticator, "SECURE", 6)) != H_OK)
   {
     log_stderr("Cannot register secure service (%s)\n", 
       herror_message(status));
     goto error2;
   }
 
-  if ((status = httpd_register_secure("/headers", headers_service, 
-    simple_authenticator, "HEAD")) != H_OK)
+  if ((status = httpd_register_secure("/headers", 8, headers_service, 
+    simple_authenticator, "HEAD", 4)) != H_OK)
   {
     log_stderr("Cannot register headers service (%s)\n", 
       herror_message(status));
     goto error2;
   }
 
-  if ((status = httpd_register_secure("/mime", mime_service, 
-    simple_authenticator, "MIME")) != H_OK)
+  if ((status = httpd_register_secure("/mime", 5, mime_service, 
+    simple_authenticator, "MIME", 4)) != H_OK)
   {
     log_stderr("Cannot register MIME service (%s)\n", 
       herror_message(status));
     goto error2;
   }
 
-  if ((status = httpd_register_secure("/post/wia.bin", post_service, 
-    simple_authenticator, "POST")) != H_OK)
+  if ((status = httpd_register_secure("/post/wia.bin", 13, post_service, 
+    simple_authenticator, "POST", 4)) != H_OK)
   {
     log_stderr("Cannot register POST service (%s)\n", 
       herror_message(status));
     goto error2;
   }
 
-  if ((status = httpd_register("/favicon.ico", root_service, 
-    "FAVICON")) != H_OK)
+  if ((status = httpd_register("/favicon.ico", 12, root_service, 
+    "FAVICON", 7)) != H_OK)
   {
     log_stderr("Cannot register default service (%s)\n", 
       herror_message(status));
@@ -1390,14 +1391,15 @@ main(int argc, char **argv)
   }
 
   if ((status = httpd_register_secure(_nanoConfig_HTTPD_DATA_SERVICE, 
-    data_service, simple_authenticator, "DATA")) != H_OK)
+    sizeof(_nanoConfig_HTTPD_DATA_SERVICE)-1,
+    data_service, simple_authenticator, "DATA", 4)) != H_OK)
   {
     log_stderr("Cannot register DATA service (%s)\n", 
       herror_message(status));
     goto error2;
   }
 
-  if ((status = httpd_register_default_secure("/error", default_service, 
+  if ((status = httpd_register_default_secure("/error", 6, default_service, 
     simple_authenticator)) != H_OK)
   {
     log_stderr("Cannot register default service (%s)\n", 

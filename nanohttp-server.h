@@ -375,28 +375,34 @@ extern herror_t httpd_run(void);
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_register(const char *context, httpd_service service, const char *service_name);
+extern herror_t httpd_register(const char *context, 
+  int context_len, httpd_service service, const char *service_name, 
+  int service_name_len);
 
 /** This function registers a service routing which is secured by
  * a password (HTTP basic authentication).
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_register_secure(const char *context, httpd_service service, httpd_auth auth, const char *service_name);
+extern herror_t httpd_register_secure(const char *context, 
+  int context_len, httpd_service service, httpd_auth auth, 
+  const char *service_name, int service_name_len);
 
 /** This function registers a service routing which is executed if
  * no matching service is found.
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_register_default(const char *context, httpd_service service);
+extern herror_t httpd_register_default(const char *context, 
+  int context_len, httpd_service service);
 
 /** This function registers a serivce routing which is executed if
  * no matching service is found, it is protected by a password.
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_register_default_secure(const char *context, httpd_service service, httpd_auth auth);
+extern herror_t httpd_register_default_secure(const char *context, 
+  int context_len, httpd_service service, httpd_auth auth);
 
 /** This function returns the port the service is listening on.
  *
@@ -452,7 +458,7 @@ extern int httpd_set_header(httpd_conn_t *conn, const char *key, int keylen,
 extern int httpd_set_headers(httpd_conn_t * conn, hpair_t *header);
 
 extern int httpd_add_header(httpd_conn_t * conn, const char *key, const char *value);
-extern void httpd_add_headers(httpd_conn_t * conn, const hpair_t * values);
+extern int httpd_add_headers(httpd_conn_t * conn, const hpair_t * values);
 
 /**
  *
