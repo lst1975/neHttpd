@@ -267,10 +267,12 @@ int http_log_init(void)
     return -1;
   else
     return 0;
+  log_info("[OK] http_log_init.");
 }
 
 void http_log_free(void)
 {
   httpd_destroy_mutex((void *)&log_mutex);
+  log_info("[OK] http_log_free.");
 }
 

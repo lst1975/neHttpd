@@ -220,7 +220,7 @@ nanohttp_dir_init(const char *pfile)
   httpd_base_path.len = plen + flen;
   httpd_base_path.buf[httpd_base_path.len]='\0';
   
-  log_info("[OK]");
+  log_info("[OK]: nanohttp_dir_init.");
   return H_OK;
 }
 #endif
@@ -233,7 +233,7 @@ nanohttp_dir_free(void)
     http_free(httpd_base_path.buf);
     BUF_SIZE_INIT(&httpd_base_path, NULL, 0);
   }
-  log_info("[OK]");
+  log_info("[OK]: nanohttp_dir_free.");
 }
 
 #if 0
@@ -288,40 +288,40 @@ static int normalizePath(char *inputPath, int len)
     token = memchr(p, __PATH_DLIM, len);
     if (token == NULL)
     {
-	  if (top == __TOP_MAX_E)
-		return -1;
+  	  if (top == __TOP_MAX_E)
+    		return -1;
   	  t = &stack[++top];
       t->i = p - inputPath; // Push valid directory onto stack
   	  t->l = end - p;
   	  break;
     }
     if (end - token > 2 
-	  && *(uint16_t*)(token+1) == *(const uint16_t*)"..") 
-	{
+  	  && *(uint16_t*)(token+1) == *(const uint16_t*)"..") 
+  	{
       if (top > -1) 
-	  {
+  	  {
         top--; // Pop the last valid directory
       }
-	  p = token + 3;
+  	  p = token + 3;
     } 
-	else if (token > p)
-	{
-	  if (token - p != 1 || p[0] != '.')
-	  {
-	    if (top == __TOP_MAX_E)
-		  return -1;
-	    t = &stack[++top];
-        t->i = p - inputPath; // Push valid directory onto stack
-	    t->l = token - p;
-	  }
-	  p = token + 1;
+  	else if (token > p)
+  	{
+  	  if (token - p != 1 || p[0] != '.')
+  	  {
+  	    if (top == __TOP_MAX_E)
+  		  return -1;
+  	    t = &stack[++top];
+          t->i = p - inputPath; // Push valid directory onto stack
+  	    t->l = token - p;
+  	  }
+  	  p = token + 1;
     }
-	else if (end - token > 0)
-	{
-	  p = token + 1;
+  	else if (end - token > 0)
+  	{
+  	  p = token + 1;
     }
-	else 
-	  break;
+  	else 
+  	  break;
   }
 
   // Construct the normalized path
@@ -331,11 +331,11 @@ static int normalizePath(char *inputPath, int len)
 
   for (int i = 0; i <= top; i++) 
   {
-	if (i)
+  	if (i)
       *p++ = __PATH_DLIM;
     t = &stack[i];
-	memcpy(p, inputPath+t->i, t->l);
-	p += t->l;
+  	memcpy(p, inputPath+t->i, t->l);
+  	p += t->l;
   }
   *p = '\0';
   return 0;
@@ -377,19 +377,19 @@ static char *nanohttp_file_get_path(const char *file)
     http_free(path);
     return NULL;
   }
+  
   log_debug("Get path: %s", path);
 
   return path;
 }
 
 static void *nanohttp_file_open(const char *file, 
-  const char *mode, int del)
+  const char *mode)
 {
   char *fpath = nanohttp_file_get_path(file);
   // Open a file in write mode
   if (fpath != NULL)
   {
-    if (del) remove(fpath);
     void *fp = fopen(fpath, mode);
     http_free(fpath);
     return fp;
@@ -400,7 +400,7 @@ static void *nanohttp_file_open(const char *file,
 
 void *nanohttp_file_open_for_read(const char *file)
 {
-  return nanohttp_file_open(file, "rb", 0);
+  return nanohttp_file_open(file, "rb");
 }
 
 herror_t nanohttp_file_read_all(const char *file, 
@@ -479,7 +479,7 @@ herror_t nanohttp_file_read(void *file,
 
 void *nanohttp_file_open_for_write(const char *file)
 {
-  return nanohttp_file_open(file, "wb", 1);
+  return nanohttp_file_open(file, "wb");
 }
 
 void nanohttp_file_close(void *file)

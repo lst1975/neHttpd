@@ -155,7 +155,7 @@
 #include "nanohttp-ssl.h"
 #endif
 
-#if __NHTTP_USE_EPOLL
+#if __NHTTP_USE_EPOLL || __NHTTP_USE_WSAPOLL
 static int _hsocket_timeout = 10000;
 #else
 static int _hsocket_timeout = 10;
@@ -180,9 +180,9 @@ _hsocket_sys_accept(struct hsocket_t *sock, struct hsocket_t *dest)
       &asize, NULL, (DWORD_PTR)NULL);
     if (dest->sock != INVALID_SOCKET)
       break;
-    if (!_hsocket_should_again(WSAGetLastError()))
+    int err = ng_socket_errno;
+    if (!_hsocket_should_again(err))
     {
-      int err = errno;
       return herror_new("hsocket_accept", HSOCKET_ERROR_ACCEPT, 
         "Socket error (%d:%s)", err, os_strerror(errno));
     }
@@ -194,19 +194,17 @@ _hsocket_sys_accept(struct hsocket_t *sock, struct hsocket_t *dest)
 static void
 _hsocket_sys_close(struct hsocket_t * sock)
 {
-  char junk[10];
 
-  if (sock->sock == HSOCKET_FREE)
-    return;
-  
-  /* shutdown(sock,SD_RECEIVE); */
-
-  shutdown(sock->sock, SD_SEND);
-  while (recv(sock->sock, junk, sizeof(junk), 0) > 0);
-    /* nothing */
-  closesocket(sock->sock);
-  sock->sock = HSOCKET_FREE;
-
+  if (sock->sock != HSOCKET_FREE)
+  {
+    char junk[10];
+    /* shutdown(sock,SD_RECEIVE); */
+    shutdown(sock->sock, SD_SEND);
+    while (recv(sock->sock, junk, sizeof(junk), 0) > 0);
+      /* nothing */
+    closesocket(sock->sock);
+    sock->sock = HSOCKET_FREE;
+  }
 #if __NHTTP_USE_EPOLL
   if (sock->ep != HSOCKET_FREE)
   {
@@ -271,14 +269,12 @@ _hsocket_sys_accept(struct hsocket_t *sock, struct hsocket_t *dest)
 static inline void
 _hsocket_sys_close(struct hsocket_t * sock)
 {
-  if (sock->sock == HSOCKET_FREE)
-    return;
-  
-  shutdown(sock->sock, SHUT_RDWR);
-
-  close(sock->sock);
-  sock->sock = HSOCKET_FREE;
-
+  if (sock->sock != HSOCKET_FREE)
+  {
+    shutdown(sock->sock, SHUT_RDWR);
+    close(sock->sock);
+    sock->sock = HSOCKET_FREE;
+  }
 #if __NHTTP_USE_EPOLL
   if (sock->ep != HSOCKET_FREE)
   {
@@ -309,7 +305,7 @@ hsocket_module_init(int argc, char **argv)
   }
 #endif
 
-  log_info("[OK]");
+  log_info("[OK]: hsocket_module_init.");
   return H_OK;
 }
 
@@ -318,12 +314,12 @@ hsocket_module_destroy(void)
 {
   _hsocket_module_sys_destroy();
 
-  log_info("[OK]");
+  log_info("[OK]: hsocket_module_destroy.");
   return;
 }
 
 herror_t
-hsocket_init(struct hsocket_t * sock)
+hsocket_init(struct hsocket_t *sock)
 {
   memset(sock, 0, sizeof(struct hsocket_t));
   sock->sock = HSOCKET_FREE;
@@ -331,6 +327,7 @@ hsocket_init(struct hsocket_t * sock)
   sock->ep   = HSOCKET_FREE;
 #endif
 
+  log_info("[OK]: hsocket_init [%p].", sock);
   return H_OK;
 }
 
@@ -558,9 +555,9 @@ hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
   }
 #endif
 
-  char buf[128];
-  ng_inet_ntop_su(&dest->addr, buf, sizeof(buf));
-  log_verbose("accepting connection from '%s' socket=%d", buf, dest->sock);
+  char buf[NG_INET6_ADDRSTRLEN];
+  int n = ng_inet_ntop_su(&dest->addr, buf, sizeof(buf));
+  log_verbose("accepting connection from '%.*s' socket=%d", n, buf, dest->sock);
 
   return H_OK;
 }
@@ -668,28 +665,34 @@ hsocket_select_recv(struct hsocket_t *sock,
     int n = epoll_wait(sock->ep, &event, 1, _hsocket_timeout);
     if (n == -1)
     {
-      if (_hsocket_should_again(errno))
+      if (_hsocket_should_again(ng_socket_errno))
         continue;
-      log_verbose("Socket %d epoll_wait error", sock);
+      n = ng_socket_errno;
+      log_verbose("Socket %d epoll_wait error. (%d:%s)", 
+        sock->sock, n, os_strerror(n));
       return -1;
     }
     else if (n == 0)
     {
-      errno = ETIMEDOUT;
-      log_verbose("Socket %d timed out", sock);
+      ng_set_errno(OS_ERR_ETIMEDOUT);
+      log_verbose("Socket %d timed out", sock->sock);
       return -1;
     }
     else
     {
       if (event.events & (EPOLLRDHUP|EPOLLERR))
       {
-        log_verbose("Socket %d EPOLLRDHUP|EPOLLERR", sock);
+        n = ng_socket_errno;
+        log_verbose("Socket %d EPOLLRDHUP|EPOLLERR. (%d:%s)", 
+          sock->sock, n, os_strerror(n));
         return -1;
       }
       if ((event.events & EPOLLIN) 
           && event.data.fd == sock->sock)
         break;
-      log_verbose("Socket %d unknown error", sock);
+      n = ng_socket_errno;
+      log_verbose("Socket %d unknown error. (%d:%s)", 
+        sock->sock, n, os_strerror(n));
       return -1;
     }
   }
@@ -697,7 +700,66 @@ hsocket_select_recv(struct hsocket_t *sock,
   while (1)
   {
     n = recv(sock->sock, buf, len, 0);
-    if (n != -1 || !_hsocket_should_again(errno))
+    if (n != -1 || !_hsocket_should_again(ng_socket_errno))
+      break;
+  }
+
+  return n;
+}
+#elif __NHTTP_USE_WSAPOLL
+int
+hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
+{
+  WSAPOLLFD pfd = { 0 };
+  INT ret = 0;
+  int n = -1;
+
+  pfd.fd = sock->sock;
+  pfd.events = POLLIN;
+
+  while (1)
+  {
+    ret = WSAPoll(&pfd, 1, _hsocket_timeout);
+    if (ret == SOCKET_ERROR)
+    {
+      log_verbose("WSAPoll failed. (%d:%s)", ret, os_strerror(ret));
+      return -1;
+    }
+    else if (ret == 0)
+    {
+      ng_set_errno(OS_ERR_ETIMEDOUT);
+      log_verbose("Socket %d timed out", sock->sock);
+      return -1;
+    }
+    else if (ret == 1)
+    {
+      if ((pfd.revents & (POLLERR|POLLHUP|POLLNVAL)))
+      {
+        ret = ng_socket_errno;
+        log_verbose("WSAPoll %d EPOLLRDHUP|EPOLLERR. (%d:%s)", 
+          sock->sock, ret, os_strerror(ret));
+        return -1;
+      }
+      
+      if (pfd.revents & POLLIN)
+        break;
+
+      log_fatal("Socket %d not in POLLIN", sock->sock);
+      return -1;
+    }
+    else
+    {
+      ret = ng_socket_errno;
+      log_fatal("WSAPoll %d, failed. (%d:%s)", sock->sock, 
+        ret, os_strerror(ret));
+      return -1;
+    }
+  }
+  
+  while (1)
+  {
+    n = recv(sock->sock, buf, len, 0);
+    if (n != -1 || !_hsocket_should_again(ng_socket_errno))
       break;
   }
 
@@ -732,22 +794,29 @@ hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
     }
     else if (n == -1)
     {
-      if (!_hsocket_should_again(errno))
-      {
-        log_verbose("Socket %d select error", sock->sock);
-        return -1;
-      }
+      if (_hsocket_should_again(ng_socket_errno))
+        continue;
+      n = ng_socket_errno;
+      log_verbose("Socket %d select error. (%d:%s)", 
+        sock->sock, n, os_strerror(n));
+      return -1;
     }
-  	else
+  	else if (n == 1)
   	{
   	  break;
   	}
+    else
+    {
+      log_verbose("Socket %d select error. (%d:%s)", 
+        sock->sock, n, os_strerror(n));
+      return -1;
+    }
   }
   
   while (1)
   {
     n = recv(sock->sock, buf, len, 0);
-    if (n != -1 || !_hsocket_should_again(errno))
+    if (n != -1 || !_hsocket_should_again(ng_socket_errno))
       break;
   }
 
@@ -780,7 +849,7 @@ hsocket_recv(struct hsocket_t *sock, unsigned char * buffer,
       (size_t) total - totalRead)) == -1)
     {
       status = herror_new("hsocket_recv", HSOCKET_ERROR_RECEIVE, 
-        "recv failed (%s)", strerror(errno));
+        "recv failed (%s)", os_strerror(ng_socket_errno));
     }
 #endif
     if (status != H_OK)

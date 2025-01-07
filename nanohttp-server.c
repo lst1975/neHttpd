@@ -191,6 +191,7 @@ static inline int hssl_enabled(void) { return 0; }
 
 typedef struct _conndata
 {
+  char name[32];
   volatile int flag;
   int index;
   struct hsocket_t sock;
@@ -239,6 +240,7 @@ int nanohttpd_is_running(void)
 }
 void nanohttpd_stop_running(void)
 {
+  log_debug("nanohttpd_stop_running");
   _httpd_run = 0;
 }
 
@@ -271,7 +273,7 @@ int httpd_create_mutex(void *mutex)
   if (*(MUTEXT_T *)mutex == NULL)
     err = 1;
 #else
-  pthread_mutex_init((MUTEXT_T *)mutex, NULL);
+  err = pthread_mutex_init((MUTEXT_T *)mutex, NULL);
 #endif
   if (err)
     log_error("httpd_create_mutex failed");
@@ -351,13 +353,30 @@ void httpd_thread_kill(THREAD_T *tid)
 #endif
 }
 
-void httpd_thread_init(THREAD_T *tid)
+void httpd_thread_init(conndata_t *conn)
 {
-#ifndef WIN32
-  memset(tid, 0, sizeof(*tid));
+#ifdef WIN32
+  conn->tid = NULL;
 #else
-  *tid = NULL;
+  memset(&conn->tid, 0, sizeof(conn->tid));
+  pthread_attr_init(&(conn->attr));
 #endif
+}
+
+void httpd_thread_cancel(conndata_t *conn)
+{
+#ifdef WIN32
+  if (conn->tid != NULL)
+  {
+    log_debug("###########Close Thread Handle=%p.", conn->tid);
+    CloseHandle(conn->tid);
+    conn->tid = NULL;
+  }
+#else
+  pthread_attr_destroy(&(conn->attr));
+#endif
+
+  log_debug("CloseHandle: %s", conn->name);
 }
 
 int
@@ -546,8 +565,9 @@ _httpd_connection_slots_init(void)
     conndata_t *c = &_httpd_connection[i];
     c->flag = CONNECTION_FREE;
     hsocket_init(&c->sock);
-    httpd_thread_init(&c->tid);
+    httpd_thread_init(c);
     c->index = i;
+    ng_snprintf(c->name, sizeof(c->name), "Sess-%d", i);
 #if __HTTP_USE_CONN_RING
     if (rte_ring_mp_enqueue(ring, c) < 0)
     {
@@ -560,7 +580,7 @@ _httpd_connection_slots_init(void)
 #endif
   }
 
-  log_info("[OK]");
+  log_info("[OK]: connection_slots_init.");
   return H_OK;
 
 #if __HTTP_USE_CONN_RING
@@ -576,7 +596,6 @@ clean1:
   httpd_destroy_mutex(&_httpd_connection_lock);
 clean0:
 #endif  
-  log_info("[FAIL]");
   return status;
 }
 
@@ -609,7 +628,7 @@ _httpd_connection_slots_free(void)
   _httpd_connection_ring = NULL;
 #endif
 
-  log_info("[OK]");
+  log_info("[OK] _httpd_connection_slots_free");
   return;
 }
 
@@ -632,39 +651,41 @@ httpd_init(int argc, char **argv)
 {
   herror_t status;
 
+  httpd_pthread_sigmask();
+  
   if (http_memcache_init() < 0)
   {
-    log_error("Cannot init memcache.");
+    log_error("[FAIL]: Cannot init memcache.");
     return herror_new("http_memcache_init",HSOCKET_ERROR_INIT,"failed");
   }
 
   if (http_log_init() < 0)
   {
-    log_error("Cannot init http_log.");
+    log_error("[FAIL]: Cannot init http_log.");
     return herror_new("http_log_init",HSOCKET_ERROR_INIT,"failed");
   }
   
   if ((status = nanohttp_dir_init(argv[0])) != H_OK)
   {
-    log_error("nanohttp_dir_init failed (%s)", herror_message(status));
+    log_error("[FAIL]: nanohttp_dir_init failed (%s)", herror_message(status));
     return status;
   } 
 
   if (nanohttp_users_init() < 0)
   {
-    log_error("Cannot init users.");
+    log_error("[FAIL]: Cannot init users.");
     return herror_new("nanohttp_users_init",HSOCKET_ERROR_INIT,"failed");
   }
 
   if ((status = hsocket_module_init(argc, argv)) != H_OK)
   {
-    log_error("hsocket_modeule_init failed (%s)", herror_message(status));
+    log_error("[FAIL]: hsocket_modeule_init failed (%s)", herror_message(status));
     return status;
   } 
 
   if ((status = _httpd_connection_slots_init()) != H_OK)
   {
-    log_error("hsocket_modeule_init failed (%s)", herror_message(status));
+    log_error("[FAIL]: hsocket_modeule_init failed (%s)", herror_message(status));
     return status;
   } 
 
@@ -676,27 +697,27 @@ httpd_init(int argc, char **argv)
 
   if ((status = hsocket_init(&_httpd_socket4)) != H_OK)
   {
-    log_error("hsocket_init failed (%s)", herror_message(status));
+    log_error("[FAIL]: hsocket_init failed (%s)", herror_message(status));
     return status;
   }
 
   if ((status = hsocket_init(&_httpd_socket6)) != H_OK)
   {
-    log_error("hsocket_init failed (%s)", herror_message(status));
+    log_error("[FAIL]: hsocket_init failed (%s)", herror_message(status));
     return status;
   }
 
 #if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
   if ((status = hsocket_bind(AF_INET, &_httpd_socket4, _httpd_port)) != H_OK)
   {
-    log_error("hsocket_bind failed (%s)", herror_message(status));
+    log_error("[FAIL]: hsocket_bind failed (%s)", herror_message(status));
     return status;
   }
 #endif
 
   if ((status = hsocket_bind(AF_INET6, &_httpd_socket6, _httpd_port)) != H_OK)
   {
-    log_error("hsocket_bind failed (%s)", herror_message(status));
+    log_error("[FAIL]: hsocket_bind failed (%s)", herror_message(status));
     return status;
   }
 
@@ -711,7 +732,9 @@ httpd_register_secure(const char *context, httpd_service func,
 {
   hservice_t *service;
 
-  if (!(service = (hservice_t *)http_malloc(sizeof(hservice_t))))
+  int context_len = strlen(context);
+  
+  if (!(service = (hservice_t *)http_malloc(sizeof(hservice_t)+context_len+1)))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
     return herror_new("httpd_register_secure", 0, 
@@ -725,13 +748,15 @@ httpd_register_secure(const char *context, httpd_service func,
   stat_pthread_rwlock_init(&(service->statistics.lock), NULL);
 
   service->name = service_name;
+  service->name_len = strlen(service_name);
   service->next = NULL;
   service->auth = auth;
   service->func = func;
   service->status = NHTTPD_SERVICE_UP;
-  service->context = http_strdup(context);
-  service->name_len = strlen(service_name);
-  service->context_len = strlen(context);
+  
+  service->context = (char *)(service+1);
+  memcpy(service->context, context, context_len+1);
+  service->context_len = context_len;
 
   log_verbose("register service (%p) for \"%s\"", service, context);
   if (_httpd_services_head == NULL)
@@ -807,14 +832,14 @@ httpd_get_services(void)
 }
 
 static void
-hservice_free(hservice_t * service)
+hservice_free(hservice_t *service)
 {
   if (!service)
     return;
 
+  log_verbose("unregister service \"%s\"", service->context);
   http_free(service);
 
-  log_verbose("unregister service \"%s\"", service->context);
   return;
 }
 
@@ -1158,13 +1183,13 @@ _httpd_request_print(struct hrequest_t * req)
 }
 
 httpd_conn_t *
-httpd_new(struct hsocket_t * sock)
+httpd_new(struct hsocket_t *sock)
 {
   httpd_conn_t *conn;
 
   if (!(conn = (httpd_conn_t *) http_malloc(sizeof(httpd_conn_t))))
   {
-    log_error("http_malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
   conn->sock = sock;
@@ -1304,17 +1329,11 @@ httpd_session_main(void *data)
   herror_t status;
   uint64_t start, duration;
   int done;
-#ifdef WIN32
-  HANDLE tid;
-#endif
 
   rconn = NULL;
   conn = (conndata_t *)data;
-#ifdef WIN32
-  tid = conn->tid;
-#endif
   start = ng_get_time();
-
+  
   log_debug("starting new httpd session on socket %d.", conn->sock.sock);
 
   rconn = httpd_new(&(conn->sock));
@@ -1439,25 +1458,14 @@ httpd_session_main(void *data)
     }
   }
 
-  if (rconn)
-    httpd_free(rconn);
-
-  hsocket_close(&(conn->sock));
-
-#ifdef WIN32
-#else
-  pthread_attr_destroy(&(conn->attr));
-#endif
-
+  httpd_free(rconn);
   _httpd_release_finished_conn(conn);
 
-  int count = httpd_get_conncount();
-  log_debug("Connection used is: %d", count);
   ng_date_print();
+  log_debug("Connection used is: %d", httpd_get_conncount());
   
 #ifdef WIN32
   ExitThread(0);
-  CloseHandle(tid);
   return 0;
 #else
   /* pthread_exits automagically */
@@ -1605,7 +1613,7 @@ _httpd_wait_for_empty_conn(void)
   {
     ng_smp_mb();
     hsocket_init(&conn->sock);
-    httpd_thread_init(&conn->tid);
+    httpd_thread_init(conn);
   }
   
   log_debug("get new connection %d, (%p).", conn->index, conn);
@@ -1618,6 +1626,9 @@ _httpd_release_finished_conn(conndata_t *conn)
   if (conn == NULL)
     return;
   
+  httpd_thread_cancel(conn);
+  hsocket_close(&(conn->sock));
+
   conn->flag = CONNECTION_FREE;
   ng_smp_mb();
 #if __HTTP_USE_CONN_RING
@@ -1632,27 +1643,25 @@ static int
 _httpd_start_thread(conndata_t *conn)
 {
   int err = 0;
-  
+
 #ifdef WIN32
   conn->tid = CreateThread(NULL, 65535, httpd_session_main, conn, 0, NULL);
   if (conn->tid == NULL)
   {
-    log_error("CreateThread failed (%d:%s)", os_strerror(GetLastError()));
+    log_error("CreateThread failed (%d:%s)", os_strerror(ng_errno));
     err = -1;
   }
+  log_debug("###########Create Thread Handle=%p.", conn->tid);
 #else
-
-  pthread_attr_init(&(conn->attr));
 
 #ifdef PTHREAD_CREATE_DETACHED
   pthread_attr_setdetachstate(&(conn->attr), PTHREAD_CREATE_DETACHED);
 #endif
 
-  httpd_pthread_sigmask();
   if ((err =
        pthread_create(&(conn->tid), &(conn->attr), httpd_session_main, conn)))
   {
-    log_error("pthread_create failed (%s)", strerror(err));
+    log_error("pthread_create failed (%s)", os_strerror(ng_errno));
     err = -1;
   }
 #endif
@@ -1661,7 +1670,7 @@ _httpd_start_thread(conndata_t *conn)
 }
 
 #if __NHTTP_USE_EPOLL
-static inline herror_t
+static inline int
 __httpd_run(struct hsocket_t *sock, const char *name)
 {
   herror_t err;
@@ -1672,20 +1681,23 @@ __httpd_run(struct hsocket_t *sock, const char *name)
   if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
     log_error("hsocket_listen failed (%s)", herror_message(err));
-    return err;
+    herror_release(err);
+    return -1;
   }
 
   if ((err = hsocket_epoll_create(sock)) != H_OK)
   {
     log_error("hsocket_epoll_create failed (%s)", herror_message(err));
-    return err;
+    herror_release(err);
+    return -1;
   }
   
   if ((err = hsocket_epoll_ctl(sock->ep, sock->sock, 
     &sock->event, EPOLL_CTL_ADD, EPOLLIN|EPOLLRDHUP|EPOLLERR)) != H_OK)
   {
     log_error("hsocket_epoll_ctl failed (%s)", herror_message(err));
-    return err;
+    herror_release(err);
+    return -1;
   }
   
   while (nanohttpd_is_running())
@@ -1694,39 +1706,66 @@ __httpd_run(struct hsocket_t *sock, const char *name)
     
     conn = _httpd_wait_for_empty_conn();
     if (!nanohttpd_is_running())
-      break;
-
+    {
+      _httpd_release_finished_conn(conn);
+      return 0;
+    }
+    
     /* Wait for a socket to accept */
     while (nanohttpd_is_running())
     {
       /* select socket descriptor with proper timeout */
       int n = epoll_wait(sock->ep, &event, 1, 1000);
-      switch (n)
+      if (n == 0)
       {
-      case 0:
         /* descriptor is not ready */
-        break;
-      case -1:
-        log_warn("Socket %d epoll_wait error: (%s)", 
-          sock, strerror(errno));
-        /* got a signal? */
-        break;
-      case 1:
-        if (event.events & (EPOLLRDHUP|EPOLLERR))
-          continue;
-        /* no nothing */
-        if ((event.events & EPOLLIN) 
-          && event.data.fd == sock->sock)
-          break;
-        // FALLTHROUGH;
-      default:
-        log_fatal("Socket %d unknown error: (%s)", 
-          sock, strerror(errno));
-        break;
+        if (!nanohttpd_is_running())
+        {
+          _httpd_release_finished_conn(conn);
+          return 0;
+        }
+        log_debug("Epoll %d wait timeout", sock->ep);
+        continue;
       }
-
-      if (n == 1 && (event.events & EPOLLIN)) 
-        break;
+      else if (n == -1)
+      {
+        /* got a signal? */
+        n = ng_socket_errno;
+        if (_hsocket_should_again(n))
+        {
+          log_fatal("Socket %d epoll_wait INTR: (%d:%s)", 
+            sock->ep, n, os_strerror(n));
+          continue;
+        }
+        log_fatal("Socket %d epoll_wait error: (%d:%s)", 
+          sock->ep, n, os_strerror(n));
+        _httpd_release_finished_conn(conn);
+        return -1;
+      }
+      else if (n == 1)
+      {
+        if (!nanohttpd_is_running()
+          || (event.events & (EPOLLRDHUP|EPOLLERR)))
+        {
+          _httpd_release_finished_conn(conn);
+          return 0;
+        }
+        /* no nothing */
+        if ((event.events & EPOLLIN) && event.data.fd == sock->sock)
+          break;
+        
+        log_fatal("Socket %d unknown error: (%s)", 
+          sock->ep, os_strerror(ng_socket_errno));
+        _httpd_release_finished_conn(conn);
+        return -1;
+      }
+      else
+      {
+        log_fatal("Socket %d unknown error: (%s)", 
+          sock->ep, os_strerror(ng_socket_errno));
+        _httpd_release_finished_conn(conn);
+        return -1;
+      }
     }
 
     /* check signal status */
@@ -1740,21 +1779,125 @@ __httpd_run(struct hsocket_t *sock, const char *name)
     if (err != H_OK)
     {
       log_error("hsocket_accept failed (%s)", herror_message(err));
-      hsocket_close(&(conn->sock));
       _httpd_release_finished_conn(conn);
       continue;
     }
     
     if (_httpd_start_thread(conn) < 0)
     {
+      log_error("_httpd_start_thread failed.");
       _httpd_release_finished_conn(conn);
     }
   }
 
   return 0;
 }
+#elif __NHTTP_USE_WSAPOLL
+static inline int
+__httpd_run(struct hsocket_t *sock, const char *name)
+{
+  herror_t err;
+  WSAPOLLFD event = { 0 };
+  
+  log_verbose("starting run routine: %s", name);
+
+  if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
+  {
+    log_error("hsocket_listen failed (%s)", herror_message(err));
+    herror_release(err);
+    return -1;
+  }
+
+  event.fd = sock->sock;
+  event.events = POLLIN;
+
+  while (nanohttpd_is_running())
+  {
+    conndata_t *conn;
+    
+    conn = _httpd_wait_for_empty_conn();
+    
+    if (!nanohttpd_is_running())
+    {
+      _httpd_release_finished_conn(conn);
+      return 0;
+    }
+    
+    /* Wait for a socket to accept */
+    while (nanohttpd_is_running())
+    {
+      /* select socket descriptor with proper timeout */
+      int n = WSAPoll(&event, 1, 1000);
+      if (n == 0)
+      {
+        /* descriptor is not ready */
+        if (!nanohttpd_is_running())
+        {
+          _httpd_release_finished_conn(conn);
+          return 0;
+        }
+        continue;
+      }
+      else if (n == -1)
+      {
+        log_warn("Socket %d epoll_wait error: (%s)", 
+          sock->sock, os_strerror(ng_socket_errno));
+        /* got a signal? */
+        _httpd_release_finished_conn(conn);
+        return -1;
+      }
+      else if (n == 1)
+      {
+        if (!nanohttpd_is_running()
+          || (event.revents & (POLLERR|POLLHUP|POLLNVAL)))
+        {
+          _httpd_release_finished_conn(conn);
+          return 0;
+        }
+        /* no nothing */
+        if (event.revents & POLLIN)
+          break;
+        
+        log_fatal("Socket %d unknown error: (%s)", 
+          sock->sock, os_strerror(ng_socket_errno));
+        _httpd_release_finished_conn(conn);
+        return -1;
+      }
+      else
+      {
+        log_fatal("Socket %d unknown error: (%s)", 
+          sock->sock, os_strerror(ng_socket_errno));
+        _httpd_release_finished_conn(conn);
+        return -1;
+      }
+    }
+  
+    /* check signal status */
+    if (!nanohttpd_is_running())
+    {
+      _httpd_release_finished_conn(conn);
+      break;
+    }
+    
+    err = hsocket_accept(sock, &(conn->sock));
+    if (err != H_OK)
+    {
+      log_error("hsocket_accept failed (%s)", herror_message(err));
+      _httpd_release_finished_conn(conn);
+      continue;
+    }
+    
+    if (_httpd_start_thread(conn) < 0)
+    {
+      log_error("_httpd_start_thread failed.");
+      _httpd_release_finished_conn(conn);
+    }
+  }
+  
+  return 0;
+}
 #else
-static inline herror_t
+static inline int
 __httpd_run(struct hsocket_t *sock, const char *name)
 {
 #ifdef WIN32
@@ -1770,7 +1913,8 @@ __httpd_run(struct hsocket_t *sock, const char *name)
   if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
     log_error("hsocket_listen failed (%s)", herror_message(err));
-    return err;
+    herror_release(err);
+    return -1;
   }
 
   while (nanohttpd_is_running())
@@ -1784,7 +1928,8 @@ __httpd_run(struct hsocket_t *sock, const char *name)
     /* Wait for a socket to accept */
     while (nanohttpd_is_running())
     {
-
+      int n;
+      
       /* set struct timeval to the proper timeout */
       timeout.tv_sec = 1;
       timeout.tv_usec = 0;
@@ -1794,27 +1939,52 @@ __httpd_run(struct hsocket_t *sock, const char *name)
       FD_SET(sock->sock, &fds);
 
       /* select socket descriptor */
-      switch (select(sock->sock + 1, &fds, NULL, NULL, &timeout))
+      n = select(sock->sock + 1, &fds, NULL, NULL, &timeout);
+      if (n == 0)
       {
-      case 0:
         if (!nanohttpd_is_running())
-          break;
+        {
+          _httpd_release_finished_conn(conn);
+          return 0;
+        }
         /* descriptor is not ready */
         continue;
-      case -1:
-        if (!nanohttpd_is_running())
-          break;
-        /* got a signal? */
-        continue;
-      default:
-        if (!nanohttpd_is_running())
-          break;
-        /* no nothing */
-        break;
       }
-      if (FD_ISSET(sock->sock, &fds))
+      else if (n == -1)
       {
-        break;
+        n = ng_socket_errno;
+
+        /* got a signal? */
+        if (_hsocket_should_again(ng_socket_errno))
+        {
+          log_warn("Socket %d select INTR. (%d:%s)", 
+            sock->sock, n, os_strerror(n));
+          continue;
+        }
+
+        log_error("Socket %d select error. (%d:%s)", 
+          sock->sock, n, os_strerror(n));
+        _httpd_release_finished_conn(conn);
+        return -1;
+      }
+      else if (n == 1)
+      {
+        if (FD_ISSET(sock->sock, &fds))
+        {
+          break;
+        }
+        n = ng_socket_errno;
+        log_verbose("Socket %d select error. (%d:%s)", 
+          sock->sock, n, os_strerror(n));
+        _httpd_release_finished_conn(conn);
+        return -1;
+      }
+      else
+      {
+        log_verbose("Socket %d select error. (%d:%s)", 
+          sock->sock, n, os_strerror(n));
+        _httpd_release_finished_conn(conn);
+        return -1;
       }
     }
 
@@ -1829,7 +1999,6 @@ __httpd_run(struct hsocket_t *sock, const char *name)
     if (err != H_OK)
     {
       log_error("hsocket_accept failed (%s)", herror_message(err));
-      hsocket_close(&(conn->sock));
       _httpd_release_finished_conn(conn);
       continue;
     }
@@ -1844,52 +2013,63 @@ __httpd_run(struct hsocket_t *sock, const char *name)
 }
 #endif
 
+typedef struct {
 #ifdef WIN32
-HANDLE main_cond=NULL;
-HANDLE main_mutex=NULL;
-typedef HANDLE COND_T;
+  HANDLE handle;
 #else
-pthread_cond_t  main_cond = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t main_mutex = PTHREAD_MUTEX_INITIALIZER;
-typedef pthread_cond_t COND_T;
+  pthread_cond_t  handle;
+  MUTEXT_T mutex;
 #endif
-static NG_ATOMIC_T(NG_U32) condition_met;
+  NG_ATOMIC_T(NG_U32) set;
+} COND_T;
+
+#ifdef WIN32
+COND_T main_cond = {
+  .handle  = NULL,
+};
+#else
+COND_T main_cond = {
+  .mutex  = PTHREAD_MUTEX_INITIALIZER,
+  .handle = PTHREAD_COND_INITIALIZER,
+};
+#endif
 
 int httpd_create_cond(COND_T *cond)
 {
   int err = 0;
 
-  ng_atomic_set(&condition_met, 0);
+  ng_atomic_set(&cond->set, 0);
   
 #ifdef WIN32
-  *cond = CreateEvent(NULL, TRUE, FALSE, NULL);
-  if (*cond == NULL)
+  cond->handle = CreateEvent(NULL, TRUE, FALSE, NULL);
+  if (cond->handle == NULL)
   {
-    err = 1;
+    err = -1;
     log_error("httpd_create_mutex failed: (%d)", errno);
     goto clean0;
   }
 #else
-  err = httpd_create_mutex(&main_mutex);
-  if (httpd_create_mutex(&main_mutex))
+  err = httpd_create_mutex(&cond->mutex);
+  if (err)
   {
-    err = 1;
+    err = -1;
     log_error("httpd_create_mutex failed: (%s)", strerror(errno));
     goto clean0;
   }
-  if (pthread_cond_init(cond, NULL))
+  if (pthread_cond_init(&cond->handle, NULL))
   {
-    err = 1;
+    err = -1;
     log_error("pthread_cond_init failed: %d", strerror(errno));
     goto clean1;
   }
 #endif
 
+  log_debug("httpd_create_cond.");
   return err;
   
 #ifndef WIN32
 clean1:  
-  httpd_destroy_mutex(&main_mutex);
+  httpd_destroy_mutex(&cond->mutex);
 #endif
 clean0:  
   return err;
@@ -1897,46 +2077,57 @@ clean0:
 void httpd_destroy_cond(COND_T *cond)
 {
 #ifdef WIN32
-  if (*cond != NULL)
+  if (cond->handle != NULL)
   {
-    CloseHandle(*cond);
-    *cond = NULL;
+    CloseHandle(cond->handle);
+    cond->handle = NULL;
   }
 #else
-  httpd_destroy_mutex(&main_mutex);
-  pthread_cond_destroy(cond);
+  pthread_cond_destroy(&cond->handle);
+  httpd_destroy_mutex(&cond->mutex);
 #endif
+
+  log_debug("httpd_destroy_cond.");
 }
 
 void httpd_wait_cond(COND_T *cond)
 {
 #ifdef WIN32
-  WaitForSingleObject(*cond, INFINITE);
+  WaitForSingleObject(cond->handle, INFINITE);
 #else
-  pthread_mutex_lock(&main_mutex);
-  while (!condition_met && nanohttpd_is_running()) 
+  httpd_enter_mutex(&cond->mutex);
+  while (!ng_atomic_read(&cond->set)) 
   {
-    pthread_cond_wait(cond, &main_mutex); // Wait for the condition
+    log_debug("Httpd Eenter WAIT.");
+    pthread_cond_wait(&cond->handle, &cond->mutex); // Wait for the condition
+    log_debug("Httpd Leave WAIT.");
   }
-  pthread_mutex_unlock(&main_mutex);
+  httpd_leave_mutex(&cond->mutex);
 #endif
+  log_debug("Httpd returned from WAIT.");
 }
 void httpd_signal_cond(COND_T *cond)
 {
-  int already_set = ng_atomic_read(&condition_met);
+  int already_set = ng_atomic_read(&cond->set);
   if (already_set)
+  {
+    log_debug("httpd signal already set.");
     return;
-
+  }
   // Set the condition
-  ng_atomic_set(&condition_met, 1);
+  ng_atomic_set(&cond->set, 1);
+  log_debug("httpd condition set write: %d.", 
+    ng_atomic_read(&cond->set));
+  ng_smp_mb();
   
 #ifdef WIN32
-  SetEvent(*cond);
+  SetEvent(cond->handle);
 #else
-  pthread_mutex_lock(&main_mutex);
-  pthread_cond_signal(cond); // Signal the main thread
-  pthread_mutex_unlock(&main_mutex);
+  httpd_enter_mutex(&cond->mutex);
+  pthread_cond_signal(&cond->handle); // Signal the main thread
+  httpd_leave_mutex(&cond->mutex);
 #endif
+  log_debug("httpd_signal_cond.");
 }
 
 #if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
@@ -1947,6 +2138,7 @@ static void *thread_function_ipv4(void* arg)
 #endif
 {
   __httpd_run(&_httpd_socket4, "ipv4");
+  log_debug("thread_function_ipv4 finished.");
   ng_smp_mb();
   httpd_signal_cond(&main_cond);
   return 0;
@@ -1961,8 +2153,10 @@ static void *thread_function_ipv6(void* arg)
 {
 #if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
   __httpd_run(&_httpd_socket6, "ipv6");
+  log_debug("thread function ipv6 finished.");
 #else
   __httpd_run(&_httpd_socket6, "ipv4 and ipv6");
+  log_debug("thread function ipv4 and ipv6 finished.");
 #endif
   ng_smp_mb();
   httpd_signal_cond(&main_cond);
@@ -1994,55 +2188,109 @@ __start_thread(conndata_t *conn, HTTP_THREAD_EXEFUNC_T exefunc)
   return status;
 }
 
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
-static conndata_t httpd_thread_ipv4={.flag=CONNECTION_IN_USE};
+#define USE_PTHREAD_WAIT 1
+
+#if USE_PTHREAD_WAIT
+#ifdef WIN32
+DWORD WINAPI httpd_run_thread(LPVOID arg) 
+#else
+static void *httpd_run_thread(void* arg) 
 #endif
-static conndata_t httpd_thread_ipv6={.flag=CONNECTION_IN_USE};
+{
+  httpd_wait_cond(&main_cond);
+#ifdef WIN32
+  return 0;
+#else
+  return NULL;
+#endif
+}
+#endif
+
+#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+static conndata_t httpd_thread_ipv4={
+  .flag=CONNECTION_IN_USE, 
+  .index=0, 
+  .name="EPoll-IPv4"};
+#endif
+static conndata_t httpd_thread_ipv6={
+  .flag=CONNECTION_IN_USE, 
+  .index=1, 
+#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+  .name="EPoll-IPv6"
+#else
+  .name="EPoll-IPv4&IPv6"
+#endif
+};
 herror_t httpd_run(void)
 {
+#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+  conndata_t *c4;
+#endif
+  conndata_t *c6;
   herror_t status = H_OK;
 
   httpd_register_signal_handler();
  
-  if (httpd_create_cond(&main_cond))
+  if (httpd_create_cond(&main_cond) < 0)
   {
     log_error("httpd_create_cond failed");
     status = herror_new("httpd_run",  THREAD_BEGIN_ERROR,
                              "Failed to create condition!");
     goto clean0;
   }
-
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
-  hsocket_init(&httpd_thread_ipv4.sock);
-  httpd_thread_init(&httpd_thread_ipv4.tid);
-#endif
-  hsocket_init(&httpd_thread_ipv6.sock);
-  httpd_thread_init(&httpd_thread_ipv6.tid);
   
 #if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
-  status = __start_thread(&httpd_thread_ipv4, thread_function_ipv4);
+  c4 = &httpd_thread_ipv4;
+  hsocket_init(&c4->sock);
+  httpd_thread_init(c4);
+  status = __start_thread(c4, thread_function_ipv4);
   if (status != H_OK)
     goto clean1;
 #endif
 
-  status = __start_thread(&httpd_thread_ipv6, thread_function_ipv6);
+  c6 = &httpd_thread_ipv6;
+  hsocket_init(&c6->sock);
+  httpd_thread_init(c6);
+  status = __start_thread(c6, thread_function_ipv6);
   if (status != H_OK)
   {
   	nanohttpd_stop_running();
 #if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
     ng_smp_mb();
-    httpd_thread_kill(&httpd_thread_ipv4.tid);
-    httpd_thread_join(&httpd_thread_ipv4.tid);
+    httpd_thread_kill(&c4->tid);
+    httpd_thread_join(&c4->tid);
+    httpd_thread_cancel(c4);
+    c4->flag = CONNECTION_FREE;
 #endif
     goto clean1;
   }
 
+#if USE_PTHREAD_WAIT
+  conndata_t main_conn = { .name="Main" };
+  status = __start_thread(&main_conn, httpd_run_thread);
+  if (status != H_OK)
+  {
+    goto clean2;
+  }  
+  httpd_thread_join(&main_conn.tid);
+  httpd_thread_cancel(&main_conn);
+#else
   httpd_wait_cond(&main_cond);
-  ng_smp_mb();
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
-  httpd_thread_join(&httpd_thread_ipv4.tid);
 #endif
-  httpd_thread_join(&httpd_thread_ipv6.tid);
+
+#if USE_PTHREAD_WAIT
+clean2:  
+#endif
+#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+  httpd_thread_join(&c4->tid);
+  ng_smp_mb();
+  httpd_thread_cancel(c4);
+  c4->flag = CONNECTION_FREE;
+#endif
+  httpd_thread_join(&c6->tid);
+  ng_smp_mb();
+  httpd_thread_cancel(c6);
+  c6->flag = CONNECTION_FREE;
   
 clean1:
   httpd_destroy_cond(&main_cond);
@@ -2053,20 +2301,23 @@ clean0:
 void
 httpd_destroy(void)
 {
-  hservice_t *tmp, *cur = _httpd_services_head;
+  hservice_t *tmp, *cur;
 
 #if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
   hsocket_close(&_httpd_socket4);
+  log_debug("_httpd_socket4 closed.");
 #endif
   hsocket_close(&_httpd_socket6);
+  log_debug("_httpd_socket6 closed.");
 
-  while (cur != NULL)
+  for (cur = _httpd_services_head; cur != NULL;)
   {
+    log_info("service %p:%p.", cur, cur->next);
     tmp = cur->next;
     hservice_free(cur);
     cur = tmp;
   }
-  log_info("[OK]");
+  log_info("[OK] httpd_services_free.");
 
   hsocket_module_destroy();
   _httpd_connection_slots_free();

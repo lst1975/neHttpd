@@ -95,6 +95,7 @@ static pthread_spinlock_t msg_spin_lock;
 
 #define TSN_RESERVED_HEADROOM 128
 
+#if !__NHTTP_USE_NATIVE_MEM
 static uint8_t *msg_array_ptr;
 static uint8_t *msg_array_end;
 static uint8_t msg_cache_array[(TSN_MEM_Cache_Max-1)*TSN_MEM_ENTRY_SIZE]={0};
@@ -131,6 +132,7 @@ static void __http_malloced_list_deq(http_mentry_s *e)
   HTTPD_UNUSED(e);
 #endif
 }
+#endif
 
 #if __NHTTP_MEM_DEBUG  
 #define __P2M(p) ((uint8_t *)(p)+sizeof(http_mentry_s))
@@ -142,6 +144,10 @@ static void __http_malloced_list_deq(http_mentry_s *e)
 
 int http_memcache_init(void)
 {
+#if __NHTTP_USE_NATIVE_MEM
+  log_info("[OK]: http_memcache_init.");
+  return 0;
+#else
   uint8_t *p;
 
   RTE_BUILD_BUG_ON(!POWEROF2(RTE_CACHE_LINE_SIZE));
@@ -185,7 +191,7 @@ int http_memcache_init(void)
     p += TSN_MEM_ENTRY_SIZE;
   }
 
-  log_info("[OK]");
+  log_info("[OK]: http_memcache_init.");
   return 0;
   
 clean1:
@@ -194,8 +200,10 @@ clean1:
 clean0:
 #endif
   return -1;
+#endif
 }
 
+#if !__NHTTP_USE_NATIVE_MEM
 #if !__NHTTP_NO_LOGGING
 #if __NHTTP_MEM_DEBUG  
 static const char *file_base_name(const char *file)
@@ -207,9 +215,14 @@ static const char *file_base_name(const char *file)
 }
 #endif
 #endif
+#endif
 
 void http_memcache_free(void)
 {
+#if __NHTTP_USE_NATIVE_MEM
+  log_info("[OK]: http_memcache_free.");
+  return;
+#else
   void *p;
   
   while (!rte_ring_mc_dequeue(__http_mem_ring, &p))
@@ -239,7 +252,8 @@ void http_memcache_free(void)
   pthread_spin_destroy(&msg_spin_lock);
 #endif
 
-  log_info("[OK]");
+  log_info("[OK]: http_memcache_free.");
+#endif
 }
 
 void *__http_malloc(size_t size
@@ -248,6 +262,13 @@ void *__http_malloc(size_t size
 #endif
 )
 {
+#if __NHTTP_USE_NATIVE_MEM
+#if __NHTTP_MEM_DEBUG  
+  NG_UNUSED(file);
+  NG_UNUSED(line);
+#endif
+  return os_malloc(size);
+#else
   void *p;
   http_mentry_s *e;
   if (size + sizeof(http_mentry_s) < TSN_MEM_ENTRY_SIZE)
@@ -285,10 +306,14 @@ void *__http_malloc(size_t size
 #endif
   __http_malloced_list_enq(e);
   return __P2M(e);
+#endif  
 }
 
 void __http_free(void *ptr)
 {
+#if __NHTTP_USE_NATIVE_MEM
+  os_free(ptr);
+#else  
   http_mentry_s *e = (http_mentry_s *)(__M2P(ptr));
 
   __http_malloced_list_deq(e);
@@ -310,5 +335,6 @@ void __http_free(void *ptr)
   
   os_free(e);
   return;
+#endif  
 }
 

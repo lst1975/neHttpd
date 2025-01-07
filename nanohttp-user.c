@@ -98,7 +98,7 @@ void nanohttp_users_free(void)
     http_free(entry);
   }
 
-  log_info("[OK]");
+  log_info("[OK]: nanohttp_users_free");
 }
 
 static const httpd_user_t *__superuser=NULL;
@@ -231,7 +231,7 @@ int nanohttp_users_init(void)
       goto clean2;
   }
   err = 0;
-  log_info("[OK]");
+  log_info("[OK]: nanohttp_users_init.");
 
 clean2:
   json_pairs_free(pair);

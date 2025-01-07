@@ -135,4 +135,12 @@
 #define __NHTTP_USE_EPOLL 1
 #endif
 
+#ifdef WIN32
+#define __NHTTP_USE_WSAPOLL 1
+#else
+#define __NHTTP_USE_WSAPOLL 0
+#endif
+
+#define __NHTTP_USE_NATIVE_MEM 0
+
 #endif
