@@ -79,10 +79,6 @@ struct _mentry {
 
 typedef struct _mentry http_mentry_s;
 
-#if __NHTTP_MEM_DEBUG  
-static pthread_spinlock_t msg_spin_lock;
-#endif  
-
 #define TSN_MEM_Cache_Max 1024
 #define TSN_MEM_ENTRY_SIZE 2048
 
@@ -102,6 +98,7 @@ static uint8_t msg_cache_array[(TSN_MEM_Cache_Max-1)*TSN_MEM_ENTRY_SIZE]={0};
 struct rte_ring *__http_mem_ring = NULL;
 #if __NHTTP_MEM_DEBUG  
 static ng_list_head_s msg_malloced_list;
+static pthread_spinlock_t msg_spin_lock;
 #endif  
 
 #define ____pthread_spin_lock(l) while(pthread_spin_lock(l)){}
