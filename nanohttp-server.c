@@ -134,6 +134,7 @@
 
 #include "nanohttp-logging.h"
 #include "nanohttp-error.h"
+#include "nanohttp-defs.h"
 #include "nanohttp-common.h"
 #include "nanohttp-socket.h"
 #include "nanohttp-stream.h"
@@ -1674,9 +1675,15 @@ _httpd_start_thread(conndata_t *conn)
 }
 
 #define __NHTTP_EPOLL_WAIT_TIMEOUT 1000
+#define __NHTTP_EPOLL_WAIT_LOG 5
 
 static void __httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep, uint64_t rt)
 {
+  static rte_atomic64_t last_log = RTE_ATOMIC64_INIT(0);
+  uint64_t last_rt = rte_atomic64_read(&last_log);
+  if (ng_difftime(rt, last_rt) < __NHTTP_EPOLL_WAIT_LOG)
+    return;
+  rte_atomic64_set(&last_log, rt);
   if (ep != INVALID_SOCKET)
   {
     log_debug("Epoll [%lu:%lu]"
@@ -1748,7 +1755,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
 		
         /* timeout */
         __httpd_log_poll_timeout(sock->sock, sock->ep, 
-          __ng_difftime(ng_get_time(), start));
+          ng_difftime(ng_get_time(), start));
         continue;
       }
       else if (n == -1)
@@ -1864,7 +1871,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
         
         /* timeout */
         __httpd_log_poll_timeout(sock->sock, INVALID_SOCKET, 
-          __ng_difftime(ng_get_time(), start));
+          ng_difftime(ng_get_time(), start));
         continue;
       }
       else if (n == -1)
@@ -1990,7 +1997,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
 
         /* timeout */
         __httpd_log_poll_timeout(sock->sock, INVALID_SOCKET, 
-          __ng_difftime(ng_get_time(), start));
+          ng_difftime(ng_get_time(), start));
         continue;
       }
       else if (n == -1)
