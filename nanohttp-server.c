@@ -1733,7 +1733,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
         n = ng_socket_errno;
         if (_hsocket_should_again(n))
         {
-          log_fatal("Socket %d epoll_wait INTR: (%d:%s)", 
+          log_info("Socket %d epoll_wait INTR: (%d:%s)", 
             sock->ep, n, os_strerror(n));
           continue;
         }
@@ -1836,13 +1836,21 @@ __httpd_run(struct hsocket_t *sock, const char *name)
           _httpd_release_finished_conn(conn);
           return 0;
         }
+        log_debug("Epoll %d wait timeout", sock->sock);
         continue;
       }
       else if (n == -1)
       {
-        log_warn("Socket %d epoll_wait error: (%s)", 
-          sock->sock, os_strerror(ng_socket_errno));
         /* got a signal? */
+        n = ng_socket_errno;
+        if (_hsocket_should_again(n))
+        {
+          log_info("Socket %d epoll_wait INTR: (%d:%s)", 
+            sock->sock, n, os_strerror(n));
+          continue;
+        }
+        log_fatal("Socket %d epoll_wait error: (%d:%s)", 
+          sock->sock, n, os_strerror(n));
         _httpd_release_finished_conn(conn);
         return -1;
       }
