@@ -115,7 +115,7 @@
  *
  *   if (httpd_init(argc, argv))
  *   {
- *     fprintf(stderr, "Cannot init httpd\n");
+ *     ng_fprintf(stderr, "Cannot init httpd\n");
  *     exit(1);
  *   }
  * @endcode
@@ -125,7 +125,7 @@
  * @code
  *   if ((status = httpd_register("/", root_service)) != H_OK)
  *   {
- *     fprintf(stderr, "Cannot register service (%s)\n", herror_message(status));
+ *     ng_fprintf(stderr, "Cannot register service (%s)\n", herror_message(status));
  *     herror_release(status);
  *     httpd_destroy();
  *     exit(1);
@@ -135,7 +135,7 @@
  * @code
  *   if ((status = httpd_register_secure("/secure", secure_service, simple_authenticator)) != H_OK)
  *   {
- *     fprintf(stderr, "Cannot register secure service (%s)\n", herror_message(status));
+ *     ng_fprintf(stderr, "Cannot register secure service (%s)\n", herror_message(status));
  *     herror_release(status);
  *     httpd_destroy();
  *     exit(1);
@@ -145,7 +145,7 @@
  * @code
  *   if ((status = httpd_register("/headers", headers_service)) != H_OK)
  *   {
- *     fprintf(stderr, "Cannot register headers service (%s)\n", herror_message(status));
+ *     ng_fprintf(stderr, "Cannot register headers service (%s)\n", herror_message(status));
  *     herror_release(status);
  *     httpd_destroy();
  *     exit(1);
@@ -155,7 +155,7 @@
  * @code
  *   if ((status = httpd_register_default("/error", default_service)) != H_OK)
  *   {
- *     fprintf(stderr, "Cannot register default service (%s)\n", herror_message(status));
+ *     ng_fprintf(stderr, "Cannot register default service (%s)\n", herror_message(status));
  *     herror_release(status);
  *     httpd_destroy();
  *     exit(1);
@@ -167,7 +167,7 @@
  * @code
  *   if ((status = httpd_run()) != H_OK)
  *   {
- *     fprintf(stderr, "Cannot run httpd (%s)\n", herror_message(status));
+ *     ng_fprintf(stderr, "Cannot run httpd (%s)\n", herror_message(status));
  *     herror_release(status);
  *     httpd_destroy();
  *     exit(1);

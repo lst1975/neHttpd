@@ -144,10 +144,15 @@ struct sockaddr_in6 {
 };
 #endif
 
+typedef int (*ng_vsout_f)(void *arg, const char *string, size_t length);
+
 int __ng_snprintf(char *string, size_t length, char const * format, ...);
 int __ng_vsnprintf(char *string, size_t length, char const * format, va_list args);
 int __ng_fprintf(void *fp, char const * format, ...);
 int __ng_vfprintf(void *fp, char const * format, va_list args);
+
+int __ng_snprintf_cb(ng_vsout_f out, void *arg, char const * format, ...);
+int __ng_vsnprintf_cb(ng_vsout_f out, void *arg, char const * format, va_list args);
 
 /* set of small tests for ng_snprintf() */
 #if __NHTTP_VSNPRINTF_DEBUG

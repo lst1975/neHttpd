@@ -188,6 +188,8 @@
 /* this struct holds everything we need */
 struct DATA {
   int length;
+  int nbytes;
+  int err;
   char *holder;
   int counter;
   char fmtchr;
@@ -197,7 +199,9 @@ struct DATA {
   int justify; char pad;
   int square, space, star_w, star_p, a_long, a_longlong;
   void *arg;
-  int (*out)(struct DATA *data, const char *string, size_t length);
+  ng_vsout_f out;
+  ng_vsout_f _out;
+  int (*fine)(struct DATA *d);
 };
 
 /*
@@ -249,7 +253,8 @@ PRIVATE void strings(struct DATA *, const char *);
         if ((p)->out) \
         { \
           char b[1]={c}; \
-          (p)->out((p), b, 1); \
+          if ((p)->out((p), b, 1)<0) \
+            return; \
           break; \
         } \
         if ((p)->counter < (p)->length) { \
@@ -262,7 +267,8 @@ PRIVATE void strings(struct DATA *, const char *);
 #define PUT_STRING(s, l, p) do {\
         if ((p)->out) \
         { \
-          (p)->out((p), s, l); \
+          if ((p)->out((p), s, l) < 0) \
+            return; \
           break; \
         } \
         if ((p)->counter + l < (p)->length) { \
@@ -865,6 +871,13 @@ __ng_inet_ntop4(char *p, const uint8_t *addr)
   *p = '\0';
 }
 
+#ifdef WIN32
+  #define s6_addr32(a, i) ((uint32_t *)(a))[i]
+  #define s6_addr16(a, i) ((uint16_t *)(a))[i]
+#else
+  #define s6_addr32(a, i) (a)->s6_addr32[i]
+  #define s6_addr16(a, i) (a)->s6_addr16[i]
+#endif
 /*
  * Note that we must __force cast these to unsigned long to make sparse happy,
  * since all of the endian-annotated types are fixed size regardless of arch.
@@ -876,16 +889,16 @@ ipv6_addr_v4mapped(const struct in6_addr *a)
 #if __NG_BITS_PER_LONG == 64
     *(unsigned long *)a |
 #else
-    (unsigned long)(a->s6_addr32[0] | a->s6_addr32[1]) |
+    (unsigned long)(s6_addr32(a, 0) | s6_addr32(a, 1)) |
 #endif
-    (unsigned long)(a->s6_addr32[2] ^
+    (unsigned long)(s6_addr32(a, 2) ^
           rte_cpu_to_be_32(0x0000ffff))) == 0UL;
 }
 
 static inline int 
-ipv6_addr_is_isatap(const struct in6_addr *addr)
+ipv6_addr_is_isatap(const struct in6_addr *a)
 {
-  return (addr->s6_addr32[2] | rte_cpu_to_be_32(0x02000000)) 
+  return (s6_addr32(a, 2) | rte_cpu_to_be_32(0x02000000)) 
     == rte_cpu_to_be_32(0x02005EFE);
 }
 
@@ -917,7 +930,7 @@ ip6_compressed_string(char *p, const uint8_t *addr)
   /* find position of longest 0 run */
   for (i = 0; i < range; i++) {
     for (j = i; j < range; j++) {
-      if (in6.s6_addr16[j] != 0)
+      if (s6_addr16(&in6, j) != 0)
         break;
       zerolength[i]++;
     }
@@ -946,7 +959,7 @@ ip6_compressed_string(char *p, const uint8_t *addr)
       needcolon = ngrtos_FALSE;
     }
     /* hex uint16_t without leading 0s */
-    word = ng_ntohs(in6.s6_addr16[i]);
+    word = ng_ntohs(s6_addr16(&in6, i));
     hi = word >> 8;
     lo = word & 0xff;
     if (hi) {
@@ -966,12 +979,16 @@ ip6_compressed_string(char *p, const uint8_t *addr)
   if (useIPv4) {
     if (needcolon)
       *p++ = ':';
-    p = __ip4_string(p, (const uint8_t *)&in6.s6_addr[12], "I4");
+    p = __ip4_string(p, (const uint8_t *)&s6_addr16(&in6, 12), "I4");
   }
   *p = '\0';
 
   return p;
 }
+#ifdef WIN32
+#undef s6_addr32
+#undef s6_addr16
+#endif
 
 static char *
 ip6_string(char *p, const uint8_t *addr, const char *fmt)
@@ -1366,6 +1383,12 @@ bitsstr(struct DATA *d, unsigned LONG_LONG _uquad, const char *b)
   strings(d, buf);
 }
 
+PRIVATE void
+char1(struct DATA *d, int c)
+{
+  PUT_CHAR(c, d);
+}
+
 PRIVATE int
 __ng_vsnprintf_internal(struct DATA *data, va_list args)
 {
@@ -1375,8 +1398,9 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
   int64_t ni;
   int state;
   int i;
+  int ch;
 
-  for (; *data->pf && (data->counter < data->length); data->pf++) 
+  for (; *data->pf && data->fine(data); data->pf++) 
   {
     /* we got a magic % cookie */
     if ( *data->pf == '%' ) 
@@ -1385,7 +1409,7 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
       for (state = 1; *data->pf && state;) {
         switch (*(++data->pf)) {
           case '\0': /* a NULL here ? ? bail out */
-            if (data->holder)
+            if (data->holder && !data->out)
               *data->holder = '\0';
             return data->counter;
             break;
@@ -1458,8 +1482,8 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
             state = 0;
             break;
           case 'c': /* character */
-            d = va_arg(args, int);
-            PUT_CHAR(d, data);
+            ch = va_arg(args, int);
+            char1(data, ch);
             state = 0;
             break;
           case 's':  /* string */
@@ -1497,7 +1521,7 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
           case 'h':
             break;
           case '%':  /* nothing just % */
-            PUT_CHAR('%', data);
+            char1(data, '%');
             state = 0;
             break;
           case '#': case ' ': case '+': case '*':
@@ -1521,19 +1545,30 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
     } 
     else 
     { /* not % */
-      PUT_CHAR(*data->pf, data);  /* add the char the string */
+      char1(data, *data->pf); /* add the char the string */
     }
   }
 
-  if (data->holder)
+  if (data->holder && !data->out)
     *data->holder = '\0'; /* the end ye ! */
 
   return data->counter;
 }
 
-PUBLIC int
-__ng_std_out(struct DATA *data, const char *string, size_t length)
+PRIVATE int __ng_fine_buf(struct DATA *d)
 {
+  return d->counter < d->length;
+}
+
+PRIVATE int __ng_fine_always(struct DATA *d)
+{
+  return 1;
+}
+
+PRIVATE PUBLIC int
+__ng_std_out(void *arg, const char *string, size_t length)
+{
+  struct DATA *data = (struct DATA *)arg;
   data->counter += fwrite(string, length, 1, (FILE*)data->arg);
   return 0;
 }
@@ -1545,9 +1580,11 @@ __ng_vfprintf(void *fp, char const *format, va_list args)
   data.length  = INT_MAX; /* leave room for '\0' */
   data.holder  = NULL;
   data.pf      = format;
+  data.err     = 0;
   data.counter = 0;
   data.out     = __ng_std_out;
   data.arg     = fp;
+  data.fine    = __ng_fine_always;
   return __ng_vsnprintf_internal(&data, args);
 }
 
@@ -1573,7 +1610,9 @@ __ng_vsnprintf(char *string, size_t length, char const *format,
   data.holder  = string;
   data.pf      = format;
   data.counter = 0;
+  data.err     = 0;
   data.out     = NULL;
+  data.fine    = __ng_fine_buf;
   return __ng_vsnprintf_internal(&data, args);
 }
 
@@ -1585,6 +1624,81 @@ __ng_snprintf(char *string, size_t length, char const * format, ...)
 
   va_start(args, format);
   rval = __ng_vsnprintf(string, length, format, args);
+  va_end(args);
+
+  return rval;
+}
+
+PRIVATE int
+__ng_cb_out(void *arg, const char *string, size_t length)
+{
+  struct DATA *data = (struct DATA *)arg;
+
+  if (data->nbytes + length > data->length)
+  {
+    int n = data->_out(data->arg, data->holder, data->nbytes);
+    if (n < 0)
+    {
+      data->err = n;
+      return -1;
+    }
+      
+    data->counter += n;
+    data->nbytes = 0;
+  }
+  else
+  {
+    ng_memcpy(data->holder+data->nbytes, string, length);
+    data->nbytes += length;
+  }
+  
+  return 0;
+}
+
+PRIVATE int __ng_fine_cb(struct DATA *d)
+{
+  return !d->err;
+}
+
+PUBLIC int
+__ng_vsnprintf_cb(ng_vsout_f out, void *arg, char const *format, va_list args)
+{
+  char buf[2048];
+  struct DATA data;
+  int counter;
+  
+  data.length  = sizeof(buf); /* leave room for '\0' */
+  data.holder  = buf;
+  data.nbytes  = 0;
+  data.err     = 0;
+  data.pf      = format;
+  data.counter = 0;
+  data._out    = out;
+  data.out     = __ng_cb_out;
+  data.arg     = arg;
+  data.fine    = __ng_fine_cb;
+  counter = __ng_vsnprintf_internal(&data, args);
+  if (data.nbytes)
+  {
+    int n = out(arg, data.holder, data.nbytes);
+    if (n < 0)
+    {
+      data.err = n;
+      return -1;
+    }
+    counter += n;
+  }
+  return counter;
+}
+
+PUBLIC int
+__ng_snprintf_cb(ng_vsout_f out, void *arg, char const * format, ...)
+{
+  int rval;
+  va_list args;
+
+  va_start(args, format);
+  rval = __ng_vsnprintf_cb(out, arg, format, args);
   va_end(args);
 
   return rval;

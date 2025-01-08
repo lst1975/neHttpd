@@ -219,35 +219,35 @@
  *         
  *   if (X509_cmp_current_time(notAfter) <= 0)
  *   {
- *     fprintf(stderr,"SSL Certificate has expired");
+ *     ng_fprintf(stderr,"SSL Certificate has expired");
  *     return 0;
  *   }   
  *                                     
  *   if (!verify_sn(cert, CERT_ISSUER, NID_commonName, "My Common Name") )
  *   {
- *     fprintf(stderr, "issuer commonName does not match");
+ *     ng_fprintf(stderr, "issuer commonName does not match");
  *     return 0;
  *   }
  * 
  *   if (!verify_sn(cert, CERT_ISSUER, NID_organizationName, "My Organization") )
  *   {
- *     fprintf(stderr, "issuer organizationName does not match");
+ *     ng_fprintf(stderr, "issuer organizationName does not match");
  *     return 0;
  *   }   
  * 
  *   if (!verify_sn(cert, CERT_SUBJECT, NID_commonName, "My Web Service") )
  *   {
- *     fprintf(stderr, "subject commonName does not match");
+ *     ng_fprintf(stderr, "subject commonName does not match");
  *     return 0;
  *   }
  *
  *   if (!verify_sn(cert, CERT_SUBJECT, NID_organizationName, "My Organization") )
  *   {
- *     fprintf(stderr, "subject organizationName does not match");
+ *     ng_fprintf(stderr, "subject organizationName does not match");
  *     return 0;
  *   }
  *
- *   fprintf(stderr, "Certificate checks out");
+ *   ng_fprintf(stderr, "Certificate checks out");
  *   return 1;
  * }
  *

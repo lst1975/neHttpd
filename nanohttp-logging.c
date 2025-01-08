@@ -142,7 +142,8 @@ VisualC_funcname(const char *file, int line)
  
   for (i = strlen(file) - 1; i > 0 && file[i] != '\\'; i--)
     /* nothing */ ;
-  sprintf(buffer, "%s:%d", (file[i] != '\\') ? file : (file + i + 1), line);
+  ng_snprintf(buffer, sizeof(buffer), "%s:%d", 
+    (file[i] != '\\') ? file : (file + i + 1), line);
   return buffer;
 }
 #endif

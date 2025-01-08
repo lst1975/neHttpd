@@ -125,13 +125,13 @@
  *
  *   if (argc < 2)
  *   {
- *     fprintf(stderr, "usage: %s <url> [nanoHTTP params]\n", argv[0]);
+ *     ng_fprintf(stderr, "usage: %s <url> [nanoHTTP params]\n", argv[0]);
  *     exit(1);
  *   }
  *
  *   if ((status = httpc_init(argc, argv)) != H_OK)
  *   {
- *     fprintf(stderr, "Cannot init nanoHTTP client (%s)\n", herror_message(status));
+ *     ng_fprintf(stderr, "Cannot init nanoHTTP client (%s)\n", herror_message(status));
  *     herror_release(status);
  *     exit(1);
  *   }
@@ -142,7 +142,7 @@
  * @code
  *   if (!(conn = httpc_new()))
  *   {
- *     fprintf(stderr, "Cannot create nanoHTTP client connection\n");
+ *     ng_fprintf(stderr, "Cannot create nanoHTTP client connection\n");
  *     httpc_destroy();
  *     exit(1);
  *   }
@@ -189,7 +189,7 @@
  * @code
  *   if ((status = httpc_get(conn, &result, argv[1])) != H_OK)
  *   {
- *     fprintf(stderr, "nanoHTTP client connection failed (%s)\n", herror_message(status));
+ *     ng_fprintf(stderr, "nanoHTTP client connection failed (%s)\n", herror_message(status));
  *     herror_release(status);
  *     httpc_destroy();
  *     exit(1);
@@ -201,7 +201,7 @@
  * @code
  *   if ((status = httpc_post_begin(conn, argv[1])) != H_OK)
  *   {
- *     fprintf(stderr, "nanoHTTP client connection failed (%s)\n", herror_message(status));
+ *     ng_fprintf(stderr, "nanoHTTP client connection failed (%s)\n", herror_message(status));
  *     herror_release(status);
  *     httpc_destroy();
  *     exit(1);
@@ -209,7 +209,7 @@
  *
  *   if ((status = http_output_stream_write(conn->out, buffer, len)) != H_OK)
  *   {
- *     fprintf(stderr, "nanoHTTP client sending POST data failed (%s)\n", herror_message(status));
+ *     ng_fprintf(stderr, "nanoHTTP client sending POST data failed (%s)\n", herror_message(status));
  *     herror_release(status);
  *     httpc_destroy();
  *     exit(1);
@@ -217,7 +217,7 @@
  *
  *   if ((status = httpc_post_end(conn, &result)) != H_OK)
  *   {
- *     fprintf(stderr, "nanoHTTP client POST failed (%s)\n", herror_message(status));
+ *     ng_fprintf(stderr, "nanoHTTP client POST failed (%s)\n", herror_message(status));
  *     herror_release(status);
  *     httpc_destroy();
  *     exit(1);

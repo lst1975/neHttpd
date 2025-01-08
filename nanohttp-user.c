@@ -444,7 +444,7 @@ json_printer_file(httpd_buf_t *b, const char *fmt, ...)
   va_list args;
 
   va_start(args, fmt);
-  n = vfprintf(b->data, fmt, args);
+  n = ng_vfprintf(b->data, fmt, args);
   va_end(args);
   return n;
 }

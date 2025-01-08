@@ -352,7 +352,7 @@ MIME_parse(MIME_read_function reader_function,
   MIME_buffer_init(&buffer);
 
   /* Set boundary related stuff */
-  sprintf(boundary, "\n--%s", user_boundary);
+  ng_snprintf(boundary, sizeof(boundary), "\n--%s", user_boundary);
   boundary_length = strlen(boundary);
 
   /* Call parse begin callback */

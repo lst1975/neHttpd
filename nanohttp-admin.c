@@ -163,7 +163,7 @@ _httpd_admin_list_services(httpd_conn_t *conn)
     switch (node->status)
     {
       case NHTTPD_SERVICE_DOWN:
-        sprintf(buffer,
+        ng_snprintf(buffer, sizeof(buffer),
           "<li>"
             "<a href=\"%s\">%s</a> "
             "<a href=\"?" NHTTPD_ADMIN_QUERY_ACTIVATE_SERVICE "=%s\">[Activate]</a> "
@@ -173,7 +173,7 @@ _httpd_admin_list_services(httpd_conn_t *conn)
         break;
       case NHTTPD_SERVICE_UP:
       default:
-        sprintf(buffer,
+        ng_snprintf(buffer, sizeof(buffer),
           "<li>"
             "<a href=\"%s\">%s</a> "
             "<a href=\"?" NHTTPD_ADMIN_QUERY_PASSIVATE_SERVICE "=%s\">[Passivate]</a> "
@@ -199,7 +199,7 @@ _httpd_admin_list_statistics(httpd_conn_t *conn,
   
   log_verbose("Client requested statistics for \"%s\"", service_name);
 
-  sprintf(buffer, "Listing statistics for service <b>%s</b>", service_name);
+  ng_snprintf(buffer, sizeof(buffer), "Listing statistics for service <b>%s</b>", service_name);
   _httpd_admin_send_title(conn, buffer);
 
   if (!service_name 
@@ -215,7 +215,8 @@ _httpd_admin_list_statistics(httpd_conn_t *conn,
 
   stat_pthread_rwlock_rdlock(&(service->statistics.lock));
   uint64_t secs = STAT_u64_read(service->statistics.time);
-  n = sprintf(buffer, "<ul>"
+  n = ng_snprintf(buffer, sizeof(buffer), 
+                  "<ul>"
                     "<li>Requests served: %"PRIu64"</li>"
                     "<li>Bytes read: %"PRIu64"</li>"
                     "<li>Bytes sent: %"PRIu64"</li>"
@@ -238,7 +239,7 @@ _httpd_admin_enable_service(httpd_conn_t *conn,
   hservice_t *service;
   char buffer[1024];
 
-  sprintf(buffer, "Activating service <b>%s</b>", service_name);
+  ng_snprintf(buffer, sizeof(buffer), "Activating service <b>%s</b>", service_name);
   _httpd_admin_send_title(conn, buffer);
 
   if (!(service = httpd_find_service(service_name, service_name_len)))
@@ -269,7 +270,7 @@ _httpd_admin_disable_service(httpd_conn_t *conn,
   hservice_t *service;
   char buffer[1024];
 
-  sprintf(buffer, "Passivating service <b>%s</b>", service_name);
+  ng_snprintf(buffer, sizeof(buffer), "Passivating service <b>%s</b>", service_name);
   _httpd_admin_send_title(conn, buffer);
 
   if (!(service = httpd_find_service(service_name, service_name_len)))
@@ -363,7 +364,7 @@ _httpd_admin_set_loglevel(httpd_conn_t *conn, const char *loglevel)
 
   _httpd_admin_send_title(conn, "Adjusting loglevel");
 
-  sprintf(buffer, "<p>Switching from %s to %s</p>", tmp, loglevel);
+  ng_snprintf(buffer, sizeof(buffer), "<p>Switching from %s to %s</p>", tmp, loglevel);
   http_output_stream_write_string(conn->out, buffer);
 
   _httpd_admin_send_footer(conn);

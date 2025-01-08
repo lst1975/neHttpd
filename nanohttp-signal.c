@@ -209,9 +209,9 @@ void signal_handler_segfault(int sig) {
   symbols = backtrace_symbols(buffer, num_frames);
   
   // Print the stack trace
-  fprintf(stderr, "Error: signal %d:\n", sig);
+  ng_fprintf(stderr, "Error: signal %d:\n", sig);
   for (int i = 0; i < num_frames; i++) {
-      fprintf(stderr, "%s\n", symbols[i]);
+      ng_fprintf(stderr, "%s\n", symbols[i]);
   }
   
   // Free the allocated memory for symbols

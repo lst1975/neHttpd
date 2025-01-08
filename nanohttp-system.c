@@ -1386,12 +1386,12 @@ ng_result_t ng_os_init(void)
   if (ng_os_info.cacheline_size &&
     ng_os_info.cacheline_size != RTE_CACHE_LINE_SIZE)
   {
-    fprintf(stderr, 
+    ng_fprintf(stderr, 
       "System cachelinesize is %ld, but defined "
       "RTE_CACHE_LINE_SIZE as %d", 
       ng_os_info.cacheline_size, 
       (int)RTE_CACHE_LINE_SIZE);
-    fprintf(stderr, 
+    ng_fprintf(stderr, 
       "Please redefine RTE_CACHE_LINE_SIZE as %ld",
       ng_os_info.cacheline_size);
     goto clean1;
