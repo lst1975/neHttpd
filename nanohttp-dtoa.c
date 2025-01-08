@@ -1531,37 +1531,37 @@ static inline void  multiply_128(
 */
 static inline unsigned int  count_leading_zeros( uint64_t  a )
 {
-   // Make use of 64-bit leading zero count instruction
-   // (if processor has this instruction and compiler allows for using it).
+  // Make use of 64-bit leading zero count instruction
+  // (if processor has this instruction and compiler allows for using it).
 #if defined(__GNUC__) || defined(__clang__)
-   return  __builtin_clzll( a );
+  return  __builtin_clzll( a );
 #elif defined(_MSC_VER) && defined(_M_X64)
-   unsigned long  most_significant_bit_number = 0;
-   _BitScanReverse64( &most_significant_bit_number, a );
-   return  63 - most_significant_bit_number;
+  unsigned long  most_significant_bit_number = 0;
+  _BitScanReverse64( &most_significant_bit_number, a );
+  return  63 - most_significant_bit_number;
 #elif defined(_MSC_VER) && (!defined(_M_X64))
-   if( a <= 0xFFFFFFFFULL )
-   {
-       unsigned long  most_significant_bit_number = 0;
-       _BitScanReverse( &most_significant_bit_number, (uint32_t)a );
-       return  63 - most_significant_bit_number;
-   }
-   else
-   {
-       unsigned long  most_significant_bit_number = 0;
-       _BitScanReverse( &most_significant_bit_number, (uint32_t)(a >> 32) );
-       return  31 - most_significant_bit_number;
-   }
+  if( a <= 0xFFFFFFFFULL )
+  {
+    unsigned long  most_significant_bit_number = 0;
+    _BitScanReverse( &most_significant_bit_number, (uint32_t)a );
+    return  63 - most_significant_bit_number;
+  }
+  else
+  {
+    unsigned long  most_significant_bit_number = 0;
+    _BitScanReverse( &most_significant_bit_number, (uint32_t)(a >> 32) );
+    return  31 - most_significant_bit_number;
+  }
 #else
-   // On other processors and compilers, count leading zero bits manually
-   unsigned int  n = 0;
-   if( a <= 0x00000000FFFFFFFFULL ) { n += 32; a <<= 32; }
-   if( a <= 0x0000FFFFFFFFFFFFULL ) { n += 16; a <<= 16; }
-   if( a <= 0x00FFFFFFFFFFFFFFULL ) { n += 8;  a <<= 8;  }
-   if( a <= 0x0FFFFFFFFFFFFFFFULL ) { n += 4;  a <<= 4;  }
-   if( a <= 0x3FFFFFFFFFFFFFFFULL ) { n += 2;  a <<= 2;  }
-   if( a <= 0x7FFFFFFFFFFFFFFFULL ) { n += 1;            }
-   return  n;
+  // On other processors and compilers, count leading zero bits manually
+  unsigned int  n = 0;
+  if( a <= 0x00000000FFFFFFFFULL ) { n += 32; a <<= 32; }
+  if( a <= 0x0000FFFFFFFFFFFFULL ) { n += 16; a <<= 16; }
+  if( a <= 0x00FFFFFFFFFFFFFFULL ) { n += 8;  a <<= 8;  }
+  if( a <= 0x0FFFFFFFFFFFFFFFULL ) { n += 4;  a <<= 4;  }
+  if( a <= 0x3FFFFFFFFFFFFFFFULL ) { n += 2;  a <<= 2;  }
+  if( a <= 0x7FFFFFFFFFFFFFFFULL ) { n += 1;            }
+  return  n;
 #endif
 }
 
@@ -1585,63 +1585,63 @@ static inline unsigned int  count_leading_zeros( uint64_t  a )
 *
 */
 static int  convert_extended_decimal_to_binary_and_round(
-   uint64_t   a,
-   int32_t    b,
-   uint64_t*  c,
-   int32_t*   d
+  uint64_t   a,
+  int32_t    b,
+  uint64_t*  c,
+  int32_t*   d
 )
 {
-   // 1. Check input arguments
-   if(( a == 0 )||
-      ( b < powers_of_ten_[0].decimal_exponent )||
-      ( b > powers_of_ten_[sizeof(powers_of_ten_)/sizeof(powers_of_ten_[0]) - 1].decimal_exponent ))
-       return  0;
+  // 1. Check input arguments
+  if(( a == 0 )||
+  ( b < powers_of_ten_[0].decimal_exponent )||
+  ( b > powers_of_ten_[sizeof(powers_of_ten_)/sizeof(powers_of_ten_[0]) - 1].decimal_exponent ))
+   return  0;
 
-   // 2. Convert (a * 10^b) -> (mantissa * 2^exponent)
-   uint64_t  mantissa = powers_of_ten_[ b - powers_of_ten_[0].decimal_exponent ].binary_mantissa;
-   int32_t   exponent = powers_of_ten_[ b - powers_of_ten_[0].decimal_exponent ].binary_exponent;
-   uint64_t  long_mantissa[2];
-   multiply_128( a, mantissa, long_mantissa );
-   if( long_mantissa[1] != 0 )   // high half
-   {
-       unsigned int  lz = count_leading_zeros( long_mantissa[1] );
-       if( lz == 0 )
-           mantissa = long_mantissa[1];
-       else
-           mantissa = ( long_mantissa[1] << lz )|( long_mantissa[0] >> (64 - lz) );
-       exponent += (64 - lz);
-   }
-   else if( long_mantissa[0] != 0 )   // low half
-   {
-       unsigned int  lz = count_leading_zeros( long_mantissa[0] );
-       mantissa = ( long_mantissa[0] << lz );
-       exponent -= lz;
-   }
-   else
-       return  0;   // product is unexpectedly zero
+  // 2. Convert (a * 10^b) -> (mantissa * 2^exponent)
+  uint64_t  mantissa = powers_of_ten_[ b - powers_of_ten_[0].decimal_exponent ].binary_mantissa;
+  int32_t   exponent = powers_of_ten_[ b - powers_of_ten_[0].decimal_exponent ].binary_exponent;
+  uint64_t  long_mantissa[2];
+  multiply_128( a, mantissa, long_mantissa );
+  if( long_mantissa[1] != 0 )   // high half
+  {
+    unsigned int  lz = count_leading_zeros( long_mantissa[1] );
+    if( lz == 0 )
+      mantissa = long_mantissa[1];
+    else
+      mantissa = ( long_mantissa[1] << lz )|( long_mantissa[0] >> (64 - lz) );
+    exponent += (64 - lz);
+  }
+  else if( long_mantissa[0] != 0 )   // low half
+  {
+    unsigned int  lz = count_leading_zeros( long_mantissa[0] );
+    mantissa = ( long_mantissa[0] << lz );
+    exponent -= lz;
+  }
+  else
+    return  0;   // product is unexpectedly zero
 
-   // 3. Round mantissa
-   uint64_t  remainder = mantissa & 0x07FFULL;  // 0x07FF: 11 least significant bits set, where 11 = 64-53
-   if( remainder < 0x0400ULL )
-       mantissa -= remainder;
-   else
-   {
-       mantissa += (0x0800ULL - remainder);
-       if( mantissa == 0 )
-       {
-           // handle overflow of the mantissa
-           mantissa = (1ULL << 63);
-           ++exponent;
-       }
-   }
+  // 3. Round mantissa
+  uint64_t  remainder = mantissa & 0x07FFULL;  // 0x07FF: 11 least significant bits set, where 11 = 64-53
+  if( remainder < 0x0400ULL )
+    mantissa -= remainder;
+  else
+  {
+    mantissa += (0x0800ULL - remainder);
+    if( mantissa == 0 )
+    {
+      // handle overflow of the mantissa
+      mantissa = (1ULL << 63);
+      ++exponent;
+    }
+  }
 
-   // 4. Move binary point 63 bits to the left: adjust exponent
-   exponent += 63;
+  // 4. Move binary point 63 bits to the left: adjust exponent
+  exponent += 63;
 
-   // 5. Save computation results and exit
-   (*c) = mantissa;
-   (*d) = exponent;
-   return  1;
+  // 5. Save computation results and exit
+  (*c) = mantissa;
+  (*d) = exponent;
+  return  1;
 }
 
 /**
@@ -1655,27 +1655,27 @@ static int  convert_extended_decimal_to_binary_and_round(
 *
 */
 static int  does_extended_decimal_round_to_given_binary(
-   uint64_t   a,
-   int32_t    b,
-   uint64_t   expected_c,
-   int32_t    expected_d
+  uint64_t   a,
+  int32_t    b,
+  uint64_t   expected_c,
+  int32_t    expected_d
 )
 {
-   // 1. Check/normalize binary (expected_c * 2^expected_d)
-   if( expected_c == 0 )
-       return  0;
-   unsigned int  lz = count_leading_zeros( expected_c );
-   expected_c <<= lz;
-   expected_d  -= lz;
+  // 1. Check/normalize binary (expected_c * 2^expected_d)
+  if( expected_c == 0 )
+    return  0;
+  unsigned int  lz = count_leading_zeros( expected_c );
+  expected_c <<= lz;
+  expected_d  -= lz;
 
-   // 2. Convert (a * 10^b) to binary with rounding to 53 bits (in round-to-nearest mode)
-   uint64_t  actual_c = 0;
-   int32_t   actual_d = 0;
-   if(! convert_extended_decimal_to_binary_and_round( a, b, &actual_c, &actual_d ) )
-       return  0;
+  // 2. Convert (a * 10^b) to binary with rounding to 53 bits (in round-to-nearest mode)
+  uint64_t  actual_c = 0;
+  int32_t   actual_d = 0;
+  if(! convert_extended_decimal_to_binary_and_round( a, b, &actual_c, &actual_d ) )
+    return  0;
 
-   // 3. Compare and compute result of this function
-   return(( actual_c == expected_c )&&( actual_d == expected_d ));
+  // 3. Compare and compute result of this function
+  return(( actual_c == expected_c )&&( actual_d == expected_d ));
 }
 
 /**
@@ -1694,53 +1694,53 @@ static int  does_extended_decimal_round_to_given_binary(
 *
 */
 static int  convert_binary_to_decimal_1st_approx(
-   uint64_t   a,
-   int32_t    b,
-   uint64_t*  c,
-   int32_t*   d
+  uint64_t   a,
+  int32_t    b,
+  uint64_t*  c,
+  int32_t*   d
 )
 {
-   // 1. Check/normalize input mantissa.
-   if( a == 0 )
-       return  0;
-   unsigned int  lz = count_leading_zeros( a );
-   a <<= lz;
-   b  -= lz;
-
-   // 2. Move binary point to the right side of mantissa.
-   //    Do bounds check of the input exponent.
-   b -= 63;
-   if(( b < powers_of_two_[0].binary_exponent )||
-      ( b > powers_of_two_[sizeof(powers_of_two_)/sizeof(powers_of_two_[0]) - 1].binary_exponent ))
-       return  0;
-
-   // 3. Convert (a * 2^b) -> (long_mantissa * 10^exponent)
-   uint64_t  mantissa = powers_of_two_[ b - powers_of_two_[0].binary_exponent ].decimal_mantissa;
-   int32_t   exponent = powers_of_two_[ b - powers_of_two_[0].binary_exponent ].decimal_exponent;
-   uint64_t  long_mantissa[2];
-   multiply_128( a, mantissa, long_mantissa );
-       // invariant: 2^63*(0.1*2^64) < long_mantissa < 2^64*(1*2^64)
-   mantissa = long_mantissa[1];
-       // invariant: 2^63*0.1 < mantissa < 2^64
-
-   // 4. Force resulting decimal mantissa into the range 10^18 <= c < 10^19.
-   if( mantissa < POW10_18 )
-   {
-       mantissa *= 10ULL;
-       multiply_128( 10ULL, long_mantissa[0], long_mantissa );
-       mantissa += long_mantissa[1];
-       --exponent;
-   }
-   else if( mantissa >= (10ULL * POW10_18) )
-   {
-       mantissa /= 10ULL;
-       ++exponent;
-   }
-
-   // 5. Save computation results and exit
-   (*c) = mantissa;
-   (*d) = exponent;
-   return  1;
+  // 1. Check/normalize input mantissa.
+  if( a == 0 )
+    return  0;
+  unsigned int  lz = count_leading_zeros( a );
+  a <<= lz;
+  b  -= lz;
+ 
+  // 2. Move binary point to the right side of mantissa.
+  //    Do bounds check of the input exponent.
+  b -= 63;
+  if(( b < powers_of_two_[0].binary_exponent )||
+    ( b > powers_of_two_[sizeof(powers_of_two_)/sizeof(powers_of_two_[0]) - 1].binary_exponent ))
+    return  0;
+ 
+  // 3. Convert (a * 2^b) -> (long_mantissa * 10^exponent)
+  uint64_t  mantissa = powers_of_two_[ b - powers_of_two_[0].binary_exponent ].decimal_mantissa;
+  int32_t   exponent = powers_of_two_[ b - powers_of_two_[0].binary_exponent ].decimal_exponent;
+  uint64_t  long_mantissa[2];
+  multiply_128( a, mantissa, long_mantissa );
+      // invariant: 2^63*(0.1*2^64) < long_mantissa < 2^64*(1*2^64)
+  mantissa = long_mantissa[1];
+      // invariant: 2^63*0.1 < mantissa < 2^64
+ 
+  // 4. Force resulting decimal mantissa into the range 10^18 <= c < 10^19.
+  if( mantissa < POW10_18 )
+  {
+    mantissa *= 10ULL;
+    multiply_128( 10ULL, long_mantissa[0], long_mantissa );
+    mantissa += long_mantissa[1];
+    --exponent;
+  }
+  else if( mantissa >= (10ULL * POW10_18) )
+  {
+    mantissa /= 10ULL;
+    ++exponent;
+  }
+ 
+  // 5. Save computation results and exit
+  (*c) = mantissa;
+  (*d) = exponent;
+  return  1;
 }
 
 /**
@@ -1765,98 +1765,98 @@ static int  convert_binary_to_decimal_1st_approx(
 *
 */
 static int  convert_binary_to_extended_decimal(
-   uint64_t   a,
-   int32_t    b,
-   uint64_t*  c,
-   int32_t*   d
+  uint64_t   a,
+  int32_t    b,
+  uint64_t*  c,
+  int32_t*   d
 )
 {
-   // 1. Check input parameters and convert binary mantissa in such way that
-   //    its most significant bits are 01. Zero out least significant bits of
-   //    mantissa, which are not representable in IEEE 754 double precision format.
-   if( a == 0 )
-       return  0;
-   unsigned int  lz = count_leading_zeros( a );
-   a <<= lz;
-   a >>= 1;
-   b   = b - lz + 1;
-   a &= (~0x03FFULL);    // 2 msb const `01' + 52 bits of mantissa + 10 lsb zeroed out = 64 bits total
+  // 1. Check input parameters and convert binary mantissa in such way that
+  //    its most significant bits are 01. Zero out least significant bits of
+  //    mantissa, which are not representable in IEEE 754 double precision format.
+  if( a == 0 )
+    return  0;
+  unsigned int  lz = count_leading_zeros( a );
+  a <<= lz;
+  a >>= 1;
+  b   = b - lz + 1;
+  a &= (~0x03FFULL);    // 2 msb const `01' + 52 bits of mantissa + 10 lsb zeroed out = 64 bits total
 
-   // 2. Compute first approximation for (a * 2^b), also for ((a-1) * 2^b) and ((a+1) * 2^b).
-   //    Reduce all of them to the common exponent (base_d).
-   uint64_t  prev_c = 0;  int32_t  prev_d = 0;
-   uint64_t  base_c = 0;  int32_t  base_d = 0;
-   uint64_t  next_c = 0;  int32_t  next_d = 0;
-   if((! convert_binary_to_decimal_1st_approx( a - 0x0400ULL, b, &prev_c, &prev_d ) )||
-      (! convert_binary_to_decimal_1st_approx( a            , b, &base_c, &base_d ) )||
-      (! convert_binary_to_decimal_1st_approx( a + 0x0400ULL, b, &next_c, &next_d ) ))
-       return  0;
-   if( prev_d < next_d )
-   {
-       prev_c /= 10ULL;
-       ++prev_d;
-   }
-   if( base_d < next_d )
-   {
-       base_c /= 10ULL;
-       ++base_d;
-   }
+  // 2. Compute first approximation for (a * 2^b), also for ((a-1) * 2^b) and ((a+1) * 2^b).
+  //    Reduce all of them to the common exponent (base_d).
+  uint64_t  prev_c = 0;  int32_t  prev_d = 0;
+  uint64_t  base_c = 0;  int32_t  base_d = 0;
+  uint64_t  next_c = 0;  int32_t  next_d = 0;
+  if((! convert_binary_to_decimal_1st_approx( a - 0x0400ULL, b, &prev_c, &prev_d ) )||
+    (! convert_binary_to_decimal_1st_approx( a            , b, &base_c, &base_d ) )||
+    (! convert_binary_to_decimal_1st_approx( a + 0x0400ULL, b, &next_c, &next_d ) ))
+    return  0;
+  if( prev_d < next_d )
+  {
+    prev_c /= 10ULL;
+    ++prev_d;
+  }
+  if( base_d < next_d )
+  {
+    base_c /= 10ULL;
+    ++base_d;
+  }
 
-   // 3. Check invariants before starting the binary search
-   if(( prev_c >= base_c )||( base_c >= next_c )||
-      (! does_extended_decimal_round_to_given_binary( prev_c, prev_d, a - 0x0400ULL, b ) )||
-      (! does_extended_decimal_round_to_given_binary( base_c, base_d, a,             b ) )||
-      (! does_extended_decimal_round_to_given_binary( next_c, next_d, a + 0x0400ULL, b ) ))
-       return  0;
+  // 3. Check invariants before starting the binary search
+  if(( prev_c >= base_c )||( base_c >= next_c )||
+    (! does_extended_decimal_round_to_given_binary( prev_c, prev_d, a - 0x0400ULL, b ) )||
+    (! does_extended_decimal_round_to_given_binary( base_c, base_d, a,             b ) )||
+    (! does_extended_decimal_round_to_given_binary( next_c, next_d, a + 0x0400ULL, b ) ))
+     return  0;
 
-   // 4. Using binary search, compute range of attraction: range of decimals
-   //    around (base_c * 10^base_d) such that every number within it is mapped to 
-   //    (a * 2^b) using convert_extended_decimal_to_binary_and_round().
-   //    (prev_c * 10^base_d) and (next_c * 10^base_d) are known to be outside 
-   //    this range of attraction, so lower bound is somewhere between prev_c and base_c
-   //    and upper bound is somewhere between base_c and next_c.
-   uint64_t  negative_extent = 0, negative_search_space = base_c - prev_c;
-   uint64_t  positive_extent = 0, positive_search_space = next_c - base_c;
-   for( uint64_t  bit = 1ULL << (63 - count_leading_zeros( negative_search_space )); bit != 0; bit >>= 1 )
+  // 4. Using binary search, compute range of attraction: range of decimals
+  //    around (base_c * 10^base_d) such that every number within it is mapped to 
+  //    (a * 2^b) using convert_extended_decimal_to_binary_and_round().
+  //    (prev_c * 10^base_d) and (next_c * 10^base_d) are known to be outside 
+  //    this range of attraction, so lower bound is somewhere between prev_c and base_c
+  //    and upper bound is somewhere between base_c and next_c.
+  uint64_t  negative_extent = 0, negative_search_space = base_c - prev_c;
+  uint64_t  positive_extent = 0, positive_search_space = next_c - base_c;
+  for( uint64_t  bit = 1ULL << (63 - count_leading_zeros( negative_search_space )); bit != 0; bit >>= 1 )
+  {
+   if(( bit <= negative_search_space )&&
+      ( does_extended_decimal_round_to_given_binary( base_c - negative_extent - bit,
+                                                     base_d, a, b ) ))
    {
-       if(( bit <= negative_search_space )&&
-          ( does_extended_decimal_round_to_given_binary( base_c - negative_extent - bit,
-                                                         base_d, a, b ) ))
-       {
-           negative_extent       += bit;
-           negative_search_space -= bit;
-       }
+     negative_extent       += bit;
+     negative_search_space -= bit;
    }
-   for( uint64_t  bit = 1ULL << (63 - count_leading_zeros( positive_search_space )); bit != 0; bit >>= 1 )
-   {
-       if(( bit <= positive_search_space )&&
-          ( does_extended_decimal_round_to_given_binary( base_c + positive_extent + bit,
-                                                         base_d, a, b ) ))
-       {
-           positive_extent       += bit;
-           positive_search_space -= bit;
-       }
-   }
+  }
+  for( uint64_t  bit = 1ULL << (63 - count_leading_zeros( positive_search_space )); bit != 0; bit >>= 1 )
+  {
+    if(( bit <= positive_search_space )&&
+       ( does_extended_decimal_round_to_given_binary( base_c + positive_extent + bit,
+                                                      base_d, a, b ) ))
+    {
+      positive_extent       += bit;
+      positive_search_space -= bit;
+    }
+  }
 
-   // 5. Compute new decimal mantissa within range of attraction: digit after digit, most significant first
-   uint64_t  new_mantissa = 0;
-   for( uint64_t  current_scale = POW10_18; current_scale != 0; current_scale /= 10ULL )
-   {
-       uint64_t  next_digit = ((base_c + positive_extent) / current_scale) % 10ULL;
-       new_mantissa += (current_scale * next_digit);
-       if(( base_c - negative_extent <= new_mantissa )&&( new_mantissa <= base_c + positive_extent ))
-           break;
-   }
+  // 5. Compute new decimal mantissa within range of attraction: digit after digit, most significant first
+  uint64_t  new_mantissa = 0;
+  for( uint64_t  current_scale = POW10_18; current_scale != 0; current_scale /= 10ULL )
+  {
+   uint64_t  next_digit = ((base_c + positive_extent) / current_scale) % 10ULL;
+   new_mantissa += (current_scale * next_digit);
+   if(( base_c - negative_extent <= new_mantissa )&&( new_mantissa <= base_c + positive_extent ))
+     break;
+  }
 
-   // 6. Perform final normalization and offload results
-   if( new_mantissa < POW10_18 )
-   {
-       new_mantissa *= 10ULL;
-       --base_d;
-   }
-   (*c) = new_mantissa;
-   (*d) = base_d;
-   return  1;
+  // 6. Perform final normalization and offload results
+  if( new_mantissa < POW10_18 )
+  {
+    new_mantissa *= 10ULL;
+    --base_d;
+  }
+  (*c) = new_mantissa;
+  (*d) = base_d;
+  return  1;
 }
 
 //=====================================================================================================
@@ -1875,54 +1875,54 @@ static void  unpack_ieee754_double(
    int*           out_is_infinity
 )
 {
-   // 1. Unpack bits
-   uint64_t  input_bits     = *( (const uint64_t*)input );
-   uint64_t  input_sign     = (input_bits >> 63);
-   uint64_t  input_exponent = (input_bits >> 52) & 0x7FFULL;
-   uint64_t  input_mantissa = (input_bits & ((1ULL << 52) - 1ULL));
-
-   // 2. Handle special case: NaN
-   if(( input_exponent == 0x7FFULL )&&( input_mantissa != 0 ))
-   {
-       *out_is_nan          = 1;
-       *out_sign            = 0;
-       *out_is_infinity     = 0;
-       *out_binary_exponent = 0;
-       *out_binary_mantissa = 0;
-       return;
-   }
-   *out_is_nan = 0;
+  // 1. Unpack bits
+  uint64_t  input_bits     = *( (const uint64_t*)input );
+  uint64_t  input_sign     = (input_bits >> 63);
+  uint64_t  input_exponent = (input_bits >> 52) & 0x7FFULL;
+  uint64_t  input_mantissa = (input_bits & ((1ULL << 52) - 1ULL));
  
-   // 3. Handle special case: +INF/-INF
-   *out_sign = (input_sign != 0);
-   if( input_exponent == 0x7FFULL )
-   {
-       *out_is_infinity     = 1;
-       *out_binary_exponent = 0;
-       *out_binary_mantissa = 0;
-       return;
-   }
-   *out_is_infinity = 0;
-
-   // 4. Handle special case: +0/-0
-   if(( input_exponent == 0 )&&( input_mantissa == 0 ))
-   {
-       *out_binary_exponent = 0;
-       *out_binary_mantissa = 0;
-       return;
-   }
-
-   // 5. Handle denormalized numbers
-   if( input_exponent == 0 )
-   {
-       *out_binary_exponent = -1022;
-       *out_binary_mantissa = (input_mantissa << 11);   // most significant 53rd bit of mantissa is always 0
-       return;
-   }
-
-   // 6. Handle normalized numbers
-   *out_binary_exponent = ((int32_t)input_exponent) - 1023;
-   *out_binary_mantissa = (1ULL << 63) | (input_mantissa << 11);   // 53rd bit of mantissa is always 1
+  // 2. Handle special case: NaN
+  if(( input_exponent == 0x7FFULL )&&( input_mantissa != 0 ))
+  {
+    *out_is_nan          = 1;
+    *out_sign            = 0;
+    *out_is_infinity     = 0;
+    *out_binary_exponent = 0;
+    *out_binary_mantissa = 0;
+    return;
+  }
+  *out_is_nan = 0;
+ 
+  // 3. Handle special case: +INF/-INF
+  *out_sign = (input_sign != 0);
+  if( input_exponent == 0x7FFULL )
+  {
+    *out_is_infinity     = 1;
+    *out_binary_exponent = 0;
+    *out_binary_mantissa = 0;
+    return;
+  }
+  *out_is_infinity = 0;
+ 
+  // 4. Handle special case: +0/-0
+  if(( input_exponent == 0 )&&( input_mantissa == 0 ))
+  {
+    *out_binary_exponent = 0;
+    *out_binary_mantissa = 0;
+    return;
+  }
+ 
+  // 5. Handle denormalized numbers
+  if( input_exponent == 0 )
+  {
+    *out_binary_exponent = -1022;
+    *out_binary_mantissa = (input_mantissa << 11);   // most significant 53rd bit of mantissa is always 0
+    return;
+  }
+ 
+  // 6. Handle normalized numbers
+  *out_binary_exponent = ((int32_t)input_exponent) - 1023;
+  *out_binary_mantissa = (1ULL << 63) | (input_mantissa << 11);   // 53rd bit of mantissa is always 1
 }
 
 /**
@@ -1934,84 +1934,84 @@ static void  unpack_ieee754_double(
 *
 */
 static int  pack_ieee754_double(
-   int       input_is_nan,
-   int       input_sign,
-   uint64_t  input_binary_mantissa,
-   int32_t   input_binary_exponent,
-   int       input_is_infinity,
-   double*   output
+  int       input_is_nan,
+  int       input_sign,
+  uint64_t  input_binary_mantissa,
+  int32_t   input_binary_exponent,
+  int       input_is_infinity,
+  double*   output
 )
 {
-   // 1. Initialize values to pack
-   uint64_t  output_sign     = 0;
-   uint64_t  output_exponent = 0;
-   uint64_t  output_mantissa = 0;
+  // 1. Initialize values to pack
+  uint64_t  output_sign     = 0;
+  uint64_t  output_exponent = 0;
+  uint64_t  output_mantissa = 0;
 
-   // 2. Handle special case: NaN
-   int  had_overflow_or_underflow_in_exponent = 0;
-   if( input_is_nan )
-   {
-       output_sign     = 1;              // Quiet NaN
-       output_exponent = 0x7FF;
-       output_mantissa = (1ULL << 51);   // mantissa MSB set
-   }
-   else
-   {
-       // 3. Handle special case: +INF/-INF
-       output_sign = (input_sign ? 1 : 0);
-       if( input_is_infinity )
-       {
-           output_exponent = 0x7FF;
-           output_mantissa = 0;
-       }
-       // 4. Handle special case: +0/-0
-       else if( input_binary_mantissa == 0 )
-       {
-           output_exponent = 0;
-           output_mantissa = 0;
-       }
-       else
-       {
-           unsigned int  lz = count_leading_zeros( input_binary_mantissa );
-           input_binary_mantissa <<= lz;
-           input_binary_exponent  -= lz;
+  // 2. Handle special case: NaN
+  int  had_overflow_or_underflow_in_exponent = 0;
+  if( input_is_nan )
+  {
+    output_sign     = 1;              // Quiet NaN
+    output_exponent = 0x7FF;
+    output_mantissa = (1ULL << 51);   // mantissa MSB set
+  }
+  else
+  {
+    // 3. Handle special case: +INF/-INF
+    output_sign = (input_sign ? 1 : 0);
+    if( input_is_infinity )
+    {
+      output_exponent = 0x7FF;
+      output_mantissa = 0;
+    }
+    // 4. Handle special case: +0/-0
+    else if( input_binary_mantissa == 0 )
+    {
+      output_exponent = 0;
+      output_mantissa = 0;
+    }
+    else
+    {
+      unsigned int  lz = count_leading_zeros( input_binary_mantissa );
+      input_binary_mantissa <<= lz;
+      input_binary_exponent  -= lz;
+ 
+      if( input_binary_exponent > 1023 )
+      {
+        // 5. Handle unintentional infinity (due to exponent overflow)
+        output_exponent = 0x7FF;
+        output_mantissa = 0;
+        had_overflow_or_underflow_in_exponent = 1;
+      }
+      else if( input_binary_exponent >= -1022 )
+      {
+        // 6. Handle normalized numbers
+        output_exponent = ((uint64_t)( input_binary_exponent + 1023 ));
+        output_mantissa = (input_binary_mantissa >> 11) & ((1ULL << 52) - 1ULL);
+      }
+      else
+      {
+        // 7. Handle denormalized numbers
+        //    and unintentional zero (due to exponent underflow)
+        input_binary_mantissa >>= 11;
+        while(( input_binary_mantissa != 0 )&&( input_binary_exponent < -1022 ))
+        {
+          input_binary_mantissa >>= 1;
+          ++input_binary_exponent;
+        }
+        output_exponent = 0;
+        output_mantissa = input_binary_mantissa;
+        had_overflow_or_underflow_in_exponent = (input_binary_mantissa == 0);
+      }
+    }
+  }
 
-           if( input_binary_exponent > 1023 )
-           {
-               // 5. Handle unintentional infinity (due to exponent overflow)
-               output_exponent = 0x7FF;
-               output_mantissa = 0;
-               had_overflow_or_underflow_in_exponent = 1;
-           }
-           else if( input_binary_exponent >= -1022 )
-           {
-               // 6. Handle normalized numbers
-               output_exponent = ((uint64_t)( input_binary_exponent + 1023 ));
-               output_mantissa = (input_binary_mantissa >> 11) & ((1ULL << 52) - 1ULL);
-           }
-           else
-           {
-               // 7. Handle denormalized numbers
-               //    and unintentional zero (due to exponent underflow)
-               input_binary_mantissa >>= 11;
-               while(( input_binary_mantissa != 0 )&&( input_binary_exponent < -1022 ))
-               {
-                   input_binary_mantissa >>= 1;
-                   ++input_binary_exponent;
-               }
-               output_exponent = 0;
-               output_mantissa = input_binary_mantissa;
-               had_overflow_or_underflow_in_exponent = (input_binary_mantissa == 0);
-           }
-       }
-   }
-
-   // 8. Pack bits up
-   uint64_t  output_bits = (output_sign << 63) |
-                           ((output_exponent & 0x7FFULL) << 52) |
-                           (output_mantissa & ((1ULL << 52) - 1ULL));
-   *( (uint64_t*)output ) = output_bits;
-   return(! had_overflow_or_underflow_in_exponent );
+  // 8. Pack bits up
+  uint64_t  output_bits = (output_sign << 63) |
+                         ((output_exponent & 0x7FFULL) << 52) |
+                         (output_mantissa & ((1ULL << 52) - 1ULL));
+  *( (uint64_t*)output ) = output_bits;
+  return(! had_overflow_or_underflow_in_exponent );
 }
 
 /**
@@ -2020,17 +2020,17 @@ static int  pack_ieee754_double(
 *
 */
 static inline void  bcd_decompress_small(
-   uint32_t  compressed_bcd,
-   uint8_t*  decompressed_bcd
+  uint32_t  compressed_bcd,
+  uint8_t*  decompressed_bcd
 )
 {
-   uint32_t  high_pair = compressed_bcd / 100;
-   uint32_t  low_pair  = compressed_bcd % 100;
-
-   decompressed_bcd[0] = ((uint8_t)( high_pair / 10 ));
-   decompressed_bcd[1] = ((uint8_t)( high_pair % 10 ));
-   decompressed_bcd[2] = ((uint8_t)( low_pair  / 10 ));
-   decompressed_bcd[3] = ((uint8_t)( low_pair  % 10 ));
+  uint32_t  high_pair = compressed_bcd / 100;
+  uint32_t  low_pair  = compressed_bcd % 100;
+ 
+  decompressed_bcd[0] = ((uint8_t)( high_pair / 10 ));
+  decompressed_bcd[1] = ((uint8_t)( high_pair % 10 ));
+  decompressed_bcd[2] = ((uint8_t)( low_pair  / 10 ));
+  decompressed_bcd[3] = ((uint8_t)( low_pair  % 10 ));
 }
 
 /**
@@ -2046,32 +2046,32 @@ static void  bcd_decompress(
    uint8_t*  decompressed_bcd
 )
 {
-   uint32_t  d0 = compressed_bcd         & 0xFFFF;
-   uint32_t  d1 = (compressed_bcd >> 16) & 0xFFFF;
-   uint32_t  d2 = (compressed_bcd >> 32) & 0xFFFF;
-   uint32_t  d3 = (compressed_bcd >> 48) & 0xFFFF;
-
-             d0 = 656 * d3 + 7296 * d2 + 5536 * d1 + d0;
-   uint32_t  q  = d0 / 10000;
-             d0 = d0 % 10000;
-
-             d1 = q + 7671 * d3 + 9496 * d2 + 6 * d1;
-             q  = d1 / 10000;
-             d1 = d1 % 10000;
-
-             d2 = q + 4749 * d3 + 42 * d2;
-             q  = d2 / 10000;
-             d2 = d2 % 10000;
-
-             d3 = q + 281 * d3;
-             q  = d3 / 10000;
-             d3 = d3 % 10000;
-
-   bcd_decompress_small( q,  decompressed_bcd      );
-   bcd_decompress_small( d3, decompressed_bcd + 4  );
-   bcd_decompress_small( d2, decompressed_bcd + 8  );
-   bcd_decompress_small( d1, decompressed_bcd + 12 );
-   bcd_decompress_small( d0, decompressed_bcd + 16 );
+  uint32_t  d0 = compressed_bcd         & 0xFFFF;
+  uint32_t  d1 = (compressed_bcd >> 16) & 0xFFFF;
+  uint32_t  d2 = (compressed_bcd >> 32) & 0xFFFF;
+  uint32_t  d3 = (compressed_bcd >> 48) & 0xFFFF;
+ 
+            d0 = 656 * d3 + 7296 * d2 + 5536 * d1 + d0;
+  uint32_t  q  = d0 / 10000;
+            d0 = d0 % 10000;
+ 
+            d1 = q + 7671 * d3 + 9496 * d2 + 6 * d1;
+            q  = d1 / 10000;
+            d1 = d1 % 10000;
+ 
+            d2 = q + 4749 * d3 + 42 * d2;
+            q  = d2 / 10000;
+            d2 = d2 % 10000;
+ 
+            d3 = q + 281 * d3;
+            q  = d3 / 10000;
+            d3 = d3 % 10000;
+ 
+  bcd_decompress_small( q,  decompressed_bcd      );
+  bcd_decompress_small( d3, decompressed_bcd + 4  );
+  bcd_decompress_small( d2, decompressed_bcd + 8  );
+  bcd_decompress_small( d1, decompressed_bcd + 12 );
+  bcd_decompress_small( d0, decompressed_bcd + 16 );
 }
 
 /**
@@ -2081,9 +2081,9 @@ static void  bcd_decompress(
 */
 static inline uint32_t  bcd_compress_small( const uint8_t*  decompressed_bcd )
 {
-   uint32_t  high_pair = 10 * decompressed_bcd[0] + decompressed_bcd[1];
-   uint32_t  low_pair  = 10 * decompressed_bcd[2] + decompressed_bcd[3];
-   return  100 * high_pair + low_pair;
+  uint32_t  high_pair = 10 * decompressed_bcd[0] + decompressed_bcd[1];
+  uint32_t  low_pair  = 10 * decompressed_bcd[2] + decompressed_bcd[3];
+  return  100 * high_pair + low_pair;
 }
 
 /**
@@ -2093,12 +2093,12 @@ static inline uint32_t  bcd_compress_small( const uint8_t*  decompressed_bcd )
 */
 static uint64_t  bcd_compress( const uint8_t*  decompressed_bcd )
 {
-   uint64_t  d2 =         bcd_compress_small( decompressed_bcd      );
-   uint64_t  d1 = 10000 * bcd_compress_small( decompressed_bcd + 4  )
-                        + bcd_compress_small( decompressed_bcd + 8  );
-   uint64_t  d0 = 10000 * bcd_compress_small( decompressed_bcd + 12 )
-                        + bcd_compress_small( decompressed_bcd + 16 );
-   return  ((d2 * (10000ULL * 10000ULL) + d1) * (10000ULL * 10000ULL)) + d0;
+  uint64_t  d2 =         bcd_compress_small( decompressed_bcd      );
+  uint64_t  d1 = 10000 * bcd_compress_small( decompressed_bcd + 4  )
+                       + bcd_compress_small( decompressed_bcd + 8  );
+  uint64_t  d0 = 10000 * bcd_compress_small( decompressed_bcd + 12 )
+                       + bcd_compress_small( decompressed_bcd + 16 );
+  return  ((d2 * (10000ULL * 10000ULL) + d1) * (10000ULL * 10000ULL)) + d0;
 }
 
 /**
@@ -2113,52 +2113,52 @@ static uint64_t  bcd_compress( const uint8_t*  decompressed_bcd )
 */
 static int  bcd_round( int  new_ndigits, uint8_t*  decimal_mantissa, int32_t*  exponent )
 {
-   // 1. Bounds check and adjustment
-   if( new_ndigits < 1 )
-       new_ndigits = 1;
-   else if( new_ndigits > 19 )
-       new_ndigits = 19;
+  // 1. Bounds check and adjustment
+  if( new_ndigits < 1 )
+   new_ndigits = 1;
+  else if( new_ndigits > 19 )
+   new_ndigits = 19;
 
-   if( new_ndigits < 19 )
-   {
-       for( ;; )
-       {
-           // 2. Compute round-up flag
-           int  round_up = ( decimal_mantissa[1 + new_ndigits] >= 5 );
+  if( new_ndigits < 19 )
+  {
+    for( ;; )
+    {
+      // 2. Compute round-up flag
+      int  round_up = ( decimal_mantissa[1 + new_ndigits] >= 5 );
 
-           // 3. Zero out the tail
-           for( int  i = 1 + new_ndigits; i < 20; ++i )
-               decimal_mantissa[i] = 0;
+      // 3. Zero out the tail
+      for( int  i = 1 + new_ndigits; i < 20; ++i )
+        decimal_mantissa[i] = 0;
 
-           // 4. Make round-up if necessary
-           if(! round_up )
-               break;
-           for( int  i = new_ndigits; i >= 0; --i )
-           {
-               uint8_t  new_value = decimal_mantissa[i] + 1;
-               if( new_value < 10 )
-               {
-                   decimal_mantissa[i] = new_value;
-                   break;
-               }
-               decimal_mantissa[i] = 0;
-           }
+      // 4. Make round-up if necessary
+      if(! round_up )
+          break;
+      for( int  i = new_ndigits; i >= 0; --i )
+      {
+        uint8_t  new_value = decimal_mantissa[i] + 1;
+        if( new_value < 10 )
+        {
+          decimal_mantissa[i] = new_value;
+          break;
+        }
+        decimal_mantissa[i] = 0;
+      }
 
-           // 5. Handle overflow
-           if( decimal_mantissa[0] == 0 )
-               break;     // no overflow
-           else
-           {
-               memmove( decimal_mantissa + 1, decimal_mantissa, 19 );
-               decimal_mantissa[0] = 0;
-               ++( *exponent );
-               // if there was an overflow, then make one more iteration
-           }
-       }
-   }
+      // 5. Handle overflow
+      if( decimal_mantissa[0] == 0 )
+          break;     // no overflow
+      else
+      {
+        memmove( decimal_mantissa + 1, decimal_mantissa, 19 );
+        decimal_mantissa[0] = 0;
+        ++( *exponent );
+        // if there was an overflow, then make one more iteration
+      }
+    }
+  }
 
-   // 6. Return adjusted number of significant decimal digits to the caller
-   return  new_ndigits;
+  // 6. Return adjusted number of significant decimal digits to the caller
+  return  new_ndigits;
 }
 
 //=====================================================================================================
@@ -2173,17 +2173,17 @@ static int  bcd_round( int  new_ndigits, uint8_t*  decimal_mantissa, int32_t*  e
 */
 static int  format_pad( char**  outbuf, int*  outbuf_size, int  n )
 {
-   if( *outbuf_size < n )
-       return  0;
-   else
-   {
-       *outbuf_size -= n;
-       char*  p = *outbuf;
-       while( n-- > 0 )
-           *p++ = ' ';
-       *outbuf = p;
-       return  1;
-   }
+  if( *outbuf_size < n )
+    return  0;
+  else
+  {
+    *outbuf_size -= n;
+    char*  p = *outbuf;
+    while( n-- > 0 )
+      *p++ = ' ';
+    *outbuf = p;
+    return  1;
+  }
 }
 
 /**
@@ -2196,14 +2196,14 @@ static int  format_pad( char**  outbuf, int*  outbuf_size, int  n )
 */
 static int  format_onechar( char**  outbuf, int*  outbuf_size, int  c )
 {
-   if( *outbuf_size <= 0 )
-       return  0;
-   else
-   {
-       *((*outbuf)++) = ((char)c);
-       --(*outbuf_size);
-       return  1;
-   }
+  if( *outbuf_size <= 0 )
+    return  0;
+  else
+  {
+    *((*outbuf)++) = ((char)c);
+    --(*outbuf_size);
+    return  1;
+  }
 }
 
 /**
@@ -2216,18 +2216,46 @@ static int  format_onechar( char**  outbuf, int*  outbuf_size, int  c )
 */
 static int  format_copystr( char**  outbuf, int*  outbuf_size, const char*  str, int  str_size )
 {
-   if( *outbuf_size < str_size )
-       return  0;
-   else
-   {
-       *outbuf_size -= str_size;
-       char*  p = *outbuf;
-       while( str_size-- > 0 )
-           *p++ = *str++;
-       *outbuf = p;
-       return  1;
-   }
+ if( *outbuf_size < str_size )
+  return  0;
+ else
+ {
+  *outbuf_size -= str_size;
+  char*  p = *outbuf;
+  while( str_size-- > 0 )
+    *p++ = *str++;
+  *outbuf = p;
+  return  1;
+ }
 }
+
+static const char *_EXPONENT_TABLE[400] = {
+  "00  ","01  ","02  ","03  ","04  ","05  ","06  ","07  ","08  ","09  ","10  ","11  ","12  ","13  ","14  ","15  ",
+  "16  ","17  ","18  ","19  ","20  ","21  ","22  ","23  ","24  ","25  ","26  ","27  ","28  ","29  ","30  ","31  ",
+  "32  ","33  ","34  ","35  ","36  ","37  ","38  ","39  ","40  ","41  ","42  ","43  ","44  ","45  ","46  ","47  ",
+  "48  ","49  ","50  ","51  ","52  ","53  ","54  ","55  ","56  ","57  ","58  ","59  ","60  ","61  ","62  ","63  ",
+  "64  ","65  ","66  ","67  ","68  ","69  ","70  ","71  ","72  ","73  ","74  ","75  ","76  ","77  ","78  ","79  ",
+  "80  ","81  ","82  ","83  ","84  ","85  ","86  ","87  ","88  ","89  ","90  ","91  ","92  ","93  ","94  ","95  ",
+  "96  ","97  ","98  ","99  ","100 ","101 ","102 ","103 ","104 ","105 ","106 ","107 ","108 ","109 ","110 ","111 ",
+  "112 ","113 ","114 ","115 ","116 ","117 ","118 ","119 ","120 ","121 ","122 ","123 ","124 ","125 ","126 ","127 ",
+  "128 ","129 ","130 ","131 ","132 ","133 ","134 ","135 ","136 ","137 ","138 ","139 ","140 ","141 ","142 ","143 ",
+  "144 ","145 ","146 ","147 ","148 ","149 ","150 ","151 ","152 ","153 ","154 ","155 ","156 ","157 ","158 ","159 ",
+  "160 ","161 ","162 ","163 ","164 ","165 ","166 ","167 ","168 ","169 ","170 ","171 ","172 ","173 ","174 ","175 ",
+  "176 ","177 ","178 ","179 ","180 ","181 ","182 ","183 ","184 ","185 ","186 ","187 ","188 ","189 ","190 ","191 ",
+  "192 ","193 ","194 ","195 ","196 ","197 ","198 ","199 ","200 ","201 ","202 ","203 ","204 ","205 ","206 ","207 ",
+  "208 ","209 ","210 ","211 ","212 ","213 ","214 ","215 ","216 ","217 ","218 ","219 ","220 ","221 ","222 ","223 ",
+  "224 ","225 ","226 ","227 ","228 ","229 ","230 ","231 ","232 ","233 ","234 ","235 ","236 ","237 ","238 ","239 ",
+  "240 ","241 ","242 ","243 ","244 ","245 ","246 ","247 ","248 ","249 ","250 ","251 ","252 ","253 ","254 ","255 ",
+  "256 ","257 ","258 ","259 ","260 ","261 ","262 ","263 ","264 ","265 ","266 ","267 ","268 ","269 ","270 ","271 ",
+  "272 ","273 ","274 ","275 ","276 ","277 ","278 ","279 ","280 ","281 ","282 ","283 ","284 ","285 ","286 ","287 ",
+  "288 ","289 ","290 ","291 ","292 ","293 ","294 ","295 ","296 ","297 ","298 ","299 ","300 ","301 ","302 ","303 ",
+  "304 ","305 ","306 ","307 ","308 ","309 ","310 ","311 ","312 ","313 ","314 ","315 ","316 ","317 ","318 ","319 ",
+  "320 ","321 ","322 ","323 ","324 ","325 ","326 ","327 ","328 ","329 ","330 ","331 ","332 ","333 ","334 ","335 ",
+  "336 ","337 ","338 ","339 ","340 ","341 ","342 ","343 ","344 ","345 ","346 ","347 ","348 ","349 ","350 ","351 ",
+  "352 ","353 ","354 ","355 ","356 ","357 ","358 ","359 ","360 ","361 ","362 ","363 ","364 ","365 ","366 ","367 ",
+  "368 ","369 ","370 ","371 ","372 ","373 ","374 ","375 ","376 ","377 ","378 ","379 ","380 ","381 ","382 ","383 ",
+  "384 ","385 ","386 ","387 ","388 ","389 ","390 ","391 ","392 ","393 ","394 ","395 ","396 ","397 ","398 ","399 "
+};
 
 /**
 *
@@ -2236,30 +2264,43 @@ static int  format_copystr( char**  outbuf, int*  outbuf_size, const char*  str,
 *  There must be at least 16 bytes in the output buffer.
 *
 */
-static void  format_exponent( char*  buffer, int32_t  exponent, int  is_uppercase )
+static void format_exponent(char *buffer, int32_t exponent, int is_uppercase)
 {
-   char  tmp_buffer[12];
+  rte_prefetch0(_EXPONENT_TABLE);
 
-   *buffer++ = (is_uppercase ? 'E' : 'e');
-   if( exponent < 0 )
-   {
-       *buffer++ = '-';
-       exponent = -exponent;
-   }
-   else
-       *buffer++ = '+';
+  *buffer++ = (is_uppercase ? 'E' : 'e');
+  if( exponent < 0 )
+  {
+    *buffer++ = '-';
+    exponent = -exponent;
+  }
+  else
+   *buffer++ = '+';
 
-   int  i = 0;
-   while(( exponent > 0 )&&( i < 12 ))
-   {
-       tmp_buffer[i++] = ((char)( (exponent % 10) + '0' ));
-       exponent /= 10;
-   }
-   while( i < 2 )
-       tmp_buffer[i++] = '0';
-   while( i > 0 )
-       *buffer++ = tmp_buffer[--i];
-   *buffer = 0;
+  assert(exponent <= 324);
+  
+#if 0
+  char  tmp_buffer[12];
+  int  i = 0;
+  while(( exponent > 0 )&&( i < 12 ))
+  {
+    tmp_buffer[i++] = ((char)( (exponent % 10) + '0' ));
+    exponent /= 10;
+  }
+  while( i < 2 )
+   tmp_buffer[i++] = '0';
+  while( i > 0 )
+   *buffer++ = tmp_buffer[--i];
+  *buffer = 0;
+#else
+  *(uint32_t *)buffer = *(const uint32_t *)_EXPONENT_TABLE[exponent];
+  if (buffer[2] == ' ') 
+    buffer[2] = '\0';
+  else if (buffer[3] == ' ') 
+    buffer[3] = '\0';
+#endif  
+
+  return;
 }
 
 /**
@@ -2300,256 +2341,256 @@ int  dconvstr_ieee754_print(
    int           format_precision
 )
 {
-   // 1. Unpack double precision value
-   int       is_nan      = 0;
-   int       is_negative = 0;
-   int       is_infinity = 0;
-   uint64_t  mantissa    = 0;
-   int32_t   exponent    = 0;
-   unpack_ieee754_double( &value, &is_nan, &is_negative, &mantissa, &exponent, &is_infinity );
+  // 1. Unpack double precision value
+  int       is_nan      = 0;
+  int       is_negative = 0;
+  int       is_infinity = 0;
+  uint64_t  mantissa    = 0;
+  int32_t   exponent    = 0;
+  unpack_ieee754_double( &value, &is_nan, &is_negative, &mantissa, &exponent, &is_infinity );
 
-   // 2. Handle special cases
-   if( is_nan )
-   {
-       if( format_flags & DCONVSTR_FLAG_UPPERCASE )
-           return  format_copystr( outbuf, outbuf_size, "NAN", 3 );
-       else
-           return  format_copystr( outbuf, outbuf_size, "nan", 3 );
-   }
-   if(( is_infinity )&&( !is_negative ))
-   {
-       if( format_flags & DCONVSTR_FLAG_UPPERCASE )
-           return  format_copystr( outbuf, outbuf_size, "INF", 3 );
-       else
-           return  format_copystr( outbuf, outbuf_size, "inf", 3 );
-   }
-   if(( is_infinity )&&( is_negative ))
-   {
-       if( format_flags & DCONVSTR_FLAG_UPPERCASE )
-           return  format_copystr( outbuf, outbuf_size, "-INF", 4 );
-       else
-           return  format_copystr( outbuf, outbuf_size, "-inf", 4 );
-   }
+  // 2. Handle special cases
+  if( is_nan )
+  {
+     if( format_flags & DCONVSTR_FLAG_UPPERCASE )
+         return  format_copystr( outbuf, outbuf_size, "NAN", 3 );
+     else
+         return  format_copystr( outbuf, outbuf_size, "nan", 3 );
+  }
+  if(( is_infinity )&&( !is_negative ))
+  {
+     if( format_flags & DCONVSTR_FLAG_UPPERCASE )
+         return  format_copystr( outbuf, outbuf_size, "INF", 3 );
+     else
+         return  format_copystr( outbuf, outbuf_size, "inf", 3 );
+  }
+  if(( is_infinity )&&( is_negative ))
+  {
+     if( format_flags & DCONVSTR_FLAG_UPPERCASE )
+         return  format_copystr( outbuf, outbuf_size, "-INF", 4 );
+     else
+         return  format_copystr( outbuf, outbuf_size, "-inf", 4 );
+  }
 
-   // 3. Get exact decimal representation.
-   //    Decimal point is located on the right side of decimal mantissa
-   uint8_t  decimal_mantissa[20];
-   if( mantissa == 0 )
-   {
-       ng_memset( decimal_mantissa, 0, sizeof(decimal_mantissa) );
-       exponent = -18;
-   }
-   else
-   {
-       if(! convert_binary_to_extended_decimal( mantissa, exponent, &mantissa, &exponent ) )
-           return  0;    // internal error during conversion
-       bcd_decompress( mantissa, decimal_mantissa );
-       if(( decimal_mantissa[0] != 0 )||( decimal_mantissa[1] == 0 ))
-           return  0;    // invariant does not hold : mantissa >= 10^19 || mantissa < 10^18
-   }
+  // 3. Get exact decimal representation.
+  //    Decimal point is located on the right side of decimal mantissa
+  uint8_t  decimal_mantissa[20];
+  if( mantissa == 0 )
+  {
+     ng_memset( decimal_mantissa, 0, sizeof(decimal_mantissa) );
+     exponent = -18;
+  }
+  else
+  {
+     if(! convert_binary_to_extended_decimal( mantissa, exponent, &mantissa, &exponent ) )
+         return  0;    // internal error during conversion
+     bcd_decompress( mantissa, decimal_mantissa );
+     if(( decimal_mantissa[0] != 0 )||( decimal_mantissa[1] == 0 ))
+         return  0;    // invariant does not hold : mantissa >= 10^19 || mantissa < 10^18
+  }
 
-   // 4. Compute the following fields:
-   //    z1      - number of zeros inserted before the digits
-   //    z2      - number of zeros inserted after the digits
-   //    point   - number of digits printed before decimal point
-   //    ndigits - number of digits to print from decimal_mantissa[1..19].
-   //    suffix  - formatted exponent like "e-5"
-   //    (Code from this section was adopted from http://golang.org/src/lib9/fmt/fltfmt.c)
-   int   point   = 1;
-   int   z1      = 0;
-   int   z2      = 0;
-   int   ndigits = 19;      // initially we have 19 digits (most significant zero digit is ignored)
-   char  suffix[16];
-   int   suffix_width = 0;
+  // 4. Compute the following fields:
+  //    z1      - number of zeros inserted before the digits
+  //    z2      - number of zeros inserted after the digits
+  //    point   - number of digits printed before decimal point
+  //    ndigits - number of digits to print from decimal_mantissa[1..19].
+  //    suffix  - formatted exponent like "e-5"
+  //    (Code from this section was adopted from http://golang.org/src/lib9/fmt/fltfmt.c)
+  int   point   = 1;
+  int   z1      = 0;
+  int   z2      = 0;
+  int   ndigits = 19;      // initially we have 19 digits (most significant zero digit is ignored)
+  char  suffix[16];
+  int   suffix_width = 0;
 
-   int  original_format_char = format_char;
-   if( format_char == 'g' )
-   {
-       // get rid of excess precision
-       if( format_precision == 0 )
-           format_precision = 1;
-       if( format_precision < ndigits )
-       {
-           exponent += (ndigits - format_precision);  // retain invariant "point after mantissa"
-           ndigits = bcd_round( format_precision, decimal_mantissa, &exponent );
-       }
-   
-       // choose format: e or f
-       int  e = exponent + (ndigits - 1);  // now point is after mantissa, move to the left (after 1st digit)
-       if(( e >= -4 )&&( e < format_precision ))    // so printf(3) rules say
-       {
-           format_char = 'f';
-       }
-       else
-       {
-           format_char = 'e';
-           --format_precision;             // one digit before the point, rest after
-       }
-   }
+  int  original_format_char = format_char;
+  if( format_char == 'g' )
+  {
+    // get rid of excess precision
+    if( format_precision == 0 )
+      format_precision = 1;
+    if( format_precision < ndigits )
+    {
+      exponent += (ndigits - format_precision);  // retain invariant "point after mantissa"
+      ndigits = bcd_round( format_precision, decimal_mantissa, &exponent );
+    }
+ 
+    // choose format: e or f
+    int  e = exponent + (ndigits - 1);  // now point is after mantissa, move to the left (after 1st digit)
+    if(( e >= -4 )&&( e < format_precision ))    // so printf(3) rules say
+    {
+      format_char = 'f';
+    }
+    else
+    {
+      format_char = 'e';
+      --format_precision;             // one digit before the point, rest after
+    }
+  }
 
-   if( format_char == 'e' )
-   {
-       exponent += (ndigits - 1);    // now point is after mantissa, move to the left (after 1st digit)
+  if( format_char == 'e' )
+  {
+    exponent += (ndigits - 1);    // now point is after mantissa, move to the left (after 1st digit)
+ 
+    // compute trailing zero padding or truncate digits
+    if( 1 + format_precision >= ndigits )
+      z2 = 1 + format_precision - ndigits;
+    else
+      ndigits = bcd_round( 1 + format_precision, decimal_mantissa, &exponent );
+ 
+    format_exponent( suffix, exponent, format_flags & DCONVSTR_FLAG_UPPERCASE );
+    suffix_width = ((int)( strlen( suffix ) ));
+  }
+  else if( format_char == 'f' )
+  {
+    // determine where digits go with respect to decimal point
+    if( ndigits + exponent > 0 )
+    {
+      point = ndigits + exponent;
+      z1    = 0;
+    }
+    else
+    {
+      point = 1;
+      z1    = 1 + -(ndigits + exponent);
+    }
+ 
+    // %g specifies prec = number of significant digits
+    // convert to number of digits after decimal point
+    if( original_format_char == 'g' )
+      format_precision += (z1 - point);
+ 
+    // compute trailing zero padding or truncate digits
+    if( point + format_precision >= z1 + ndigits )
+        z2 = point + format_precision - (z1 + ndigits);
+    else
+    {
+      int  new_ndigits = point + format_precision - z1;
+      if( new_ndigits < 0 )
+      {
+        z1 += new_ndigits;
+        ndigits = 0;
+      }
+      else if( new_ndigits == 0 )
+      {
+        if( decimal_mantissa[1] >= 5 )
+        {
+          decimal_mantissa[1] = 1;
+          ndigits = 1;
+          if( z1 > 0 )
+            --z1;
+          else
+            ++point;
+        }
+      }
+      else
+      {
+        int  new_exponent = exponent;
+        ndigits = bcd_round( new_ndigits, decimal_mantissa, &new_exponent );
+        for( ; new_exponent > exponent; --new_exponent )
+        {
+          ++z2;
+          if( z1 > 0 )
+            --z1;
+          else
+            ++point;
+        }
+      }
+    }
+    suffix_width = 0;
+  }
+  else
+     return  0;
 
-       // compute trailing zero padding or truncate digits
-       if( 1 + format_precision >= ndigits )
-           z2 = 1 + format_precision - ndigits;
-       else
-           ndigits = bcd_round( 1 + format_precision, decimal_mantissa, &exponent );
+  // 5. If %g is given without DCONVSTR_FLAG_SHARP, remove trailing zeros.
+  //    Must do after truncation, so that e.g. print %.3g 1.001 produces 1, not 1.00.
+  //    Sorry, but them's the rules.
+  if(( original_format_char == 'g'      )&&
+    ( !(format_flags & DCONVSTR_FLAG_SHARP) )&&
+    ( z1 + ndigits + z2 >= point       ))
+  {
+    if( z1 + ndigits < point )
+      z2 = point - (z1 + ndigits);
+    else
+    {
+      z2 = 0;
+      while(( z1 + ndigits > point )&&( decimal_mantissa[ndigits] == 0 ))
+          --ndigits;
+    }
+  }
 
-       format_exponent( suffix, exponent, format_flags & DCONVSTR_FLAG_UPPERCASE );
-       suffix_width = ((int)( strlen( suffix ) ));
-   }
-   else if( format_char == 'f' )
-   {
-       // determine where digits go with respect to decimal point
-       if( ndigits + exponent > 0 )
-       {
-           point = ndigits + exponent;
-           z1    = 0;
-       }
-       else
-       {
-           point = 1;
-           z1    = 1 + -(ndigits + exponent);
-       }
+  // 6. Compute width of all digits and decimal point and suffix if any
+  int  total_width = z1 + ndigits + z2;
+  if( total_width > point )
+     total_width += 1;
+  else if( total_width == point )
+  {
+    if( format_flags & DCONVSTR_FLAG_SHARP )
+      total_width += 1;
+    else
+      ++point;        // point is not printed at the end
+  }
+  total_width += suffix_width;
 
-       // %g specifies prec = number of significant digits
-       // convert to number of digits after decimal point
-       if( original_format_char == 'g' )
-           format_precision += (z1 - point);
+  // 7. Determine sign
+  int  sign = 0;
+  if( is_negative )
+     sign = '-';
+  else
+  {
+    if( format_flags & DCONVSTR_FLAG_PRINT_PLUS )
+      sign = '+';
+    if( format_flags & DCONVSTR_FLAG_SPACE_IF_PLUS )
+      sign = ' ';
+  }
+  if( sign )
+     ++total_width;
 
-       // compute trailing zero padding or truncate digits
-       if( point + format_precision >= z1 + ndigits )
-           z2 = point + format_precision - (z1 + ndigits);
-       else
-       {
-           int  new_ndigits = point + format_precision - z1;
-           if( new_ndigits < 0 )
-           {
-               z1 += new_ndigits;
-               ndigits = 0;
-           }
-           else if( new_ndigits == 0 )
-           {
-               if( decimal_mantissa[1] >= 5 )
-               {
-                   decimal_mantissa[1] = 1;
-                   ndigits = 1;
-                   if( z1 > 0 )
-                       --z1;
-                   else
-                       ++point;
-               }
-           }
-           else
-           {
-               int  new_exponent = exponent;
-               ndigits = bcd_round( new_ndigits, decimal_mantissa, &new_exponent );
-               for( ; new_exponent > exponent; --new_exponent )
-               {
-                   ++z2;
-                   if( z1 > 0 )
-                       --z1;
-                   else
-                       ++point;
-               }
-           }
-       }
-       suffix_width = 0;
-   }
-   else
-       return  0;
+  // 8. Compute padding
+  int  padding = 0;
+  if(( format_flags & DCONVSTR_FLAG_HAVE_WIDTH )&&( format_width > total_width ))
+     padding = format_width - total_width;
+  if(( padding                                 )&&
+    ( !(format_flags & DCONVSTR_FLAG_LEFT_JUSTIFY) )&&
+    ( format_flags & DCONVSTR_FLAG_PAD_WITH_ZERO   ))
+  {
+   z1     += padding;
+   point  += padding;
+   padding = 0;
+  }
 
-   // 5. If %g is given without DCONVSTR_FLAG_SHARP, remove trailing zeros.
-   //    Must do after truncation, so that e.g. print %.3g 1.001 produces 1, not 1.00.
-   //    Sorry, but them's the rules.
-   if(( original_format_char == 'g'      )&&
-      ( !(format_flags & DCONVSTR_FLAG_SHARP) )&&
-      ( z1 + ndigits + z2 >= point       ))
-   {
-       if( z1 + ndigits < point )
-           z2 = point - (z1 + ndigits);
-       else
-       {
-           z2 = 0;
-           while(( z1 + ndigits > point )&&( decimal_mantissa[ndigits] == 0 ))
-               --ndigits;
-       }
-   }
-
-   // 6. Compute width of all digits and decimal point and suffix if any
-   int  total_width = z1 + ndigits + z2;
-   if( total_width > point )
-       total_width += 1;
-   else if( total_width == point )
-   {
-       if( format_flags & DCONVSTR_FLAG_SHARP )
-           total_width += 1;
-       else
-           ++point;        // point is not printed at the end
-   }
-   total_width += suffix_width;
-
-   // 7. Determine sign
-   int  sign = 0;
-   if( is_negative )
-       sign = '-';
-   else
-   {
-       if( format_flags & DCONVSTR_FLAG_PRINT_PLUS )
-           sign = '+';
-       if( format_flags & DCONVSTR_FLAG_SPACE_IF_PLUS )
-           sign = ' ';
-   }
-   if( sign )
-       ++total_width;
-
-   // 8. Compute padding
-   int  padding = 0;
-   if(( format_flags & DCONVSTR_FLAG_HAVE_WIDTH )&&( format_width > total_width ))
-       padding = format_width - total_width;
-   if(( padding                                 )&&
-      ( !(format_flags & DCONVSTR_FLAG_LEFT_JUSTIFY) )&&
-      ( format_flags & DCONVSTR_FLAG_PAD_WITH_ZERO   ))
-   {
-       z1     += padding;
-       point  += padding;
-       padding = 0;
-   }
-
-   // 9. Collect everything together and dump to output buffer
-   if(( padding                                      )&&
-      ( !(format_flags & DCONVSTR_FLAG_LEFT_JUSTIFY) )&&
-      ( !format_pad( outbuf, outbuf_size, padding )  ))
-       return  0;
-   if(( sign )&&(! format_onechar( outbuf, outbuf_size, sign ) ))
-       return  0;
-   const unsigned char*  digits = decimal_mantissa + 1;
-   while(( z1 > 0 )||( ndigits > 0 )||( z2 > 0 ))
-   {
-       int  c = '0';
-       if( z1 > 0 )
-           z1--;
-       else if( ndigits > 0 )
-       {
-           ndigits--;
-           c = '0' + (*digits++);
-       }
-       else
-           z2--;
-       if(! format_onechar( outbuf, outbuf_size, c ) )
-           return  0;
-       if(( --point == 0 )&&(! format_onechar( outbuf, outbuf_size, '.' ) ))
-           return  0;
-   }
-   if(( suffix_width )&&(! format_copystr( outbuf, outbuf_size, suffix, suffix_width ) ))
-       return  0;
-   if(( padding                                     )&&
-      ( format_flags & DCONVSTR_FLAG_LEFT_JUSTIFY   )&&
-      ( !format_pad( outbuf, outbuf_size, padding ) ))
-       return  0;
-   return  1;
+  // 9. Collect everything together and dump to output buffer
+  if(( padding                                      )&&
+    ( !(format_flags & DCONVSTR_FLAG_LEFT_JUSTIFY) )&&
+    ( !format_pad( outbuf, outbuf_size, padding )  ))
+     return  0;
+  if(( sign )&&(! format_onechar( outbuf, outbuf_size, sign ) ))
+     return  0;
+  const unsigned char*  digits = decimal_mantissa + 1;
+  while(( z1 > 0 )||( ndigits > 0 )||( z2 > 0 ))
+  {
+    int  c = '0';
+    if( z1 > 0 )
+      z1--;
+    else if( ndigits > 0 )
+    {
+      ndigits--;
+      c = '0' + (*digits++);
+    }
+    else
+        z2--;
+    if(! format_onechar( outbuf, outbuf_size, c ) )
+      return  0;
+    if(( --point == 0 )&&(! format_onechar( outbuf, outbuf_size, '.' ) ))
+      return  0;
+  }
+  if(( suffix_width )&&(! format_copystr( outbuf, outbuf_size, suffix, suffix_width ) ))
+     return  0;
+  if(( padding                                     )&&
+    ( format_flags & DCONVSTR_FLAG_LEFT_JUSTIFY   )&&
+    ( !format_pad( outbuf, outbuf_size, padding ) ))
+     return  0;
+  return  1;
 }
 
 /**
@@ -2584,301 +2625,301 @@ int  dconvstr_ieee754_scan(
    int*          output_erange
 )
 {
-   // 1. Handle special cases
-   if((( input[0] == 'n' )||( input[0] == 'N' ))&&
-      (( input[1] == 'a' )||( input[1] == 'A' ))&&
-      (( input[2] == 'n' )||( input[2] == 'N' )))
-   {
-       if( input_end )
-           *input_end = input + 3;
+  // 1. Handle special cases
+  if((( input[0] == 'n' )||( input[0] == 'N' ))&&
+    (( input[1] == 'a' )||( input[1] == 'A' ))&&
+    (( input[2] == 'n' )||( input[2] == 'N' )))
+  {
+     if( input_end )
+         *input_end = input + 3;
 
-       pack_ieee754_double(
-           1,      // input_is_nan
-           0,      // input_sign
-           0,      // input_binary_mantissa
-           0,      // input_binary_exponent
-           0,      // input_is_infinity
-           output
-       );
-       *output_erange = 0;
-       return  1;
-   }
-   else if((( input[0] == 'i' )||( input[0] == 'I' ))&&
-           (( input[1] == 'n' )||( input[1] == 'N' ))&&
-           (( input[2] == 'f' )||( input[2] == 'F' )))
-   {
-       if( input_end )
-           *input_end = input + 3;
+     pack_ieee754_double(
+         1,      // input_is_nan
+         0,      // input_sign
+         0,      // input_binary_mantissa
+         0,      // input_binary_exponent
+         0,      // input_is_infinity
+         output
+     );
+     *output_erange = 0;
+     return  1;
+  }
+  else if((( input[0] == 'i' )||( input[0] == 'I' ))&&
+         (( input[1] == 'n' )||( input[1] == 'N' ))&&
+         (( input[2] == 'f' )||( input[2] == 'F' )))
+  {
+     if( input_end )
+         *input_end = input + 3;
 
-       pack_ieee754_double(
-           0,      // input_is_nan
-           0,      // input_sign
-           0,      // input_binary_mantissa
-           0,      // input_binary_exponent
-           1,      // input_is_infinity
-           output
-       );
-       *output_erange = 0;
-       return  1;
-   }
-   else if(( input[0] == '-' )&&
-           (( input[1] == 'i' )||( input[1] == 'I' ))&&
-           (( input[2] == 'n' )||( input[2] == 'N' ))&&
-           (( input[3] == 'f' )||( input[3] == 'F' )))
-   {
-       if( input_end )
-           *input_end = input + 4;
+     pack_ieee754_double(
+         0,      // input_is_nan
+         0,      // input_sign
+         0,      // input_binary_mantissa
+         0,      // input_binary_exponent
+         1,      // input_is_infinity
+         output
+     );
+     *output_erange = 0;
+     return  1;
+  }
+  else if(( input[0] == '-' )&&
+         (( input[1] == 'i' )||( input[1] == 'I' ))&&
+         (( input[2] == 'n' )||( input[2] == 'N' ))&&
+         (( input[3] == 'f' )||( input[3] == 'F' )))
+  {
+     if( input_end )
+         *input_end = input + 4;
 
-       pack_ieee754_double(
-           0,      // input_is_nan
-           1,      // input_sign
-           0,      // input_binary_mantissa
-           0,      // input_binary_exponent
-           1,      // input_is_infinity
-           output
-       );
-       *output_erange = 0;
-       return  1;
-   }
+     pack_ieee754_double(
+         0,      // input_is_nan
+         1,      // input_sign
+         0,      // input_binary_mantissa
+         0,      // input_binary_exponent
+         1,      // input_is_infinity
+         output
+     );
+     *output_erange = 0;
+     return  1;
+  }
 
-   // 2. Parse input string
-   //    (Code from this section was adopted from http://golang.org/src/lib9/fmt/fltfmt.c)
-   uint8_t  parsed_digits[20];
-   int      n_parsed_digits        = 0;      // number of digits in parsed_digits[]
-   int32_t  exponent               = 0;
-   int32_t  exponent_offset        = 0;
-   int      flag_negative_mantissa = 0;
-   int      flag_negative_exponent = 0;
-   int      flag_syntax_error      = 0;
+  // 2. Parse input string
+  //    (Code from this section was adopted from http://golang.org/src/lib9/fmt/fltfmt.c)
+  uint8_t  parsed_digits[20];
+  int      n_parsed_digits        = 0;      // number of digits in parsed_digits[]
+  int32_t  exponent               = 0;
+  int32_t  exponent_offset        = 0;
+  int      flag_negative_mantissa = 0;
+  int      flag_negative_exponent = 0;
+  int      flag_syntax_error      = 0;
 
-   enum parser_state  state = S0;
-       // S0: _          _S0   +S1   #S2   .S3
-       // S1: _+         #S2   .S3
-       // S2: _+#        #S2   .S4   eS5
-       // S3: _+#.       #S4
-       // S4: _+#.#      #S4   eS5
-       // S5: _+#.#e     +S6   #S7
-       // S6: _+#.#e+    #S7
-       // S7: _+#.#e+#   #S7
-   const char*  s = input;
-   while(( !flag_syntax_error )&&( *s ))
-   {
-       char  ch = *s;
-       switch( state )
-       {
-           // State 0: skip leading whitespaces, before mantissa sign and digits
-           case S0:
-               if(( ch == ' ' )||( ch == '\t' ))
-                   ++s;  // remain in state S0
-               else if( ch == '-' )
-               {
-                   ++s;
-                   state = S1;
-                   flag_negative_mantissa = 1;
-               }
-               else if( ch == '+' )
-               {
-                   ++s;
-                   state = S1;
-               }
-               else if(( ch >= '0' )&&( ch <= '9' ))
-               {
-                   state = S2;
-               }
-               else if( ch == '.' )
-               {
-                   ++s;
-                   state = S3;
-               }
-               else
-                   flag_syntax_error = 1;
-               break;
+  enum parser_state  state = S0;
+     // S0: _          _S0   +S1   #S2   .S3
+     // S1: _+         #S2   .S3
+     // S2: _+#        #S2   .S4   eS5
+     // S3: _+#.       #S4
+     // S4: _+#.#      #S4   eS5
+     // S5: _+#.#e     +S6   #S7
+     // S6: _+#.#e+    #S7
+     // S7: _+#.#e+#   #S7
+  const char*  s = input;
+  while(( !flag_syntax_error )&&( *s ))
+  {
+    char  ch = *s;
+    switch( state )
+    {
+      // State 0: skip leading whitespaces, before mantissa sign and digits
+      case S0:
+        if(( ch == ' ' )||( ch == '\t' ))
+          ++s;  // remain in state S0
+        else if( ch == '-' )
+        {
+          ++s;
+          state = S1;
+          flag_negative_mantissa = 1;
+        }
+        else if( ch == '+' )
+        {
+          ++s;
+          state = S1;
+        }
+        else if(( ch >= '0' )&&( ch <= '9' ))
+        {
+          state = S2;
+        }
+        else if( ch == '.' )
+        {
+          ++s;
+          state = S3;
+        }
+        else
+          flag_syntax_error = 1;
+        break;
 
-           // State 1: after mantissa sign, before mantissa digits
-           case S1:
-               if(( ch >= '0' )&&( ch <= '9' ))
-                   state = S2;
-               else if( ch == '.' )
-               {
-                   ++s;
-                   state = S3;
-               }
-               else
-                   flag_syntax_error = 1;
-               break;
+      // State 1: after mantissa sign, before mantissa digits
+      case S1:
+        if(( ch >= '0' )&&( ch <= '9' ))
+          state = S2;
+        else if( ch == '.' )
+        {
+          ++s;
+          state = S3;
+        }
+        else
+          flag_syntax_error = 1;
+        break;
 
-           // State 2: parsing mantissa digits before point
-           case S2:
-               if(( ch >= '0' )&&( ch <= '9' ))
-               {
-                   ++s;
-                   if( n_parsed_digits < ((int)( sizeof(parsed_digits) )) )
-                   {
-                       parsed_digits[n_parsed_digits] = ch - '0';
-                       if(( ch != '0' )||( n_parsed_digits != 0 ))
-                           ++n_parsed_digits;
-                   }
-                   else
-                       ++exponent_offset;
-               }
-               else if( ch == '.' )
-               {
-                   ++s;
-                   state = S3;
-               }
-               else if(( ch == 'e' )||( ch == 'E' ))
-               {
-                   ++s;
-                   state = S5;
-               }
-               else
-                   flag_syntax_error = 1;
-               break;
+      // State 2: parsing mantissa digits before point
+      case S2:
+        if(( ch >= '0' )&&( ch <= '9' ))
+        {
+          ++s;
+          if( n_parsed_digits < ((int)( sizeof(parsed_digits) )) )
+          {
+            parsed_digits[n_parsed_digits] = ch - '0';
+            if(( ch != '0' )||( n_parsed_digits != 0 ))
+              ++n_parsed_digits;
+          }
+          else
+            ++exponent_offset;
+        }
+        else if( ch == '.' )
+        {
+          ++s;
+          state = S3;
+        }
+        else if(( ch == 'e' )||( ch == 'E' ))
+        {
+          ++s;
+          state = S5;
+        }
+        else
+            flag_syntax_error = 1;
+        break;
 
-           // State 3: parsing first mantissa digit just after the point
-           case S3:
-               if(( ch >= '0' )&&( ch <= '9' ))
-                   state = S4;
-               else
-                   flag_syntax_error = 1;
-               break;
+      // State 3: parsing first mantissa digit just after the point
+      case S3:
+        if(( ch >= '0' )&&( ch <= '9' ))
+          state = S4;
+        else
+          flag_syntax_error = 1;
+        break;
 
-           // State 4: parsing mantissa digits after the point
-           case S4:
-               if(( ch >= '0' )&&( ch <= '9' ))
-               {
-                   ++s;
-                   if( n_parsed_digits < ((int)( sizeof(parsed_digits) )) )
-                   {
-                       parsed_digits[n_parsed_digits] = ch - '0';
-                       if(( ch != '0' )||( n_parsed_digits != 0 ))
-                           ++n_parsed_digits;
-                       --exponent_offset;
-                   }
-               }
-               else if(( ch == 'e' )||( ch == 'E' ))
-               {
-                   ++s;
-                   state = S5;
-               }
-               else
-                   flag_syntax_error = 1;
-               break;
+      // State 4: parsing mantissa digits after the point
+      case S4:
+        if(( ch >= '0' )&&( ch <= '9' ))
+        {
+          ++s;
+          if( n_parsed_digits < ((int)( sizeof(parsed_digits) )) )
+          {
+            parsed_digits[n_parsed_digits] = ch - '0';
+            if(( ch != '0' )||( n_parsed_digits != 0 ))
+              ++n_parsed_digits;
+            --exponent_offset;
+          }
+        }
+        else if(( ch == 'e' )||( ch == 'E' ))
+        {
+          ++s;
+          state = S5;
+        }
+        else
+            flag_syntax_error = 1;
+        break;
 
-           // State 5: parsing sign after the exponent
-           case S5:
-               if(( ch >= '0' )&&( ch <= '9' ))
-                   state = S7;
-               else if( ch == '+' )
-               {
-                   ++s;
-                   state = S6;
-               }
-               else if( ch == '-' )
-               {
-                   ++s;
-                   state = S6;
-                   flag_negative_exponent = 1;
-               }
-               else
-                   flag_syntax_error = 1;
-               break;
+      // State 5: parsing sign after the exponent
+      case S5:
+        if(( ch >= '0' )&&( ch <= '9' ))
+          state = S7;
+        else if( ch == '+' )
+        {
+          ++s;
+          state = S6;
+        }
+        else if( ch == '-' )
+        {
+          ++s;
+          state = S6;
+          flag_negative_exponent = 1;
+        }
+        else
+          flag_syntax_error = 1;
+        break;
 
-           // State 6: parsing first digits after exponent sign
-           case S6:
-               if(( ch >= '0' )&&( ch <= '9' ))
-                   state = S7;
-               else
-                   flag_syntax_error = 1;
-               break;
+      // State 6: parsing first digits after exponent sign
+      case S6:
+        if(( ch >= '0' )&&( ch <= '9' ))
+          state = S7;
+        else
+          flag_syntax_error = 1;
+        break;
 
-           // State 7: parsing exponent digits
-           case S7:
-               if(( ch >= '0' )&&( ch <= '9' )) 
-               {
-                   ++s;
-                   if( exponent < 350 )
-                   {
-                       // we aim to avoid overflow/underflow of the exponent 
-                       // by using ( exponent >= 350 ) condition as overflow/underflow flag
-                       exponent = (exponent * 10) + (ch - '0');
-                   }
-               }
-               else
-                   flag_syntax_error = 1;
-               break;
-       }
-   }
-   if((! flag_syntax_error )&&(( state == S0 )||( state == S1 )||( state == S3 )||
-                               ( state == S5 )||( state == S6 )))
-       flag_syntax_error = 1;
-   if( input_end )
-       *input_end = flag_syntax_error ? input : s;
+      // State 7: parsing exponent digits
+      case S7:
+        if(( ch >= '0' )&&( ch <= '9' )) 
+        {
+          ++s;
+          if( exponent < 350 )
+          {
+            // we aim to avoid overflow/underflow of the exponent 
+            // by using ( exponent >= 350 ) condition as overflow/underflow flag
+            exponent = (exponent * 10) + (ch - '0');
+          }
+        }
+        else
+          flag_syntax_error = 1;
+        break;
+    }
+  }
+  if((! flag_syntax_error )&&(( state == S0 )||( state == S1 )||( state == S3 )||
+                             ( state == S5 )||( state == S6 )))
+    flag_syntax_error = 1;
+  if( input_end )
+    *input_end = flag_syntax_error ? input : s;
 
-   // 3. Zero out the tail of mantissa.
-   //    Move decimal point to the right side of mantissa (adjust exponent offset).
-   //    Get rid of last mantissa digit, set first one to zero, and compress BCD representation of mantissa.
-   if( n_parsed_digits < ((int)( sizeof(parsed_digits) )) )
-   {
-       int  delta = sizeof(parsed_digits) - n_parsed_digits;
-       memset( parsed_digits + n_parsed_digits, 0, delta );
-       n_parsed_digits += delta;
-       exponent_offset -= delta;
-   }
-   memmove( parsed_digits + 1, parsed_digits, sizeof(parsed_digits) - 1 ); 
-   parsed_digits[0] = 0;
-   ++exponent_offset;
-   uint64_t  mantissa = bcd_compress( parsed_digits );
+  // 3. Zero out the tail of mantissa.
+  //    Move decimal point to the right side of mantissa (adjust exponent offset).
+  //    Get rid of last mantissa digit, set first one to zero, and compress BCD representation of mantissa.
+  if( n_parsed_digits < ((int)( sizeof(parsed_digits) )) )
+  {
+    int  delta = sizeof(parsed_digits) - n_parsed_digits;
+    memset( parsed_digits + n_parsed_digits, 0, delta );
+    n_parsed_digits += delta;
+    exponent_offset -= delta;
+  }
+  memmove( parsed_digits + 1, parsed_digits, sizeof(parsed_digits) - 1 ); 
+  parsed_digits[0] = 0;
+  ++exponent_offset;
+  uint64_t  mantissa = bcd_compress( parsed_digits );
 
-   // 4. Compute exponent
-   if( mantissa == 0 )
-       exponent = 0;
-   else
-       exponent = ( (exponent < 350) ? exponent_offset : 0 ) +
-                  ( flag_negative_exponent ? -exponent : exponent );
+  // 4. Compute exponent
+  if( mantissa == 0 )
+   exponent = 0;
+  else
+   exponent = ( (exponent < 350) ? exponent_offset : 0 ) +
+              ( flag_negative_exponent ? -exponent : exponent );
 
-   // 5. Check exponent for overflow and underflow
-   if( exponent <= -350 )
-   {
-       pack_ieee754_double(
-           0,                       // input_is_nan
-           flag_negative_mantissa,  // input_sign
-           0,                       // input_binary_mantissa
-           0,                       // input_binary_exponent
-           0,                       // input_is_infinity
-           output
-       );
-       *output_erange = 1;      // strtod(3) would set errno = ERANGE
-       return  1;
-   }
-   else if( exponent >= 350 )
-   {
-       pack_ieee754_double(
-           0,                       // input_is_nan
-           flag_negative_mantissa,  // input_sign
-           0,                       // input_binary_mantissa
-           0,                       // input_binary_exponent
-           1,                       // input_is_infinity
-           output
-       );
-       *output_erange = 1;      // strtod(3) would set errno = ERANGE
-       return  1;
-   }
+  // 5. Check exponent for overflow and underflow
+  if( exponent <= -350 )
+  {
+    pack_ieee754_double(
+        0,                       // input_is_nan
+        flag_negative_mantissa,  // input_sign
+        0,                       // input_binary_mantissa
+        0,                       // input_binary_exponent
+        0,                       // input_is_infinity
+        output
+    );
+    *output_erange = 1;      // strtod(3) would set errno = ERANGE
+    return  1;
+  }
+  else if( exponent >= 350 )
+  {
+    pack_ieee754_double(
+        0,                       // input_is_nan
+        flag_negative_mantissa,  // input_sign
+        0,                       // input_binary_mantissa
+        0,                       // input_binary_exponent
+        1,                       // input_is_infinity
+        output
+    );
+    *output_erange = 1;      // strtod(3) would set errno = ERANGE
+    return  1;
+  }
 
-   // 6. Convert to binary representation, pack bits up and exit
-   if( mantissa != 0 )
-   {
-       if(! convert_extended_decimal_to_binary_and_round( mantissa, exponent, &mantissa, &exponent ) )
-           return  0;           // internal error
-   }
-   *output_erange = (! pack_ieee754_double(
-       0,                       // input_is_nan
-       flag_negative_mantissa,  // input_sign
-       mantissa,                // input_binary_mantissa
-       exponent,                // input_binary_exponent
-       0,                       // input_is_infinity
-       output
-   ) );
-   return  1;
+  // 6. Convert to binary representation, pack bits up and exit
+  if( mantissa != 0 )
+  {
+    if(! convert_extended_decimal_to_binary_and_round( mantissa, exponent, &mantissa, &exponent ) )
+      return  0;           // internal error
+  }
+  *output_erange = (! pack_ieee754_double(
+     0,                       // input_is_nan
+     flag_negative_mantissa,  // input_sign
+     mantissa,                // input_binary_mantissa
+     exponent,                // input_binary_exponent
+     0,                       // input_is_infinity
+     output
+  ) );
+  return  1;
 }
 
