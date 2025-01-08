@@ -872,11 +872,11 @@ __ng_inet_ntop4(char *p, const uint8_t *addr)
 }
 
 #ifdef WIN32
-  #define s6_addr32(a, i) ((uint32_t *)(a))[i]
-  #define s6_addr16(a, i) ((uint16_t *)(a))[i]
+  #define ng_s6_addr32(a, i) ((uint32_t *)(a))[i]
+  #define ng_s6_addr16(a, i) ((uint16_t *)(a))[i]
 #else
-  #define s6_addr32(a, i) (a)->s6_addr32[i]
-  #define s6_addr16(a, i) (a)->s6_addr16[i]
+  #define ng_s6_addr32(a, i) (a)->s6_addr32[i]
+  #define ng_s6_addr16(a, i) (a)->s6_addr16[i]
 #endif
 /*
  * Note that we must __force cast these to unsigned long to make sparse happy,
@@ -889,16 +889,16 @@ ipv6_addr_v4mapped(const struct in6_addr *a)
 #if __NG_BITS_PER_LONG == 64
     *(unsigned long *)a |
 #else
-    (unsigned long)(s6_addr32(a, 0) | s6_addr32(a, 1)) |
+    (unsigned long)(ng_s6_addr32(a, 0) | ng_s6_addr32(a, 1)) |
 #endif
-    (unsigned long)(s6_addr32(a, 2) ^
+    (unsigned long)(ng_s6_addr32(a, 2) ^
           rte_cpu_to_be_32(0x0000ffff))) == 0UL;
 }
 
 static inline int 
 ipv6_addr_is_isatap(const struct in6_addr *a)
 {
-  return (s6_addr32(a, 2) | rte_cpu_to_be_32(0x02000000)) 
+  return (ng_s6_addr32(a, 2) | rte_cpu_to_be_32(0x02000000)) 
     == rte_cpu_to_be_32(0x02005EFE);
 }
 
@@ -930,7 +930,7 @@ ip6_compressed_string(char *p, const uint8_t *addr)
   /* find position of longest 0 run */
   for (i = 0; i < range; i++) {
     for (j = i; j < range; j++) {
-      if (s6_addr16(&in6, j) != 0)
+      if (ng_s6_addr16(&in6, j) != 0)
         break;
       zerolength[i]++;
     }
@@ -959,7 +959,7 @@ ip6_compressed_string(char *p, const uint8_t *addr)
       needcolon = ngrtos_FALSE;
     }
     /* hex uint16_t without leading 0s */
-    word = ng_ntohs(s6_addr16(&in6, i));
+    word = ng_ntohs(ng_s6_addr16(&in6, i));
     hi = word >> 8;
     lo = word & 0xff;
     if (hi) {
@@ -979,15 +979,15 @@ ip6_compressed_string(char *p, const uint8_t *addr)
   if (useIPv4) {
     if (needcolon)
       *p++ = ':';
-    p = __ip4_string(p, (const uint8_t *)&s6_addr16(&in6, 12), "I4");
+    p = __ip4_string(p, (const uint8_t *)&ng_s6_addr16(&in6, 12), "I4");
   }
   *p = '\0';
 
   return p;
 }
 #ifdef WIN32
-#undef s6_addr32
-#undef s6_addr16
+#undef ng_s6_addr32
+#undef ng_s6_addr16
 #endif
 
 static char *
