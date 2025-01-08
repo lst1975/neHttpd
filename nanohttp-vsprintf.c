@@ -1560,32 +1560,66 @@ PRIVATE int __ng_fine_buf(struct DATA *d)
   return d->counter < d->length;
 }
 
-PRIVATE int __ng_fine_always(struct DATA *d)
+PRIVATE int __ng_fine_std(struct DATA *d)
 {
-  return 1;
+  return !d->err;
 }
 
 PRIVATE PUBLIC int
 __ng_std_out(void *arg, const char *string, size_t length)
 {
   struct DATA *data = (struct DATA *)arg;
-  data->counter += fwrite(string, length, 1, (FILE*)data->arg);
+
+  if (data->nbytes + length > data->length)
+  {
+    int n = fwrite(data->holder, data->nbytes, 1, (FILE*)data->arg);
+    if (n < 0)
+    {
+      data->err = n;
+      return -1;
+    }
+      
+    data->counter += n;
+    data->nbytes = 0;
+  }
+  else
+  {
+    ng_memcpy(data->holder+data->nbytes, string, length);
+    data->nbytes += length;
+  }
+
   return 0;
 }
 
 PUBLIC int
 __ng_vfprintf(void *fp, char const *format, va_list args)
 {
+  int counter;
   struct DATA data;
-  data.length  = INT_MAX; /* leave room for '\0' */
-  data.holder  = NULL;
-  data.pf      = format;
+  char buf[2048];
+
+  data.length  = sizeof(buf); 
+  data.holder  = buf;
+  data.nbytes  = 0;
   data.err     = 0;
+  data.pf      = format;
   data.counter = 0;
   data.out     = __ng_std_out;
   data.arg     = fp;
-  data.fine    = __ng_fine_always;
-  return __ng_vsnprintf_internal(&data, args);
+  data.fine    = __ng_fine_std;
+
+  counter = __ng_vsnprintf_internal(&data, args);
+  if (data.nbytes)
+  {
+    int n = fwrite(data.holder, data.nbytes, 1, (FILE*)fp);
+    if (n < 0)
+    {
+      data.err = n;
+      return -1;
+    }
+    counter += n;
+  }
+  return counter;
 }
 
 PUBLIC int
