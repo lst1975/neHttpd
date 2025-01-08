@@ -73,4 +73,3 @@ ng_free_data_buffer(httpd_buf_t *data)
     data->buf = NULL;
   }
 }
-

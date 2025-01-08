@@ -662,7 +662,7 @@ ng_http_get_mime_type(ng_str_s *ext)
   h = &_mime_types_htbl[hash&_MIME_HASH_MASK];
   ng_list_for_each_entry(m,mime_types_s,h,link)
   {
-    if (ng_str_isequal(&m->extension,ext))
+    if (ng_block_isequal_nocase(&m->extension,ext))
       return &m->mime_type;
   }
   

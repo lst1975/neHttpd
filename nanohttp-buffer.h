@@ -63,22 +63,29 @@
 #ifndef __nanohttp_buffer_h
 #define __nanohttp_buffer_h
 
+#include <stdint.h>
 #include <string.h>
+#include "nanohttp-defs.h"
+
+#define __STRUCT_BLOCK_DEF \
+  union{ \
+    void *data; \
+    const char *cptr; \
+    unsigned char *ptr;\
+    char *buf; \
+  }; \
+  uint64_t len:54; \
+  uint64_t n:10
 
 typedef struct {
-  union{
-    void *data;
-    const char *cptr;
-    unsigned char *ptr;
-    char *buf;
-  };
+  __STRUCT_BLOCK_DEF;
+} ng_block_s;
+
+typedef struct {
+  __STRUCT_BLOCK_DEF; // MUST start from the first byte
   char *p;
   size_t size;
-  size_t len;
-  union{
-    int n;
-    size_t nbytes;
-  };
+  size_t nbytes;
 } httpd_buf_t;
 
 typedef httpd_buf_t ng_str_s;
@@ -131,14 +138,24 @@ static inline void BUF_SIZE_INIT(httpd_buf_t *b, char *buf, size_t size)
   b->nbytes = 0;
 }
 
-static inline int BUF_isequal(const httpd_buf_t *b, char *buf, size_t size)
+static inline int ng_block_isequal(const void *blk, void *buf, size_t size)
 {
-  return b->len == size && !memcmp(b->data, buf, size);
+  const ng_block_s *b = (const ng_block_s *)blk;
+  return b->len == size && !ng_memcmp(b->data, buf, size);
 }
 
-static inline int ng_str_isequal(const httpd_buf_t *a, const httpd_buf_t *b)
+static inline int ng_block_isequal_case(const void *blka, const void *blkb)
 {
-  return BUF_isequal(a, b->buf, b->len);
+  const ng_block_s *b = (const ng_block_s *)blkb;
+  return ng_block_isequal(blka, b->buf, b->len);
+}
+
+static inline int ng_block_isequal_nocase(const void *blka, const void *blkb)
+{
+  const ng_block_s *a = (const ng_block_s *)blka;
+  const ng_block_s *b = (const ng_block_s *)blkb;
+  if (a->len != b->len) return -1;
+  return strncasecmp(a->cptr, b->cptr, b->len);
 }
 
 extern void ng_free_data_buffer(httpd_buf_t *data);

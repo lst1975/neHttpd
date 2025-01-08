@@ -544,6 +544,8 @@ int ng_http_date(httpd_buf_t *b);
 int rte_eal_timer_init(void);
 void ng_date_print(void);
 int __ng_http_date(char *buf, int len, int isHttp, const char *tz);
+int raw_ng_http_date(ng_time_t t, char *buf, int len, int isHttp, const char *tz);
+int ng_http_date_s(char *buf, int len);
 
 #ifdef __cplusplus
 }

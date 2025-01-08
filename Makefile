@@ -91,12 +91,14 @@ objects = \
 	nanohttp-ctype.o \
 	nanohttp-atoi.o \
 	nanohttp-itoa.o \
+	nanohttp-dtoa.o \
 	nanohttp-buffer.o \
 	nanohttp-signal.o \
 	nanohttp-utils.o \
 	nanohttp-inet.o \
 	nanohttp-header.o \
 	nanohttp-code.o \
+	nanohttp-vsprintf.o \
 	nanohttp-urlencode.o
 
 depends:= $(objects:.o=.d)
@@ -108,7 +110,7 @@ all: httpd
 
 -include $(depends)
 
-CFLAGS = -Wall -O3 -g3 -I.
+CFLAGS = -Wall -Og -g3 -I.
 LDFLAGS = 
 
 # Check if __CYGWIN__ is defined and set a Makefile variable

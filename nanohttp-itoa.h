@@ -103,8 +103,8 @@ int u64toh_jeaiii(uint64_t num, char *s, int len, int lowerAlpha);
 #define ng_i32toa(i,b,l) i32toa_jeaiii(i,b,l)
 #define ng_u64toa(u,b,l) u32toa_jeaiii(u,b,l)
 #define ng_i64toa(i,b,l) u32toa_jeaiii(i,b,l)
-#define ng_u32toh(num,s,len,L) u32toa_jeaiii(num,s,len,L)
-#define ng_u64toh(num,s,len,L) u64toa_jeaiii(num,s,len,L)
+#define ng_u32toh_generic(num,s,len) u32toa_jeaiii(num,s,len)
+#define ng_u64toh_generic(num,s,len) u64toa_jeaiii(num,s,len)
 
 #ifdef __cplusplus
     }

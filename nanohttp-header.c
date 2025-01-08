@@ -159,18 +159,18 @@ static const struct _nu __rte_aligned(1) http_headers_off[32] = {
    _D(HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, "Access-Control-Allow-Origin"),
 
 #define X(__n,__s) DECL_CONST_STR_N(__n,__s)
-static const ng_str_s __rte_cache_aligned __http_headers_sort[] = {
+static const ng_block_s __rte_cache_aligned __http_headers_sort[] = {
   __HDECL_SORTED(X)
 };
 #undef X
 
 #define X(__n,__s) [__n] = DECL_CONST_STR_N(__n,__s)
-const ng_str_s __rte_cache_aligned ng_http_headers_byid[] = {
+const ng_block_s __rte_cache_aligned ng_http_headers_byid[] = {
   __HDECL_SORTED(X)
 };
 #undef X
 
-const ng_str_s *http_header_find(const char *key, int keyLength)
+const ng_block_s *http_header_find(const char *key, int keyLength)
 {
   struct _nu off;
   if (keyLength > HTTP_HEADER_OFF_MAX)
@@ -178,7 +178,7 @@ const ng_str_s *http_header_find(const char *key, int keyLength)
   
   off = http_headers_off[keyLength];
   for (int i=0; i <off.n; i++) {
-    const ng_str_s *s = &__http_headers_sort[off.i+i];
+    const ng_block_s *s = &__http_headers_sort[off.i+i];
     if (ng_tolower(*s->cptr) == ng_tolower(*key)
       && !strncasecmp(s->cptr, key, keyLength))
     {

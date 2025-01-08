@@ -280,9 +280,9 @@ u32toh_jeaiii(uint32_t num, char *s, int len, int lowerAlpha)
 int 
 u64toh_jeaiii(uint64_t num, char *s, int len, int lowerAlpha)
 {
-  int l = u32toh_jeaiii(num>>32, s,   len, lowerAlpha);
+  int l = u32toh_jeaiii(num>>32, s, len, lowerAlpha);
   if (l < len)
-  return u32toh_jeaiii(num,  s+8, len, lowerAlpha);
-  return 16;
+    return l+u32toh_jeaiii(num, s+l, len-l, lowerAlpha);
+  return l;
 }
 

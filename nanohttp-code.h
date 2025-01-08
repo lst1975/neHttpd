@@ -63,20 +63,19 @@
 #ifndef __nanohttp_code_h
 #define __nanohttp_code_h
 
-#include <stdint.h>
 #include "nanohttp-buffer.h"
 
 #ifdef __cplusplus
-    extern "C" {
+  extern "C" {
 #endif
 
 typedef struct _http_code http_code_s;
 struct _http_code {
-  ng_str_s name;
-  ng_str_s desc;
+  ng_block_s name;
+  ng_block_s desc;
   uint32_t code;
   uint32_t type;
-  ng_str_s code_int_str;
+  ng_block_s code_int_str;
 };
 
 #define HTTP_StatusCodeTYpe_NONE                   0
@@ -86,9 +85,9 @@ struct _http_code {
 #define HTTP_StatusCodeTYpe_ServerErrors           4
 #define HTTP_StatusCodeTYpe_InformationalResponses 5
 
-const ng_str_s *http_int_code2str(unsigned int code);
-const ng_str_s *http_code2name(unsigned int code);
-const ng_str_s *http_int_code2desc(unsigned int code);
+const ng_block_s *http_int_code2str(unsigned int code);
+const ng_block_s *http_code2name(unsigned int code);
+const ng_block_s *http_int_code2desc(unsigned int code);
 
 #ifdef __cplusplus
 }

@@ -82,6 +82,7 @@
 #include "nanohttp-system.h"
 #include "nanohttp-signal.h"
 #include "nanohttp-header.h"
+#include "nanohttp-vsprintf.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const httpd_buf_t *user, 
@@ -112,7 +113,7 @@ default_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   char buf[REQUEST_MAX_PATH_SIZE+256+1];
 
-  if (BUF_isequal(&__TEST_DEV_FILE, req->path, req->path_len))
+  if (ng_block_isequal(&__TEST_DEV_FILE, req->path, req->path_len))
   {
     httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
     http_output_stream_write_string(conn->out,
@@ -123,7 +124,7 @@ default_service(httpd_conn_t *conn, struct hrequest_t *req)
   }
   else
   {
-    snprintf(buf, sizeof buf, "Resource \"%s\" not found", req->path);
+    ng_snprintf(buf, sizeof buf, "Resource \"%s\" not found", req->path);
     httpd_send_not_found(conn, buf);
   }
   return;
@@ -148,7 +149,7 @@ headers_service(httpd_conn_t *conn, struct hrequest_t *req)
 
   for (walker=req->header; walker; walker=walker->next)
   {
-    len = snprintf(buf, 512, "<li>%s: %s</li>", walker->key, walker->value);
+    len = ng_snprintf(buf, 512, "<li>%s: %s</li>", walker->key, walker->value);
     http_output_stream_write(conn->out, (unsigned char *)buf, len);
   }
 
@@ -215,7 +216,7 @@ __multipart_cb_headers_complete(multipartparser *p)
                   log_error("Failed to malloc temporary buffer.");
                   return -1;
                 }
-                snprintf(buf,PATH_MAX,"%s/%.*s","uploads",(int)(e-f), f);
+                ng_snprintf(buf,PATH_MAX,"%s/%.*s","uploads",(int)(e-f), f);
                 file = buf;
               }
             }
@@ -260,7 +261,7 @@ __multipart_cb_header_field(multipartparser *p, const char* data, size_t size)
   if (p->content_disposition_parsed)
     return 0;
 
-  p->field_length+=snprintf(p->field+p->field_length, 
+  p->field_length+=ng_snprintf(p->field+p->field_length, 
     sizeof(p->field)-p->field_length, "%.*s", (int)size, data);
   return 0;
 }
@@ -272,7 +273,7 @@ __multipart_cb_header_value(multipartparser *p, const char* data, size_t size)
   {
     p->content_disposition_parsed = 1;
   }
-  p->value_length+=snprintf(p->value+p->value_length, 
+  p->value_length+=ng_snprintf(p->value+p->value_length, 
     sizeof(p->value)-p->value_length, "%.*s", (int)size, data);
   return 0;
 }
@@ -545,11 +546,11 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
   }
   else
   {
-    if (BUF_isequal(&__ROOT_FILE, req->path, req->path_len))
+    if (ng_block_isequal(&__ROOT_FILE, req->path, req->path_len))
     {
       r = __send_root_html(conn, req);
     }
-    else if (BUF_isequal(&__FAVOR_FILE, req->path, req->path_len))
+    else if (ng_block_isequal(&__FAVOR_FILE, req->path, req->path_len))
     {
       unsigned char *bf=NULL;
       do
@@ -586,14 +587,14 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       if (bf != NULL)
         http_free(bf);
     }
-    else if (!BUF_isequal(&__MIB_FILE, req->path, req->path_len)
-      && !BUF_isequal(&__ADD_FILE, req->path, req->path_len)
-      && !BUF_isequal(&__DEL_FILE, req->path, req->path_len)
-      && !BUF_isequal(&__SAV_FILE, req->path, req->path_len)
+    else if (!ng_block_isequal(&__MIB_FILE, req->path, req->path_len)
+      && !ng_block_isequal(&__ADD_FILE, req->path, req->path_len)
+      && !ng_block_isequal(&__DEL_FILE, req->path, req->path_len)
+      && !ng_block_isequal(&__SAV_FILE, req->path, req->path_len)
 #if !__NHTTP_TEST      
-      && !BUF_isequal(&__DEV_FILE, req->path, req->path_len)
-      && !BUF_isequal(&__USR_FILE, req->path, req->path_len)
-      && !BUF_isequal(&__SYS_FILE, req->path, req->path_len)
+      && !ng_block_isequal(&__DEV_FILE, req->path, req->path_len)
+      && !ng_block_isequal(&__USR_FILE, req->path, req->path_len)
+      && !ng_block_isequal(&__SYS_FILE, req->path, req->path_len)
 #endif      
       )
     {
@@ -650,9 +651,9 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
   herror_t r;
 
 #if __NHTTP_TEST      
-  if (BUF_isequal(&__SYS_FILE, req->path, req->path_len)
-    || BUF_isequal(&__DEV_FILE, req->path, req->path_len)
-    || BUF_isequal(&__USR_FILE, req->path, req->path_len))
+  if (ng_block_isequal(&__SYS_FILE, req->path, req->path_len)
+    || ng_block_isequal(&__DEV_FILE, req->path, req->path_len)
+    || ng_block_isequal(&__USR_FILE, req->path, req->path_len))
   {
     return root_service(conn, req);
   }
@@ -734,7 +735,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       if (req->userLevel > _N_http_user_type_ADMIN)
       {
         // Process set operation
-        n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
+        n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
         goto finished;
       }
 
@@ -743,7 +744,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       if (p != NULL && p->jsonType != JSONObject)
       {
         // Process set operation
-        n = snprintf(buf, sizeof buf, CFG_RET0("Mailformed Request."), id);
+        n = ng_snprintf(buf, sizeof buf, CFG_RET0("Mailformed Request."), id);
         goto finished;
       }
       
@@ -757,7 +758,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           if (req->userLevel != _N_http_user_type_SUPER)
           {
             // Process set operation
-            n = snprintf(buf, sizeof buf, 
+            n = ng_snprintf(buf, sizeof buf, 
                     CFG_RET0("Authorization Failed."), id);
             goto finished;
           }
@@ -772,7 +773,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             if ((usrLen < _N_http_user_NAME_MINLEN
               || usrLen > _N_http_user_NAME_MAXLEN))
             {
-              n = snprintf(buf, sizeof buf, 
+              n = ng_snprintf(buf, sizeof buf, 
                     CFG_RET1("Invalid username length."), 
                     id, 
                     p->keyLength, 
@@ -781,7 +782,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             }
             if (!memcmp(p->key+p->keyLength-2, ".0", 2))
             {
-              n = snprintf(buf, sizeof buf, 
+              n = ng_snprintf(buf, sizeof buf, 
                     CFG_RET1("This user does not exists."), 
                     id, 
                     p->keyLength, 
@@ -806,24 +807,24 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
               switch (err)
               {
                 case _N_http_user_error_NONE:
-                  n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
+                  n = ng_snprintf(buf, sizeof buf, "{\"id\":%d}", id);
                   break;
                 case _N_http_user_error_PERM:
-                  n = snprintf(buf, sizeof buf, 
+                  n = ng_snprintf(buf, sizeof buf, 
                         CFG_RET1("Superuser can not be deleted."), 
                         id, 
                         (int)p->keyLength, 
                         p->key);
                   goto finished;
                 case _N_http_user_error_EXIST:
-                  n = snprintf(buf, sizeof buf, 
+                  n = ng_snprintf(buf, sizeof buf, 
                         CFG_RET1("This user does not exists."), 
                         id, 
                         p->keyLength, 
                         p->key);
                   goto finished;
                 case _N_http_user_error_VNAME:
-                  n = snprintf(buf, sizeof buf, 
+                  n = ng_snprintf(buf, sizeof buf, 
                         CFG_RET1("The length of username is invalid: [%d,%d]."), 
                         id, 
                         p->keyLength, 
@@ -831,7 +832,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
                         _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
                   goto finished;
                 case _N_http_user_error_INVAL:
-                  n = snprintf(buf, sizeof buf, 
+                  n = ng_snprintf(buf, sizeof buf, 
                         CFG_RET1("Invalid account type."), 
                         id, 
                         p->keyLength, 
@@ -839,7 +840,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
                   goto finished;
                 case _N_http_user_error_SYS:
                 default:
-                  n = snprintf(buf, sizeof buf, 
+                  n = ng_snprintf(buf, sizeof buf, 
                         CFG_RET1("System error."), 
                         id, 
                         p->keyLength, 
@@ -850,7 +851,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           }
           else
           {
-            n = snprintf(buf, sizeof buf, 
+            n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("Invalid parameter."), 
                   id, 
                   p->keyLength, 
@@ -861,7 +862,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         else
         {
           // Process set operation
-          n = snprintf(buf, sizeof buf, 
+          n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("For testing received error message from our product."), 
                   id, 
                   p->keyLength, 
@@ -874,11 +875,11 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       if (req->userLevel > _N_http_user_type_ADMIN)
       {
         // Process set operation
-        n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
+        n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
         goto finished;
       }
       // Process save operation
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
+      n = ng_snprintf(buf, sizeof buf, "{\"id\":%d}", id);
     }
     else if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"add.json", req->path))
     {
@@ -901,17 +902,17 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         if (req->userLevel != _N_http_user_type_SUPER)
         {
           // Process set operation
-          n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
+          n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
           goto finished;
         }
 
         if (!usr || !pwd)
         {
           if (usr)
-            n = snprintf(buf, sizeof buf, CFG_RET1("No password."), id, 
+            n = ng_snprintf(buf, sizeof buf, CFG_RET1("No password."), id, 
                   (int)usr->keyLength-1, usr->key);
           else
-            n = snprintf(buf, sizeof buf, CFG_RET0("No username."), id);
+            n = ng_snprintf(buf, sizeof buf, CFG_RET0("No username."), id);
           goto finished;
         }
         err = nanohttp_users_add(
@@ -925,24 +926,24 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         switch (err)
         {
           case _N_http_user_error_NONE:
-            n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
+            n = ng_snprintf(buf, sizeof buf, "{\"id\":%d}", id);
             break;
           case _N_http_user_error_PERM:
-            n = snprintf(buf, sizeof buf, 
+            n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("Superuser can not be deleted."), 
                   id, 
                   (int)usr->keyLength, 
                   usr->key);
             goto finished;
           case _N_http_user_error_EXIST:
-            n = snprintf(buf, sizeof buf, 
+            n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("This user already exists."), 
                   id, 
                   (int)usr->keyLength, 
                   usr->key);
             goto finished;
           case _N_http_user_error_VNAME:
-            n = snprintf(buf, sizeof buf, 
+            n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("The length of username is invalid: [%d,%d]."), 
                   id, 
                   (int)usr->keyLength, 
@@ -951,7 +952,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
                   _N_http_user_NAME_MAXLEN);
             goto finished;
           case _N_http_user_error_VPSWD:
-            n = snprintf(buf, sizeof buf, 
+            n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("The length of username is invalid: [%d,%d]."), 
                   id, 
                   (int)pwd->keyLength, 
@@ -961,7 +962,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             goto finished;
           case _N_http_user_error_SYS:
           default:
-            n = snprintf(buf, sizeof buf, CFG_RET1("System error."), id, 
+            n = ng_snprintf(buf, sizeof buf, CFG_RET1("System error."), id, 
                   (int)usr->keyLength, usr->key);
             goto finished;
         }
@@ -971,11 +972,11 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         if (req->userLevel > _N_http_user_type_ADMIN)
         {
           // Process set operation
-          n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), 
+          n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), 
             id);
           goto finished;
         }
-        n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
+        n = ng_snprintf(buf, sizeof buf, "{\"id\":%d}", id);
       }
     }
     else if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"del.json", req->path))
@@ -995,14 +996,14 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         if (req->userLevel != _N_http_user_type_SUPER)
         {
           // Process set operation
-          n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
+          n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
           goto finished;
         }
 
         colon = memchr(p->value, ':', p->valueLength);
         if (colon == NULL || colon-p->value < ___USER_PFX_LEN + 1)
         {
-          n = snprintf(buf, sizeof buf, 
+          n = ng_snprintf(buf, sizeof buf, 
                 CFG_RET1("This user does not exists."), 
                 id, 
                 (int)p->valueLength, 
@@ -1014,7 +1015,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         if ((usrLen < _N_http_user_NAME_MINLEN
           || usrLen > _N_http_user_NAME_MAXLEN))
         {
-          n = snprintf(buf, sizeof buf, 
+          n = ng_snprintf(buf, sizeof buf, 
                 CFG_RET1("Invalid username length."), 
                 id, 
                 (int)p->valueLength, 
@@ -1026,17 +1027,17 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         switch (err)
         {
           case _N_http_user_error_NONE:
-            n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
+            n = ng_snprintf(buf, sizeof buf, "{\"id\":%d}", id);
             break;
           case _N_http_user_error_EXIST:
-            n = snprintf(buf, sizeof buf, 
+            n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("This user does not exists."), 
                   id, 
                   (int)p->valueLength, 
                   p->value);
             goto finished;
           case _N_http_user_error_VNAME:
-            n = snprintf(buf, sizeof buf, 
+            n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("The length of username is invalid: [%d,%d]."), 
                   id, 
                   (int)p->valueLength, 
@@ -1045,7 +1046,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
                   _N_http_user_NAME_MAXLEN);
             goto finished;
           case _N_http_user_error_PERM:
-            n = snprintf(buf, sizeof buf, 
+            n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("Superuser can not be deleted."), 
                   id, 
                   (int)p->valueLength, 
@@ -1053,7 +1054,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             goto finished;
           case _N_http_user_error_SYS:
           default:
-            n = snprintf(buf, sizeof buf, 
+            n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("System error."), 
                   id, 
                   (int)p->valueLength, 
@@ -1066,10 +1067,10 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         if (req->userLevel > _N_http_user_type_ADMIN)
         {
           // Process set operation
-          n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
+          n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
           goto finished;
         }
-        n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
+        n = ng_snprintf(buf, sizeof buf, "{\"id\":%d}", id);
       }
     }
     else if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"template.json", req->path))
@@ -1085,14 +1086,14 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         if (req->userLevel != _N_http_user_type_SUPER)
         {
           // Process set operation
-          n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
+          n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
           goto finished;
         }
         if (req->path) http_free(req->path);
         req->path = http_strdup_size(__TMP_USR_FILE.buf,__TMP_USR_FILE.len);
         if (req->path == NULL)
         {
-          n = snprintf(buf, sizeof buf, CFG_RET0("Malloc Failed."), id);
+          n = ng_snprintf(buf, sizeof buf, CFG_RET0("Malloc Failed."), id);
           goto finished;
         }
       }
@@ -1101,20 +1102,20 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         if (req->userLevel > _N_http_user_type_ADMIN)
         {
           // Process set operation
-          n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
+          n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
           goto finished;
         }
         if (req->path) http_free(req->path);
         req->path = http_strdup_size(__TMP_INT_FILE.buf,__TMP_INT_FILE.len);
         if (req->path == NULL)
         {
-          n = snprintf(buf, sizeof buf, CFG_RET0("Malloc Failed."), id);
+          n = ng_snprintf(buf, sizeof buf, CFG_RET0("Malloc Failed."), id);
           goto finished;
         }
       }
       else
       {
-        n = snprintf(buf, sizeof buf, CFG_RET0("Bad Request."), id);
+        n = ng_snprintf(buf, sizeof buf, CFG_RET0("Bad Request."), id);
         goto finished;
       }
       
@@ -1128,11 +1129,11 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       if (req->userLevel != _N_http_user_type_SUPER)
       {
         // Process set operation
-        n = snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
+        n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
         goto finished;
       }
       // Generate template.json
-      n = snprintf(buf, sizeof buf, "{\"id\":%d}", id);
+      n = ng_snprintf(buf, sizeof buf, "{\"id\":%d}", id);
     }
 
 finished:  
@@ -1322,6 +1323,10 @@ main(int argc, char **argv)
     log_stderr("Cannot init httpd\n");
     goto error1;
   }
+
+#if __NHTTP_VSNPRINTF_DEBUG
+  snprintf_test();
+#endif
 
 #if __NG_RING_DEBUG
   test_ring();

@@ -74,6 +74,9 @@
 #include <assert.h>
 #include <stdatomic.h>
 
+#define RTE_FORCE_INTRINSICS 1
+#define fallthrough() (void)(0)
+
 #if defined(__GNUC__)
 #define GCC_VERSION (__GNUC__ * 10000 \
                      + __GNUC_MINOR__ * 100 \
@@ -87,8 +90,15 @@ typedef uint64_t ng_time_t;
 #endif
 typedef unsigned long ng_ulong_t;
 
-#define ng_snprintf snprintf
-#define ng_strcmp strcmp
+#include "nanohttp-vsprintf.h"
+
+#define ng_snprintf   __ng_snprintf
+#define ng_vsnprintf  __ng_vsnprintf
+#define ng_fprintf    __ng_fprintf
+#define ng_vfprintf   __ng_vfprintf
+#define ng_strncpy(s1,s2,l) strncpy(s1,s2,l)
+#define ng_strcmp(s1,s2) strcmp(s1,s2)
+#define ng_strlen(s) strlen(s)
 #define ng_memcpy(d,s,l) memcpy(d,s,l)
 #define ng_memcmp(d,s,l) memcmp(d,s,l)
 #define ng_memset(d,s,l) memset(d,s,l)
@@ -340,6 +350,7 @@ typedef int ng_result_t;
 /** Force alignment to cache line. */
 #define __rte_cache_aligned __rte_aligned(RTE_CACHE_LINE_SIZE)
 #define __ng_cache_aligned __rte_cache_aligned
+#define __ng_cache_align_as alignas(RTE_CACHE_LINE_SIZE)
 
 /** Cache line size in terms of log2 */
 #if RTE_CACHE_LINE_SIZE == 64
@@ -402,12 +413,14 @@ typedef int ng_result_t;
   defined(__aarch64__) ||\
   defined(__mips64) ||\
   defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__) ||\
-  defined(__s390x__)
+  defined(__s390x__) || defined(__RISCV64__) || defined(__riscv64__)
 
 #if NG_IS_64BIT_SYS
 #define NG_SIZET_STR_LEN_MAX NG_UINT64_STR_LEN_MAX
+#define __NG_BITS_PER_LONG 64
 #else
 #define NG_SIZET_STR_LEN_MAX NG_UINT32_STR_LEN_MAX
+#define __NG_BITS_PER_LONG 32
 #endif
 
 /* -1.79769313486231570E+308 -4.94065645841246544E-324 1.79769313486231570E+308 */
@@ -526,7 +539,7 @@ rte_constant_bswap64(uint64_t x)
 }
 
 /* ARM architecture is bi-endian (both big and little). */
-#if NG_BYTE_ORDER == NG_LITTLE_ENDIAN
+#if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
 
 #define rte_cpu_to_le_16(x) (x)
 #define rte_cpu_to_le_32(x) (x)
@@ -585,6 +598,36 @@ rte_constant_bswap64(uint64_t x)
 #define ng_htons  rte_cpu_to_be_16
 #define ng_htonl  rte_cpu_to_be_32
 #define ng_htonll rte_cpu_to_be_64
+
+/*
+ * These macros are functionally similar to rte_cpu_to_(be|le)(16|32|64)(),
+ * they take values in host CPU order and return them converted to the
+ * intended endianness.
+ *
+ * They resolve at compilation time to integer constants which can safely be
+ * used with static initializers, since those cannot involve function calls.
+ *
+ * On the other hand, they are not as optimized as their rte_cpu_to_*()
+ * counterparts, therefore applications should refrain from using them on
+ * variable values, particularly inside performance-sensitive code.
+ */
+#if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
+#define RTE_BE16(v) (rte_be16_t)(v)
+#define RTE_BE32(v) (rte_be32_t)(v)
+#define RTE_BE64(v) (rte_be64_t)(v)
+#define RTE_LE16(v) (rte_le16_t)(RTE_STATIC_BSWAP16(v))
+#define RTE_LE32(v) (rte_le32_t)(RTE_STATIC_BSWAP32(v))
+#define RTE_LE64(v) (rte_le64_t)(RTE_STATIC_BSWAP64(v))
+#elif RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
+#define RTE_BE16(v) (rte_be16_t)(RTE_STATIC_BSWAP16(v))
+#define RTE_BE32(v) (rte_be32_t)(RTE_STATIC_BSWAP32(v))
+#define RTE_BE64(v) (rte_be64_t)(RTE_STATIC_BSWAP64(v))
+#define RTE_LE16(v) (rte_le16_t)(v)
+#define RTE_LE32(v) (rte_le32_t)(v)
+#define RTE_LE64(v) (rte_le64_t)(v)
+#else
+#error Unsupported endianness.
+#endif
 
 static __ng_inline__ uint32_t 
 ng_hash_string(const char *s, size_t length) 

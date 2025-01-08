@@ -74,8 +74,8 @@ uint32_t ng_atou32(const char *str, uint8_t len, const char **end);
 
 uint32_t ng_htou32(const char *str, uint8_t len, const char **end);
 uint64_t ng_htou64(const char *str, uint8_t len, const char **end);
-void ng_u64toh(uint64_t v, char *str, uint8_t len);
-void ng_u32toh(uint32_t v, char *str, uint8_t len);
+int ng_u64toh(uint64_t v, char *str, uint8_t len, int is_upper, char seporator);
+int ng_u32toh(uint32_t v, char *str, uint8_t len, int is_upper, char seporator);
 
 void test_perf_atoi(void);
 

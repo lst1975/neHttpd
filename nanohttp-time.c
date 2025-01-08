@@ -67,6 +67,7 @@
 #include "nanohttp-system.h"
 #include "nanohttp-error.h"
 #include "nanohttp-utils.h"
+#include "nanohttp-ctype.h"
 
 /* Pointer to user delay function */
 void (*rte_delay_us)(unsigned int) = NULL;
@@ -709,14 +710,21 @@ rte_delay_us_block(unsigned int us)
 		rte_pause();
 }
 
-static double startime;  
+static uint64_t startime;  
 static uint64_t starcycles;  
 
 uint64_t ng_get_time(void)
 {
-  uint64_t endCycles;
-  endCycles = rte_get_timer_cycles();
-  return startime+round(ng_cycles2sec(ng_difftime(endCycles, starcycles), 0));
+  uint64_t endcycles, elapsed, result;
+  endcycles = rte_get_timer_cycles();
+  elapsed = round(ng_cycles2sec(ng_difftime(endcycles, starcycles), 0));
+  result = startime+elapsed;
+  if (endcycles <= starcycles)
+  {
+    startime   = result;
+    starcycles = endcycles;
+  }
+  return result;
 }
 
 void ng_update_time(void)
@@ -724,7 +732,7 @@ void ng_update_time(void)
   ng_tmv_s tv;
   ng_gettimeofday(&tv);
   starcycles = rte_get_timer_cycles();
-  startime   = tv.tv_sec+tv.tv_usec/1000000.0;
+  startime   = tv.tv_sec+tv.tv_usec/1000000;
 }
 
 #define __ng_YEARS_N  251
@@ -1032,7 +1040,171 @@ static const char *min_sec_hour_day_name[] =
     " 54 "," 55 "," 56 "," 57 "," 58 "," 59 "," 60 "
   };
 
-int __ng_http_date(char *buf, int len, int isHttp, 
+/* "Date: %a, %d %b %Y %H:%M:%S GMT\r\n" 
+ *  Date: Wed, 08 Jan 2025 05:42:00 GMT
+ */
+int ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
+{
+  const char *p = buf;
+  
+  if (len != 29)
+    return -1;
+  
+  if (p[3] != ',' || p[4] != ' ' || *(uint32_t *)&p[25] != *(const uint32_t *)" GMT")
+    return -1;
+
+  switch (p[0])
+  {
+    case 'S':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"un")
+        tm->tm_wday = 0;
+      else if (*(uint16_t*)&p[1] == *(const uint16_t*)"at")
+        tm->tm_wday = 6;
+      else
+        return -1;
+      break;
+    case 'T':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ue")
+        tm->tm_wday = 2;
+      else if (*(uint16_t*)&p[1] == *(const uint16_t*)"hu")
+        tm->tm_wday = 4;
+      else
+        return -1;
+      break;
+    case 'M':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"on")
+        tm->tm_wday = 1;
+      else if (*(uint16_t*)&p[1] == *(const uint16_t*)"ay")
+        tm->tm_wday = 4;
+      else
+        return -1;
+      break;
+    case 'W':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ed")
+        tm->tm_wday = 3;
+      else
+        return -1;
+      break;
+    case 'F':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ed")
+        tm->tm_wday = 5;
+      else
+        return -1;
+      break;
+    default:
+      return -1;
+  }
+  
+  p += 5;
+  if (p[2] != ' ' || !__ng_isdigit(p[0]) || !__ng_isdigit(p[1]))
+    return -1;
+
+  tm->tm_mday = __ng_hex2int(p[0])*10 +  __ng_hex2int(p[1]);
+  if (tm->tm_mday > 31)
+    return -1;
+
+  p += 3;
+  if (__ng_islower(p[0]) || p[3] != ' ')
+    return -1;
+
+  switch (p[0])
+  {
+    case 'J':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"an")
+        tm->tm_mon = 0;
+      else if (*(uint16_t*)&p[1] == *(const uint16_t*)"un")
+        tm->tm_mon = 5;
+      else if (*(uint16_t*)&p[1] == *(const uint16_t*)"ul")
+        tm->tm_mon = 6;
+      else
+        return -1;
+      break;
+    case 'F':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"eb")
+        tm->tm_mon = 1;
+      else
+        return -1;
+      break;
+    case 'M':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ar")
+        tm->tm_mon = 2;
+      else
+        return -1;
+      break;
+    case 'A':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"pr")
+        tm->tm_mon = 3;
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ug")
+        tm->tm_mon = 7;
+      else
+        return -1;
+      break;
+    case 'S':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ep")
+        tm->tm_mon = 8;
+      else
+        return -1;
+      break;
+    case 'O':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ct")
+        tm->tm_mon = 9;
+      else
+        return -1;
+      break;
+    case 'N':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ov")
+        tm->tm_mon = 10;
+      else
+        return -1;
+      break;
+    case 'D':
+      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ec")
+        tm->tm_mon = 11;
+      else
+        return -1;
+      break;
+    default:
+      return -1;
+  }
+  
+  if (tm->tm_mday > __ng_mon_DAYS[tm->tm_mon])
+    return -1;
+
+  p += 3;
+  if (p[4] != ' ' || !__ng_isdigit(p[0]) || !__ng_isdigit(p[1]) 
+    || !__ng_isdigit(p[2]) || !__ng_isdigit(p[3]))
+    return -1;
+
+  tm->tm_year =  __ng_hex2int(p[0])*1000 
+     + __ng_hex2int(p[1])*100
+     + __ng_hex2int(p[2])*10
+     + __ng_hex2int(p[3]);
+  if (tm->tm_year - 1900 > __ng_YEARS_N)
+    return -1;
+  tm->tm_year -= 1900;
+
+  p += 5;
+  if (!__ng_isdigit(p[0]) || !__ng_isdigit(p[1]) || p[2] != ':' 
+    || !__ng_isdigit(p[3]) || !__ng_isdigit(p[4]) || p[5] != ':'
+    || !__ng_isdigit(p[6]) || !__ng_isdigit(p[7]))
+    return -1;
+
+  tm->tm_hour = __ng_hex2int(p[0])*10 +  __ng_hex2int(p[1]);
+  if (tm->tm_hour > 23)
+    return -1;
+
+  tm->tm_min = __ng_hex2int(p[3])*10 +  __ng_hex2int(p[4]);
+  if (tm->tm_min > 59)
+    return -1;
+
+  tm->tm_sec = __ng_hex2int(p[6])*10 +  __ng_hex2int(p[7]);
+  if (tm->tm_sec > 60)
+    return -1;
+
+  return 0;
+}
+
+int raw_ng_http_date(ng_time_t t, char *buf, int len, int isHttp, 
   const char *tz)
 {
   char *p;
@@ -1054,7 +1226,10 @@ int __ng_http_date(char *buf, int len, int isHttp,
   }
 
   p = buf;
-  tv.tv_sec = ng_get_time();
+  if (t)
+    tv.tv_sec = t;
+  else
+    tv.tv_sec = ng_get_time();
   tv.tv_usec = 0;
   if (ng_unix2tm_time(&tm, &tv, tz_offset) != ng_ERR_NONE)
     return -1;
@@ -1081,7 +1256,8 @@ int __ng_http_date(char *buf, int len, int isHttp,
   p += 3;
   *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm.tm_sec]+1);
   p += 2;
-  if (tz == NULL) tz = " GMT";
+  if (tz == NULL) 
+    tz = ng_os_info.tz;
   *(uint32_t*)p = *(const uint32_t*)tz;
   p += 4;
   if (isHttp)
@@ -1092,9 +1268,20 @@ int __ng_http_date(char *buf, int len, int isHttp,
   return p - buf;
 }
 
+int __ng_http_date(char *buf, int len, int isHttp, 
+  const char *tz)
+{
+  return raw_ng_http_date(0, buf, len, isHttp, tz);
+}
+
 int ng_http_date(httpd_buf_t *b)
 {
-  return __ng_http_date(b->buf, b->len, 1, NULL);
+  return __ng_http_date(b->buf, b->len, 1, " GMT");
+}
+
+int ng_http_date_s(char *buf, int len)
+{
+  return __ng_http_date(buf, len, 1, " GMT");
 }
 
 void ng_date_print(void)
@@ -1102,7 +1289,7 @@ void ng_date_print(void)
   char date[HTTPD_DATE_STRLEN_MIN];
   httpd_buf_t b;
   BUF_SET(&b, date, sizeof(date));
-  __ng_http_date(b.buf, b.len, 0, ng_os_info.tz);
+  __ng_http_date(b.buf, b.len, 0, NULL);
   log_print("\nSystem is already running %"PRIu64" seconds\n", 
     ng_get_time() - (uint64_t)startime);
   log_print("Date   : %.*s\n\n", (int)b.len, b.cptr);

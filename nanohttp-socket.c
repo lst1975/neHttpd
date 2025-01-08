@@ -555,10 +555,7 @@ hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
   }
 #endif
 
-  char buf[NG_INET6_ADDRSTRLEN];
-  int n = ng_inet_ntop_su(&dest->addr, buf, sizeof(buf));
-  log_verbose("accepting connection from '%.*s' socket=%d", n, buf, dest->sock);
-
+  log_verbose("accepting connection from '%pISc' socket=%d", &dest->addr, dest->sock);
   return H_OK;
 }
 

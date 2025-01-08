@@ -2333,7 +2333,7 @@ json_printer_buffer(httpd_buf_t *b, const char *fmt, ...)
   va_list args;
 
   va_start(args, fmt);
-  n = vsnprintf(b->p, b->len, fmt, args);
+  n = ng_vsnprintf(b->p, b->len, fmt, args);
   va_end(args);
   b->p += n, b->len -= n;
   return n;
@@ -2429,11 +2429,11 @@ static int __json_cal_length(JSONPair_t *pair, int depth, const char *pad)
       case JSONNumber:
         if (pair->isDouble)
         {
-          n += snprintf(temp, sizeof temp, "%lf", pair->vdouble);
+          n += ng_snprintf(temp, sizeof temp, "%lf", pair->vdouble);
         }
         else
         {
-          n += snprintf(temp, sizeof temp, "%lld",pair->vint);
+          n += ng_snprintf(temp, sizeof temp, "%lld",pair->vint);
         }
         break;
       case JSONTrue:

@@ -990,9 +990,9 @@ enum __http_header {
 
 #define TRANSFER_ENCODING_CHUNKED	"chunked"
 
-const ng_str_s *http_header_find(const char *key, int keyLength);
+const ng_block_s *http_header_find(const char *key, int keyLength);
 
-extern const ng_str_s ng_http_headers_byid[];
+extern const ng_block_s ng_http_headers_byid[];
 
 #define __HDR_BUF__(x) ng_http_headers_byid[HTTP ## _ ## x]
 #define __HDR_BUF(x) __HDR_BUF__(x).cptr, __HDR_BUF__(x).len

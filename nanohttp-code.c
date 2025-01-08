@@ -509,19 +509,19 @@ static const http_code_s *__http_find_bycode(unsigned int code)
   return c;
 }
 
-const ng_str_s *http_int_code2str(unsigned int code)
+const ng_block_s *http_int_code2str(unsigned int code)
 {
   const http_code_s *c = __http_find_bycode(code);
   return c==NULL ? NULL : &c->code_int_str;
 }
 
-const ng_str_s *http_int_code2name(unsigned int code)
+const ng_block_s *http_int_code2name(unsigned int code)
 {
   const http_code_s *c = __http_find_bycode(code);
   return c==NULL ? NULL : &c->name;
 }
 
-const ng_str_s *http_int_code2desc(unsigned int code)
+const ng_block_s *http_int_code2desc(unsigned int code)
 {
   const http_code_s *c = __http_find_bycode(code);
   return c==NULL ? NULL : &c->desc;

@@ -207,7 +207,7 @@ _vnanohttp_log_printf(nanohttp_loglevel_t level,
   if (_nanohttp_logtype & NANOHTTP_LOG_FOREGROUND)
   {
     log_enter_mutex();
-    vfprintf(level==NANOHTTP_LOG_STDERR ?stderr:stdout, format, ap);
+    ng_vfprintf(level==NANOHTTP_LOG_STDERR ?stderr:stdout, format, ap);
     log_leave_mutex();
   }
 #ifdef HAVE_SYSLOG_H
@@ -254,7 +254,7 @@ _vnanohttp_log_printf(nanohttp_loglevel_t level,
     if (fp)
     {
       log_enter_mutex();
-      vfprintf(fp, format, ap);
+      ng_vfprintf(fp, format, ap);
       log_leave_mutex();
       fflush(fp);
       fclose(fp);

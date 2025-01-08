@@ -90,8 +90,7 @@ static const uint64_t __ng_cache_aligned __offsets[32] = {
 
 #define _(i,j) (j##u)*((uint32_t)(1e##i))
 #define __(i) { _(i,0),_(i,1),_(i,2),_(i,3),_(i,4),_(i,5),_(i,6),_(i,7),_(i,8),_(i,9) }
-static uint32_t uint32_offsets[11][10] __ng_cache_aligned =
-{
+static uint32_t __ng_cache_aligned uint32_offsets[11][10] = {
   {0,0,0,0,0,0,0,0,0,0},
   __(0),__(1),__(2),__(3),__(4),__(5),__(6),__(7),__(8),__(9)
 };
@@ -101,8 +100,7 @@ static uint32_t uint32_offsets[11][10] __ng_cache_aligned =
 
 #define _(i,j) (j##ull)*((uint64_t)(1e##i))
 #define __(i) { _(i,0),_(i,1),_(i,2),_(i,3),_(i,4),_(i,5),_(i,6),_(i,7),_(i,8),_(i,9) }
-static uint64_t uint64_offsets[21][10]  =
-{
+static uint64_t uint64_offsets[21][10] = {
   {0,0,0,0,0,0,0,0,0,0},
   __( 0),__( 1),__( 2),__( 3),__( 4),__( 5),__( 6),__( 7),__( 8),__( 9),
   __(10),__(11),__(12),__(13),__(14),__(15),__(16),__(17),__(18),__(19)
@@ -121,7 +119,8 @@ uint64_t ng_atou64(const char *str, uint8_t len, const char **end)
 
   if (len > NG_UINT64_STR_LEN_MAX)
   {
-    *end = str;
+    if (end)
+      *end = str;
     return value;
   } 
 
@@ -130,13 +129,15 @@ uint64_t ng_atou64(const char *str, uint8_t len, const char **end)
     c = str[len-n];
     if (!__ng_isdigit(c))
     {
-      *end = str + len - n;
+      if (end)
+        *end = str + len - n;
       return value;
     }
     value += uint64_offsets[n][c-'0'];
   }
 
-  *end = str + len;
+  if (end)
+    *end = str + len;
   return value;
 }
 
@@ -153,13 +154,15 @@ uint32_t ng_atou32(const char *str, uint8_t len, const char **end)
     c = str[len-n];
     if (!__ng_isdigit(c))
     {
-      *end = str + len - n;
+      if (end)
+        *end = str + len - n;
       return value;
     }
     value += uint32_offsets[n][c-'0'];
   }
 
-  *end = str + len;
+  if (end)
+    *end = str + len;
   return value;
 }
 
@@ -175,7 +178,8 @@ uint64_t ng_atou64(const char *str, uint8_t len, const char **end)
 
   if (len > NG_UINT64_STR_LEN_MAX)
   {
-    *end = str;
+    if (end)
+      *end = str;
     return value;
   } 
 
@@ -183,7 +187,8 @@ uint64_t ng_atou64(const char *str, uint8_t len, const char **end)
   c = str[len-n]; \
   if (!__ng_isdigit(c)) \
   { \
-    *end = str + len - n; \
+    if (end) \
+      *end = str + len - n; \
     return value; \
   } \
   uint64_offsets[n][c-'0']; \
@@ -213,8 +218,9 @@ uint64_t ng_atou64(const char *str, uint8_t len, const char **end)
       default:    break;
   }
 #undef _VA
-  
-  *end = str + len;
+
+  if (end)
+    *end = str + len;
   return value;
 }
 
@@ -228,7 +234,8 @@ uint32_t ng_atou32(const char *str, uint8_t len, const char **end)
 
   if (len > NG_UINT32_STR_LEN_MAX)
   {
-    *end = str;
+    if (end)
+      *end = str;
     return value;
   } 
   
@@ -236,7 +243,8 @@ uint32_t ng_atou32(const char *str, uint8_t len, const char **end)
   c = str[len-n]; \
   if (!__ng_isdigit(c)) \
   { \
-    *end = str + len - n; \
+    if (end) \
+      *end = str + len - n; \
     return value; \
   } \
   uint32_offsets[n][c-'0']; \
@@ -254,7 +262,8 @@ uint32_t ng_atou32(const char *str, uint8_t len, const char **end)
     case  1:    value += _VA( 1);// FALL THROUGH
     default:    break;
   }
-  *end = str + len;
+  if (end)
+    *end = str + len;
   return value - (uint32_t)(__offsets[len]);
 #undef _VA
 }
@@ -269,13 +278,15 @@ uint64_t ng_atou64_s(const char *s, const char **end)
   {
     if (!__ng_isdigit(s[pos]) || pos > NG_UINT64_STR_LEN_MAX)
     {
-      *end = s + pos;
+      if (end)
+        *end = s + pos;
       return ret-__offsets[pos];
     }
     ret = ret*10 + s[pos++];
   }
 
-  *end = s + pos;
+  if (end)
+    *end = s + pos;
   return ret-__offsets[pos];
 }
 
@@ -289,13 +300,15 @@ uint32_t ng_atou32_s(const char *s, const char **end)
   {
     if (!__ng_isdigit(s[pos]) || pos > NG_UINT32_STR_LEN_MAX)
     {
-      *end = s + pos;
+      if (end)
+        *end = s + pos;
       return ret-__offsets[pos];
     }
     ret = ret*10 + s[pos++];
   }
 
-  *end = s + pos;
+  if (end)
+    *end = s + pos;
   return ret-(uint32_t)(__offsets[pos]);
 }
 
@@ -309,8 +322,8 @@ static uint64_t __ng_cache_aligned uint64_offsets_hex[17][16] =
   __( 0),__( 1),__( 2),__( 3),__( 4),__( 5),__( 6),__( 7),
   __( 8),__( 9),__(10),__(11),__(12),__(13),__(14),__(15)
 };
-#undef _
 #undef __
+#undef _
 
 uint64_t ng_htou64(const char *str, uint8_t len, const char **end)
 {
@@ -318,7 +331,8 @@ uint64_t ng_htou64(const char *str, uint8_t len, const char **end)
   
   if (len > 16)
   {
-    *end = str;
+    if (end)
+      *end = str;
     return 0;
   }
   
@@ -327,18 +341,20 @@ uint64_t ng_htou64(const char *str, uint8_t len, const char **end)
     int c = __ng_hex2int(str[len-n]);
     if (c == 0xFF)
     {
-      *end = &str[len-n];
+      if (end)
+        *end = &str[len-n];
       return value;
     }
     value += uint64_offsets_hex[n][c];
   }
 
-  *end = str+len;
+  if (end)
+    *end = str+len;
   return value;
 }
 
 #define _(h) (h)
-static const char *int_to_hex[256] = {
+static const char *int_to_hex_upper[256] = {
   _("00"),_("01"),_("02"),_("03"),_("04"),_("05"),_("06"),_("07"),
   _("08"),_("09"),_("0A"),_("0B"),_("0C"),_("0D"),_("0E"),_("0F"),
   _("10"),_("11"),_("12"),_("13"),_("14"),_("15"),_("16"),_("17"),
@@ -373,12 +389,51 @@ static const char *int_to_hex[256] = {
   _("F8"),_("F9"),_("FA"),_("FB"),_("FC"),_("FD"),_("FE"),_("FF")
 };
 #undef _
+#define _(h) (h)
+static const char *int_to_hex_lower[256] = {
+  _("00"),_("01"),_("02"),_("03"),_("04"),_("05"),_("06"),_("07"),
+  _("08"),_("09"),_("0a"),_("0b"),_("0c"),_("0d"),_("0e"),_("0f"),
+  _("10"),_("11"),_("12"),_("13"),_("14"),_("15"),_("16"),_("17"),
+  _("18"),_("19"),_("1a"),_("1b"),_("1c"),_("1d"),_("1e"),_("1f"),
+  _("20"),_("21"),_("22"),_("23"),_("24"),_("25"),_("26"),_("27"),
+  _("28"),_("29"),_("2a"),_("2b"),_("2c"),_("2d"),_("2e"),_("2f"),
+  _("30"),_("31"),_("32"),_("33"),_("34"),_("35"),_("36"),_("37"),
+  _("38"),_("39"),_("3a"),_("3b"),_("3c"),_("3d"),_("3e"),_("3f"),
+  _("40"),_("41"),_("42"),_("43"),_("44"),_("45"),_("46"),_("47"),
+  _("48"),_("49"),_("4a"),_("4b"),_("4c"),_("4d"),_("4e"),_("4f"),
+  _("50"),_("51"),_("52"),_("53"),_("54"),_("55"),_("56"),_("57"),
+  _("58"),_("59"),_("5a"),_("5b"),_("5c"),_("5d"),_("5e"),_("5f"),
+  _("60"),_("61"),_("62"),_("63"),_("64"),_("65"),_("66"),_("67"),
+  _("68"),_("69"),_("6a"),_("6b"),_("6c"),_("6d"),_("6e"),_("6f"),
+  _("70"),_("71"),_("72"),_("73"),_("74"),_("75"),_("76"),_("77"),
+  _("78"),_("79"),_("7a"),_("7b"),_("7c"),_("7d"),_("7e"),_("7f"),
+  _("80"),_("81"),_("82"),_("83"),_("84"),_("85"),_("86"),_("87"),
+  _("88"),_("89"),_("8a"),_("8b"),_("8c"),_("8d"),_("8e"),_("8f"),
+  _("90"),_("91"),_("92"),_("93"),_("94"),_("95"),_("96"),_("97"),
+  _("98"),_("99"),_("9a"),_("9b"),_("9c"),_("9d"),_("9e"),_("9f"),
+  _("a0"),_("a1"),_("a2"),_("a3"),_("a4"),_("a5"),_("a6"),_("a7"),
+  _("a8"),_("a9"),_("aa"),_("ab"),_("ac"),_("ad"),_("ae"),_("af"),
+  _("b0"),_("b1"),_("b2"),_("b3"),_("b4"),_("b5"),_("b6"),_("b7"),
+  _("b8"),_("b9"),_("ba"),_("bb"),_("bc"),_("bd"),_("be"),_("bf"),
+  _("c0"),_("c1"),_("c2"),_("c3"),_("c4"),_("c5"),_("c6"),_("c7"),
+  _("c8"),_("c9"),_("ca"),_("cb"),_("cc"),_("cd"),_("ce"),_("cf"),
+  _("d0"),_("d1"),_("d2"),_("d3"),_("d4"),_("d5"),_("d6"),_("d7"),
+  _("d8"),_("d9"),_("da"),_("db"),_("dc"),_("dd"),_("de"),_("df"),
+  _("e0"),_("e1"),_("e2"),_("e3"),_("e4"),_("e5"),_("e6"),_("e7"),
+  _("e8"),_("e9"),_("ea"),_("eb"),_("ec"),_("ed"),_("ee"),_("ef"),
+  _("f0"),_("f1"),_("f2"),_("f3"),_("f4"),_("f5"),_("f6"),_("f7"),
+  _("f8"),_("f9"),_("fa"),_("fb"),_("fc"),_("fd"),_("fe"),_("ff")
+};
+#undef _
 
-void ng_u64toh(uint64_t v, char *str, uint8_t len)
+int ng_u64toh(uint64_t v, char *str, uint8_t len, int is_upper, char seporator)
 {
-  NG_ASSERT(len >= 16);
+  NG_ASSERT((!seporator && len >= 16) || (seporator && len >= 23));
+
+  int start = 0;
   uint8_t  *p, *e;
   uint16_t *o;
+  const char **int_to_hex = is_upper ? int_to_hex_upper : int_to_hex_lower;
   
   v = ng_htonll(v);
   p = (uint8_t  *)&v;
@@ -386,15 +441,29 @@ void ng_u64toh(uint64_t v, char *str, uint8_t len)
   o = (uint16_t *)str;
   while (p < e)
   {
-    *o++ = *(const uint16_t *)int_to_hex[*p++];
+    uint8_t c = *p++;
+    if (!c && !start)
+      continue;
+    start = 1;
+    *o++ = *(const uint16_t *)int_to_hex[c];
+    if (seporator)
+    {
+      *(char *)o = seporator;
+      o = (uint16_t *)((char *)o+1);
+    }
   }
+
+  return ((char *)o) - str;
 }
 
-void ng_u32toh(uint32_t v, char *str, uint8_t len)
+int ng_u32toh(uint32_t v, char *str, uint8_t len, int is_upper, char seporator)
 {
-  NG_ASSERT(len >= 8);
+  NG_ASSERT((!seporator && len >= 8) || (seporator && len >= 11));
+
+  int start = 0;
   uint8_t  *p, *e;
   uint16_t *o;
+  const char **int_to_hex = is_upper ? int_to_hex_upper : int_to_hex_lower;
   
   v = ng_htonl(v);
   p = (uint8_t  *)&v;
@@ -402,8 +471,19 @@ void ng_u32toh(uint32_t v, char *str, uint8_t len)
   o = (uint16_t *)str;
   while (p < e)
   {
-    *o++ = *(const uint16_t *)int_to_hex[*p++];
+    uint8_t c = *p++;
+    if (!c && !start)
+      continue;
+    start = 1;
+    *o++ = *(const uint16_t *)int_to_hex[c];
+    if (seporator)
+    {
+      *(char *)o = seporator;
+      o = (uint16_t *)((char *)o+1);
+    }
   }
+
+  return ((char *)o) - str;
 }
 
 

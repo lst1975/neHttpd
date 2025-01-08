@@ -635,7 +635,7 @@ http_output_stream_write(struct http_output_stream_t * stream,
 
   if (stream->type == HTTP_TRANSFER_CHUNKED)
   {
-    snprintf(chunked, sizeof(chunked)-1, "%lx\r\n", size);
+    ng_snprintf(chunked, sizeof(chunked)-1, "%lx\r\n", size);
     if ((status = hsocket_send_string(stream->sock, chunked)) != H_OK)
       return status;
   }
@@ -680,7 +680,7 @@ http_output_stream_write_printf(struct http_output_stream_t *stream,
   va_list ap;
 
   va_start(ap, format);
-  n = vsnprintf(buf, sizeof buf, format, ap);
+  n = ng_vsnprintf(buf, sizeof buf, format, ap);
   status = http_output_stream_write(stream, (const unsigned char *)buf, n);
   va_end(ap);
   return status;

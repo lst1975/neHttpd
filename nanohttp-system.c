@@ -161,7 +161,7 @@ const char *__os_strerror(int err)
   }
 
   if (len == 0) {
-    snprintf(errstr, size, "FormatMessage() error:(%d)", GetLastError());
+    ng_snprintf(errstr, size, "FormatMessage() error:(%d)", GetLastError());
     return errstr;
   }
 

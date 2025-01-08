@@ -939,7 +939,7 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
   BUF_SIZE_INIT(&b, header, __BUF_SZ);
   
   /* set status code */
-  n = snprintf(__BUF, "HTTP/1.1 %d %s\r\n", code, text);
+  n = ng_snprintf(__BUF, "HTTP/1.1 %d %s\r\n", code, text);
   BUF_GO(&b, n);
 
 #if 0  
@@ -951,7 +951,7 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
   BUF_GO(&b, n);
 #else
   /* set date */
-  n = __ng_http_date(__BUF, 1, NULL);
+  n = ng_http_date_s(__BUF);
   if (n < 0)
   {
     log_warn("Tempary buffer size is too small: %d", __BUF_SZ);
@@ -971,7 +971,7 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
    */
 
   /* set server name */
-  n = snprintf(__BUF, "%s", "Server: nanoHTTP library\r\n");
+  n = ng_snprintf(__BUF, "%s", "Server: nanoHTTP library\r\n");
   BUF_GO(&b, n);
 
   /* set _httpd_connection status */
@@ -1067,8 +1067,8 @@ _httpd_send_html_message(httpd_conn_t *conn, int reason,
     goto clean0;
   }
   
-  len = snprintf(buf, __BUF_SZ, tmpl, phrase, phrase, msg);
-  n = snprintf(slen, 5, "%lu", len);
+  len = ng_snprintf(buf, __BUF_SZ, tmpl, phrase, phrase, msg);
+  n = ng_snprintf(slen, 5, "%lu", len);
   if (httpd_set_header(conn, __HDR_BUF(HEADER_CONTENT_LENGTH), slen, n))
   {
     r = herror_new("_httpd_send_html_message", GENERAL_ERROR,
@@ -1143,7 +1143,7 @@ httpd_send_unauthorized(httpd_conn_t *conn, const char *realm)
     int n;
     char buf[128];
     
-    n = snprintf(buf, 128, "Basic realm=\"%s\"", realm);
+    n = ng_snprintf(buf, 128, "Basic realm=\"%s\"", realm);
     if (httpd_set_header(conn, __HDR_BUF(HEADER_WWW_AUTHENTICATE), buf, n) < 0)
     {
       r = herror_new("httpd_send_unauthorized", GENERAL_ERROR,
@@ -1455,7 +1455,7 @@ httpd_session_main(void *data)
             }
             else
             {
-              snprintf(buffer, sizeof(buffer), 
+              ng_snprintf(buffer, sizeof(buffer), 
                 "service '%.*s' is not registered properly (service function is NULL)", 
                 req->path_len, req->path);
               log_warn("%s", buffer);
@@ -1470,7 +1470,7 @@ httpd_session_main(void *data)
         }
         else
         {
-          snprintf(buffer, sizeof(buffer), "service for '%.*s' is disabled", 
+          ng_snprintf(buffer, sizeof(buffer), "service for '%.*s' is disabled", 
             req->path_len, req->path);
           log_warn("%s", buffer);
           httpd_send_internal_error(rconn, buffer);
@@ -1478,7 +1478,7 @@ httpd_session_main(void *data)
       }
       else
       {
-        snprintf(buffer, sizeof(buffer), "no service for '%.*s' found", 
+        ng_snprintf(buffer, sizeof(buffer), "no service for '%.*s' found", 
           req->path_len, req->path);
         log_warn("%s", buffer);
       	httpd_send_not_implemented(rconn, buffer);
@@ -2489,7 +2489,7 @@ _httpd_mime_get_boundary(httpd_conn_t *conn, char *dest, int len)
   if (len < 29)
     return -1;
   memcpy(dest, "---=.Part_NH_", 13);
-  ng_u64toh((uintptr_t)conn, dest+13, len-13);
+  ng_u64toh((uintptr_t)conn, dest+13, len-13, 1, 0);
   log_verbose("boundary= \"%.*s\"", 29, dest);
   return 29;
 }
@@ -2520,26 +2520,26 @@ httpd_mime_send_header(httpd_conn_t * conn, const char *related_start,
   BUF_SIZE_INIT(&b, buffer, 1024);
   
   /* Set Content-type Set multipart/related parameter type=..; start=.. ;
-     start-info= ..; boundary=... using sprintf instead of snprintf because 
-     visual c does not support snprintf */
+     start-info= ..; boundary=... using sprintf instead of ng_snprintf because 
+     visual c does not support ng_snprintf */
   memcpy(buffer, "multipart/related;", 18);
   BUF_GO(&b, 18);
 
   if (related_type)
   {
-    n = snprintf(__BUF, " type=\"%s\";", related_type);
+    n = ng_snprintf(__BUF, " type=\"%s\";", related_type);
     BUF_GO(&b, n);
   }
 
   if (related_start)
   {
-    n = snprintf(__BUF, " start=\"%s\";", related_start);
+    n = ng_snprintf(__BUF, " start=\"%s\";", related_start);
     BUF_GO(&b, n);
   }
 
   if (related_start_info)
   {
-    n = snprintf(__BUF, " start-info=\"%s\";", related_start_info);
+    n = ng_snprintf(__BUF, " start-info=\"%s\";", related_start_info);
     BUF_GO(&b, n);
   }
 
@@ -2631,7 +2631,7 @@ httpd_mime_next(httpd_conn_t * conn, const char *content_id,
   }
 
   /* Send Content header */
-  len = snprintf(buffer,__BUF_SZ, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
+  len = ng_snprintf(buffer,__BUF_SZ, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
             __HDR_BUF_PTR(HEADER_CONTENT_TYPE), content_type ? content_type : "text/plain",
             __HDR_BUF_PTR(HEADER_CONTENT_TRANSFER_ENCODING),
             transfer_encoding ? transfer_encoding : "binary",

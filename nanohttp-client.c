@@ -402,7 +402,7 @@ static void
 httpc_header_set_date(httpc_conn_t * conn)
 {
   char buffer[32];
-  int n = __ng_http_date(buffer, 32, 1, NULL);
+  int n = ng_http_date_s(buffer, 32);
   buffer[n]='\0';
   httpc_set_header(conn, __HDR_BUF_PTR(HEADER_DATE), buffer);
 
@@ -426,7 +426,7 @@ httpc_send_header(httpc_conn_t * conn)
   {
     if (walker->key && walker->value)
     {
-      len = snprintf(buffer, 1024, "%s: %s\r\n", walker->key, walker->value);
+      len = ng_snprintf(buffer, 1024, "%s: %s\r\n", walker->key, walker->value);
       if ((status = hsocket_send(conn->sock, (unsigned char *)buffer, len)) != H_OK)
         return status;
     }
@@ -535,14 +535,14 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t * conn, const char *url
   {
     case HTTP_REQUEST_GET:
 
-      len = snprintf(buffer, ___BUFSZ, "GET %s HTTP/%s\r\n",
+      len = ng_snprintf(buffer, ___BUFSZ, "GET %s HTTP/%s\r\n",
           (conn->url->context[0] != '\0') ? conn->url->context : ("/"),
           (conn->version == HTTP_1_0) ? "1.0" : "1.1");
       break;
 
     case HTTP_REQUEST_POST:
 
-      len = snprintf(buffer, ___BUFSZ, "POST %s HTTP/%s\r\n",
+      len = ng_snprintf(buffer, ___BUFSZ, "POST %s HTTP/%s\r\n",
           (conn->url->context[0] != '\0') ? conn->url->context : ("/"),
           (conn->version == HTTP_1_0) ? "1.0" : "1.1");
       break;
@@ -646,7 +646,7 @@ httpc_post_end(httpc_conn_t * conn, hresponse_t ** out)
 static size_t
 _httpc_mime_get_boundary(httpc_conn_t * conn, char *dest, size_t len)
 {
-  size_t n = snprintf(dest, len, "---=.Part_NH_%d", conn->id);
+  size_t n = ng_snprintf(dest, len, "---=.Part_NH_%d", conn->id);
   log_verbose("boundary= \"%s\"", dest);
   return n;
 }
@@ -666,7 +666,7 @@ __httpc_mime_concat(httpd_buf_t *b, size_t tsize, const char *fmt,
   const char *data, char *temp, size_t temp_size)
 {
   size_t n;
-  n = snprintf(temp, temp_size, fmt, data);
+  n = ng_snprintf(temp, temp_size, fmt, data);
   if (BUF_REMAIN(b) <= n)
   {
     return __httpc_mime_toolarge("__httpc_mime_concat", tsize);
@@ -813,7 +813,7 @@ httpc_mime_next(httpc_conn_t * conn, const char *content_id,
     goto clean1;
 
   /* Send Content header */
-  len = snprintf(buffer, ___BUFSZ, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
+  len = ng_snprintf(buffer, ___BUFSZ, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
             __HDR_BUF_PTR(HEADER_CONTENT_TYPE), content_type,
             __HDR_BUF_PTR(HEADER_CONTENT_TRANSFER_ENCODING), transfer_encoding,
             __HDR_BUF_PTR(HEADER_CONTENT_ID), content_id);

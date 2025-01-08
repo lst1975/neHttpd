@@ -349,7 +349,7 @@ __nanohttp_user2json_super(httpd_user_t *entry, char *b, int len, int count)
   if (lp == NULL)
     return -1;
 
-  int n = snprintf(b, len,
+  int n = ng_snprintf(b, len,
   		"\"username\": {"
   		"  \"type\":\"string\","
   		"  \"range\":[%u,%u],"
@@ -396,7 +396,7 @@ __nanohttp_user2json(httpd_user_t *entry, char *b, int len, int count)
   if (lp == NULL)
     return -1;
 
-  int n = snprintf(b, len,
+  int n = ng_snprintf(b, len,
   		"{\"username\": {"
   		"  \"type\":\"string\","
   		"  \"range\":[%u,%u],"
@@ -462,21 +462,21 @@ __nanohttp_users2file(void)
   void *fp;
   httpd_buf_t b;
 
-  n = snprintf(p, len, "%s", "{\"AccountConfiguration\":{");
+  n = ng_snprintf(p, len, "%s", "{\"AccountConfiguration\":{");
   p += n, len -= n;
   
   ng_list_for_each_entry(entry, httpd_user_t, &users, link)
   {
     if (entry->type == _N_http_user_type_SUPER)
     {
-      n = snprintf(p, len, "%s", 
+      n = ng_snprintf(p, len, "%s", 
         "\"supperuser\":{\"label\":\"SupperUser\",\"type\":\"group\",\"id\":0,");
       p += n, len -= n;
       n = __nanohttp_user2json_super(entry, p, len, 0);
       if (n == -1)
         goto clean0;
       p += n, len -= n;
-      n = snprintf(p, len, "%s", 
+      n = ng_snprintf(p, len, "%s", 
         "},\"users\":{\"type\":\"list+\",\"label\":\"Accounts\",\"id\":0,"
         "\"range\":[1,100],\"writable\":true,\"index\":\"username\",\"value\":[");
       p += n, len -= n;
@@ -497,7 +497,7 @@ __nanohttp_users2file(void)
     len++;
   }
   
-  n = snprintf(p, len, "%s", 
+  n = ng_snprintf(p, len, "%s", 
     "]},\"label\":\"Account Configuration\",\"id\":2}}");
   p += n, len -= n;
 

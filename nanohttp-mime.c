@@ -665,10 +665,10 @@ _mime_part_begin(void *data)
   cbdata->header_search = 0;
 
 #ifdef WIN32
-  snprintf(buffer, _TMP_SIZE, "%s\\mime_%p_%d.part", cbdata->root_dir,
+  ng_snprintf(buffer, _TMP_SIZE, "%s\\mime_%p_%d.part", cbdata->root_dir,
           cbdata, cbdata->part_id++);
 #else
-  snprintf(buffer, _TMP_SIZE, "%s/mime_%p_%d.part", cbdata->root_dir,
+  ng_snprintf(buffer, _TMP_SIZE, "%s/mime_%p_%d.part", cbdata->root_dir,
           cbdata, cbdata->part_id++);
 #endif
   http_free(buffer);

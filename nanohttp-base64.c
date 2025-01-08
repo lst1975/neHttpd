@@ -96,63 +96,62 @@ char base46_map[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
 
 int base64_encode_string(const unsigned char *instr, unsigned char *outstr)
 {
+  char counts = 0;
+  char buffer[3];
+  char* cipher = (char*)outstr; //http_malloc(strlen(plain) * 4 / 3 + 4);
+  int i = 0, c = 0;
 
-    char counts = 0;
-    char buffer[3];
-    char* cipher = (char*)outstr; //http_malloc(strlen(plain) * 4 / 3 + 4);
-    int i = 0, c = 0;
-
-    for(i = 0; instr[i] != '\0'; i++) {
-        buffer[(int)counts++] = (char)instr[i];
-        if(counts == 3) {
-            cipher[c++] = base46_map[buffer[0] >> 2];
-            cipher[c++] = base46_map[((buffer[0] & 0x03) << 4) + (buffer[1] >> 4)];
-            cipher[c++] = base46_map[((buffer[1] & 0x0f) << 2) + (buffer[2] >> 6)];
-            cipher[c++] = base46_map[buffer[2] & 0x3f];
-            counts = 0;
-        }
+  for(i = 0; instr[i] != '\0'; i++) {
+    buffer[(int)counts++] = (char)instr[i];
+    if(counts == 3) {
+      cipher[c++] = base46_map[buffer[0] >> 2];
+      cipher[c++] = base46_map[((buffer[0] & 0x03) << 4) + (buffer[1] >> 4)];
+      cipher[c++] = base46_map[((buffer[1] & 0x0f) << 2) + (buffer[2] >> 6)];
+      cipher[c++] = base46_map[buffer[2] & 0x3f];
+      counts = 0;
     }
+  }
 
-    if(counts > 0) {
-        cipher[c++] = base46_map[buffer[0] >> 2];
-        if(counts == 1) {
-            cipher[c++] = base46_map[(buffer[0] & 0x03) << 4];
-            cipher[c++] = '=';
-        } else {                      // if counts == 2
-            cipher[c++] = base46_map[((buffer[0] & 0x03) << 4) + (buffer[1] >> 4)];
-            cipher[c++] = base46_map[(buffer[1] & 0x0f) << 2];
-        }
-        cipher[c++] = '=';
+  if(counts > 0) {
+    cipher[c++] = base46_map[buffer[0] >> 2];
+    if(counts == 1) {
+      cipher[c++] = base46_map[(buffer[0] & 0x03) << 4];
+      cipher[c++] = '=';
+    } else {                      // if counts == 2
+      cipher[c++] = base46_map[((buffer[0] & 0x03) << 4) + (buffer[1] >> 4)];
+      cipher[c++] = base46_map[(buffer[1] & 0x0f) << 2];
     }
+    cipher[c++] = '=';
+  }
 
-    cipher[c] = '\0';   /* string padding character */
-    return c;
+  cipher[c] = '\0';   /* string padding character */
+  return c;
 }
 
 
 int base64_decode_string(const unsigned char *instr, unsigned char *outstr)
 {
-    char counts = 0;
-    char buffer[4];
-    char* plain = (char*)outstr; //http_malloc(strlen(cipher) * 3 / 4);
-    int i = 0, p = 0;
+  char counts = 0;
+  char buffer[4];
+  char* plain = (char*)outstr; //http_malloc(strlen(cipher) * 3 / 4);
+  int i = 0, p = 0;
 
-    for(i = 0; instr[i] != '\0'; i++) {
-        char k;
-        for(k = 0 ; k < 64 && base46_map[(int)k] != instr[i]; k++);
-        buffer[(int)counts++] = k;
-        if(counts == 4) {
-            plain[p++] = (buffer[0] << 2) + (buffer[1] >> 4);
-            if(buffer[2] != 64)
-                plain[p++] = (buffer[1] << 4) + (buffer[2] >> 2);
-            if(buffer[3] != 64)
-                plain[p++] = (buffer[2] << 6) + buffer[3];
-            counts = 0;
-        }
+  for(i = 0; instr[i] != '\0'; i++) {
+    char k;
+    for(k = 0 ; k < 64 && base46_map[(int)k] != instr[i]; k++);
+    buffer[(int)counts++] = k;
+    if(counts == 4) {
+      plain[p++] = (buffer[0] << 2) + (buffer[1] >> 4);
+      if(buffer[2] != 64)
+        plain[p++] = (buffer[1] << 4) + (buffer[2] >> 2);
+      if(buffer[3] != 64)
+        plain[p++] = (buffer[2] << 6) + buffer[3];
+      counts = 0;
     }
+  }
 
-    plain[p] = '\0';    /* string padding character */
-    return p;
+  plain[p] = '\0';    /* string padding character */
+  return p;
 }
 
 #else
@@ -188,9 +187,9 @@ int base64_decode_string(const unsigned char *instr, unsigned char *outstr)
  **************************************************************************************
  */
 
-#define BASE64_PAD '='
+#define BASE64_PAD     '='
 #define BASE64DE_FIRST '+'
-#define BASE64DE_LAST 'z'
+#define BASE64DE_LAST  'z'
 
 /* BASE 64 encode table */
 static const char base64en[] = {
@@ -413,4 +412,3 @@ b64Decode(const ng_buffer_s *in, ng_buffer_s *out)
 #endif
 
 #endif
-
