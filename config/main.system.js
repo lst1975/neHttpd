@@ -85,7 +85,7 @@ function MAIN_SYSTEM_display(p)
               if (!err)
               {
                 p.loader.eachIndex(data, function(idx, val){
-                    if (val)
+                    if (val != undefined)
                     {
                       var el = p.container.find(idx);
                       if (el.length)
