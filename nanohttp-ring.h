@@ -435,9 +435,6 @@ struct rte_ring {
 #define RTE_RING_SZ_MASK  (0x7fffffffU) /**< Ring size mask */
 
 #if defined(__GNUC__)
-#define GCC_VERSION (__GNUC__ * 10000 \
-                     + __GNUC_MINOR__ * 100 \
-                     + __GNUC_PATCHLEVEL__)
 #if (GCC_VERSION >= 120000)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
