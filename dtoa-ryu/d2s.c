@@ -424,6 +424,8 @@ d2s_to_chars(const floating_decimal_64 v, const bool sign,
   }
 #endif
 
+  rte_prefetch0(EXPONENT_TABLE);
+
   // Print the exponent.
   result[index++] = 'E';
   int32_t exp = v.exponent + (int32_t) olength - 1;
@@ -447,7 +449,6 @@ d2s_to_chars(const floating_decimal_64 v, const bool sign,
 
   return index;
 #else
-  rte_prefetch0(EXPONENT_TABLE);
   NG_ASSERT(exp <= __double_power_of_ten_n_MAX);
   *(uint32_t *)(result + index) = *(const uint32_t *)EXPONENT_TABLE[exp];
   return index + (exp >= 100 ? 3 : exp >= 10 ? 2 : 2);

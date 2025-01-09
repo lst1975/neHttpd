@@ -314,6 +314,8 @@ f2s_to_chars(const floating_decimal_32 v, const bool sign,
   }
 #endif
 
+  rte_prefetch0(EXPONENT_TABLE);
+
   // Print the exponent.
   result[index++] = 'E';
   int32_t exp = v.exponent + (int32_t) olength - 1;
