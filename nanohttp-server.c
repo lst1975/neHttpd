@@ -980,14 +980,14 @@ httpd_send_header(httpd_conn_t * res, int code, const char *text)
   /* add pairs */
   for (cur = res->header; cur; cur = cur->next)
   {
-    if (BUF_REMAIN(&b) > cur->key_len + cur->value_len + 4)
+    if (BUF_REMAIN(&b) > cur->key.len + cur->val.len + 4)
     {
-      memcpy(BUF_CUR_PTR(&b), cur->key, cur->key_len);
-      BUF_GO(&b, cur->key_len);
+      memcpy(BUF_CUR_PTR(&b), cur->key.cptr, cur->key.len);
+      BUF_GO(&b, cur->key.len);
       *(uint16_t*)BUF_CUR_PTR(&b) = *(const uint16_t*)": ";
       BUF_GO(&b, 2);
-      memcpy(BUF_CUR_PTR(&b), cur->value, cur->value_len);
-      BUF_GO(&b, cur->value_len);
+      memcpy(BUF_CUR_PTR(&b), cur->val.cptr, cur->val.len);
+      BUF_GO(&b, cur->val.len);
       *(uint16_t*)BUF_CUR_PTR(&b) = *(const uint16_t*)"\r\n";
       BUF_GO(&b, 2);
     }
@@ -1097,7 +1097,7 @@ httpd_send_bad_request(httpd_conn_t *conn, const char *msg)
 }
 
 #define _(x) { .cptr = x, .len = sizeof(x) -1}
-httpd_buf_t __nanohttp_html[]={
+ng_block_s __nanohttp_html[]={
   _(__nanohttp_index_html_head_JS_MENU_GUEST), 
   _(__nanohttp_index_html_head_JS_MENU_ADMIN), 
   _(__nanohttp_index_html_head_JS_MENU_SUPER), 
@@ -1184,29 +1184,29 @@ static void
 _httpd_request_print(struct hrequest_t * req)
 {
   hpair_t *pair;
-  const httpd_buf_t *level;
+  const ng_block_s *level;
 
   log_verbose("++++++ Request +++++++++");
-  log_verbose(" Method : '%s'",
+  log_verbose(" Method : %s",
                (req->method == HTTP_REQUEST_POST) ? "POST" : "GET");
-  log_verbose(" Path   : '%s'", req->path);
-  log_verbose(" Spec   : '%s'",
+  log_verbose(" Path   : %pS", &req->path);
+  log_verbose(" Spec   : %s",
                (req->version == HTTP_1_0) ? "HTTP/1.0" : "HTTP/1.1");
   log_verbose(" ++++++ Parsed Query string :");
 
   for (pair = req->query; pair; pair = pair->next)
-    log_verbose(" %s = '%s'", pair->key, pair->value);
+    log_verbose(" %pS = %pS", &pair->key, &pair->val);
 
   log_verbose(" ++++++ Parsed Header :");
   for (pair = req->header; pair; pair = pair->next)
-    log_verbose(" %s = '%s'", pair->key, pair->value);
+    log_verbose(" %pS = %pS", &pair->key, &pair->val);
 
   content_type_print(req->content_type);
   log_verbose("++++++++++++++++++++++++");
 
   level = __nanohttp_level2string(req->userLevel);
   if (level != NULL)
-    log_verbose(" User Level : %.*s", (int)level->len, level->cptr);
+    log_verbose(" User Level : %pS", level);
   log_verbose(" Connection : %p", req->conn);
 
   return;
@@ -1249,8 +1249,8 @@ httpd_free(httpd_conn_t *conn)
 
 static void *
 _httpd_decode_authorization(int *tmplen, 
-  const char *_value, size_t inlen, httpd_buf_t *user, 
-  httpd_buf_t *pass)
+  const char *_value, size_t inlen, ng_block_s *user, 
+  ng_block_s *pass)
 {
   size_t len, value_len;
   unsigned char *tmp, *tmp2;
@@ -1312,7 +1312,7 @@ _httpd_decode_authorization(int *tmplen,
 static int
 _httpd_authenticate_request(struct hrequest_t * req, httpd_auth auth)
 {
-  httpd_buf_t user, pass;
+  ng_block_s user, pass;
   hpair_t *authorization_pair;
   int ret, tmplen;
   void *tmp;
@@ -1328,8 +1328,8 @@ _httpd_authenticate_request(struct hrequest_t * req, httpd_auth auth)
     return 0;
   }
 
-  tmp = _httpd_decode_authorization(&tmplen, authorization_pair->value, 
-    authorization_pair->value_len, &user, &pass);
+  tmp = _httpd_decode_authorization(&tmplen, authorization_pair->val.cptr, 
+    authorization_pair->val.len, &user, &pass);
   if (tmp == NULL)
   {
     log_error("httpd_base64_decode_failed");
@@ -1416,17 +1416,16 @@ httpd_session_main(void *data)
       conn_pair = hpairnode_get_ignore_case_len(req->header, 
         __HDR_BUF(HEADER_CONNECTION));
       if (conn_pair != NULL && 
-        (conn_pair->value_len == 6 && !strncasecmp(conn_pair->value, "close", 6)))
+        (conn_pair->val.len == 6 && !strncasecmp(conn_pair->val.cptr, "close", 6)))
         done = 1;
 
       if (!done)
         done = req->version == HTTP_1_0 ? 1 : 0;
 
-      if ((service = httpd_find_service(req->path, req->path_len)))
+      if ((service = httpd_find_service(req->path.cptr, req->path.len)))
       {
-        log_debug("service '%s' for '%.*s'(%s) found", 
-                service->context, req->path_len, 
-                req->path, service->name);
+        log_debug("service '%s' for '%pS'(%s) found", 
+                service->context, &req->path, service->name);
 
       	if (service->status == NHTTPD_SERVICE_UP)
       	{
@@ -1456,30 +1455,27 @@ httpd_session_main(void *data)
             else
             {
               ng_snprintf(buffer, sizeof(buffer), 
-                "service '%.*s' is not registered properly (service function is NULL)", 
-                req->path_len, req->path);
+                "service '%pS' is not registered properly (service function is NULL)", &req->path);
               log_warn("%s", buffer);
               httpd_send_not_implemented(rconn, buffer);
             }
       	  }
           else
           {
-            httpd_send_unauthorized(rconn, req->path);
+            httpd_send_unauthorized(rconn, req->path.cptr);
             done = 1;
           }
         }
         else
         {
-          ng_snprintf(buffer, sizeof(buffer), "service for '%.*s' is disabled", 
-            req->path_len, req->path);
+          ng_snprintf(buffer, sizeof(buffer), "service for '%pS' is disabled", &req->path);
           log_warn("%s", buffer);
           httpd_send_internal_error(rconn, buffer);
         }
       }
       else
       {
-        ng_snprintf(buffer, sizeof(buffer), "no service for '%.*s' found", 
-          req->path_len, req->path);
+        ng_snprintf(buffer, sizeof(buffer), "no service for '%pS' found", &req->path);
         log_warn("%s", buffer);
       	httpd_send_not_implemented(rconn, buffer);
         done = 1;
@@ -1528,13 +1524,15 @@ httpd_set_header(httpd_conn_t *conn, const char *key, int keylen,
   }
   else
   {
-    http_free(p->value);
-    p->value = http_strdup_size(value, valuelen);
-    if (p->value == NULL)
+    char *tmp = http_strdup_size(value, valuelen);
+    if (tmp == NULL)
     {
       log_fatal("http_strdup_size failed.");
       return -1;
     }
+    ng_free_data_block(&p->val);
+    p->val.buf = tmp;
+    p->val.len = valuelen;
   }
 
   return 0;
@@ -1545,8 +1543,8 @@ httpd_set_headers(httpd_conn_t * conn, hpair_t *header)
 {
   while (header)
   {
-    int r = httpd_set_header(conn, header->key, header->key_len, 
-      header->value, header->value_len);
+    int r = httpd_set_header(conn, header->key.cptr, header->key.len, 
+      header->val.cptr, header->val.len);
     if (r < 0)
       return r;
     header = header->next;
@@ -1587,7 +1585,7 @@ httpd_add_headers(httpd_conn_t *conn, const hpair_t *values)
 
   while (values)
   {
-    if (!httpd_add_header(conn, values->key, values->value))
+    if (!httpd_add_header(conn, values->key.cptr, values->val.cptr))
     {
       log_warn("httpd_add_header failed.");
       return -1;
@@ -2429,8 +2427,8 @@ httpd_get_postdata(httpd_conn_t *conn, struct hrequest_t *req,
 
     if (content_length_pair != NULL)
     {
-      content_length = ng_atoi(content_length_pair->value, 
-        content_length_pair->value_len);
+      content_length = ng_atoi(content_length_pair->val.cptr, 
+        content_length_pair->val.len);
       req->content_length = content_length;
     }
   }

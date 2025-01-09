@@ -137,24 +137,24 @@ hpairnode_new_len(const char *key, int keylen,
 
   if (key != NULL)
   {
-    pair->key_len = keylen;
-    pair->key = http_strdup_size(key, pair->key_len);
+    pair->key.len = keylen;
+    pair->key.buf = http_strdup_size(key, pair->key.len);
   }
   else
   {
-    pair->key = NULL;
-    pair->key_len = 0;
+    pair->key.buf = NULL;
+    pair->key.len = 0;
   }
 
   if (value != NULL)
   {
-    pair->value_len = valuelen;
-    pair->value = http_strdup_size(value, pair->value_len);
+    pair->val.len = valuelen;
+    pair->val.buf = http_strdup_size(value, pair->val.len);
   }
   else
   {
-    pair->value = NULL;
-    pair->value_len = 0;
+    pair->val.buf = NULL;
+    pair->val.len = 0;
   }
 
   pair->next = next;
@@ -187,16 +187,15 @@ hpairnode_parse(const char *str, int _size, char delim, hpair_t *next)
     log_error("http_malloc hpair_t failed.");
     goto clean0;
   }
-  pair->key = NULL;
-  pair->value = NULL;
+
+  ng_block_init(&pair->key);
+  ng_block_init(&pair->val);
   pair->next = next;
-  pair->key_len = 0;
-  pair->value_len = 0;
 
   value = ng_memchr(str, delim, size);
-  pair->key_len = value == NULL ? size : value - str;
-  pair->key = http_strdup_size(str, pair->key_len);
-  if (pair->key == NULL)
+  pair->key.len = value == NULL ? size : value - str;
+  pair->key.buf = http_strdup_size(str, pair->key.len);
+  if (pair->key.buf == NULL)
   {
     log_error("http_malloc hpair_t->key failed.");
     goto clean1;
@@ -206,11 +205,11 @@ hpairnode_parse(const char *str, int _size, char delim, hpair_t *next)
   {
     /* skip white space */
     for (value++; __ng_isspace((int)*value); value++) ;
-    pair->value_len = size - (value - str);
-    if (pair->value_len)
+    pair->val.len = size - (value - str);
+    if (pair->val.len)
     {
-      pair->value = http_strdup_size(value, pair->value_len);
-      if (pair->value == NULL)
+      pair->val.buf = http_strdup_size(value, pair->val.len);
+      if (pair->val.buf == NULL)
       {
         log_error("http_malloc hpair_t->value failed.");
         goto clean1;
@@ -231,8 +230,8 @@ hpairnode_copy(const hpair_t * src)
   if (src == NULL)
     return NULL;
 
-  return hpairnode_new_len(src->key, src->key_len, 
-    src->value, src->value_len, NULL);
+  return hpairnode_new_len(src->key.cptr, src->key.len, 
+    src->val.cptr, src->val.len, NULL);
 }
 
 hpair_t *
@@ -266,9 +265,7 @@ hpairnode_dump(const hpair_t * pair)
     log_verbose("(NULL)[]");
     return;
   }
-  log_verbose("%s:%s",
-               SAVE_STR(pair->key), 
-               SAVE_STR(pair->value));
+  log_verbose("%pS: %pS", &pair->key, &pair->val);
 
   return;
 }
@@ -294,12 +291,8 @@ hpairnode_free(hpair_t * pair)
   if (pair == NULL)
     return;
 
-  if (pair->key)
-    http_free(pair->key);
-
-  if (pair->value)
-    http_free(pair->value);
-
+  ng_free_data_block(&pair->key);
+  ng_free_data_block(&pair->val);
   http_free(pair);
 
   return;
@@ -331,14 +324,13 @@ hpairnode_get_ignore_case_len(hpair_t *pair,
     return NULL;
   }
 
+  const ng_block_s b={.cptr=key, .len = len};
+  
   while (pair != NULL)
   {
-    if (pair->key != NULL && pair->key_len == len)
+    if (ng_block_isequal_nocase(&pair->key, &b))
     {
-      if (!strncasecmp(pair->key, key, len))
-      {
-        return pair;
-      }
+      return pair;
     }
     pair = pair->next;
   }
@@ -353,7 +345,7 @@ hpairnode_get_ignore_case(hpair_t * pair, const char *key)
   p = hpairnode_get_ignore_case_len(pair, key, SAFE_STRLEN(key));
   if (p == NULL)
     return NULL;
-  return p->value;
+  return p->val.buf;
 }
 
 hpair_t *
@@ -364,15 +356,14 @@ hpairnode_get_len(hpair_t *pair, const char *key, int len)
     log_error("key is NULL");
     return NULL;
   }
+
+  const ng_block_s b={.cptr=key, .len = len};
   
   while (pair != NULL)
   {
-    if (pair->key != NULL && len == pair->key_len)
+    if (ng_block_isequal__(&pair->key, &b))
     {
-      if (!ng_memcmp(pair->key, key, len))
-      {
-        return pair;
-      }
+      return pair;
     }
     pair = pair->next;
   }
@@ -387,7 +378,7 @@ hpairnode_get(hpair_t *pair, const char *key)
   p = hpairnode_get_len(pair, key, SAFE_STRLEN(key));
   if (p == NULL)
     return NULL;
-  return p->value;
+  return p->val.buf;
 }
 
 static inline int __rm_ctsp(const char *content_type_str, int i, int len)
@@ -412,7 +403,7 @@ content_type_print(content_type_t *ct)
     log_verbose(" ++++++ Parsed Content-Type :");
     log_verbose(" Content-Type : %s", ct->type);
     for (pair =ct->params; pair; pair = pair->next)
-      log_verbose("    %s = '%s'", pair->key, pair->value);
+      log_verbose("    %pS = %pS", &pair->key, &pair->val);
   }
 }
 

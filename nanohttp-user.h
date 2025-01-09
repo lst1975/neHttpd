@@ -77,8 +77,8 @@
 #define _N_http_user_PSWD_MAXLEN 32
 
 typedef struct {
-  httpd_buf_t name;
-  httpd_buf_t pswd;
+  ng_block_s name;
+  ng_block_s pswd;
   int type;
   int encrypted;
   ng_list_head_s link;
@@ -101,7 +101,7 @@ int nanohttp_users_add(const char *name, int nameLen,
 int nanohttp_users_update(const char *name, int nameLen, 
   const char *pswd, int pswdLen, const char *level, int levelLen);
 int nanohttp_users_del(const char *name, int nameLen);
-const httpd_buf_t *__nanohttp_level2string(int level);
+const ng_block_s *__nanohttp_level2string(int level);
 
 #if 0
 int nanohttp_pswd_enc(httpd_buf_t *b, const char *pswd, int len);

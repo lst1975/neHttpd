@@ -247,7 +247,7 @@ _hresponse_parse_header(const char *buffer, size_t len)
             __HDR_BUF(HEADER_CONTENT_TYPE));
   if (pair != NULL)
   {
-    res->content_type = content_type_new(pair->value, pair->value_len);
+    res->content_type = content_type_new(pair->val.cptr, pair->val.len);
     if (res->content_type == NULL)
     {
       log_error("content_type_new failed.");

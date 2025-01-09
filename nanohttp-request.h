@@ -343,8 +343,7 @@ struct hrequest_t
 {
   hreq_method_t method;
   http_version_t version;
-  char *path;
-  int   path_len;
+  ng_block_s path;
   int   userLevel;
   hpair_t *query;
   hpair_t *header;

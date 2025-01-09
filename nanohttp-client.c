@@ -261,7 +261,7 @@ httpc_add_headers(httpc_conn_t *conn, const hpair_t *values)
   }
 
   for ( ;values; values=values->next)
-    httpc_add_header(conn, values->key, values->value);
+    httpc_add_header(conn, values->key.cptr, values->val.cptr);
 
   return;
 }
@@ -280,21 +280,36 @@ httpc_set_header(httpc_conn_t *conn, const char *key, const char *value)
   if (conn == NULL)
   {
     log_warn("Connection object is NULL");
-    return 0;
+    return -1;
   }
 
   for (p = conn->header; p; p = p->next)
   {
-    if (p->key && !strcmp(p->key, key))
+    if (p->key.cptr && !strcmp(p->key.cptr, key))
     {
-      http_free(p->value);
-      p->value = http_strdup(value);
-      return 1;
+      int len;
+      char *tmp;
+      len = ng_strlen(value);
+      tmp = http_strdup_size(value, len);
+      if (p->val.buf == NULL)
+      {
+        log_fatal("http_strdup_size failed.");
+        return -1;
+      }
+      ng_free_data_block(&p->val);
+      p->val.buf = tmp;
+      p->val.len = len;
     }
   }
 
-  conn->header = hpairnode_new(key, value, conn->header);
+  p = hpairnode_new(key, value, conn->header);
+  if (p == NULL)
+  {
+    log_fatal("http_strdup_size failed.");
+    return -1;
+  }
 
+  conn->header = p;
   return 0;
 }
 
@@ -424,9 +439,9 @@ httpc_send_header(httpc_conn_t * conn)
 
   for (walker = conn->header; walker; walker = walker->next)
   {
-    if (walker->key && walker->value)
+    if (walker->key.len && walker->val.len)
     {
-      len = ng_snprintf(buffer, 1024, "%s: %s\r\n", walker->key, walker->value);
+      len = ng_snprintf(buffer, 1024, "%pS: %pS\r\n", &walker->key, &walker->val);
       if ((status = hsocket_send(conn->sock, (unsigned char *)buffer, len)) != H_OK)
         return status;
     }

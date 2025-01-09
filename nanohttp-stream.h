@@ -287,9 +287,9 @@ http_output_stream_write_printf(struct http_output_stream_t *stream,
 */
 static inline herror_t
 http_output_stream_write_buffer(struct http_output_stream_t * stream,
-                         httpd_buf_t *b)
+                         ng_block_s *b)
 {
-  return http_output_stream_write(stream, (const unsigned char *)b->cptr, b->len);
+  return http_output_stream_write(stream, b->ptr, b->len);
 }
 
 /** This function writes a null terminated string to the stream.

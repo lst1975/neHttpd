@@ -860,23 +860,27 @@ _mime_received_bytes(void *data, const unsigned char *bytes, int size)
                           __HDR_BUF(HEADER_CONTENT_ID));
           if (pair != NULL)
           {
-            strcpy(cbdata->current_part->id, pair->value);
-            if (!strcmp(pair->value, cbdata->root_id))
+            int len = RTE_MIN(sizeof(cbdata->current_part->id)-1, pair->val.len);
+            ng_memcpy(cbdata->current_part->id, pair->val.ptr, len);
+            cbdata->current_part->id[len] = '\0';
+            if (!strcmp(pair->val.cptr, cbdata->root_id))
               cbdata->message->root_part = cbdata->current_part;
           }
-          pair =
-            hpairnode_get_len(cbdata->current_part->header,
+          pair = hpairnode_get_len(cbdata->current_part->header,
                           __HDR_BUF(HEADER_CONTENT_LOCATION));
           if (pair != NULL)
           {
-            strcpy(cbdata->current_part->location, pair->value);
+            int len = RTE_MIN(sizeof(cbdata->current_part->location)-1, pair->val.len);
+            ng_memcpy(cbdata->current_part->location, pair->val.ptr, len);
+            cbdata->current_part->location[len] = '\0';
           }
-          pair =
-            hpairnode_get_len(cbdata->current_part->header, 
+          pair = hpairnode_get_len(cbdata->current_part->header, 
                           __HDR_BUF(HEADER_CONTENT_TYPE));
           if (pair != NULL)
           {
-            strcpy(cbdata->current_part->content_type, pair->value);
+            int len = RTE_MIN(sizeof(cbdata->current_part->content_type)-1, pair->val.len);
+            ng_memcpy(cbdata->current_part->content_type, pair->val.ptr, len);
+            cbdata->current_part->content_type[len] = '\0';
           }
           i++;
           break;

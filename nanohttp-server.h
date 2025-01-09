@@ -272,7 +272,7 @@ typedef void (*httpd_service) (httpd_conn_t *conn, struct hrequest_t *req);
 
 /** Authentication callback function for a nanoHTTP service. */
 typedef int (*httpd_auth) (struct hrequest_t *req, 
-                    const httpd_buf_t *user, const httpd_buf_t *pass);
+                    const ng_block_s *user, const ng_block_s *pass);
 
 #define __NHTTP_USE_STAT_RWLOCK 0
 #ifdef __NHTTP_INTERNAL
@@ -537,7 +537,7 @@ extern herror_t httpd_send_not_implemented(httpd_conn_t *conn, const char *msg);
 
 extern int httpd_parse_arguments(int argc, char **argv);
 
-extern httpd_buf_t __nanohttp_html[];
+extern ng_block_s __nanohttp_html[];
 #define nanohttp_index_html_head_JS_MENU_GUEST &__nanohttp_html[0]
 #define nanohttp_index_html_head_JS_MENU_ADMIN &__nanohttp_html[1]
 #define nanohttp_index_html_head_JS_MENU_SUPER &__nanohttp_html[2]

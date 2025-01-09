@@ -138,26 +138,43 @@ static inline void BUF_SIZE_INIT(httpd_buf_t *b, char *buf, size_t size)
   b->nbytes = 0;
 }
 
-static inline int ng_block_isequal(const void *blk, void *buf, size_t size)
+static inline void ng_block_init(ng_block_s *blk)
+{ 
+  blk->data = NULL;
+  blk->len  = 0;
+}
+
+static inline int ng_block_isequal(const void *blk, const void *buf, size_t size)
 {
   const ng_block_s *b = (const ng_block_s *)blk;
   return b->len == size && !ng_memcmp(b->data, buf, size);
 }
 
+static inline int ng_block_isequal__(const void *blka, const void *blkb)
+{
+  const ng_block_s *a = (const ng_block_s *)blka;
+  const ng_block_s *b = (const ng_block_s *)blkb;
+  return ng_block_isequal(a, b->data, b->len);
+}
+
 static inline int ng_block_isequal_case(const void *blka, const void *blkb)
 {
+  const ng_block_s *a = (const ng_block_s *)blka;
   const ng_block_s *b = (const ng_block_s *)blkb;
-  return ng_block_isequal(blka, b->buf, b->len);
+  return ng_block_isequal(a, b->buf, b->len);
 }
 
 static inline int ng_block_isequal_nocase(const void *blka, const void *blkb)
 {
   const ng_block_s *a = (const ng_block_s *)blka;
   const ng_block_s *b = (const ng_block_s *)blkb;
-  if (a->len != b->len) return -1;
-  return strncasecmp(a->cptr, b->cptr, b->len);
+  if (a->len != b->len) return 0;
+  return !strncasecmp(a->cptr, b->cptr, b->len);
 }
 
 extern void ng_free_data_buffer(httpd_buf_t *data);
+extern void ng_free_data_block(ng_block_s *block);
+extern int ng_dup_data_block(ng_block_s *block, const ng_block_s *n);
+extern int ng_dup_data_block_str(ng_block_s *block, const ng_block_s *n);
 
 #endif

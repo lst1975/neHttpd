@@ -85,8 +85,8 @@
 #include "nanohttp-vsprintf.h"
 
 static int
-simple_authenticator(struct hrequest_t *req, const httpd_buf_t *user, 
-  const httpd_buf_t *password)
+simple_authenticator(struct hrequest_t *req, const ng_block_s *user, 
+  const ng_block_s *password)
 {
   httpd_user_t *auth_user;
   log_debug("logging in user=\"%.*s\" password=\"%.*s\"\n", 
@@ -113,7 +113,7 @@ default_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   char buf[REQUEST_MAX_PATH_SIZE+256+1];
 
-  if (ng_block_isequal(&__TEST_DEV_FILE, req->path, req->path_len))
+  if (ng_block_isequal__(&__TEST_DEV_FILE, &req->path))
   {
     httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
     http_output_stream_write_string(conn->out,
@@ -124,7 +124,7 @@ default_service(httpd_conn_t *conn, struct hrequest_t *req)
   }
   else
   {
-    ng_snprintf(buf, sizeof buf, "Resource \"%s\" not found", req->path);
+    ng_snprintf(buf, sizeof buf, "Resource \"%pS\" not found", &req->path);
     httpd_send_not_found(conn, buf);
   }
   return;
@@ -149,7 +149,7 @@ headers_service(httpd_conn_t *conn, struct hrequest_t *req)
 
   for (walker=req->header; walker; walker=walker->next)
   {
-    len = ng_snprintf(buf, 512, "<li>%s: %s</li>", walker->key, walker->value);
+    len = ng_snprintf(buf, 512, "<li>%pS: %pS</li>", &walker->key, &walker->val);
     http_output_stream_write(conn->out, (unsigned char *)buf, len);
   }
 
@@ -317,24 +317,23 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
       || memcmp(ct->type, "multipart/form-data", 19))
     {
       ng_free_data_buffer(&req->data);
-      log_warn("Bad POST data format, must 'multipart/form-data' for %s", req->path);
+      log_warn("Bad POST data format, must 'multipart/form-data' for %pS", &req->path);
       return httpd_send_not_implemented(conn, "post_service");
     }
 
     pair = ct->params;
     if (pair == NULL
-      || pair->key_len != 8
-      || memcmp(pair->key, "boundary", 8)
-      || pair->value == NULL
-      || !pair->value_len)
+      || !ng_block_isequal(&pair->key, "boundary", 8)
+      || pair->val.cptr == NULL
+      || !pair->val.len)
     {
       ng_free_data_buffer(&req->data);
       r = herror_new("post_service", FILE_ERROR_READ, 
-        "Bad POST data format, must 'multipart/form-data' for %s", req->path);
+        "Bad POST data format, must 'multipart/form-data' for %pS", &req->path);
       return __post_internal_error(conn, r);
     }
 
-    if (multipartparser_init(&p, NULL, pair->value, pair->value_len))
+    if (multipartparser_init(&p, NULL, pair->val.cptr, pair->val.len))
     {
       ng_free_data_buffer(&req->data);
       r = herror_new("post_service", GENERAL_ERROR, 
@@ -354,7 +353,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
           ng_free_data_buffer(&req->data);
           nanohttp_file_close(p.arg);
           r = herror_new("post_service", FILE_ERROR_READ, 
-            "Failed to read stream %s", req->path);
+            "Failed to read stream %pS", &req->path);
           return __post_internal_error(conn, r);
         }
         buffer = req->data.buf;
@@ -372,7 +371,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
         ng_free_data_buffer(&req->data);
         nanohttp_file_close(p.arg);
         r = herror_new("post_service", FILE_ERROR_WRITE, 
-          "Failed to read stream %s", req->path);
+          "Failed to read stream %pS", &req->path);
         return __post_internal_error(conn, r);
       }
     }
@@ -520,17 +519,18 @@ extern const char *nanohttp_index_html_head;
 #define _(x) _nanoConfig_HTTPD_DATA_SERVICE x
 #define __(x) { .cptr=_(x), .len=sizeof(_(x))-1 }
 #define ___(x) { .cptr=x, .len=sizeof(x)-1 }
-static const httpd_buf_t __SYS_FILE=__("system.json");
-static const httpd_buf_t __DEV_FILE=__("device.json");
-static const httpd_buf_t __USR_FILE=__("users.json");
-static const httpd_buf_t __MIB_FILE=__("setmib.json");
-static const httpd_buf_t __ADD_FILE=__("add.json");
-static const httpd_buf_t __DEL_FILE=__("del.json");
-static const httpd_buf_t __SAV_FILE=__("save.json");
-static const httpd_buf_t __TMP_USR_FILE  =__("templateUser.json");
-static const httpd_buf_t __TMP_INT_FILE  =__("templateInterface.json");
-static const httpd_buf_t __FAVOR_FILE =___("/favicon.ico");
-static const httpd_buf_t __ROOT_FILE  =___("/");
+static const ng_block_s __SYS_FILE=__("system.json");
+static const ng_block_s __DEV_FILE=__("device.json");
+static const ng_block_s __USR_FILE=__("users.json");
+static const ng_block_s __MIB_FILE=__("setmib.json");
+static const ng_block_s __ADD_FILE=__("add.json");
+static const ng_block_s __DEL_FILE=__("del.json");
+static const ng_block_s __SAV_FILE=__("save.json");
+static const ng_block_s __TEM_FILE=__("template.json");
+static const ng_block_s __TMP_USR_FILE  =__("templateUser.json");
+static const ng_block_s __TMP_INT_FILE  =__("templateInterface.json");
+static const ng_block_s __FAVOR_FILE =___("/favicon.ico");
+static const ng_block_s __ROOT_FILE  =___("/");
 #undef ___
 #undef __
 #undef _
@@ -540,17 +540,17 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   herror_t r = NULL;
 
-  if (strstr(req->path, "..") != NULL)
+  if (strstr(req->path.buf, "..") != NULL)
   {
     return default_service(conn, req);
   }
   else
   {
-    if (ng_block_isequal(&__ROOT_FILE, req->path, req->path_len))
+    if (ng_block_isequal__(&__ROOT_FILE, &req->path))
     {
       r = __send_root_html(conn, req);
     }
-    else if (ng_block_isequal(&__FAVOR_FILE, req->path, req->path_len))
+    else if (ng_block_isequal__(&__FAVOR_FILE, &req->path))
     {
       unsigned char *bf=NULL;
       do
@@ -587,25 +587,24 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       if (bf != NULL)
         http_free(bf);
     }
-    else if (!ng_block_isequal(&__MIB_FILE, req->path, req->path_len)
-      && !ng_block_isequal(&__ADD_FILE, req->path, req->path_len)
-      && !ng_block_isequal(&__DEL_FILE, req->path, req->path_len)
-      && !ng_block_isequal(&__SAV_FILE, req->path, req->path_len)
+    else if (!ng_block_isequal__(&__MIB_FILE, &req->path)
+          && !ng_block_isequal__(&__ADD_FILE, &req->path)
+          && !ng_block_isequal__(&__DEL_FILE, &req->path)
+          && !ng_block_isequal__(&__SAV_FILE, &req->path)
 #if !__NHTTP_TEST      
-      && !ng_block_isequal(&__DEV_FILE, req->path, req->path_len)
-      && !ng_block_isequal(&__USR_FILE, req->path, req->path_len)
-      && !ng_block_isequal(&__SYS_FILE, req->path, req->path_len)
+          && !ng_block_isequal__(&__DEV_FILE, &req->path)
+          && !ng_block_isequal__(&__USR_FILE, &req->path)
+          && !ng_block_isequal__(&__SYS_FILE, &req->path)
 #endif      
       )
     {
-      log_debug("Try to open the file %.*s.", req->path_len, req->path);
+      log_debug("Try to open the file %pS.", &req->path);
 
-      void *file = nanohttp_file_open_for_read(req->path+1);
+      void *file = nanohttp_file_open_for_read(req->path.cptr+1);
       if (file == NULL)
       {
         // If the file does not exist
-        log_error("Not able to open the file %.*s for reading.", 
-        req->path_len, req->path);
+        log_error("Not able to open the file %pS for reading.", &req->path);
         r = httpd_send_header(conn, 404, HTTP_STATUS_404_REASON_PHRASE);
       }
       else
@@ -618,8 +617,8 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
           {
             herror_release(r);
             r = http_output_stream_write_printf(conn->out, 
-                  "Failed to readfile %.*s: %s", 
-                  req->path_len, req->path, herror_message(r));
+                  "Failed to readfile %pS: %s", 
+                  &req->path, herror_message(r));
           }
         }
         nanohttp_file_close(file);
@@ -651,9 +650,9 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
   herror_t r;
 
 #if __NHTTP_TEST      
-  if (ng_block_isequal(&__SYS_FILE, req->path, req->path_len)
-    || ng_block_isequal(&__DEV_FILE, req->path, req->path_len)
-    || ng_block_isequal(&__USR_FILE, req->path, req->path_len))
+  if (ng_block_isequal__(&__SYS_FILE, &req->path)
+   || ng_block_isequal__(&__DEV_FILE, &req->path)
+   || ng_block_isequal__(&__USR_FILE, &req->path))
   {
     return root_service(conn, req);
   }
@@ -727,7 +726,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     }
     id = (int)p->vint;
     
-    if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"setmib.json", req->path))
+    if (ng_block_isequal__(&__MIB_FILE, &req->path))
     {
       // Process del operation
       int err, usrLen;
@@ -870,7 +869,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         }
       }
     }
-    else if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"save.json", req->path))
+    else if (ng_block_isequal__(&__SAV_FILE, &req->path))
     {
       if (req->userLevel > _N_http_user_type_ADMIN)
       {
@@ -881,7 +880,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       // Process save operation
       n = ng_snprintf(buf, sizeof buf, "{\"id\":%d}", id);
     }
-    else if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"add.json", req->path))
+    else if (ng_block_isequal__(&__ADD_FILE, &req->path))
     {
       int err;
       JSONPair_t *usr, *pwd, *type;
@@ -979,7 +978,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         n = ng_snprintf(buf, sizeof buf, "{\"id\":%d}", id);
       }
     }
-    else if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"del.json", req->path))
+    else if (ng_block_isequal__(&__DEL_FILE, &req->path))
     {
       // Process del operation
       int err, usrLen;
@@ -1073,7 +1072,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         n = ng_snprintf(buf, sizeof buf, "{\"id\":%d}", id);
       }
     }
-    else if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"template.json", req->path))
+    else if (ng_block_isequal__(&__TEM_FILE, &req->path))
     {
       // Generate template.json
       p = json_find_bykey(pair, "value", 5);
@@ -1089,9 +1088,8 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
           goto finished;
         }
-        if (req->path) http_free(req->path);
-        req->path = http_strdup_size(__TMP_USR_FILE.buf,__TMP_USR_FILE.len);
-        if (req->path == NULL)
+
+        if (ng_dup_data_block_str(&req->path, &__TMP_USR_FILE) < 0)
         {
           n = ng_snprintf(buf, sizeof buf, CFG_RET0("Malloc Failed."), id);
           goto finished;
@@ -1105,9 +1103,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
           goto finished;
         }
-        if (req->path) http_free(req->path);
-        req->path = http_strdup_size(__TMP_INT_FILE.buf,__TMP_INT_FILE.len);
-        if (req->path == NULL)
+        if (ng_dup_data_block_str(&req->path, &__TMP_INT_FILE) < 0)
         {
           n = ng_snprintf(buf, sizeof buf, CFG_RET0("Malloc Failed."), id);
           goto finished;
@@ -1124,7 +1120,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       root_service(conn, req);
       return;
     }
-    else if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"users.json", req->path))
+    else if (ng_block_isequal__(&__USR_FILE, &req->path))
     {
       if (req->userLevel != _N_http_user_type_SUPER)
       {
@@ -1150,7 +1146,7 @@ finished:
   }
   else
   {
-    if (!strcmp(_nanoConfig_HTTPD_DATA_SERVICE"system.json", req->path))
+    if (ng_block_isequal__(&__SYS_FILE, &req->path))
     {
       // Generate system.json
       r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);

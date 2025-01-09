@@ -131,8 +131,8 @@ _http_stream_is_chunked(hpair_t * header)
     __HDR_BUF(HEADER_TRANSFER_ENCODING));
   if (chunked != NULL)
   {
-    if (chunked->value_len == (sizeof(TRANSFER_ENCODING_CHUNKED)-1)
-      && !memcmp(chunked->value, TRANSFER_ENCODING_CHUNKED, chunked->value_len))
+    if (ng_block_isequal(&chunked->val, TRANSFER_ENCODING_CHUNKED, 
+      sizeof(TRANSFER_ENCODING_CHUNKED)-1))
     {
       return 1;
     }
@@ -169,7 +169,7 @@ http_input_stream_new(struct hsocket_t *sock, hpair_t *header)
     cl = hpairnode_get_ignore_case_len(header, 
       __HDR_BUF(HEADER_CONTENT_LENGTH));
     assert(cl != NULL);
-    result->content_length = ng_atoi(cl->value, cl->value_len);
+    result->content_length = ng_atoi(cl->val.cptr, cl->val.len);
     result->received = 0;
     result->type = HTTP_TRANSFER_CONTENT_LENGTH;
   }
@@ -599,7 +599,7 @@ http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
     cl = hpairnode_get_ignore_case_len(header, 
       __HDR_BUF(HEADER_CONTENT_LENGTH));
     assert(cl != NULL);
-    result->content_length = ng_atoi(cl->value, cl->value_len);
+    result->content_length = ng_atoi(cl->val.cptr, cl->val.len);
     result->type = HTTP_TRANSFER_CONTENT_LENGTH;
   }
   /* Check if Chunked */

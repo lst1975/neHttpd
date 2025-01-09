@@ -383,22 +383,22 @@ _httpd_admin_handle_get(httpd_conn_t * conn, struct hrequest_t *req)
   else if ((param = hpairnode_get_ignore_case_len(req->query, 
         ___(NHTTPD_ADMIN_QUERY_STATISTICS))))
   {
-    _httpd_admin_list_statistics(conn, param->value, param->value_len);
+    _httpd_admin_list_statistics(conn, param->val.cptr, param->val.len);
   }
   else if ((param = hpairnode_get_ignore_case_len(req->query, 
         ___(NHTTPD_ADMIN_QUERY_ACTIVATE_SERVICE))))
   {
-    _httpd_admin_enable_service(conn, param->value, param->value_len);
+    _httpd_admin_enable_service(conn, param->val.cptr, param->val.len);
   }
   else if ((param = hpairnode_get_ignore_case_len(req->query, 
         ___(NHTTPD_ADMIN_QUERY_PASSIVATE_SERVICE))))
   {
-    _httpd_admin_disable_service(conn, param->value, param->value_len);
+    _httpd_admin_disable_service(conn, param->val.cptr, param->val.len);
   }
   else if ((param = hpairnode_get_ignore_case_len(req->query, 
     ___(NHTTPD_ADMIN_QUERY_SET_LOGLEVEL))))
   {
-    _httpd_admin_set_loglevel(conn, param->value);
+    _httpd_admin_set_loglevel(conn, param->val.cptr);
   }
   else
   {

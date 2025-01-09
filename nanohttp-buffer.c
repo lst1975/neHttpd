@@ -73,3 +73,41 @@ ng_free_data_buffer(httpd_buf_t *data)
     data->buf = NULL;
   }
 }
+
+void
+ng_free_data_block(ng_block_s *block)
+{
+  if (block->buf != NULL)
+  {
+    http_free(block->buf);
+    block->buf = NULL;
+  }
+}
+
+int
+ng_dup_data_block(ng_block_s *block, const ng_block_s *n)
+{
+  void *p = http_malloc(n->len);
+  if (p == NULL)
+    return -1;
+  ng_free_data_block(block);
+  ng_memcpy(p, n->data, n->len);
+  block->data = p;
+  block->len  = n->len;
+  return 0;
+}
+
+int
+ng_dup_data_block_str(ng_block_s *block, const ng_block_s *n)
+{
+  void *p = http_malloc(n->len+1);
+  if (p == NULL)
+    return -1;
+  ng_free_data_block(block);
+  ng_memcpy(p, n->data, n->len);
+  block->data = p;
+  block->len  = n->len;
+  block->buf[block->len] = '\0';
+  return 0;
+}
+

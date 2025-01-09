@@ -1248,6 +1248,21 @@ ip_addr_string(struct DATA *d, const void *ptr)
   strings(d, err_fmt_msg);
 }
 
+/* %S ng_block_s */
+PRIVATE void
+blocks(struct DATA *p, const ng_block_s *b)
+{
+  int i;
+
+  i = b->len;
+  if (p->precision != NOT_FOUND) /* the smallest number */
+    i = (i < p->precision ? i : p->precision);
+  p->width -= i;
+  PAD_RIGHT(p);
+  PUT_STRING(b->buf, i, p);
+  PAD_LEFT(p);
+}
+
 /*
  * Show a '%p' thing.  A kernel extension is that the '%p' is followed
  * by an extra set of alphanumeric characters that are extended format
@@ -1354,6 +1369,10 @@ pointer(struct DATA *d, const void *ptr)
     d->pf++;
     uuid_string(d, (const uint8_t *)ptr);
     return;
+  case 'S':
+    d->pf++;
+    blocks(d, (const ng_block_s *)ptr);
+    break;
   case 'u':
   case 'k':
     d->pf++;

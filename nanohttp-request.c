@@ -134,7 +134,6 @@ static struct hrequest_t *hrequest_new(void)
   req->method       = HTTP_REQUEST_GET;
   req->version      = HTTP_1_1;
   req->query        = NULL;
-  req->path         = NULL;
   req->header       = NULL;
   req->in           = NULL;
   req->attachments  = NULL;
@@ -144,6 +143,8 @@ static struct hrequest_t *hrequest_new(void)
   req->statistics.bytes_transmitted = 0;
   req->statistics.bytes_received    = 0;
   req->content_length = -1;
+
+  ng_block_init(&req->path);
   
 clean0:
   return req;
@@ -268,17 +269,17 @@ _hrequest_parse_header(char *data, size_t len)
 
       /* save path */
       /* req->path = (char *) http_malloc(strlen(key) + 1); */
-      req->path_len = opt_key == NULL ? key-result : opt_key - result;
-      if (req->path_len >= REQUEST_MAX_PATH_SIZE - 1)
+      req->path.len = opt_key == NULL ? key-result : opt_key - result;
+      if (req->path.len >= REQUEST_MAX_PATH_SIZE - 1)
       {
         log_error("Request path length is too large (%d), MAX:", 
-          req->path_len, REQUEST_MAX_PATH_SIZE);
+          req->path.len, REQUEST_MAX_PATH_SIZE);
         goto clean1;
       }
-      req->path = http_strdup_size(result, req->path_len);
-      if (req->path == NULL)
+      req->path.buf = http_strdup_size(result, req->path.len);
+      if (req->path.buf == NULL)
       {
-        req->path_len = 0;
+        req->path.len = 0;
         log_error("Failed to malloc buffer for path (%s)", 
           strerror(errno));
         goto clean1;
@@ -315,12 +316,12 @@ _hrequest_parse_header(char *data, size_t len)
 
           /* fill hpairnode_t struct */
           tmppair->next = NULL;
-          tmppair->value_len = opt_value == NULL ? 0 : key - opt_value - 1;
-          tmppair->key_len = opt_value == NULL ? key - opt_key : opt_value - opt_key;
-          tmppair->key = http_strdup_size(opt_key, tmppair->key_len);
+          tmppair->val.len = opt_value == NULL ? 0 : key - opt_value - 1;
+          tmppair->key.len = opt_value == NULL ? key - opt_key : opt_value - opt_key;
+          tmppair->key.buf = http_strdup_size(opt_key, tmppair->key.len);
           if (opt_value)
-            tmppair->value = http_strdup_size(opt_value+1, tmppair->value_len);
-          if (tmppair->key == NULL || tmppair->value == NULL)
+            tmppair->val.buf = http_strdup_size(opt_value+1, tmppair->val.len);
+          if (tmppair->key.buf == NULL || tmppair->val.buf == NULL)
           {
             log_error("http_strdup_size failed (%s)", strerror(errno));
             goto clean1;
@@ -366,7 +367,7 @@ _hrequest_parse_header(char *data, size_t len)
                       __HDR_BUF(HEADER_CONTENT_TYPE));
   if (tmppair != NULL)
   {
-    req->content_type = content_type_new(tmppair->value, tmppair->value_len);
+    req->content_type = content_type_new(tmppair->val.cptr, tmppair->val.len);
     if (req->content_type == NULL)
     {
       log_error("content_type_new failed.");
@@ -399,9 +400,7 @@ hrequest_free(struct hrequest_t * req)
   if (req->attachments)
     attachments_free(req->attachments);
 
-  if (req->path)
-    http_free(req->path);
-
+  ng_free_data_block(&req->path);
   ng_free_data_buffer(&req->data);
   http_free(req);
 

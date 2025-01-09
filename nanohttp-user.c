@@ -106,10 +106,7 @@ static int __nanohttp_users_is_super(const char *name, int nameLen)
 {
   if (__superuser == NULL)
     return 0;
-  if (nameLen != __superuser->name.len 
-    || memcmp(name, __superuser->name.cptr, nameLen))
-    return 0;
-  return 1;
+  return ng_block_isequal(&__superuser->name, name, nameLen);
 }
 
 static int __nanohttp_users_init__one(JSONPair_t *p)
@@ -242,10 +239,10 @@ clean0:
   return err;
 }
 
-static const httpd_buf_t __http_user_super={.cptr="SupperUser",.len=10};
-static const httpd_buf_t __http_user_admin={.cptr="Administrator",.len=13};
-static const httpd_buf_t __http_user_guest={.cptr="Guest",.len=5};
-const httpd_buf_t *
+static const ng_block_s __http_user_super={.cptr="SupperUser",.len=10};
+static const ng_block_s __http_user_admin={.cptr="Administrator",.len=13};
+static const ng_block_s __http_user_guest={.cptr="Guest",.len=5};
+const ng_block_s *
 __nanohttp_level2string(int level)
 {
   switch (level)
@@ -263,11 +260,11 @@ __nanohttp_level2string(int level)
 static int
 __nanohttp_string2level(const char *level, int levelLen)
 {
-  if (levelLen == __http_user_super.len && !memcmp(level, __http_user_super.data, levelLen))
+  if (ng_block_isequal(&__http_user_super, level, levelLen))
     return _N_http_user_type_SUPER;
-  if (levelLen == __http_user_admin.len && !memcmp(level, __http_user_admin.data, levelLen))
+  if (ng_block_isequal(&__http_user_admin, level, levelLen))
     return _N_http_user_type_ADMIN;
-  if (levelLen == __http_user_guest.len && !memcmp(level, __http_user_guest.data, levelLen))
+  if (ng_block_isequal(&__http_user_guest, level, levelLen))
     return _N_http_user_type_GUEST;
 
   return _N_http_user_type_NONE;
@@ -345,7 +342,7 @@ nanohttp_users_match(const char *name, int nameLen,
 static int
 __nanohttp_user2json_super(httpd_user_t *entry, char *b, int len, int count)
 {
-  const httpd_buf_t *lp = __nanohttp_level2string(entry->type);
+  const ng_block_s *lp = __nanohttp_level2string(entry->type);
   if (lp == NULL)
     return -1;
 
@@ -392,7 +389,7 @@ __nanohttp_user2json_super(httpd_user_t *entry, char *b, int len, int count)
 static int
 __nanohttp_user2json(httpd_user_t *entry, char *b, int len, int count)
 {
-  const httpd_buf_t *lp = __nanohttp_level2string(entry->type);
+  const ng_block_s *lp = __nanohttp_level2string(entry->type);
   if (lp == NULL)
     return -1;
 

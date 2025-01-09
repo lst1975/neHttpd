@@ -123,10 +123,8 @@
 typedef struct hpair hpair_t;
 struct hpair
 {
-  char *key;
-  char *value;
-  int key_len;
-  int value_len;
+  ng_block_s key;
+  ng_block_s val;
   hpair_t *next;
 };
 
