@@ -325,13 +325,20 @@ ng_inet_ntop4(const char *src, char *dst, size_t size)
 {
 	char tmp[sizeof "255.255.255.255"];
 	size_t l;
+  char *p = tmp;
+  
+  for (int i = 0; i < 4; i++) {
+    /* hold each IP quad in normal order */
+    const ng_block_s *b = &__ng_uint8_string[(uint8_t)src[i]];
+    for (int x=0;x<b->len;x++)
+      *p++ = b->cptr[x];
+    if (i < 3)
+      *p++ = '.';
+  }
 
-	l = ng_snprintf(tmp, sizeof(tmp), "%u.%u.%u.%u",
-	    src[0], src[1], src[2], src[3]);
-	if (l <= 0 || l >= size) {
-		return 0;
-	}
+  l = RTE_MIN(p-tmp, size-1);
 	ng_memcpy(dst, tmp, l);
+  tmp[l] = '\0';
 	return l;
 }
 
