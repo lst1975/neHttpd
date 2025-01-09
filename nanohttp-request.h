@@ -341,21 +341,21 @@ struct request_statistics
  */
 struct hrequest_t
 {
-  hreq_method_t method;
-  http_version_t version;
   ng_block_s path;
-  int   userLevel;
   hpair_t *query;
   hpair_t *header;
   void    *conn;
   size_t   content_length;
-  httpd_buf_t data;
   struct request_statistics statistics;
+  httpd_buf_t data;
 
   struct http_input_stream_t *in;
   content_type_t *content_type;
   struct attachments_t *attachments;
   char root_part_id[150];
+  hreq_method_t  method;
+  http_version_t version;
+  int   userLevel;
 };
 
 #ifdef __cplusplus

@@ -78,15 +78,16 @@ typedef size_t (*multipart_data_cb) (multipartparser*, const char* data, size_t 
 
 struct _multipartparser {
   /** PRIVATE **/
-  char        boundary[128];
-  int         boundary_length;
+  char        __boundary[128];
+  char        field[128];
+  char        value[256];
+  ng_block_s  boundary;
   int         index;
+  int         pad;
   uint16_t    state;
   uint16_t    content_disposition_parsed;
   uint16_t    value_length;
   uint16_t    field_length;
-  char field[112];
-  char value[246];
 
   /** PUBLIC **/
   void* data;

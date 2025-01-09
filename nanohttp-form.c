@@ -501,23 +501,23 @@ reexecute:
         break;
 
       case s_first_boundary:
-        if (!parser->index && end - p >= parser->boundary_length)
+        if (!parser->index && end - p >= parser->boundary.len)
         {
-          if (memcmp(p, parser->boundary, parser->boundary_length))
+          if (memcmp(p, parser->boundary.cptr, parser->boundary.len))
           {
             goto error;
           }
-          parser->index = parser->boundary_length;
-          p += parser->boundary_length - 1;
+          parser->index = parser->boundary.len;
+          p += parser->boundary.len - 1;
           break;
         }
-        if (parser->index == parser->boundary_length) {
+        if (parser->index == parser->boundary.len) {
           if (c != CR)
             goto error;
           parser->index++;
           break;
         }
-        if (parser->index == parser->boundary_length + 1) {
+        if (parser->index == parser->boundary.len + 1) {
           if (c != LF)
             goto error;
           CALLBACK_NOTIFY(body_begin);
@@ -526,7 +526,7 @@ reexecute:
           parser->state = s_header_field_start;
           break;
         }
-        if (c == parser->boundary[parser->index]) {
+        if (c == parser->boundary.cptr[parser->index]) {
           parser->index++;
           break;
         }
@@ -703,27 +703,27 @@ reexecute:
         // fallthrough;
 
       case s_data_boundary:
-        if (!parser->index && end - p >= parser->boundary_length)
+        if (!parser->index && end - p >= parser->boundary.len)
         {
-          if (!memcmp(p, parser->boundary, parser->boundary_length))
+          if (!memcmp(p, parser->boundary.cptr, parser->boundary.len))
           {
             parser->index = 0;
             parser->state = s_data_boundary_done;
-            p += parser->boundary_length - 1;
+            p += parser->boundary.len - 1;
             goto reexecute;
           }
         }
-        if (parser->index == parser->boundary_length) {
+        if (parser->index == parser->boundary.len) {
           parser->index = 0;
           parser->state = s_data_boundary_done;
           goto reexecute;
         }
-        if (c == parser->boundary[parser->index]) {
+        if (c == parser->boundary.cptr[parser->index]) {
           parser->index++;
           break;
         }
         CALLBACK_DATA(data, "\r\n--", 4);
-        CALLBACK_DATA(data, parser->boundary, parser->index);
+        CALLBACK_DATA(data, parser->boundary.cptr, parser->index);
         parser->state = s_data;
         goto reexecute;
 
@@ -767,23 +767,27 @@ error:
   return p - data;
 }
 
-int multipartparser_init(multipartparser *parser, void *arg, 
+int 
+multipartparser_init(multipartparser *parser, void *arg, 
   const char *boundary, int boundaryLen)
 {
-  parser->boundary_length = boundaryLen;
+  parser->boundary.len = boundaryLen;
 
-  if (boundaryLen >= sizeof(parser->boundary))
+  if (boundaryLen + 1 >= sizeof(parser->__boundary))
     return -1;
-  memcpy(parser->boundary, boundary, boundaryLen);
-  parser->boundary[boundaryLen]='\0';
+  
+  ng_memcpy(parser->__boundary, boundary, boundaryLen);
+  parser->__boundary[boundaryLen]='\0';
 
-  parser->arg   = arg;
-  parser->data  = NULL;
-  parser->index = 0;
+  parser->boundary.buf = parser->__boundary;
+  parser->arg          = arg;
+  parser->data         = NULL;
+  parser->index        = 0;
   parser->value_length = 0;
   parser->field_length = 0;
   parser->state        = s_preamble;
   parser->content_disposition_parsed = 0;
+  
   return 0;
 }
 

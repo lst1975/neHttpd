@@ -468,21 +468,27 @@ extern int httpd_add_headers(httpd_conn_t * conn, const hpair_t * values);
  * @returns H_OK on success or error flag
  *
  */
-extern herror_t httpd_mime_send_header(httpd_conn_t * conn, const char *related_start, const char *related_start_info, const char *related_type, int code, const char *text);
+extern herror_t httpd_mime_send_header(httpd_conn_t * conn, 
+  const char *related_start, const char *related_start_info, 
+  const char *related_type, int code, const char *text);
 
 /**
  *
  * Send boundary and part header and continue with next part
  *
  */
-extern herror_t httpd_mime_next(httpd_conn_t * conn, const char *content_id, const char *content_type, const char *transfer_encoding);
+extern herror_t httpd_mime_next(httpd_conn_t * conn, 
+  const char *content_id, const char *content_type, 
+  const char *transfer_encoding);
 
 /**
  *
  * Send boundary and part header and continue with next part
  *
  */
-extern herror_t httpd_mime_send_file(httpd_conn_t * conn, const char *content_id, const char *content_type, const char *transfer_encoding, const char *filename);
+extern herror_t httpd_mime_send_file(httpd_conn_t * conn, 
+  const char *content_id, const char *content_type, 
+  const char *transfer_encoding, const char *filename);
 
 /** This function finishes a MIME request.
  *
@@ -497,7 +503,8 @@ extern herror_t httpd_mime_end(httpd_conn_t * conn);
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_send_bad_request(httpd_conn_t *conn, const char *msg);
+extern herror_t 
+httpd_send_bad_request(httpd_conn_t *conn, const char *msg);
 
 /** This function sends a minimalistc HTML error document with HTTP
  * status 401.
@@ -506,7 +513,8 @@ extern herror_t httpd_send_bad_request(httpd_conn_t *conn, const char *msg);
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_send_unauthorized(httpd_conn_t *conn, const char *realm);
+extern herror_t 
+httpd_send_unauthorized(httpd_conn_t *conn, const char *realm);
 
 /** This function sends a minimalistic HTML error document with HTTP
  * status 404.
@@ -515,7 +523,8 @@ extern herror_t httpd_send_unauthorized(httpd_conn_t *conn, const char *realm);
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_send_not_found(httpd_conn_t *conn, const char *msg);
+extern herror_t 
+httpd_send_not_found(httpd_conn_t *conn, const char *msg);
 
 /** This function sends a minimalistic HTML error document with HTTP
  * status 500.
@@ -524,7 +533,8 @@ extern herror_t httpd_send_not_found(httpd_conn_t *conn, const char *msg);
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_send_internal_error(httpd_conn_t * conn, const char *msg);
+extern herror_t 
+httpd_send_internal_error(httpd_conn_t * conn, const char *msg);
 
 /** This functions sends a minimalistic HTML error document with HTTP
  * status 501.
