@@ -314,7 +314,7 @@ enum __ng_errno{
   ng_ERR_ENOTCONN                 = -107,
   ng_ERR_ESHUTDOWN                = -108,
   ng_ERR_ETOOMANYREFS             = -109,
-  ng_ERR_ETIMEDOUT                = -110,
+  ng_ERR_ECONNTIMEOUT             = -110,
   ng_ERR_ECONNREFUSED             = -111,
   ng_ERR_EHOSTDOWN                = -112,
   ng_ERR_EHOSTUNREACH             = -113,
@@ -329,11 +329,12 @@ enum __ng_errno{
   ng_ERR_E2SMALL                  = -122,
   ng_ERR_EINCOMPLETE              = -123,
   ng_ERR_ESYSTEM                  = -124,
-  ng_ERR_MIME_ERROR_NO_BOUNDARY_PARAM = -125,
-  ng_ERR_MIME_ERROR_NO_START_PARAM    = -126,
-  ng_ERR_MIME_ERROR_PARSE_ERROR       = -127,
-  ng_ERR_MIME_ERROR_NO_ROOT_PART      = -128,
-  ng_ERR_MIME_ERROR_NOT_MIME_MESSAGE  = -129,
+  ng_ERR_ETIMEOUT                 = -125,
+  ng_ERR_HTTP_MIME_ERROR_NO_BOUNDARY_PARAM = -126,
+  ng_ERR_HTTP_MIME_ERROR_NO_START_PARAM    = -127,
+  ng_ERR_HTTP_MIME_ERROR_PARSE_ERROR       = -128,
+  ng_ERR_HTTP_MIME_ERROR_NO_ROOT_PART      = -129,
+  ng_ERR_HTTP_MIME_ERROR_NOT_MIME_MESSAGE  = -130,
 };
 
 #ifndef SOCKET_ERROR

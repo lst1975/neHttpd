@@ -2353,23 +2353,23 @@ int  dconvstr_ieee754_print(
   if( is_nan )
   {
      if( format_flags & DCONVSTR_FLAG_UPPERCASE )
-         return  format_copystr( outbuf, outbuf_size, "NAN", 3 );
+       return  format_copystr( outbuf, outbuf_size, "NAN", 3 );
      else
-         return  format_copystr( outbuf, outbuf_size, "nan", 3 );
+       return  format_copystr( outbuf, outbuf_size, "nan", 3 );
   }
   if(( is_infinity )&&( !is_negative ))
   {
      if( format_flags & DCONVSTR_FLAG_UPPERCASE )
-         return  format_copystr( outbuf, outbuf_size, "INF", 3 );
+       return  format_copystr( outbuf, outbuf_size, "INF", 3 );
      else
-         return  format_copystr( outbuf, outbuf_size, "inf", 3 );
+       return  format_copystr( outbuf, outbuf_size, "inf", 3 );
   }
   if(( is_infinity )&&( is_negative ))
   {
      if( format_flags & DCONVSTR_FLAG_UPPERCASE )
-         return  format_copystr( outbuf, outbuf_size, "-INF", 4 );
+       return  format_copystr( outbuf, outbuf_size, "-INF", 4 );
      else
-         return  format_copystr( outbuf, outbuf_size, "-inf", 4 );
+       return  format_copystr( outbuf, outbuf_size, "-inf", 4 );
   }
 
   // 3. Get exact decimal representation.
@@ -2383,10 +2383,10 @@ int  dconvstr_ieee754_print(
   else
   {
      if(! convert_binary_to_extended_decimal( mantissa, exponent, &mantissa, &exponent ) )
-         return  0;    // internal error during conversion
+       return  0;    // internal error during conversion
      bcd_decompress( mantissa, decimal_mantissa );
      if(( decimal_mantissa[0] != 0 )||( decimal_mantissa[1] == 0 ))
-         return  0;    // invariant does not hold : mantissa >= 10^19 || mantissa < 10^18
+       return  0;    // invariant does not hold : mantissa >= 10^19 || mantissa < 10^18
   }
 
   // 4. Compute the following fields:

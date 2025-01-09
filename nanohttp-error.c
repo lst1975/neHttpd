@@ -133,7 +133,7 @@ herror_new(const char *func, int errcode, const char *format, ...)
   impl->func = func ? http_strdup(func) : NULL;
 
   va_start(ap, format);
-  vsprintf(impl->message, format, ap);
+  ng_vsnprintf(impl->message, sizeof(impl->message), format, ap);
   va_end(ap);
 
   return (herror_t) impl;
@@ -188,7 +188,7 @@ herror_release(herror_t err)
   return;
 }
 
-#define ENTRY(n, s) DECL_CONST_STR("("#n")" s)
+#define ENTRY(n, s) [-ng_ERR_ ## n] = DECL_CONST_STR_N(-ng_ERR_ ## n, "("#n")" s)
 
 static const ng_str_s error_table[] =
 {
@@ -301,7 +301,7 @@ static const ng_str_s error_table[] =
   ENTRY(ENOTCONN,          "Transport endpoint is not connected"),
   ENTRY(ESHUTDOWN,         "Cannot send after transport endpoint shutdown"),
   ENTRY(ETOOMANYREFS,      "Too many references: cannot splice"),
-  ENTRY(ETIMEDOUT,         "Connection timed out"),
+  ENTRY(ECONNTIMEOUT,      "Connection timed out"),
   ENTRY(ECONNREFUSED,      "Connection refused"),
   ENTRY(EHOSTDOWN,         "Host is down"),
   ENTRY(EHOSTUNREACH,      "No route to host"),
@@ -316,11 +316,11 @@ static const ng_str_s error_table[] =
   ENTRY(E2SMALL,           "Arg list too small"),
   ENTRY(EINCOMPLETE,       "Incomplete operation or argument"),
   ENTRY(ESYSTEM,           "System error"),
-  ENTRY(MIME_ERROR_NO_BOUNDARY_PARAM,     "'boundary' not set for multipart/related"),
-  ENTRY(MIME_ERROR_NO_START_PARAM,        "'start' not set for multipart/related"),
-  ENTRY(MIME_ERROR_PARSE_ERROR,           "MIME Parse Error"),
-  ENTRY(MIME_ERROR_NO_ROOT_PART,          "No root part found"),
-  ENTRY(MIME_ERROR_NOT_MIME_MESSAGE,      "Not a MIME message"),
+  ENTRY(HTTP_MIME_ERROR_NO_BOUNDARY_PARAM,     "'boundary' not set for multipart/related"),
+  ENTRY(HTTP_MIME_ERROR_NO_START_PARAM,        "'start' not set for multipart/related"),
+  ENTRY(HTTP_MIME_ERROR_PARSE_ERROR,           "MIME Parse Error"),
+  ENTRY(HTTP_MIME_ERROR_NO_ROOT_PART,          "No root part found"),
+  ENTRY(HTTP_MIME_ERROR_NOT_MIME_MESSAGE,      "Not a MIME message"),
 };
 
 const ng_str_s *ng_strerror(ng_errno_e err)

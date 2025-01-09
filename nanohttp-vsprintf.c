@@ -1773,7 +1773,7 @@ __ng_vsnprintf_cb(ng_vsout_f out, void *arg, char const *format, va_list args)
   data.arg     = arg;
   data.fine    = __ng_fine_cb;
   counter = __ng_vsnprintf_internal(&data, args);
-  if (data.nbytes)
+  if (!data.err && data.nbytes)
   {
     int n = out(arg, data.holder, data.nbytes);
     if (n < 0)
@@ -1783,7 +1783,7 @@ __ng_vsnprintf_cb(ng_vsout_f out, void *arg, char const *format, va_list args)
     }
     counter += n;
   }
-  return counter;
+  return data.err ? -1 : counter;
 }
 
 PUBLIC int

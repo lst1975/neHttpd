@@ -162,6 +162,7 @@ struct http_output_stream_t
   http_transfer_type_t type;
   size_t content_length;
   size_t sent;
+  herror_t status;
 };
 
 #ifdef __cplusplus

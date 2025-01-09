@@ -238,9 +238,7 @@ http_input_stream_free(struct http_input_stream_t * stream)
     /* remove(stream->filename); */
   }
 
-  if (stream->err)
-    herror_release(stream->err);
-
+  herror_release(stream->err);
   http_free(stream);
 }
 
@@ -326,8 +324,16 @@ _http_input_stream_chunked_read_chunk_size(struct http_input_stream_t * stream)
     }
     else if (chunk[i] == '\n')
     {
+      const char *end;
       chunk[i] = '\0';          /* double check */
-      chunk_size = strtol(chunk, (char **) NULL, 16);   /* hex to dec */
+      chunk_size = ng_htou64(chunk, i, &end);   /* hex to dec */
+      if (end != chunk + i)
+      {
+        stream->err = herror_new("_http_input_stream_chunked_read_chunk_size",
+                                 STREAM_ERROR_WRONG_CHUNK_SIZE,
+                                 "Wrong chunk-size: %.*s", i, chunk);
+        return -1;
+      }
       /* 
          log_verbose("chunk_size: '%s' as dec: '%d'", chunk, chunk_size); */
       return chunk_size;
@@ -456,7 +462,7 @@ _http_input_stream_chunked_read(struct http_input_stream_t * stream, unsigned ch
 
 
 static int
-_http_input_stream_connection_closed_read(struct http_input_stream_t * stream, 
+_http_input_stream_connection_closed_read(struct http_input_stream_t *stream, 
   unsigned char *dest, size_t size)
 {
   size_t status;
@@ -579,8 +585,9 @@ http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
     return NULL;
   }
 
-  result->sock = sock;
-  result->sent = 0;
+  result->sock   = sock;
+  result->sent   = 0;
+  result->status = H_OK;
 
   /* Find connection type */
 
@@ -617,8 +624,8 @@ http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
 void
 http_output_stream_free(struct http_output_stream_t * stream)
 {
+  herror_release(stream->status);
   http_free(stream);
-
   return;
 }
 
@@ -631,12 +638,12 @@ http_output_stream_write(struct http_output_stream_t * stream,
                          const unsigned char *bytes, size_t size)
 {
   herror_t status;
-  char chunked[24];
 
   if (stream->type == HTTP_TRANSFER_CHUNKED)
   {
-    ng_snprintf(chunked, sizeof(chunked)-1, "%lx\r\n", size);
-    if ((status = hsocket_send_string(stream->sock, chunked)) != H_OK)
+    char chunked[24];
+    int n = ng_u64toh(size, chunked, sizeof(chunked)-1, 0, 0);
+    if ((status = hsocket_send(stream->sock, (const unsigned char *)chunked, n)) != H_OK)
       return status;
   }
 
@@ -648,7 +655,7 @@ http_output_stream_write(struct http_output_stream_t * stream,
 
   if (stream->type == HTTP_TRANSFER_CHUNKED)
   {
-    if ((status = hsocket_send_string(stream->sock, "\r\n")) != H_OK)
+    if ((status = hsocket_send(stream->sock, (const unsigned char *)"\r\n", 2)) != H_OK)
       return status;
   }
 
@@ -666,6 +673,20 @@ http_output_stream_write_string(struct http_output_stream_t * stream,
   return http_output_stream_write(stream, (const unsigned char *)str, strlen(str));
 }
 
+static int
+__http_snprintf_out(void *arg, const char *string, size_t length)
+{
+  struct http_output_stream_t *stream = (struct http_output_stream_t *)arg;
+  herror_t status;
+  status = http_output_stream_write(stream, (const unsigned char *)string, length);
+  if (status != H_OK)
+  {
+    stream->status = status;
+    return -1;
+  }
+  return length;
+}
+
 /**
   Writes 'strlen()' bytes of 'str' into stream.
   Returns socket error flags or H_OK.
@@ -674,26 +695,41 @@ herror_t
 http_output_stream_write_printf(struct http_output_stream_t *stream, 
   const char *format, ...)
 {
-  herror_t status;
-  char buf[1024];
   int n;
   va_list ap;
 
   va_start(ap, format);
-  n = ng_vsnprintf(buf, sizeof buf, format, ap);
-  status = http_output_stream_write(stream, (const unsigned char *)buf, n);
+  n = __ng_vsnprintf_cb(__http_snprintf_out, stream, format, ap);
   va_end(ap);
-  return status;
+
+  if (n < 0)
+  {
+    herror_t status = stream->status;
+    if (status == H_OK)
+    {
+      status = herror_new("http_output_stream_write_printf",
+                 GENERAL_ERROR,
+                 "__ng_vsnprintf_cb error.");
+    }
+    else
+    {
+      stream->status = NULL;
+    }
+    
+    return status;
+  }
+  
+  return H_OK;
 }
 
 herror_t
-http_output_stream_flush(struct http_output_stream_t * stream)
+http_output_stream_flush(struct http_output_stream_t *stream)
 {
   herror_t status;
 
   if (stream->type == HTTP_TRANSFER_CHUNKED)
   {
-    if ((status = hsocket_send_string(stream->sock, "0\r\n\r\n")) != H_OK)
+    if ((status = hsocket_send(stream->sock, (const unsigned char *)"0\r\n\r\n", 5)) != H_OK)
       return status;
   }
 
