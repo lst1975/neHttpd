@@ -84,6 +84,7 @@
 #include "nanohttp-ctype.h"
 #include "nanohttp-socket.h"
 #include "nanohttp-inet.h"
+#include "nanohttp-atoi.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -420,7 +421,7 @@ ng_inet_ntop6(const char *src, char *dst, size_t size)
 			tp += n;
 			break;
 		}
-		advance = ng_snprintf(tp, ep - tp, "%x", words[i]);
+		advance = ng_u32toh(words[i], tp, ep - tp, 0, 0);
 		if (advance <= 0 || advance >= ep - tp)
 			return 0;
 		tp += advance;

@@ -764,93 +764,6 @@ mac_address_string(struct DATA *d, const uint8_t *addr)
   strings(d, mac_addr);
 }
 
-/*
- * Decimal conversion is by far the most typical, and is used for
- * /proc and /sys data. This directly impacts e.g. top performance
- * with many processes running. We optimize it for speed by emitting
- * two characters at a time, using a 200 byte lookup table. This
- * roughly halves the number of multiplications compared to computing
- * the digits one at a time. Implementation strongly inspired by the
- * previous version, which in turn used ideas described at
- * <http://www.cs.uiowa.edu/~jones/bcd/divide.html> (with permission
- * from the author, Douglas W. Jones).
- *
- * It turns out there is precisely one 26 bit fixed-point
- * approximation a of 64/100 for which x/100 == (x * (uint64_t)a) >> 32
- * holds for all x in [0, 10^8-1], namely a = 0x28f5c29. The actual
- * range happens to be somewhat larger (x <= 1073741898), but that's
- * irrelevant for our purpose.
- *
- * For dividing a number in the range [10^4, 10^6-1] by 100, we still
- * need a 32x32->64 bit multiply, so we simply use the same constant.
- *
- * For dividing a number in the range [100, 10^4-1] by 100, there are
- * several options. The simplest is (x * 0x147b) >> 19, which is valid
- * for all x <= 43698.
- */
-
-static const uint16_t decpair[100] = {
-#define _(x) (uint16_t) RTE_LE16(((x % 10) | ((x / 10) << 8)) + 0x3030)
-	_( 0), _( 1), _( 2), _( 3), _( 4), _( 5), _( 6), _( 7), _( 8), _( 9),
-	_(10), _(11), _(12), _(13), _(14), _(15), _(16), _(17), _(18), _(19),
-	_(20), _(21), _(22), _(23), _(24), _(25), _(26), _(27), _(28), _(29),
-	_(30), _(31), _(32), _(33), _(34), _(35), _(36), _(37), _(38), _(39),
-	_(40), _(41), _(42), _(43), _(44), _(45), _(46), _(47), _(48), _(49),
-	_(50), _(51), _(52), _(53), _(54), _(55), _(56), _(57), _(58), _(59),
-	_(60), _(61), _(62), _(63), _(64), _(65), _(66), _(67), _(68), _(69),
-	_(70), _(71), _(72), _(73), _(74), _(75), _(76), _(77), _(78), _(79),
-	_(80), _(81), _(82), _(83), _(84), _(85), _(86), _(87), _(88), _(89),
-	_(90), _(91), _(92), _(93), _(94), _(95), _(96), _(97), _(98), _(99),
-#undef _
-};
-
-/*
- * This will print a single '0' even if r == 0, since we would
- * immediately jump to out_r where two 0s would be written but only
- * one of them accounted for in buf. This is needed by ip4_string
- * below. All other callers pass a non-zero value of r.
-*/
-static char *
-put_dec_trunc8(char *buf, unsigned r)
-{
-	unsigned q;
-
-	/* 1 <= r < 10^8 */
-	if (r < 100)
-		goto out_r;
-
-	/* 100 <= r < 10^8 */
-	q = (r * (uint64_t)0x28f5c29) >> 32;
-	*((uint16_t *)buf) = decpair[r - 100*q];
-	buf += 2;
-
-	/* 1 <= q < 10^6 */
-	if (q < 100)
-		goto out_q;
-
-	/*  100 <= q < 10^6 */
-	r = (q * (uint64_t)0x28f5c29) >> 32;
-	*((uint16_t *)buf) = decpair[q - 100*r];
-	buf += 2;
-
-	/* 1 <= r < 10^4 */
-	if (r < 100)
-		goto out_r;
-
-	/* 100 <= r < 10^4 */
-	q = (r * 0x147b) >> 19;
-	*((uint16_t *)buf) = decpair[r - 100*q];
-	buf += 2;
-out_q:
-	/* 1 <= q < 100 */
-	r = q;
-out_r:
-	/* 1 <= r < 100 */
-	*((uint16_t *)buf) = decpair[r];
-  buf += r < 10 ? 1 : 2;
-	return buf;
-}
-
 static char *
 __ip4_string(char *p, const uint8_t *addr, const char *fmt)
 {
@@ -880,18 +793,19 @@ __ip4_string(char *p, const uint8_t *addr, const char *fmt)
     step = 1;
     break;
   }
+  
   for (i = 0; i < 4; i++) {
-    char temp[4];  /* hold each IP quad in reverse order */
-    int digits = put_dec_trunc8(temp, addr[index]) - temp;
+    /* hold each IP quad in normal order */
+    const ng_block_s *b = &__ng_uint8_string[addr[index]];
+    int digits = b->len;
     if (leading_zeros) {
       if (digits < 3)
         *p++ = '0';
       if (digits < 2)
         *p++ = '0';
     }
-    /* reverse the digits in the quad */
-    while (digits--)
-      *p++ = temp[digits];
+    for (int x=0;x<digits;x++)
+      *p++ = b->cptr[x];
     if (i < 3)
       *p++ = '.';
     index += step;
@@ -899,27 +813,6 @@ __ip4_string(char *p, const uint8_t *addr, const char *fmt)
   *p = '\0';
 
   return p;
-}
-
-static __rte_unused void
-__ng_inet_ntop4(char *p, const uint8_t *addr)
-{
-  int i;
-  int index = 0;
-  int step  = 1;
-
-  for (i = 0; i < 4; i++) 
-  {
-    char temp[4];  /* hold each IP quad in reverse order */
-    int digits = put_dec_trunc8(temp, addr[index]) - temp;
-    /* reverse the digits in the quad */
-    while (digits--)
-      *p++ = temp[digits];
-    if (i < 3)
-      *p++ = '.';
-    index += step;
-  }
-  *p = '\0';
 }
 
 #ifdef WIN32

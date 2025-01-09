@@ -177,4 +177,6 @@ extern void ng_free_data_block(ng_block_s *block);
 extern int ng_dup_data_block(ng_block_s *block, const ng_block_s *n);
 extern int ng_dup_data_block_str(ng_block_s *block, const ng_block_s *n);
 
+extern const ng_block_s __ng_uint8_string[];
+
 #endif
