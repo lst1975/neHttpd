@@ -484,11 +484,30 @@ times(struct DATA *p, uint64_t d)
 {
   char buf[32];
   int len;
+  ng_rtc_time_s *tm;
 
-  if (p->square)
-    len = raw_ng_http_date(d, buf, sizeof(buf), 1, " GMT");
-  else
-    len = raw_ng_http_date(d, buf, sizeof(buf), 0, NULL);
+  switch (p->pf[1]) {
+  case 'r':
+    p->pf++;
+    tm = (ng_rtc_time_s *)(uintptr_t)d;
+    len = raw_ng_tm(tm, buf, sizeof(buf));
+		break;
+	case 'R':
+    p->pf++;
+    tm = (ng_rtc_time_s *)(uintptr_t)d;
+    len = raw_ng_http_tm(tm, buf, sizeof(buf), p->square);
+		break;
+  case 'T':
+    p->pf++;
+    fallthrough();
+  default:
+    if (p->square)
+      len = raw_ng_http_date(d, buf, sizeof(buf), 1, " GMT");
+    else
+      len = raw_ng_http_date(d, buf, sizeof(buf), 0, NULL);
+		break;
+	}
+  
   if (len > 0)
   {
     p->width -= len;
@@ -509,20 +528,23 @@ hexa(struct DATA *d, const uint64_t n)
 
   switch (d->pf[1]) {
 	case 'C':
-		separator = ':';
-		break;
+      separator = ':';
+      d->pf++;
+      break;
 	case 'D':
-		separator = '-';
-		break;
+      separator = '-';
+      d->pf++;
+      break;
 	case 'N':
-		separator = ' ';
-		break;
+      separator = ' ';
+      d->pf++;
+      break;
 	default:
-		separator = 0;
-		break;
+      separator = 0;
+      break;
 	}
 
-  len = ng_u64toh(n, buf, sizeof(buf), *d->pf == 'X', separator);
+  len = ng_u64toh(n, buf, sizeof(buf), d->fmtchr == 'X', separator);
   p=buf;
   e=p+len;
   while (*p=='0' && p < e)
@@ -535,7 +557,7 @@ hexa(struct DATA *d, const uint64_t n)
   PAD_RIGHT(d);
   if (d->square == FOUND) { /* prefix '0x' for hexa */
     PUT_CHAR('0', d); 
-    PUT_CHAR(*d->pf, d);
+    PUT_CHAR(d->fmtchr, d);
   }
   PUT_STRING(p, len, d);
   PAD_LEFT(d);
@@ -663,15 +685,21 @@ static const int uuid_index[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
   const uint8_t *index = (const uint8_t *)uuid_index;
   int8_t uc = ngrtos_FALSE;
 
-  switch (d->pf[2]) {
+  switch (d->pf[1]) {
   case 'L':
     uc = ngrtos_TRUE;
-    fallthrough();
+    index = (const uint8_t *)guid_index;
+    d->pf++;
+    break;
+
   case 'l':
     index = (const uint8_t *)guid_index;
+    d->pf++;
     break;
+    
   case 'B':
     uc = ngrtos_TRUE;
+    d->pf++;
     break;
   }
 
@@ -703,23 +731,21 @@ mac_address_string(struct DATA *d, const uint8_t *addr)
   int i;
   char separator;
   int8_t reversed = ngrtos_FALSE;
-  char pf = d->pf[0];
+  char pf = d->fmtchr;
   
-  switch (d->pf[2]) {
+  switch (d->pf[1]) {
   case 'F':
     separator = '-';
-    d->pf += 3;
+    d->pf++;
     break;
 
   case 'R':
-    d->pf += 3;
+    d->pf++;
     reversed = ngrtos_TRUE;
-    fallthrough();
     separator = ':';
     break;
 
   default:
-    d->pf += 2;
     separator = ':';
     break;
   }
@@ -899,9 +925,11 @@ __ng_inet_ntop4(char *p, const uint8_t *addr)
 #ifdef WIN32
   #define ng_s6_addr32(a, i) ((uint32_t *)(a))[i]
   #define ng_s6_addr16(a, i) ((uint16_t *)(a))[i]
+  #define ng_s6_addr8(a, i)  ((uint8_t *)(a))[i]
 #else
   #define ng_s6_addr32(a, i) (a)->s6_addr32[i]
   #define ng_s6_addr16(a, i) (a)->s6_addr16[i]
+  #define ng_s6_addr8(a, i)  (a)->s6_addr[i]
 #endif
 /*
  * Note that we must __force cast these to unsigned long to make sparse happy,
@@ -984,7 +1012,7 @@ ip6_compressed_string(char *p, const uint8_t *addr)
       needcolon = ngrtos_FALSE;
     }
     /* hex uint16_t without leading 0s */
-    word = ng_ntohs(ng_s6_addr16(&in6, i));
+    word = ng_ntohs(ng_s6_addr8(&in6, i));
     hi = word >> 8;
     lo = word & 0xff;
     if (hi) {
@@ -1004,7 +1032,7 @@ ip6_compressed_string(char *p, const uint8_t *addr)
   if (useIPv4) {
     if (needcolon)
       *p++ = ':';
-    p = __ip4_string(p, (const uint8_t *)&ng_s6_addr16(&in6, 12), "I4");
+    p = __ip4_string(p, (const uint8_t *)&ng_s6_addr8(&in6, 12), "I4");
   }
   *p = '\0';
 
@@ -1303,6 +1331,8 @@ pointer(struct DATA *d, const void *ptr)
     /* Contiguous: 000102030405 */
     /* [mM]F (FDDI) */
     /* [mM]R (Reverse order; Bluetooth) */
+    d->pf++;
+    d->fmtchr = d->pf[1];
     mac_address_string(d, (const uint8_t *)ptr);
     break;
   case 'I':      
@@ -1321,12 +1351,15 @@ pointer(struct DATA *d, const void *ptr)
     ip_addr_string(d, ptr);
     return;
   case 'U':
+    d->pf++;
     uuid_string(d, (const uint8_t *)ptr);
     return;
   case 'u':
   case 'k':
+    d->pf++;
     switch (d->pf[2]) {
     case 's':
+      d->pf++;
       strings(d, (const char *)ptr);
       return;
     default:
@@ -1334,6 +1367,7 @@ pointer(struct DATA *d, const void *ptr)
       return;
     }
   default:
+    d->fmtchr = 'X';
     hexa(d, (uintptr_t)ptr);
     return;
   }
@@ -1452,7 +1486,6 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
             state = 0;
             break;
           case 't':
-          case 'T':  /* Time */
             STAR_ARGS(data);
             if (data->a_longlong == FOUND)
                d = va_arg(args, unsigned LONG_LONG);
@@ -1503,6 +1536,7 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
               nu = va_arg(args, long);
             else
               nu = va_arg(args, int);
+            data->fmtchr = data->pf[0];
             hexa(data, nu);
             state = 0;
             break;
@@ -1597,7 +1631,7 @@ __ng_std_out(void *arg, const char *string, size_t length)
 
   if (data->nbytes + length > data->length)
   {
-    int n = fwrite(data->holder, data->nbytes, 1, (FILE*)data->arg);
+    int n = fwrite(data->holder, 1, data->nbytes, (FILE*)data->arg);
     if (n < 0)
     {
       data->err = n;
@@ -1606,6 +1640,7 @@ __ng_std_out(void *arg, const char *string, size_t length)
       
     data->counter += n;
     data->nbytes = 0;
+    fflush((FILE*)data->arg);
   }
   else
   {
@@ -1636,13 +1671,14 @@ __ng_vfprintf(void *fp, char const *format, va_list args)
   counter = __ng_vsnprintf_internal(&data, args);
   if (data.nbytes)
   {
-    int n = fwrite(data.holder, data.nbytes, 1, (FILE*)fp);
+    int n = fwrite(data.holder, 1, data.nbytes, (FILE*)fp);
     if (n < 0)
     {
       data.err = n;
       return -1;
     }
     counter += n;
+    fflush((FILE*)fp);
   }
   return counter;
 }

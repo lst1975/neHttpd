@@ -863,7 +863,9 @@ ng_tm2unix_time(ng_rtc_time_s *tm, ng_tmv_s *tv)
         + __ng_DAYS[tm->tm_mday-1]
         + __ng_HOURS[tm->tm_hour] 
         + __ng_MINUTES[tm->tm_min] 
-        + tm->tm_sec;
+        + tm->tm_sec
+        + tm->tm_gmtoff;
+              
   tv->tv_usec = tm->tm_ms * MS_PER_S;
   return ng_ERR_NONE;              
 }
@@ -1201,13 +1203,75 @@ int ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
   if (tm->tm_sec > 60)
     return -1;
 
+  tm->tm_gmtoff = ng_os_info.tz_offset;
+  tm->tm_zone   = " GMT";
   return 0;
+}
+
+static int __raw_ng_http_tm(ng_rtc_time_s *tm, char *buf, int len, int isHttp, 
+  const char *tz)
+{
+  char *p = buf;
+
+  if (isHttp)
+  {
+    *(uint64_t*)p = *(const uint64_t*)"Date:   ";
+    p += 6;
+  }
+  *(uint32_t*)p = *(const uint32_t*)week_name[tm->tm_wday];
+  p += 4;
+  *(uint32_t*)p = *(const uint32_t*)min_sec_hour_day_name[tm->tm_mday];
+  p += 4;
+  *(uint32_t*)p = *(const uint32_t*)month_name[tm->tm_mon];
+  p += 4;
+  *(uint32_t*)p = *(const uint32_t*)year_name[tm->tm_year - 70];
+  p[4] = ' ';
+  p += 5;
+  *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm->tm_hour]+1);
+  p[2] = ':';
+  p += 3;
+  *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm->tm_min]+1);
+  p[2] = ':';
+  p += 3;
+  *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm->tm_sec]+1);
+  p += 2;
+  if (tz == NULL) 
+    tz = ng_os_info.tz;
+  *(uint32_t*)p = *(const uint32_t*)tz;
+  p += 4;
+  if (isHttp)
+  {
+    *(uint16_t*)p = *(const uint16_t*)"\r\n";
+    p += 2;
+  }
+  return p - buf;
+}
+
+int raw_ng_http_tm(ng_rtc_time_s *tm, char *buf, int len, int isHttp)
+{
+  ng_tmv_s tv;
+  ng_result_t r = ng_tm2unix_time(tm, &tv);
+  
+  if (r != ng_ERR_NONE || ng_unix2tm_time(tm, &tv, 0) != ng_ERR_NONE)
+    return -1;
+  
+  return __raw_ng_http_tm(tm, buf, len, isHttp, tm->tm_zone);
+}
+
+int raw_ng_tm(ng_rtc_time_s *tm, char *buf, int len)
+{
+  ng_tmv_s tv;
+  ng_result_t r = ng_tm2unix_time(tm, &tv);
+  
+  if (r != ng_ERR_NONE || ng_unix2tm_time(tm, &tv, 0) != ng_ERR_NONE)
+    return -1;
+  
+  return __raw_ng_http_tm(tm, buf, len, 0, tm->tm_zone);
 }
 
 int raw_ng_http_date(ng_time_t t, char *buf, int len, int isHttp, 
   const char *tz)
 {
-  char *p;
   ng_tmv_s tv;
   ng_rtc_time_s tm;
   long tz_offset;
@@ -1225,7 +1289,6 @@ int raw_ng_http_date(ng_time_t t, char *buf, int len, int isHttp,
     tz_offset = ng_os_info.tz_offset;
   }
 
-  p = buf;
   if (t)
     tv.tv_sec = t;
   else
@@ -1233,39 +1296,8 @@ int raw_ng_http_date(ng_time_t t, char *buf, int len, int isHttp,
   tv.tv_usec = 0;
   if (ng_unix2tm_time(&tm, &tv, tz_offset) != ng_ERR_NONE)
     return -1;
-  
-  if (isHttp)
-  {
-    *(uint64_t*)p = *(const uint64_t*)"Date:   ";
-    p += 6;
-  }
-  *(uint32_t*)p = *(const uint32_t*)week_name[tm.tm_wday];
-  p += 4;
-  *(uint32_t*)p = *(const uint32_t*)min_sec_hour_day_name[tm.tm_mday];
-  p += 4;
-  *(uint32_t*)p = *(const uint32_t*)month_name[tm.tm_mon];
-  p += 4;
-  *(uint32_t*)p = *(const uint32_t*)year_name[tm.tm_year - 70];
-  p[4] = ' ';
-  p += 5;
-  *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm.tm_hour]+1);
-  p[2] = ':';
-  p += 3;
-  *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm.tm_min]+1);
-  p[2] = ':';
-  p += 3;
-  *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm.tm_sec]+1);
-  p += 2;
-  if (tz == NULL) 
-    tz = ng_os_info.tz;
-  *(uint32_t*)p = *(const uint32_t*)tz;
-  p += 4;
-  if (isHttp)
-  {
-    *(uint16_t*)p = *(const uint16_t*)"\r\n";
-    p += 2;
-  }
-  return p - buf;
+
+  return __raw_ng_http_tm(&tm, buf, len, isHttp, tz);
 }
 
 int __ng_http_date(char *buf, int len, int isHttp, 

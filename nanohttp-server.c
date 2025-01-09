@@ -1608,6 +1608,8 @@ int
 httpd_get_conncount(void)
 {
 #if __HTTP_USE_CONN_RING
+  if (!_httpd_connection_ring)
+    return 0;
   return rte_ring_free_count(_httpd_connection_ring);
 #else
   httpd_enter_mutex(&_httpd_connection_lock);
