@@ -86,6 +86,14 @@
 #ifndef __nanohttp_url_h
 #define __nanohttp_url_h
 
+#include <stdint.h>
+#include "nanohttp-defs.h"
+#include "nanohttp-inet.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @file nanohttp-url.h URL handling
  *
  * @defgroup NANOHTTP_URL URL handling
@@ -97,10 +105,14 @@
 /** URL errors
  */
 /**@{*/
-#define URL_ERROR			1100
-#define URL_ERROR_UNKNOWN_PROTOCOL	(URL_ERROR + 1)
-#define URL_ERROR_NO_PROTOCOL		(URL_ERROR + 2)
-#define URL_ERROR_NO_HOST		(URL_ERROR + 3)
+#define URL_ERROR                    1100
+#define URL_ERROR_UNKNOWN_PROTOCOL  (URL_ERROR + 1)
+#define URL_ERROR_NO_PROTOCOL       (URL_ERROR + 2)
+#define URL_ERROR_NO_HOST           (URL_ERROR + 3)
+#define URL_ERROR_BAD_PORT          (URL_ERROR + 4)
+#define URL_ERROR_CHARACTER         (URL_ERROR + 5)
+#define URL_ERROR_BAD_IP            (URL_ERROR + 6)
+
 /**@}*/
 
 /** The protocol types in enumeration format. Used in some other
@@ -108,11 +120,9 @@
  *
  * @see hurl_t
  */
-typedef enum _hprotocol
-{
-  PROTOCOL_HTTP,
-  PROTOCOL_HTTPS
-} hprotocol_t;
+#define NG_PROTOCOL_NONE  0
+#define NG_PROTOCOL_HTTP  1
+#define NG_PROTOCOL_HTTPS 2
 
 /** The URL object. A representation of an URL like:
  *
@@ -122,24 +132,31 @@ typedef enum _hprotocol
  *
  * @see http://www.ietf.org/rfc/rfc2396.txt
  */
-struct hurl_t
+struct __ng_url_t
 {
-  hprotocol_t protocol; /**< The transfer protocol. Note that only
-			     - PROTOCOL_HTTP and
-			     - PROTOCOL_HTTPS
-			     are supported by nanohttp. */
-  unsigned short port;  /**< The port number. If no port number was given
-                             in the URL, one of the default port numbers
-                             will be selected: 
-                             - HTTP_DEFAULT_PORT    
-                             - HTTPS_DEFAULT_PORT */
-  char *host;           /**< The hostname */
-  char *context;        /** The string after the hostname. */
+  uint16_t port;              /**< The port number. If no port number was given
+                                 in the URL, one of the default port numbers
+                                 will be selected: 
+                                 - HTTP_DEFAULT_PORT    
+                                 - HTTPS_DEFAULT_PORT */
+  uint16_t protocol;          /**< The transfer protocol. Note that only
+                                 - PROTOCOL_HTTP and
+                                 - PROTOCOL_HTTPS
+                                 are supported by nanohttp. */
+  uint32_t is_ipv6;                           
+  ng_block_s user;              /**< The username */
+  ng_block_s pswd;              /**< The password */
+  ng_block_s host;              /**< The hostname */
+  ng_block_s context;           /** The string after the hostname. */
+  union{
+    uint8_t v4[NG_INADDRSZ];
+    uint8_t v6[NG_IN6ADDRSZ];
+  } u;
+
+  char *data;
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+typedef struct __ng_url_t ng_url_s;
 
 /** This function parses the given 'urlstr' and fills the given hurl_t
  * object. Parse an URI
@@ -156,13 +173,22 @@ extern "C" {
  *          - URL_ERROR_NO_PROTOCOL 
  *          - URL_ERROR_NO_HOST 
  */
-extern herror_t hurl_parse(struct hurl_t * obj, const char *url);
+extern int __ng_url_parse(ng_url_s *url, const char *urlstr, int urllen);
+extern herror_t ng_url_parse(ng_url_s *url, const char *urlstr, int urllen);
+
+extern void ng_urlorpath_dlim_convert(char *str, int len, 
+ const char from, const char to);
+extern int ng_urlorPath_normalize(ng_block_s *url);
+extern void ng_url_dump(const ng_url_s *url);
 
 /** This function frees the resources within a url and the url itself.
  *
  * @param url pointer to an hurl_t
  */
-extern void hurl_free(struct hurl_t *url);
+extern void ng_url_free(ng_url_s *url);
+extern int ng_url_init(ng_url_s *url);
+
+extern void ng_url_test(void);
 
 #ifdef __cplusplus
 }

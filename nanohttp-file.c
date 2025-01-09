@@ -77,8 +77,9 @@
 #include "nanohttp-mem.h"
 #include "nanohttp-logging.h"
 #include "nanohttp-system.h"
+#include "nanohttp-url.h"
 
-static httpd_buf_t httpd_base_path = __HTTPD_BUF_INIT_DECL();
+static ng_block_s httpd_base_path = DECL_CONST_STR_NULL();
 
 #ifdef WIN32
 herror_t
@@ -128,16 +129,11 @@ nanohttp_dir_init(const char *pfile)
 
   plen = p - pwd + 1;
   httpd_base_path.buf = d;
-  httpd_base_path.len = p - pwd + 1;
+  httpd_base_path.len = plen;
   httpd_base_path.buf[httpd_base_path.len]='\0';
-  
-  for (p=d; p != NULL; )
-  {
-    p = memchr(p, __PATH_DLIM, plen);
-    if (p != NULL)
-      *p++='/';
-  }
 
+  ng_urlorpath_dlim_convert(d, plen, '\\', '/');
+  
   log_info("[OK]");
   return H_OK;
 }
@@ -231,136 +227,30 @@ nanohttp_dir_free(void)
   if (httpd_base_path.buf != NULL)
   {
     http_free(httpd_base_path.buf);
-    BUF_SIZE_INIT(&httpd_base_path, NULL, 0);
+    ng_block_init(&httpd_base_path);
   }
   log_info("[OK]: nanohttp_dir_free.");
 }
 
-#if 0
-#define __TOP_MAX 100
-static void normalizePath(char *inputPath) {
-  char *token;
-  char *pathCopy = http_strdup(inputPath);
-  char *stack[100]; // Stack to hold path components
-  int top = -1;
-  char *outputPath = inputPath;
-
-  token = strtok(pathCopy, __PATH_DLIM_S);
-  while (token != NULL) {
-    if (strcmp(token, "..") == 0) {
-      if (top > -1) {
-        top--; // Pop the last valid directory
-      }
-    } else if (strcmp(token, ".") != 0 && strlen(token) > 0) {
-      stack[++top] = token; // Push valid directory onto stack
-    }
-    token = strtok(NULL, __PATH_DLIM_S);
-  }
-
-  // Construct the normalized path
-  outputPath[0] = '\0'; // Initialize outputPath
-  for (int i = 0; i <= top; i++) {
-    strcat(outputPath, __PATH_DLIM_S);
-    strcat(outputPath, stack[i]);
-  }
-
-  http_free(pathCopy);
-}
-#undef __TOP_MAX
-#else
-#define __TOP_MAX 100
-#define __TOP_MAX_E __TOP_MAX - 1
-struct _topp{
-  uint16_t i;
-  uint16_t l;
-};
-static int normalizePath(char *inputPath, int len)
-{
-  char *token;
-  struct _topp stack[100]; // Stack to hold path components
-  int top = -1;
-  char *end = inputPath + len;
-  struct _topp *t;
-  char *p = inputPath;
-
-  while (p < end)
-  {
-    token = memchr(p, __PATH_DLIM, len);
-    if (token == NULL)
-    {
-  	  if (top == __TOP_MAX_E)
-    		return -1;
-  	  t = &stack[++top];
-      t->i = p - inputPath; // Push valid directory onto stack
-  	  t->l = end - p;
-  	  break;
-    }
-    if (end - token > 2 
-  	  && *(uint16_t*)(token+1) == *(const uint16_t*)"..") 
-  	{
-      if (top > -1) 
-  	  {
-        top--; // Pop the last valid directory
-      }
-  	  p = token + 3;
-    } 
-  	else if (token > p)
-  	{
-  	  if (token - p != 1 || p[0] != '.')
-  	  {
-  	    if (top == __TOP_MAX_E)
-  		  return -1;
-  	    t = &stack[++top];
-          t->i = p - inputPath; // Push valid directory onto stack
-  	    t->l = token - p;
-  	  }
-  	  p = token + 1;
-    }
-  	else if (end - token > 0)
-  	{
-  	  p = token + 1;
-    }
-  	else 
-  	  break;
-  }
-
-  // Construct the normalized path
-  p = inputPath;
-  if (p[0] == __PATH_DLIM)
-    p++;
-
-  for (int i = 0; i <= top; i++) 
-  {
-  	if (i)
-      *p++ = __PATH_DLIM;
-    t = &stack[i];
-  	memcpy(p, inputPath+t->i, t->l);
-  	p += t->l;
-  }
-  *p = '\0';
-  return 0;
-}
-#undef __TOP_MAX
-#endif
-
 static char *nanohttp_file_get_path(const char *file)
 {
-  httpd_buf_t *b = &httpd_base_path;
+  ng_block_s url;
+  ng_block_s *b = &httpd_base_path;
   char *path = http_malloc(PATH_MAX);
   if (path == NULL)
     return NULL;
 
-  size_t flen = strlen(file);
+  size_t flen = ng_strlen(file);
   if (file[0] == __PATH_DLIM 
     ||(flen >= b->len 
-        && (!memcmp(b->buf, file, b->len))))
+        && (!ng_memcmp(b->buf, file, b->len))))
   {
     if (flen >= PATH_MAX)
     {
       http_free(path);
       return NULL;
     }
-    memcpy(path, file, flen+1);
+    ng_memcpy(path, file, flen+1);
     return path;
   }
   if (flen + b->len >= PATH_MAX)
@@ -369,16 +259,19 @@ static char *nanohttp_file_get_path(const char *file)
     return NULL;
   }
 
-  memcpy(path,b->buf,b->len);
-  memcpy(path+b->len,file,flen);
+  ng_memcpy(path,b->buf,b->len);
+  ng_memcpy(path+b->len,file,flen);
   path[b->len+flen]='\0';
-  if (normalizePath(path, b->len+flen))
+  url.cptr = path;
+  url.len  = b->len + flen;
+  
+  if (ng_urlorPath_normalize(&url) < 0)
   {
     http_free(path);
     return NULL;
   }
   
-  log_debug("Get path: %s", path);
+  log_debug("Get path: %pS", &url);
 
   return path;
 }

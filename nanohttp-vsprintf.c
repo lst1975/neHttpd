@@ -929,7 +929,7 @@ __ip4_string(char *p, const uint8_t *addr, const char *fmt)
 #ifdef WIN32
   #define ng_s6_addr32(a, i) ((uint32_t *)(a))[i]
   #define ng_s6_addr16(a, i) ((uint16_t *)(a))[i]
-  #define ng_s6_addr8 (a, i) ((uint8_t  *)(a))[i]
+  #define ng_s6_addr8(a, i)  ((uint8_t  *)(a))[i]
 #else
   #define ng_s6_addr32(a, i) (a)->s6_addr32[i]
   #define ng_s6_addr16(a, i) (a)->s6_addr16[i]

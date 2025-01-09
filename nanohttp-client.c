@@ -159,31 +159,25 @@ httpc_new(void)
   if (!(res = (httpc_conn_t *) http_malloc(sizeof(httpc_conn_t))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
-    return NULL;
+    goto clean0;
   }
 
   if (!(res->sock = (struct hsocket_t *)http_malloc(sizeof(struct hsocket_t))))
   {
     log_error("http_malloc failed (%s)", strerror(errno));
-    http_free(res);
-    return NULL;
+    goto clean1;
   }
 
-  if (!(res->url = (struct hurl_t *)http_malloc(sizeof(struct hurl_t))))
+  if (ng_url_init(&res->url) < 0)
   {
     log_error("http_malloc failed (%s)", strerror(errno));
-    http_free(res->sock);
-    http_free(res);
-    return NULL;
+    goto clean2;
   }
 
   if ((status = hsocket_init(res->sock)) != H_OK)
   {
     log_warn("hsocket_init failed (%s)", herror_message(status));
-    hurl_free(res->url);
-    http_free(res->sock);
-    http_free(res);
-    return NULL;
+    goto clean3;
   }
 
   res->header = NULL;
@@ -192,6 +186,15 @@ httpc_new(void)
   res->id = counter++;
 
   return res;
+
+clean3:
+  ng_url_free(&res->url);
+clean2:
+  http_free(res->sock);
+clean1:
+  http_free(res);
+clean0:
+  return NULL;
 }
 
 void
@@ -216,7 +219,7 @@ httpc_free(httpc_conn_t * conn)
   }
 
   hsocket_free(conn->sock);
-  hurl_free(conn->url);
+  ng_url_free(&conn->url);
 
   if (conn->sock)
     http_free(conn->sock);
@@ -496,7 +499,7 @@ If success, this function will return 0.
 >0 otherwise.
 ----------------------------------------------------*/
 static herror_t
-_httpc_talk_to_server(hreq_method_t method, httpc_conn_t * conn, const char *urlstr)
+_httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn, const char *urlstr)
 {
   char *buffer;
   herror_t status;
@@ -525,7 +528,7 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t * conn, const char *url
   /* Build request header */
   httpc_header_set_date(conn);
 
-  if ((status = hurl_parse(conn->url, urlstr)) != H_OK)
+  if ((status = ng_url_parse(&conn->url, urlstr, 0)) != H_OK)
   {
     log_error("Cannot parse URL \"%s\"", SAVE_STR(urlstr));
     goto clean1;
@@ -533,13 +536,13 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t * conn, const char *url
   /* TODO (#1#): Check for HTTP protocol in URL */
 
   /* Set hostname */
-  httpc_set_header(conn, HEADER_HOST, conn->url->host);
+  httpc_set_header(conn, HEADER_HOST, conn->url.host.cptr);
 
-  ssl = conn->url->protocol == PROTOCOL_HTTPS ? 1 : 0;
-  log_verbose("ssl = %i (%i %i)", ssl, conn->url->protocol, PROTOCOL_HTTPS);
+  ssl = conn->url.protocol == NG_PROTOCOL_HTTPS ? 1 : 0;
+  log_verbose("ssl = %i (%i %i)", ssl, conn->url.protocol, NG_PROTOCOL_HTTPS);
 
   /* Open connection */
-  status = hsocket_open(conn->sock, conn->url->host, conn->url->port, ssl);
+  status = hsocket_open(conn->sock, conn->url.host.cptr, conn->url.port, ssl);
   if (status != H_OK)
   {
     log_error("hsocket_open failed (%s)", herror_message(status));
@@ -550,15 +553,14 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t * conn, const char *url
   {
     case HTTP_REQUEST_GET:
 
-      len = ng_snprintf(buffer, ___BUFSZ, "GET %s HTTP/%s\r\n",
-          (conn->url->context[0] != '\0') ? conn->url->context : ("/"),
-          (conn->version == HTTP_1_0) ? "1.0" : "1.1");
+      len = ng_snprintf(buffer, ___BUFSZ, "GET %pS HTTP/%s\r\n",
+          &conn->url.context, (conn->version == HTTP_1_0) ? "1.0" : "1.1");
       break;
 
     case HTTP_REQUEST_POST:
 
-      len = ng_snprintf(buffer, ___BUFSZ, "POST %s HTTP/%s\r\n",
-          (conn->url->context[0] != '\0') ? conn->url->context : ("/"),
+      len = ng_snprintf(buffer, ___BUFSZ, "POST %pS HTTP/%s\r\n",
+          &conn->url.context,
           (conn->version == HTTP_1_0) ? "1.0" : "1.1");
       break;
 

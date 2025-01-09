@@ -68,6 +68,7 @@ void http_daemonize(int nochdir, int noclose);
 void ng_print_cpufreq(const char *n, double hz);
 int ng_get_tzname(char *tz, int size);
 void __ng_gettimeofday(void *tp);
+int ng_local_strncasecmp(const char *s1, const char *s2, size_t n);
 
 #endif
 

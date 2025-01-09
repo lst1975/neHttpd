@@ -90,6 +90,9 @@
     extern "C" {
 #endif
 
+#define NG_INADDRSZ   4      /* IPv4 T_A */
+#define NG_IN6ADDRSZ  16     /* IPv6 T_AAAA */
+
 #define NG_IN6ADDR_ANY_INIT	{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 }
 #define NG_IN6ADDR_LOOPBACK_INIT	{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }
 

@@ -83,6 +83,7 @@
 #include "nanohttp-signal.h"
 #include "nanohttp-header.h"
 #include "nanohttp-vsprintf.h"
+#include "nanohttp-url.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const ng_block_s *user, 
@@ -1304,6 +1305,10 @@ main(int argc, char **argv)
 
 #if __NHTTP_VSNPRINTF_DEBUG
   snprintf_test();
+#endif
+
+#if __NHTTP_URL_TEST
+  ng_url_test();
 #endif
 
 #if __NG_RING_DEBUG

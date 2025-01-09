@@ -180,7 +180,7 @@ const ng_block_s *http_header_find(const char *key, int keyLength)
   for (int i=0; i <off.n; i++) {
     const ng_block_s *s = &__http_headers_sort[off.i+i];
     if (ng_tolower(*s->cptr) == ng_tolower(*key)
-      && !strncasecmp(s->cptr, key, keyLength))
+      && !ng_strnocasecmp(s->cptr, key, keyLength))
     {
       return s;
     }

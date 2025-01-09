@@ -269,7 +269,7 @@ typedef struct httpc_conn
 {
   struct hsocket_t *sock;
   hpair_t *header;
-  struct hurl_t *url;
+  ng_url_s url;
   http_version_t version;
 
   int errcode;

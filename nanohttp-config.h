@@ -112,16 +112,20 @@
 
 #define __NHTTP_TEST 1
 #define __NHTTP_NO_LOGGING 0
+#define __NHTTP_URL_TEST 0
 
 #undef HAVE_SSL
 
-#define _nanoConfig_HTTPD_PORT            8080
-#define _nanoConfig_HTTPD_MAX_CONNECTIONS 128
+#define _nanoConfig_HTTPD_PORT                    8080
+#define _nanoConfig_HTTPD_MAX_CONNECTIONS         128
 #define _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS 256
-#define _nanoConfig_HTTPD_FILE_BLOCK      2048
-#define _nanoConfig_HTTPD_FILE_SERVICE    "/config/"
-#define _nanoConfig_HTTPD_DATA_SERVICE    "/data/"
-#define _nanoConfig_HTTPD_LOG_LEVEL NANOHTTP_LOG_VERBOSE
+#define _nanoConfig_HTTPD_FILE_BLOCK              2048
+#define _nanoConfig_HTTPD_FILE_SERVICE            "/config/"
+#define _nanoConfig_HTTPD_DATA_SERVICE            "/data/"
+#define _nanoConfig_HTTPD_LOG_LEVEL               NANOHTTP_LOG_VERBOSE
+#define _nanoConfig_HTTP_URL_LEN_MAX              2048
+
+#define _nanoConfig_NG_HTTP_PARSER_STRICT 1
 
 #define DEBUG_MULTIPART
 #define __NHTTP_DEBUG 0

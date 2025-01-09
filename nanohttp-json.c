@@ -2162,7 +2162,7 @@ __json_print(JSON_PRINTER_f printer, httpd_buf_t *b,
 
     if (pair->key.len)
     {
-      n = printer(b, "\"%.*s\":",pair->key.len,pair->key);
+      n = printer(b, "\"%pS\":",&pair->key);
       if (n < 0) return n;
       k += n;
     }

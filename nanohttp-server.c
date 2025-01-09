@@ -257,7 +257,6 @@ typedef DWORD WINAPI (*HTTP_THREAD_EXEFUNC_T)(LPVOID arg);
 #if !__HTTP_USE_CONN_RING
 HANDLE _httpd_connection_lock = NULL;
 #endif
-#define strncasecmp(s1, s2, num) strncmp(s1, s2, num)
 
 #else
 
@@ -1416,7 +1415,7 @@ httpd_session_main(void *data)
       conn_pair = hpairnode_get_ignore_case_len(req->header, 
         __HDR_BUF(HEADER_CONNECTION));
       if (conn_pair != NULL && 
-        (conn_pair->val.len == 6 && !strncasecmp(conn_pair->val.cptr, "close", 6)))
+        (conn_pair->val.len == 6 && !ng_strnocasecmp(conn_pair->val.cptr, "close", 6)))
         done = 1;
 
       if (!done)

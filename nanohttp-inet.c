@@ -90,8 +90,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#define NG_INADDRSZ   4      /* IPv4 T_A */
-#define NG_IN6ADDRSZ  16     /* IPv6 T_AAAA */
 #define ng_FALSE 0
 #define ng_TRUE  1
 

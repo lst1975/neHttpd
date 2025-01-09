@@ -91,11 +91,20 @@ typedef uint64_t ng_time_t;
 typedef unsigned long ng_ulong_t;
 
 #include "nanohttp-vsprintf.h"
+#include "nanohttp-utils.h"
 
 #define ng_snprintf   __ng_snprintf
 #define ng_vsnprintf  __ng_vsnprintf
 #define ng_fprintf    __ng_fprintf
 #define ng_vfprintf   __ng_vfprintf
+#define ng_strstr     strstr
+
+#ifdef WIN32
+#define ng_strnocasecmp ng_local_strncasecmp
+#else
+#define ng_strnocasecmp strncasecmp
+#endif
+
 #define ng_strncpy(s1,s2,l) strncpy(s1,s2,l)
 #define ng_strcmp(s1,s2) strcmp(s1,s2)
 #define ng_strlen(s) strlen(s)
