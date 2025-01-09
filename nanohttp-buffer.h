@@ -169,7 +169,7 @@ static inline int ng_block_isequal_nocase(const void *blka, const void *blkb)
   const ng_block_s *a = (const ng_block_s *)blka;
   const ng_block_s *b = (const ng_block_s *)blkb;
   if (a->len != b->len) return 0;
-  return !strncasecmp(a->cptr, b->cptr, b->len);
+  return !ng_strnocasecmp(a->cptr, b->cptr, b->len);
 }
 
 extern void ng_free_data_buffer(httpd_buf_t *data);
