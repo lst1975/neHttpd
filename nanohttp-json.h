@@ -299,12 +299,12 @@ JSONStatus_t JSON_SearchT( char * buf,
  */
 /* @[declare_json_searchconst] */
 JSONStatus_t JSON_SearchConst( const char * buf,
-                               size_t max,
-                               const char * query,
-                               size_t queryLength,
-                               const char ** outValue,
-                               size_t * outValueLength,
-                               JSONTypes_t * outType );
+                           size_t max,
+                           const char * query,
+                           size_t queryLength,
+                           const char ** outValue,
+                           size_t * outValueLength,
+                           JSONTypes_t * outType );
 /* @[declare_json_searchconst] */
 
 /**
@@ -313,10 +313,8 @@ JSONStatus_t JSON_SearchConst( const char * buf,
  */
 typedef struct json_pair
 {
-  const char * key;     /**< @brief Pointer to the code point sequence for key. */
-  const char * value;   /**< @brief Pointer to the code point sequence for value. */
-  uint64_t keyLength:32;     /**< @brief Length of the code point sequence for key. */
-  uint64_t valueLength:31;   /**< @brief Length of the code point sequence for value. */
+  ng_block_s key;       /**< @brief Pointer to the code point sequence for key. */
+  ng_block_s val;       /**< @brief Pointer to the code point sequence for value. */
   uint64_t isDouble:1;   
   JSONTypes_t jsonType; /**< @brief JSON-specific type of the value. */
   struct json_pair *siblings;

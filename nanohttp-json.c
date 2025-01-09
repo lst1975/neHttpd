@@ -1908,17 +1908,17 @@ JSONStatus_t JSON_Iterate( const char * buf,
       valueLength -= 2U;
     }
 
-    outPair->key = ( key == 0U ) ? NULL : &buf[ key ];
-    outPair->keyLength = keyLength;
-    outPair->value = &buf[ value ];
-    outPair->valueLength = valueLength;
+    outPair->key.cptr = (key == 0U ) ? NULL : &buf[key];
+    outPair->key.len  = keyLength;
+    outPair->val.cptr = &buf[ value ];
+    outPair->val.len  = valueLength;
     outPair->jsonType = t;
   }
 
   return ret;
 }
 
-static char * json_types[] =
+static char *json_types[] =
 {
   "invalid",
   "string",
@@ -1990,7 +1990,7 @@ static JSONStatus_t __json_parse(JSONTypes_t parent_jsonType,
     }
     else
     {
-      if ((pair->key == NULL || pair->keyLength == 0)
+      if ((pair->key.cptr == NULL || pair->key.len == 0)
         && (pair->jsonType != JSONArray 
             && pair->jsonType != JSONObject
             && parent_jsonType != JSONArray))
@@ -2022,8 +2022,8 @@ static JSONStatus_t __json_parse(JSONTypes_t parent_jsonType,
         {
           char str[128];
           char *p=NULL;
-          int len = json_MIN(sizeof(str)-1, pair->valueLength);
-          memcpy(str, pair->value, len);
+          int len = json_MIN(sizeof(str)-1, pair->val.len);
+          memcpy(str, pair->val.cptr, len);
           str[len] = '\0';
           if (NULL != strchr(str, '.'))
           {
@@ -2056,7 +2056,7 @@ static JSONStatus_t __json_parse(JSONTypes_t parent_jsonType,
         {
           JSONPair_t *child;
 
-          result = __json_parse(pair->jsonType, &child, pair->value, pair->valueLength);
+          result = __json_parse(pair->jsonType, &child, pair->val.cptr, pair->val.len);
           if (result != JSONSuccess && result != JSONNotFound)
           {
             goto clean0;
@@ -2160,9 +2160,9 @@ __json_print(JSON_PRINTER_f printer, httpd_buf_t *b,
     if (n < 0) return n;
     k += n;
 
-    if (pair->keyLength)
+    if (pair->key.len)
     {
-      n = printer(b, "\"%.*s\":",pair->keyLength,pair->key);
+      n = printer(b, "\"%.*s\":",pair->key.len,pair->key);
       if (n < 0) return n;
       k += n;
     }
@@ -2174,15 +2174,15 @@ __json_print(JSON_PRINTER_f printer, httpd_buf_t *b,
         return -1;
         
       case JSONString:
-        if (pair->valueLength)
+        if (pair->val.len)
         {
           n = printer(b,"%s","\"");
           if (n < 0) return n;
           k += n;
 
-          for (int i=0;i<pair->valueLength;i++)
+          for (int i=0;i<pair->val.len;i++)
           {
-            n = printer(b,"%s",character_escape[(int)pair->value[i]]);
+            n = printer(b,"%s",character_escape[(int)pair->val.cptr[i]]);
             if (n < 0) return n;
             k += n;
           }
@@ -2413,9 +2413,9 @@ static int __json_cal_length(JSONPair_t *pair, int depth, const char *pad)
   while (pair != NULL)
   {
     n += __json_pad_length(depth,pad);
-    if (pair->keyLength)
+    if (pair->key.len)
     {
-      n += 3 + pair->keyLength;
+      n += 3 + pair->key.len;
     }
 
     switch (pair->jsonType)
@@ -2424,7 +2424,7 @@ static int __json_cal_length(JSONPair_t *pair, int depth, const char *pad)
       case JSONInvalid:
         goto clean0;
       case JSONString:
-        n += 2 + pair->valueLength;
+        n += 2 + pair->val.len;
         break;
       case JSONNumber:
         if (pair->isDouble)
@@ -2512,8 +2512,8 @@ JSONPair_t *json_find_bykey(JSONPair_t *pair, const char *key,
 {
   while (pair != NULL)
   {
-    if (pair->keyLength == length
-      && !strncmp(pair->key, key, length))
+    if (pair->key.len == length
+      && !memcmp(pair->key.cptr, key, length))
       return pair;
     pair = pair->siblings;
   }
@@ -2525,8 +2525,8 @@ JSONPair_t *json_find_bykey_head(JSONPair_t *pair, const char *key,
 {
   while (pair != NULL)
   {
-    if (pair->keyLength >= length
-      && !memcmp(pair->key, key, length))
+    if (pair->key.len >= length
+      && !memcmp(pair->key.cptr, key, length))
       return pair;
     pair = pair->siblings;
   }
@@ -2538,9 +2538,9 @@ JSONPair_t *json_find_bykey_head_tail(JSONPair_t *pair, const char *key,
 {
   while (pair != NULL)
   {
-    if (pair->keyLength >= headLen + tailKeyLen
-      && !memcmp(pair->key, key, headLen)
-      && !memcmp(pair->key+pair->keyLength-tailKeyLen, tailKey, tailKeyLen))
+    if (pair->key.len >= headLen + tailKeyLen
+      && !memcmp(pair->key.cptr, key, headLen)
+      && !memcmp(pair->key.cptr+pair->key.len-tailKeyLen, tailKey, tailKeyLen))
     {
       return pair;
     }
@@ -2554,10 +2554,10 @@ JSONPair_t *json_find_bykey_head_offset(JSONPair_t *pair, const char *key,
 {
   while (pair != NULL)
   {
-    if (pair->keyLength >= headLen + startKeyLen
-      && pair->keyLength >= startOffset + startKeyLen
-      && !memcmp(pair->key, key, headLen)
-      && !memcmp(pair->key+startOffset, startKey, startKeyLen))
+    if (pair->key.len >= headLen + startKeyLen
+      && pair->key.len >= startOffset + startKeyLen
+      && !memcmp(pair->key.cptr, key, headLen)
+      && !memcmp(pair->key.cptr+startOffset, startKey, startKeyLen))
     {
       return pair;
     }

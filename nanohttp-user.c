@@ -127,14 +127,14 @@ static int __nanohttp_users_init__one(JSONPair_t *p)
   type = json_find_bykey(type->children,"value", 5);
   if (!usr || !pwd || !type)
     goto clean2;
-  entry = http_malloc(sizeof(*entry)+usr->valueLength+pwd->valueLength);
+  entry = http_malloc(sizeof(*entry)+usr->val.len+pwd->val.len);
   if (entry == NULL)
     goto clean2;
-  if (type->valueLength == 13 && !memcmp(type->value, "Administrator", 13))
+  if (ng_block_isequal(&type->val, "Administrator", 13))
     entry->type = _N_http_user_type_ADMIN;
-  else if (type->valueLength == 5 && !memcmp(type->value, "Guest", 5))
+  else if (ng_block_isequal(&type->val, "Guest", 5))
     entry->type = _N_http_user_type_GUEST;
-  else if (type->valueLength == 10 && !memcmp(type->value, "SupperUser", 10))
+  else if (ng_block_isequal(&type->val, "SupperUser", 10))
   {
     entry->type = _N_http_user_type_SUPER;
     __superuser = entry;
@@ -145,12 +145,12 @@ static int __nanohttp_users_init__one(JSONPair_t *p)
     goto clean2;
   }
   entry->name.data = ((char *)(entry+1));
-  entry->name.len  = usr->valueLength;
-  memcpy(entry->name.data, usr->value, entry->name.len);
+  entry->name.len  = usr->val.len;
+  memcpy(entry->name.data, usr->val.cptr, entry->name.len);
 
-  entry->pswd.data = ((char *)(entry+1))+usr->valueLength;
-  entry->pswd.len  = pwd->valueLength;
-  memcpy(entry->pswd.data, pwd->value, entry->pswd.len);
+  entry->pswd.data = ((char *)(entry+1))+usr->val.len;
+  entry->pswd.len  = pwd->val.len;
+  memcpy(entry->pswd.data, pwd->val.cptr, entry->pswd.len);
   ng_list_add_tail(&entry->link, &users);
   err = 0;
 

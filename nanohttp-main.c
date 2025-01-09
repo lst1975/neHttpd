@@ -749,8 +749,8 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       
       for (p=p->children; p != NULL; p = p->siblings)
       {
-        if (p->keyLength >= ___USER_PFX_LEN 
-          && !memcmp(p->key, ___USER_PFX_STR, ___USER_PFX_LEN))
+        if (p->key.len >= ___USER_PFX_LEN 
+          && !memcmp(p->key.cptr, ___USER_PFX_STR, ___USER_PFX_LEN))
         {
           const char *colon;
           
@@ -762,42 +762,40 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             goto finished;
           }
           
-          colon = memchr(p->key, ':', p->keyLength);
-          if (colon != NULL && colon - p->key > ___USER_PFX_LEN)
+          colon = memchr(p->key.cptr, ':', p->key.len);
+          if (colon != NULL && colon - p->key.cptr > ___USER_PFX_LEN)
           {
             const char *usr;
             
             usr = colon + 1;
-            usrLen = p->keyLength - (usr - p->key) - 2;
+            usrLen = p->key.len - (usr - p->key.cptr) - 2;
             if ((usrLen < _N_http_user_NAME_MINLEN
               || usrLen > _N_http_user_NAME_MAXLEN))
             {
               n = ng_snprintf(buf, sizeof buf, 
                     CFG_RET1("Invalid username length."), 
                     id, 
-                    p->keyLength, 
-                    p->key);
+                    &p->key);
               goto finished;
             }
-            if (!memcmp(p->key+p->keyLength-2, ".0", 2))
+            if (!memcmp(p->key.cptr+p->key.len-2, ".0", 2))
             {
               n = ng_snprintf(buf, sizeof buf, 
                     CFG_RET1("This user does not exists."), 
                     id, 
-                    p->keyLength, 
-                    p->key);
+                    &p->key);
             }
             else 
             {
-              if (!memcmp(p->key+p->keyLength-2, ".1", 2))
+              if (!memcmp(p->key.cptr+p->key.len-2, ".1", 2))
               {
                 err = nanohttp_users_update(usr, usrLen, 
-                        p->value, p->valueLength, NULL, 0);
+                        p->val.cptr, p->val.len, NULL, 0);
               }
-              else if (!memcmp(p->key+p->keyLength-2, ".2", 2))
+              else if (!memcmp(p->key.cptr+p->key.len-2, ".2", 2))
               {
                 err = nanohttp_users_update(usr, usrLen, 
-                        NULL, 0, p->value, p->valueLength);
+                        NULL, 0, p->val.cptr, p->val.len);
               }
               else
               {
@@ -812,38 +810,33 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
                   n = ng_snprintf(buf, sizeof buf, 
                         CFG_RET1("Superuser can not be deleted."), 
                         id, 
-                        (int)p->keyLength, 
-                        p->key);
+                        &p->key);
                   goto finished;
                 case _N_http_user_error_EXIST:
                   n = ng_snprintf(buf, sizeof buf, 
                         CFG_RET1("This user does not exists."), 
                         id, 
-                        p->keyLength, 
-                        p->key);
+                        &p->key);
                   goto finished;
                 case _N_http_user_error_VNAME:
                   n = ng_snprintf(buf, sizeof buf, 
                         CFG_RET1("The length of username is invalid: [%d,%d]."), 
                         id, 
-                        p->keyLength, 
-                        p->key,
+                        &p->key,
                         _N_http_user_NAME_MINLEN, _N_http_user_NAME_MAXLEN);
                   goto finished;
                 case _N_http_user_error_INVAL:
                   n = ng_snprintf(buf, sizeof buf, 
                         CFG_RET1("Invalid account type."), 
                         id, 
-                        p->keyLength, 
-                        p->key);
+                        &p->key);
                   goto finished;
                 case _N_http_user_error_SYS:
                 default:
                   n = ng_snprintf(buf, sizeof buf, 
                         CFG_RET1("System error."), 
                         id, 
-                        p->keyLength, 
-                        p->key);
+                        &p->key);
                   goto finished;
               }
             }
@@ -853,8 +846,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("Invalid parameter."), 
                   id, 
-                  p->keyLength, 
-                  p->key);
+                  &p->key);
             goto finished;
           }
         }
@@ -864,8 +856,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("For testing received error message from our product."), 
                   id, 
-                  p->keyLength, 
-                  p->key);
+                  &p->key);
         }
       }
     }
@@ -909,18 +900,18 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         {
           if (usr)
             n = ng_snprintf(buf, sizeof buf, CFG_RET1("No password."), id, 
-                  (int)usr->keyLength-1, usr->key);
+                  &usr->key);
           else
             n = ng_snprintf(buf, sizeof buf, CFG_RET0("No username."), id);
           goto finished;
         }
         err = nanohttp_users_add(
-          usr->value, 
-          usr->valueLength,
-          pwd->value, 
-          pwd->valueLength,
-          type ? type->value : NULL,
-          type ? type->valueLength : 0
+          usr->val.cptr, 
+          usr->val.len,
+          pwd->val.cptr, 
+          pwd->val.len,
+          type ? type->val.cptr : NULL,
+          type ? type->val.len : 0
           );
         switch (err)
         {
@@ -931,22 +922,19 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("Superuser can not be deleted."), 
                   id, 
-                  (int)usr->keyLength, 
-                  usr->key);
+                  &usr->key);
             goto finished;
           case _N_http_user_error_EXIST:
             n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("This user already exists."), 
                   id, 
-                  (int)usr->keyLength, 
-                  usr->key);
+                  &usr->key);
             goto finished;
           case _N_http_user_error_VNAME:
             n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("The length of username is invalid: [%d,%d]."), 
                   id, 
-                  (int)usr->keyLength, 
-                  usr->key, 
+                  &usr->key, 
                   _N_http_user_NAME_MINLEN, 
                   _N_http_user_NAME_MAXLEN);
             goto finished;
@@ -954,15 +942,14 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("The length of username is invalid: [%d,%d]."), 
                   id, 
-                  (int)pwd->keyLength, 
-                  pwd->key, 
+                  &pwd->key, 
                   _N_http_user_PSWD_MINLEN, 
                   _N_http_user_PSWD_MAXLEN);
             goto finished;
           case _N_http_user_error_SYS:
           default:
             n = ng_snprintf(buf, sizeof buf, CFG_RET1("System error."), id, 
-                  (int)usr->keyLength, usr->key);
+                  &usr->key);
             goto finished;
         }
       }
@@ -990,7 +977,8 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         goto finished;
       }
 
-      if (!memcmp(p->value, ___USER_PFX_STR, ___USER_PFX_LEN))
+      if (p->val.len >= ___USER_PFX_LEN
+        && !memcmp(p->val.cptr, ___USER_PFX_STR, ___USER_PFX_LEN))
       {
         if (req->userLevel != _N_http_user_type_SUPER)
         {
@@ -999,26 +987,24 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           goto finished;
         }
 
-        colon = memchr(p->value, ':', p->valueLength);
-        if (colon == NULL || colon-p->value < ___USER_PFX_LEN + 1)
+        colon = memchr(p->val.cptr, ':', p->val.len);
+        if (colon == NULL || colon-p->val.cptr < ___USER_PFX_LEN + 1)
         {
           n = ng_snprintf(buf, sizeof buf, 
                 CFG_RET1("This user does not exists."), 
                 id, 
-                (int)p->valueLength, 
-                p->value);
+                &p->val);
           goto finished;
         }
         usr = colon + 1;
-        usrLen = p->valueLength - (usr - p->value);
+        usrLen = p->val.len - (usr - p->val.cptr);
         if ((usrLen < _N_http_user_NAME_MINLEN
           || usrLen > _N_http_user_NAME_MAXLEN))
         {
           n = ng_snprintf(buf, sizeof buf, 
                 CFG_RET1("Invalid username length."), 
                 id, 
-                (int)p->valueLength, 
-                p->value);
+                &p->val);
           goto finished;
         }
         
@@ -1032,15 +1018,13 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("This user does not exists."), 
                   id, 
-                  (int)p->valueLength, 
-                  p->value);
+                  &p->val);
             goto finished;
           case _N_http_user_error_VNAME:
             n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("The length of username is invalid: [%d,%d]."), 
                   id, 
-                  (int)p->valueLength, 
-                  p->value,
+                  &p->val,
                   _N_http_user_NAME_MINLEN, 
                   _N_http_user_NAME_MAXLEN);
             goto finished;
@@ -1048,16 +1032,14 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
             n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("Superuser can not be deleted."), 
                   id, 
-                  (int)p->valueLength, 
-                  p->value);
+                  &p->val);
             goto finished;
           case _N_http_user_error_SYS:
           default:
             n = ng_snprintf(buf, sizeof buf, 
                   CFG_RET1("System error."), 
                   id, 
-                  (int)p->valueLength, 
-                  p->value);
+                  &p->val);
             goto finished;
         }
       }
@@ -1080,7 +1062,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       {
         goto finished;
       }
-      if (p->valueLength == 3 && !strncmp(p->value,"2.0",3))
+      if (p->val.len == 3 && !memcmp(p->val.cptr,"2.0",3))
       {
         if (req->userLevel != _N_http_user_type_SUPER)
         {
@@ -1095,7 +1077,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           goto finished;
         }
       }
-      else if (p->valueLength > 2 && !memcmp(p->value,"1.",2))
+      else if (p->val.len > 2 && !memcmp(p->val.cptr, "1.", 2))
       {
         if (req->userLevel > _N_http_user_type_ADMIN)
         {
@@ -1173,23 +1155,23 @@ void json_show( const char * json,
   JSONPair_t pair = { 0 };
   JSONStatus_t result;
 
-  result = JSON_Validate( json, length );
-  if( result == JSONSuccess )
+  result = JSON_Validate(json, length);
+  if (result == JSONSuccess)
   {
-    result = JSON_Iterate( json, length, &start, &next, &pair );
+    result = JSON_Iterate(json, length, &start, &next, &pair);
   }
 
-  while( result == JSONSuccess )
+  while (result == JSONSuccess)
   {
-    if( pair.key != NULL )
+    if (pair.key.cptr != NULL && pair.key.len)
     {
-      printf( "key: %.*s\t", ( int ) pair.keyLength, pair.key );
+      printf("key: %pS\t", &pair.key);
     }
 
-    printf( "value: (%s) %.*s\n", json_type2str(pair.jsonType),
-            ( int ) pair.valueLength, pair.value );
+    printf("value: (%s) %pS\n", 
+      json_type2str(pair.jsonType), &pair.val);
 
-    result = JSON_Iterate( json, length, &start, &next, &pair );
+    result = JSON_Iterate(json, length, &start, &next, &pair);
   }
 }
 
