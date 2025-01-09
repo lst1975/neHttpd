@@ -334,7 +334,7 @@ f2s_to_chars(const floating_decimal_32 v, const bool sign,
 #else
   NG_ASSERT(exp  <= __float_power_of_ten_MAX);
   *(uint16_t *)(result + index) = *(const uint16_t *)EXPONENT_TABLE[exp];
-  return index + (exp >= 10 ? 2 : 1);
+  return index + (exp >= 10 ? 2 : 2);
 #endif
 }
 
