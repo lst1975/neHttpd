@@ -112,7 +112,7 @@ all: httpd
 
 -include $(depends)
 
-CFLAGS = -Wall -Og -g3 -I.
+CFLAGS = -Wall -O3 -g3 -I.
 LDFLAGS = 
 
 # Check if __CYGWIN__ is defined and set a Makefile variable
