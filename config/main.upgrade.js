@@ -117,7 +117,7 @@ function MAIN_UPGRADE_display(p)
                     +"<div class='txtBorder'><div class='progress'>0%</div></div>"
                     +"<div class='input'>"
                       +"<label class='button label'>"+gmtLangBuild(["ChooseFile"],0)+"</label>"
-                      +"<input class='file' name='File' type='file' accept='*'>"
+                      +"<input class='file' name='File' type='file' accept='*' multiple>"
                       +"<span class='name'></span>"
                       +"<input class='hidden_submit' value='Submit' type='submit'>"
                       +"<label class='button submit'>"+gmtLangBuild(["StartUpload"],0)+"</label>"
