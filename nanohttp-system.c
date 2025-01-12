@@ -74,6 +74,16 @@
 
 static long __os_get_tzoffset(void);
 
+#if defined(WIN32) && defined(__GNUC__) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+typedef char STRERR_Buffer[1024];
+RTE_DEFINE_PER_LCORE(STRERR_Buffer, ng_strerror_buffer);
+#if defined(WIN32) && defined(__GNUC__) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic pop
+#endif
+
 #define NG_SOCKET_MAXCONN 0xfffffff
 
 ng_os_info_s ng_os_info = {
@@ -122,16 +132,6 @@ static ng_result_t __ng_get_freq(void *log, double *freq)
   return ng_ERR_NONE;
 }
 
-#if defined(WIN32) && defined(__GNUC__) && (GCC_VERSION >= 100000)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wattributes"
-#endif
-typedef char STRERR_Buffer[1024];
-RTE_DEFINE_PER_LCORE(STRERR_Buffer, ng_strerror_buffer);
-#if defined(WIN32) && defined(__GNUC__) && (GCC_VERSION >= 100000)
-#pragma GCC diagnostic pop
-#endif
-
 const char *__os_strerror(int err)
 {
   size_t         len;
@@ -139,13 +139,8 @@ const char *__os_strerror(int err)
   char *errstr = RTE_PER_LCORE(ng_strerror_buffer);
   size_t size = sizeof(RTE_PER_LCORE(ng_strerror_buffer));
 
-  if (size == 0) {
-    return "";
-  }
-
   len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
                       NULL, err, lang, (char *)errstr, size, NULL);
-
   if (len == 0 && lang && GetLastError() == ERROR_RESOURCE_LANG_NOT_FOUND) {
 
     /*
@@ -161,8 +156,7 @@ const char *__os_strerror(int err)
   }
 
   if (len == 0) {
-    ng_snprintf(errstr, size, "FormatMessage() error:(%d)", GetLastError());
-    return errstr;
+    len = ng_snprintf(errstr, size, "FormatMessage() error:(%d)", GetLastError());
   }
 
   /* remove ".\r\n\0" */
@@ -171,7 +165,7 @@ const char *__os_strerror(int err)
   {
     --len;
   }
-
+  errstr[len+1] = '\0';
   return errstr;
 }
 
@@ -848,6 +842,22 @@ __os_get_tzoffset(void)
 #include <sys/resource.h>
 
 #define BUFFER_SIZE 256
+
+const char *__os_strerror(int err)
+{
+  char *errstr = RTE_PER_LCORE(ng_strerror_buffer);
+  size_t size = sizeof(RTE_PER_LCORE(ng_strerror_buffer));
+  int len = snprintf(errstr, size, "%s", strerror(err));
+  
+  /* remove ".\r\n\0" */
+  while (errstr[len] == '\0' || errstr[len] == '\r'
+         || errstr[len] == '\n' || errstr[len] == '.')
+  {
+    --len;
+  }
+  errstr[len+1] = '\0';
+  return errstr;
+}
 
 char *ng_get_pwd(char *path, size_t len) 
 {

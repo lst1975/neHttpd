@@ -134,6 +134,7 @@
 #include "nanohttp-client.h"
 #include "nanohttp-time.h"
 #include "nanohttp-header.h"
+#include "nanohttp-system.h"
 
 herror_t
 httpc_init(int argc, char **argv)
@@ -158,33 +159,34 @@ httpc_new(void)
  
   if (!(res = (httpc_conn_t *) http_malloc(sizeof(httpc_conn_t))))
   {
-    log_error("http_malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     goto clean0;
   }
 
   if (!(res->sock = (struct hsocket_t *)http_malloc(sizeof(struct hsocket_t))))
   {
-    log_error("http_malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     goto clean1;
   }
 
   if (ng_url_init(&res->url) < 0)
   {
-    log_error("http_malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     goto clean2;
   }
 
   if ((status = hsocket_init(res->sock)) != H_OK)
   {
-    log_warn("hsocket_init failed (%s)", herror_message(status));
+    herror_log(status);
+    log_warn("hsocket_init failed.");
     goto clean3;
   }
 
-  res->header = NULL;
   res->version = HTTP_1_1;
   res->out = NULL;
   res->id = counter++;
-
+  ng_INIT_LIST_HEAD(&res->header);
+  
   return res;
 
 clean3:
@@ -200,17 +202,10 @@ clean0:
 void
 httpc_free(httpc_conn_t * conn)
 {
-  hpair_t *tmp;
-
   if (conn == NULL)
     return;
 
-  while (conn->header != NULL)
-  {
-    tmp = conn->header;
-    conn->header = conn->header->next;
-    hpairnode_free(tmp);
-  }
+  hpairnode_free_deep(&conn->header);
 
   if (conn->out != NULL)
   {
@@ -240,100 +235,16 @@ httpc_close_free(httpc_conn_t * conn)
   return;
 }
 
-int
-httpc_add_header(httpc_conn_t *conn, const char *key, const char *value)
-{
-  if (!conn)
-  {
-    log_warn("Connection object is NULL");
-    return -1;
-  }
-
-  conn->header = hpairnode_new(key, value, conn->header);
-
-  return 0;
-}
-
-void
-httpc_add_headers(httpc_conn_t *conn, const hpair_t *values)
-{
-  if (conn == NULL)
-  {
-    log_warn("Connection object is NULL");
-    return;
-  }
-
-  for ( ;values; values=values->next)
-    httpc_add_header(conn, values->key.cptr, values->val.cptr);
-
-  return;
-}
- 
-/*--------------------------------------------------
-FUNCTION: httpc_set_header
-DESC: Adds a new (key, value) pair to the header
-or modifies the old pair if this function will
-finds another pair with the same 'key' value.
-----------------------------------------------------*/
-int
-httpc_set_header(httpc_conn_t *conn, const char *key, const char *value)
-{
-  hpair_t *p;
-
-  if (conn == NULL)
-  {
-    log_warn("Connection object is NULL");
-    return -1;
-  }
-
-  for (p = conn->header; p; p = p->next)
-  {
-    if (p->key.cptr && !strcmp(p->key.cptr, key))
-    {
-      int len;
-      char *tmp;
-      len = ng_strlen(value);
-      tmp = http_strdup_size(value, len);
-      if (p->val.buf == NULL)
-      {
-        log_fatal("http_strdup_size failed.");
-        return -1;
-      }
-      ng_free_data_block(&p->val);
-      p->val.buf = tmp;
-      p->val.len = len;
-    }
-  }
-
-  p = hpairnode_new(key, value, conn->header);
-  if (p == NULL)
-  {
-    log_fatal("http_strdup_size failed.");
-    return -1;
-  }
-
-  conn->header = p;
-  return 0;
-}
-
-#if !__configUseStreamBase64
 static int
 _httpc_set_basic_authorization_header(httpc_conn_t *conn, 
-  const char *key, const char *user, const char *password)
+  const ng_block_s *key, const ng_block_s *user, const ng_block_s *password)
 {
-  int ulen, plen, inlen, outlen, len;
+  int inlen, outlen, len;
   unsigned char *p, *o;
-
-  if (!user)
-    user = "";
-
-  if (!password)
-    password = "";
+  ng_block_s in, out;
 
   /* XXX: do we need this really? */
-  ulen = strlen(user);
-  plen = strlen(password);
-  inlen  = ulen + plen + 1;
+  inlen  = user->len + password->len + 1;
   outlen = B64_ENCLEN(inlen);
 
   p = (unsigned char *)http_malloc(6+inlen+1+outlen);
@@ -342,89 +253,54 @@ _httpc_set_basic_authorization_header(httpc_conn_t *conn,
     log_fatal("Malloc failed.");
     return 0;
   }
-  memcpy(p, user, ulen);
-  p[ulen]=':';
-  memcpy(p+ulen+1, password, plen);
-  p[inlen]='\0';
+  ng_memcpy(p, user->ptr, user->len);
+  p[user->len]=':';
+  ng_memcpy(p+user->len+1, password->ptr, password->len);
   
   o = p + inlen + 7;
-  len = base64_encode_string(p, o);
-  memcpy(p, "Basic ", 6);
-  memcpy(p+6, o, len);
-  p[6+len]='\0';
-  
-  len = httpc_set_header(conn, key, (char *)p);
-  http_free(p);
-  return len;
-}
-#else
-static int
-_httpc_set_basic_authorization_header(httpc_conn_t *conn, 
-  const char *key, const char *user, const char *password)
-{
-  int ulen, plen, inlen, outlen, len;
-  unsigned char *p, *o;
-  ng_buffer_s in, out;
-
-  if (!user)
-    user = "";
-
-  if (!password)
-    password = "";
-
-  /* XXX: do we need this really? */
-  ulen = strlen(user);
-  plen = strlen(password);
-  inlen  = ulen + plen + 1;
-  outlen = B64_ENCLEN(inlen);
-
-  p = (unsigned char *)http_malloc(6+inlen+1+outlen);
-  if (p == NULL)
-  {
-    log_fatal("Malloc failed.");
-    return 0;
-  }
-  memcpy(p, user, ulen);
-  p[ulen]=':';
-  memcpy(p+ulen+1, password, plen);
-  p[inlen]='\0';
-  
-  o = p + inlen + 7;
-   in.ptr = p;
-   in.len = inlen;
+  in.ptr = p;
+  in.len = inlen;
   out.ptr = o;
   len = b64Encode(&in, &out);
-  memcpy(p, "Basic ", 6);
-  memcpy(p+6, o, len);
-  p[6+len]='\0';
+  ng_memcpy(o - 6, "Basic ", 6);
+  out.len = len + 6;
+  out.ptr = o - 6;
   
-  len = httpc_set_header(conn, key, (char *)p);
+  if (0 > hpairnode_set_header(&conn->header, key, &out))
+  {
+    http_free(p);
+    log_fatal("httpc_set_header failed.");
+    return -1;
+  }
+  
   http_free(p);
-  return len;
-}
-#endif
-
-int
-httpc_set_basic_authorization(httpc_conn_t *conn, const char *user, const char *password)
-{
-  return _httpc_set_basic_authorization_header(conn, HEADER_AUTHORIZATION, user, password);
+  return 0;
 }
 
 int
-httpc_set_basic_proxy_authorization(httpc_conn_t *conn, const char *user, const char *password)
+httpc_set_basic_authorization(httpc_conn_t *conn, 
+  const ng_block_s *user, const ng_block_s *password)
 {
-  return _httpc_set_basic_authorization_header(conn, HEADER_PROXY_AUTHORIZATION, user, password);
+  return _httpc_set_basic_authorization_header(conn, 
+    &__HDR_BUF__(HEADER_AUTHORIZATION), user, password);
 }
 
-static void
-httpc_header_set_date(httpc_conn_t * conn)
+int
+httpc_set_basic_proxy_authorization(httpc_conn_t *conn, 
+  const ng_block_s *user, const ng_block_s *password)
+{
+  return _httpc_set_basic_authorization_header(conn, 
+    &__HDR_BUF__(HEADER_PROXY_AUTHORIZATION), user, password);
+}
+
+static int
+httpc_header_set_date(httpc_conn_t *conn)
 {
   char buffer[32];
-  int n = ng_http_date_s(buffer, 32);
-  buffer[n]='\0';
-  httpc_set_header(conn, __HDR_BUF_PTR(HEADER_DATE), buffer);
-
-  return;
+  ng_block_s date;
+  date.len = ng_http_date_s(buffer, 32);
+  date.buf = buffer;
+  return hpairnode_set_header(&conn->header, &__HDR_BUF__(HEADER_DATE), &date);
 }
 
 /*--------------------------------------------------
@@ -433,24 +309,22 @@ DESC: Sends the current header information stored
 in conn through conn->sock.
 ----------------------------------------------------*/
 herror_t
-httpc_send_header(httpc_conn_t * conn)
+httpc_send_header(httpc_conn_t *conn)
 {
   hpair_t *walker;
-  herror_t status;
-  char buffer[1024];
-  int len;
-
-  for (walker = conn->header; walker; walker = walker->next)
+  ng_list_for_each_entry(walker,hpair_t,&conn->header,link)
   {
     if (walker->key.len && walker->val.len)
     {
-      len = ng_snprintf(buffer, 1024, "%pS: %pS\r\n", &walker->key, &walker->val);
-      if ((status = hsocket_send(conn->sock, (unsigned char *)buffer, len)) != H_OK)
+      herror_t status;
+      status = hsocket_send_string(conn->sock, "%pS: %pS\r\n", 
+        &walker->key, &walker->val);
+      if (status != H_OK)
         return status;
     }
   }
 
-  return hsocket_send_string(conn->sock, "\r\n");
+  return hsocket_send(conn->sock, (const unsigned char *)"\r\n", 2);
 }
 
 /*--------------------------------------------------
@@ -499,7 +373,8 @@ If success, this function will return 0.
 >0 otherwise.
 ----------------------------------------------------*/
 static herror_t
-_httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn, const char *urlstr)
+_httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn, 
+  const ng_block_s *urlstr)
 {
   char *buffer;
   herror_t status;
@@ -514,7 +389,7 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn, const char *urls
                       HSERVER_ERROR_MALLOC,
                       "Can malloc \"%d\" (%s)", 
                       ___BUFSZ, 
-                      strerror(errno));
+                      os_strerror(ng_errno));
     goto clean0;
   }
   
@@ -526,17 +401,32 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn, const char *urls
   }
 
   /* Build request header */
-  httpc_header_set_date(conn);
-
-  if ((status = ng_url_parse(&conn->url, urlstr, 0)) != H_OK)
+  if (httpc_header_set_date(conn) < 0)
   {
-    log_error("Cannot parse URL \"%s\"", SAVE_STR(urlstr));
+    log_error("httpc_header_set_date failed.");
+    status = herror_new("httpc_talk_to_server", GENERAL_ERROR, 
+      "httpc_header_set_date failed.");
     goto clean1;
   }
+
+  status = ng_url_parse(&conn->url, urlstr->cptr, urlstr->len);
+  if (status != H_OK)
+  {
+    log_error("Cannot parse URL \"%pS\"", urlstr);
+    goto clean1;
+  }
+  
   /* TODO (#1#): Check for HTTP protocol in URL */
 
   /* Set hostname */
-  httpc_set_header(conn, HEADER_HOST, conn->url.host.cptr);
+  if (hpairnode_set_header(&conn->header, &__HDR_BUF__(HEADER_HOST), 
+    &conn->url.host) < 0)
+  {
+    log_error("httpc_set_header failed.");
+    status = herror_new("httpc_talk_to_server", GENERAL_ERROR, 
+      "httpc_set_header failed.");
+    goto clean1;
+  }
 
   ssl = conn->url.protocol == NG_PROTOCOL_HTTPS ? 1 : 0;
   log_verbose("ssl = %i (%i %i)", ssl, conn->url.protocol, NG_PROTOCOL_HTTPS);
@@ -545,7 +435,8 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn, const char *urls
   status = hsocket_open(conn->sock, conn->url.host.cptr, conn->url.port, ssl);
   if (status != H_OK)
   {
-    log_error("hsocket_open failed (%s)", herror_message(status));
+    herror_log(status);
+    log_error("hsocket_open failed.");
     goto clean1;
   }
 
@@ -576,7 +467,8 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn, const char *urls
   status = hsocket_send(conn->sock, (unsigned char *)buffer, len);
   if (status != H_OK)
   {
-    log_error("Cannot send request (%s)", herror_message(status));
+    herror_log(status);
+    log_error("Cannot send request.");
     goto clean2;
   }
 
@@ -584,7 +476,8 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn, const char *urls
   status = httpc_send_header(conn);
   if (status != H_OK)
   {
-    log_error("Cannot send header (%s)", herror_message(status));
+    herror_log(status);
+    log_error("Cannot send header.");
     goto clean2;
   }
 
@@ -602,19 +495,21 @@ clean0:
 }
 
 herror_t
-httpc_get(httpc_conn_t *conn, hresponse_t **out, const char *urlstr)
+httpc_get(httpc_conn_t *conn, hresponse_t **out, const ng_block_s *urlstr)
 {
   herror_t status;
 
   if ((status = _httpc_talk_to_server(HTTP_REQUEST_GET, conn, urlstr)) != H_OK)
   {
-    log_error("_httpc_talk_to_server failed (%s)", herror_message(status));
+    herror_log(status);
+    log_error("_httpc_talk_to_server failed.");
     return status;
   }
 
   if ((status = hresponse_new_from_socket(conn->sock, out)) != H_OK)
   {
-    log_error("hresponse_new_from_socket failed (%s)", herror_message(status));
+    herror_log(status);
+    log_error("hresponse_new_from_socket failed.");
     return status;
   }
 
@@ -622,17 +517,25 @@ httpc_get(httpc_conn_t *conn, hresponse_t **out, const char *urlstr)
 }
 
 herror_t
-httpc_post_begin(httpc_conn_t * conn, const char *url)
+httpc_post_begin(httpc_conn_t *conn, const ng_block_s *url)
 {
   herror_t status;
 
   if ((status = _httpc_talk_to_server(HTTP_REQUEST_POST, conn, url)) != H_OK)
   {
-    log_error("_httpc_talk_to_server failed (%s)", herror_message(status));
+    herror_log(status);
+    log_error("_httpc_talk_to_server failed.");
     return status;
   }
 
-  conn->out = http_output_stream_new(conn->sock, conn->header);
+  conn->out = http_output_stream_new(conn->sock, &conn->header);
+  if (conn->out == NULL)
+  {
+    log_error("http_output_stream_new failed.");
+    status = herror_new("httpc_post_begin", GENERAL_ERROR, 
+      "http_output_stream_new failed.");
+    return status;
+  }
 
   return H_OK;
 }
@@ -654,307 +557,4 @@ httpc_post_end(httpc_conn_t * conn, hresponse_t ** out)
     return status;
 
   return H_OK;
-}
-
-/* ---------------------------------------------------
-  MIME support functions httpc_mime_* function set
------------------------------------------------------*/
-
-static size_t
-_httpc_mime_get_boundary(httpc_conn_t * conn, char *dest, size_t len)
-{
-  size_t n = ng_snprintf(dest, len, "---=.Part_NH_%d", conn->id);
-  log_verbose("boundary= \"%s\"", dest);
-  return n;
-}
-
-#define _HTTPC_MIME_BOUNDARY_SIZE_MAX 75
-
-static herror_t __httpc_mime_toolarge(const char *func, size_t size)
-{
-  return herror_new(func, 
-                    HSERVER_ERROR_2SHORT,
-                    "Tempary buffer is too short: \"%d\"", 
-                    size);
-}
-
-static inline herror_t 
-__httpc_mime_concat(httpd_buf_t *b, size_t tsize, const char *fmt, 
-  const char *data, char *temp, size_t temp_size)
-{
-  size_t n;
-  n = ng_snprintf(temp, temp_size, fmt, data);
-  if (BUF_REMAIN(b) <= n)
-  {
-    return __httpc_mime_toolarge("__httpc_mime_concat", tsize);
-  }
-  memcpy(BUF_CUR_PTR(b), temp, n);
-  BUF_GO(b, n);
-  BUF_SET_CHR(b, '\0');
-  return H_OK;
-}
-
-static inline herror_t
-httpc_mime_copy2(char *buffer, size_t blen, const char *d1, size_t d1len, 
-  const char *d2, size_t d2len)
-{
-  if (blen < d1len+d2len)
-  {
-    return __httpc_mime_toolarge("httpc_mime_copy2", blen);
-  }
-  memcpy(buffer, d1, d1len);
-  memcpy(buffer+d1len, d2, d2len);
-  return H_OK;
-}
-
-static inline herror_t
-httpc_mime_copy3(char *buffer, size_t blen, const char *d1, size_t d1len, 
-  const char *d2, size_t d2len, const char *d3, size_t d3len)
-{
-  if (blen < d1len+d2len+d3len)
-  {
-    return __httpc_mime_toolarge("httpc_mime_copy3", blen);
-  }
-  memcpy(buffer, d1, d1len);
-  memcpy(buffer+d1len, d2, d2len);
-  memcpy(buffer+d1len+d2len, d3, d3len);
-  return H_OK;
-}
-
-herror_t
-httpc_mime_begin(httpc_conn_t * conn, const char *url, const char *related_start, 
-  const char *related_start_info, const char *related_type)
-{
-  herror_t status;
-  size_t n,tsize;
-  char *buffer, *boundary;
-  httpd_buf_t b;
-
-#define ___BUFSZ 512
-  tsize = ___BUFSZ+_HTTPC_MIME_BOUNDARY_SIZE_MAX;
-  buffer = (char *)http_malloc(tsize);
-  if (buffer == NULL)
-  {
-    log_fatal("Failed to malloc temp buffer.");
-    status = herror_new("httpc_mime_begin", 
-                      HSERVER_ERROR_MALLOC,
-                      "Can malloc \"%d\" (%s)", 
-                      tsize, 
-                      strerror(errno));
-    goto clean0;
-  }
-  boundary = buffer+___BUFSZ;
-  
-  BUF_SIZE_INIT(&b, buffer, ___BUFSZ);
-
-  /* 
-     Set Content-type Set multipart/related parameter type=..; start=.. ;
-     start-info= ..; boundary=...
-
-   */
-  memcpy(BUF_CUR_PTR(&b), "multipart/related;", 18);
-  BUF_GO(&b, 18);
-  
-  if (related_type)
-  {
-    status = httpc_mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
-      " type=\"", 7, related_type, strlen(related_type), "\";", 2);
-    if (status != H_OK) goto clean1;
-  }
-
-  if (related_start)
-  {
-    status = httpc_mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
-      " start=\"", 8, related_start, strlen(related_start), "\";", 2);
-    if (status != H_OK) goto clean1;
-  }
-
-
-  if (related_start_info)
-  {
-    status = httpc_mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
-      " start-info=\"", 13, related_start_info, 
-      strlen(related_start_info), "\";", 2);
-    if (status != H_OK) goto clean1;
-  }
-
-  n = _httpc_mime_get_boundary(conn, boundary, _HTTPC_MIME_BOUNDARY_SIZE_MAX);
-  status = httpc_mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
-    " boundary=\"", 11, boundary, n, "\"", 1);
-  if (status != H_OK) goto clean1;
-
-  httpc_set_header(conn, __HDR_BUF_PTR(HEADER_CONTENT_TYPE), buffer);
-  status = httpc_post_begin(conn, url);
-  
-#undef ___BUFSZ
-  
-clean1:
-  http_free(buffer);
-clean0:
-  return status;
-}
-
-herror_t
-httpc_mime_next(httpc_conn_t * conn, const char *content_id, 
-  const char *content_type, const char *transfer_encoding)
-{
-  herror_t status;
-  char *buffer, *boundary;
-  size_t len;
-
-#define ___BUFSZ 512
-  size_t tsize = ___BUFSZ+_HTTPC_MIME_BOUNDARY_SIZE_MAX;
-  buffer = (char *)http_malloc(tsize);
-  if (buffer == NULL)
-  {
-    log_fatal("Failed to malloc temp buffer.");
-    status = herror_new("httpc_mime_next", 
-                      HSERVER_ERROR_MALLOC,
-                      "Can malloc \"%d\" (%s)", 
-                      tsize, 
-                      strerror(errno));
-    goto clean0;
-  }
-  boundary = buffer+___BUFSZ;
-
-  /* Get the boundary string */
-  len = _httpc_mime_get_boundary(conn, boundary, _HTTPC_MIME_BOUNDARY_SIZE_MAX);
-  status = httpc_mime_copy3(buffer, ___BUFSZ, "\r\n--", 4, 
-    boundary, len, "\r\n", 2);
-  if (status != H_OK)
-    goto clean1;
-  len = 4+len+2;
-  /* Send boundary */
-  status = http_output_stream_write(conn->out, (unsigned char *)buffer, len);
-  if (status != H_OK)
-    goto clean1;
-
-  /* Send Content header */
-  len = ng_snprintf(buffer, ___BUFSZ, "%s: %s\r\n%s: %s\r\n%s: %s\r\n\r\n",
-            __HDR_BUF_PTR(HEADER_CONTENT_TYPE), content_type,
-            __HDR_BUF_PTR(HEADER_CONTENT_TRANSFER_ENCODING), transfer_encoding,
-            __HDR_BUF_PTR(HEADER_CONTENT_ID), content_id);
-
-  status = http_output_stream_write(conn->out, (unsigned char *)buffer, len);
-
-#undef ___BUFSZ
-
-clean1:
-  http_free(buffer);
-clean0:
-  return status;
-}
-
-herror_t
-httpc_mime_end(httpc_conn_t * conn, hresponse_t ** out)
-{
-  herror_t status = H_OK;
-  char *buffer, *boundary;
-  size_t len;
-
-#define ___BUFSZ 512
-  buffer = (char *)http_malloc(___BUFSZ+_HTTPC_MIME_BOUNDARY_SIZE_MAX);
-  if (buffer == NULL)
-  {
-    log_fatal("Failed to malloc temp buffer.");
-    status = herror_new("httpc_mime_end", 
-                      HSERVER_ERROR_MALLOC,
-                      "Can malloc \"%d\" (%s)", 
-                      512+_HTTPC_MIME_BOUNDARY_SIZE_MAX, 
-                      strerror(errno));
-    goto clean0;
-  }
-  boundary = buffer+___BUFSZ;
-
-  /* Get the boundary string */
-  len = _httpc_mime_get_boundary(conn, boundary, _HTTPC_MIME_BOUNDARY_SIZE_MAX);
-  status = httpc_mime_copy3(buffer, ___BUFSZ, "\r\n--", 4, boundary, len, "--\r\n\r\n", 6);
-  if (status != H_OK)
-    goto clean1;
-  len = 4+len+6;
-
-  /* Send boundary */
-  status = http_output_stream_write(conn->out, (unsigned char *)buffer, len);
-  if (status != H_OK) goto clean1;
-
-  status = http_output_stream_flush(conn->out);
-  if (status != H_OK) goto clean1;
-
-  status = hresponse_new_from_socket(conn->sock, out);
-  if (status != H_OK) goto clean1;
-
-#undef ___BUFSZ
-
-clean1:
-  http_free(buffer);
-clean0:
-  return status;
-}
-
-
-/**
-  Send boundary and part header and continue 
-  with next part
-*/
-herror_t
-httpc_mime_send_file(httpc_conn_t * conn, const char *content_id, 
-  const char *content_type, const char *transfer_encoding, 
-  const char *filename)
-{
-  herror_t status = H_OK;
-  unsigned char *buffer;
-  size_t size;
-  FILE *fd;
-
-  buffer = (unsigned char *)http_malloc(MAX_FILE_BUFFER_SIZE);
-  if (buffer == NULL)
-  {
-    log_fatal("Failed to malloc temp buffer.");
-    status = herror_new("httpc_mime_send_file", 
-                      HSERVER_ERROR_MALLOC,
-                      "Can malloc \"%d\" (%s)", 
-                      MAX_FILE_BUFFER_SIZE, 
-                      strerror(errno));
-    goto clean0;
-  }
-
-  if ((fd = fopen(filename, "rb")) == NULL)
-  {
-    log_error("fopen failed (%s)", strerror(errno));
-    status = herror_new("httpc_mime_send_file", FILE_ERROR_OPEN,
-                      "Can not open file \"%s\" (%s)", filename, strerror(errno));
-    goto clean1;
-  }
-
-  status = httpc_mime_next(conn, content_id, content_type, transfer_encoding);
-  if (status != H_OK)
-    goto clean2;
-
-  while (!feof(fd))
-  {
-    size = fread(buffer, 1, MAX_FILE_BUFFER_SIZE, fd);
-    if (size == -1)
-    {
-      status = herror_new("httpc_mime_send_file", FILE_ERROR_READ,
-                        "Can not read from file '%s'", filename);
-      goto clean2;
-    }
-
-    if (size > 0)
-    {
-      /* DEBUG: fwrite(buffer, 1, size, stdout); */
-      status = http_output_stream_write(conn->out, buffer, size);
-      if (status != H_OK)
-        goto clean2;
-    }
-  }
-
-  log_verbose("file sent!");
-
-clean2:
-  fclose(fd);
-clean1:
-  http_free(buffer);
-clean0:
-  return status;
 }

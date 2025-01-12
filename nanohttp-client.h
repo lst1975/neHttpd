@@ -268,7 +268,7 @@
 typedef struct httpc_conn
 {
   struct hsocket_t *sock;
-  hpair_t *header;
+  ng_list_head_s header;
   ng_url_s url;
   http_version_t version;
 
@@ -340,46 +340,6 @@ extern void httpc_close_free(httpc_conn_t * conn);
 
 /**
  *
- * Sets header element (key,value) pair.
- *
- * @return 0 on success or failure (yeah!), 1 if a (key,value) pair was replaced.
- *
- * @see httpc_add_header
- * @see httpc_add_headers
- * @see http_general_header_fields
- * @see http_request_header_fields
- *
- */
-extern int httpc_set_header(httpc_conn_t * conn, const char *key, const char *value);
-
-/**
- *
- * Adds a header element (key, value) pair.
- *
- * @return 0 on success, -1 on failure.
- *
- * @see httpc_set_header
- * @see httpc_add_headers
- * @see http_general_header_fields
- * @see http_request_header_fields
- *
- */
-extern int httpc_add_header(httpc_conn_t *conn, const char *key, const char *value);
-
-/**
- *
- * Adds a list of (key, value) pairs.
- *
- * @see httpc_set_header
- * @see httpc_add_header
- * @see http_general_header_fields
- * @see http_request_header_fields
- *
- */
-extern void httpc_add_headers(httpc_conn_t *conn, const hpair_t *values);
-
-/**
- *
  * Sets a HEADER_AUTHORIZATION header.
  *
  * @param conn		The HTTP connection.
@@ -390,7 +350,8 @@ extern void httpc_add_headers(httpc_conn_t *conn, const hpair_t *values);
  * @see HEADER_AUTHORIZATION
  *
  */
-extern int httpc_set_basic_authorization(httpc_conn_t *conn, const char *user, const char *password);
+extern int httpc_set_basic_authorization(httpc_conn_t *conn, 
+    const ng_block_s *user, const ng_block_s *password);
 
 /**
  *
@@ -404,7 +365,8 @@ extern int httpc_set_basic_authorization(httpc_conn_t *conn, const char *user, c
  * @see HEADER_PROXY_AUTHORIZATION
  *
  */
-extern int httpc_set_basic_proxy_authorization(httpc_conn_t *conn, const char *user, const char *password);
+extern int httpc_set_basic_proxy_authorization(httpc_conn_t *conn, 
+    const ng_block_s *user, const ng_block_s *password);
 
 /**
  *
@@ -415,7 +377,8 @@ extern int httpc_set_basic_proxy_authorization(httpc_conn_t *conn, const char *u
  * @see HTTP_REQUEST_GET
  *
  */
-extern herror_t httpc_get(httpc_conn_t * conn, hresponse_t ** out, const char *urlstr);
+extern herror_t httpc_get(httpc_conn_t *conn, hresponse_t **out, 
+                  const ng_block_s *urlstr);
 
 /**
  *
@@ -427,7 +390,7 @@ extern herror_t httpc_get(httpc_conn_t * conn, hresponse_t ** out, const char *u
  * @see httpc_post_end
  *
  */
-extern herror_t httpc_post_begin(httpc_conn_t * conn, const char *url);
+extern herror_t httpc_post_begin(httpc_conn_t *conn, const ng_block_s *url);
 
 /**
  *
@@ -440,67 +403,7 @@ extern herror_t httpc_post_begin(httpc_conn_t * conn, const char *url);
  * @see HTTP_REQUEST_POST
  *
  */
-extern herror_t httpc_post_end(httpc_conn_t * conn, hresponse_t ** out);
-
-/**
- *
- * @todo move to nanohttp-mime.c merge with httpc_mime_* functions
- *
- */
-
-/**
- *
- * Begin MIME multipart/related POST request
- *
- * @return H_OK on success or error flag
- *
- * @see nanohttp_mime_page
- *
- */
-extern herror_t httpc_mime_begin(httpc_conn_t * conn, const char *url,
-                          const char *related_start,
-                          const char *related_start_info,
-                          const char *related_type);
-
-/**
- *
- * Send boundary and part header and continue with next part
- *
- * @return H_OK on success
- *
- * @see nanohttp_mime_page
- *
- */
-extern herror_t httpc_mime_next(httpc_conn_t * conn,
-                         const char *content_id,
-                         const char *content_type,
-                         const char *transfer_encoding);
-
-/**
- *
- * Finish MIME request and get the response
- *
- * @return H_OK on success
- *
- * @see nanohttp_mime_page
- *
- */
-extern herror_t httpc_mime_end(httpc_conn_t * conn, hresponse_t ** out);
-
-/**
- *
- * Send boundary and part header and continue with next part
- *
- * @return H_OK on success
- *
- * @see nanohttp_mime_page
- *
- */
-extern herror_t httpc_mime_send_file(httpc_conn_t * conn,
-                              const char *content_id,
-                              const char *content_type,
-                              const char *transfer_encoding,
-                              const char *filename);
+extern herror_t httpc_post_end(httpc_conn_t *conn, hresponse_t **out);
 
 #ifdef __cplusplus
 }

@@ -114,20 +114,21 @@
 #include "nanohttp-socket.h"
 #include "nanohttp-stream.h"
 #include "nanohttp-header.h"
+#include "nanohttp-system.h"
 
 static int
-_http_stream_has_content_length(hpair_t * header)
+_http_stream_has_content_length(ng_list_head_s *header)
 {
-  return hpairnode_get_ignore_case_len(header, 
+  return hpairnode_get_ignore_case(header, 
     __HDR_BUF(HEADER_CONTENT_LENGTH)) != NULL;
 }
 
 static int
-_http_stream_is_chunked(hpair_t * header)
+_http_stream_is_chunked(ng_list_head_s *header)
 {
   hpair_t *chunked;
 
-  chunked = hpairnode_get_ignore_case_len(header, 
+  chunked = hpairnode_get_ignore_case(header, 
     __HDR_BUF(HEADER_TRANSFER_ENCODING));
   if (chunked != NULL)
   {
@@ -140,99 +141,12 @@ _http_stream_is_chunked(hpair_t * header)
   return 0;
 }
 
-/**
-  Creates a new input stream. 
-*/
-struct http_input_stream_t *
-http_input_stream_new(struct hsocket_t *sock, hpair_t *header)
-{
-  struct http_input_stream_t *result;
-
-  if (!(result = (struct http_input_stream_t *) 
-    http_malloc(sizeof(struct http_input_stream_t))))
-  {
-    log_error("http_malloc failed (%s)", strerror(errno));
-    return NULL;
-  }
-
-  result->sock = sock;
-  result->err = H_OK;
-
-  /* Find connection type */
-  hpairnode_dump_deep(header);
-  
-  /* Check if Content-type */
-  if (_http_stream_has_content_length(header))
-  {
-    hpair_t *cl;
-    log_verbose("Stream transfer with 'Content-length'");
-    cl = hpairnode_get_ignore_case_len(header, 
-      __HDR_BUF(HEADER_CONTENT_LENGTH));
-    assert(cl != NULL);
-    result->content_length = ng_atoi(cl->val.cptr, cl->val.len);
-    result->received = 0;
-    result->type = HTTP_TRANSFER_CONTENT_LENGTH;
-  }
-  /* Check if Chunked */
-  else if (_http_stream_is_chunked(header))
-  {
-    log_verbose("Stream transfer with 'chunked'");
-    result->type = HTTP_TRANSFER_CHUNKED;
-    result->chunk_size = -1;
-    result->received = -1;
-  }
-  /* Assume connection close */
-  else
-  {
-    log_verbose("Stream transfer with 'Connection: close'");
-    result->type = HTTP_TRANSFER_CONNECTION_CLOSE;
-    result->connection_closed = 0;
-    result->received = 0;
-  }
-  return result;
-}
-
-/**
-  Creates a new input stream from file. 
-  This function was added for MIME messages 
-  and for debugging.
-*/
-struct http_input_stream_t *
-http_input_stream_new_from_file(const char *filename)
-{
-  struct http_input_stream_t *result;
-  FILE *fd;
- 
-  if (!(fd = fopen(filename, "rb"))) {
-
-    log_error("fopen failed (%s)", strerror(errno));
-    return NULL;
-  }
-
-  /* Create object */
-  if (!(result = (struct http_input_stream_t *) 
-      http_malloc(sizeof(struct http_input_stream_t)))) 
-  {
-    log_error("http_malloc failed (%s)", strerror(errno));
-    fclose(fd);
-    return NULL;
-  }
-
-  result->type = HTTP_TRANSFER_FILE;
-  result->fd = fd;
-  result->err = H_OK;
-  result->deleteOnExit = 0;
-  strcpy(result->filename, filename);
-
-  return result;
-}
-
 void
 http_input_stream_free(struct http_input_stream_t * stream)
 {
   if (stream->type == HTTP_TRANSFER_FILE && stream->fd)
   {
-    fclose(stream->fd);
+    fclose((FILE *)stream->fd);
     if (stream->deleteOnExit)
       log_info("Removing '%s'", stream->filename);
     /* remove(stream->filename); */
@@ -265,10 +179,10 @@ _http_input_stream_is_connection_closed_ready(
 static int
 _http_input_stream_is_file_ready(struct http_input_stream_t * stream)
 {
-  return !feof(stream->fd);
+  return !feof((FILE *)stream->fd);
 }
 
-static int
+static size_t
 _http_input_stream_content_length_read(
   struct http_input_stream_t *stream, unsigned char *dest, size_t size)
 {
@@ -311,9 +225,8 @@ _http_input_stream_chunked_read_chunk_size(struct http_input_stream_t * stream)
 
     if (err != H_OK)
     {
-      log_error("[%d] %s(): %s ", herror_code(err), herror_func(err),
-                 herror_message(err));
-
+      herror_log(err);
+      log_error("hsocket_recv failed, %d:%s", herror_code(err), herror_func(err));
       stream->err = err;
       return -1;
     }
@@ -357,9 +270,9 @@ _http_input_stream_chunked_read_chunk_size(struct http_input_stream_t * stream)
   return -1;
 }
 
-static int
-_http_input_stream_chunked_read(struct http_input_stream_t * stream, unsigned char *dest,
-                                int size)
+static size_t
+_http_input_stream_chunked_read(struct http_input_stream_t *stream, 
+  unsigned char *dest, size_t size)
 {
   size_t status, counter;
   size_t remain, read = 0;
@@ -461,7 +374,7 @@ _http_input_stream_chunked_read(struct http_input_stream_t * stream, unsigned ch
 }
 
 
-static int
+static size_t
 _http_input_stream_connection_closed_read(struct http_input_stream_t *stream, 
   unsigned char *dest, size_t size)
 {
@@ -482,12 +395,13 @@ _http_input_stream_connection_closed_read(struct http_input_stream_t *stream,
   return status;
 }
 
-static int
-_http_input_stream_file_read(struct http_input_stream_t * stream, unsigned char *dest, int size)
+static size_t
+_http_input_stream_file_read(struct http_input_stream_t *stream, 
+  unsigned char *dest, size_t size)
 {
   size_t len;
 
-  if ((len = fread(dest, 1, size, stream->fd)) == -1)
+  if ((len = fread(dest, 1, size, (FILE *)stream->fd)) == -1)
   {
     stream->err = herror_new("_http_input_stream_file_read",
                              HSOCKET_ERROR_RECEIVE, "fread() returned -1");
@@ -498,10 +412,107 @@ _http_input_stream_file_read(struct http_input_stream_t * stream, unsigned char 
 }
 
 /**
+  Creates a new input stream. 
+*/
+struct http_input_stream_t *
+http_input_stream_new(struct hsocket_t *sock, ng_list_head_s *header, 
+  httpd_buf_t *data)
+{
+  struct http_input_stream_t *result;
+
+  if (!(result = (struct http_input_stream_t *) 
+    http_malloc(sizeof(struct http_input_stream_t))))
+  {
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    return NULL;
+  }
+
+  sock->data   = *data;
+  result->sock = sock;
+  result->err  = H_OK;
+
+  /* Find connection type */
+  hpairnode_dump_deep(header);
+  
+  /* Check if Content-type */
+  if (_http_stream_has_content_length(header))
+  {
+    hpair_t *cl;
+    log_verbose("Stream transfer with 'Content-length'");
+    cl = hpairnode_get_ignore_case(header, __HDR_BUF(HEADER_CONTENT_LENGTH));
+    assert(cl != NULL);
+    result->content_length = ng_atoi(cl->val.cptr, cl->val.len);
+    result->received       = 0;
+    result->type           = HTTP_TRANSFER_CONTENT_LENGTH;
+    result->stream_ready   = _http_input_stream_is_content_length_ready;
+    result->stream_read    = _http_input_stream_content_length_read;
+  }
+  /* Check if Chunked */
+  else if (_http_stream_is_chunked(header))
+  {
+    log_verbose("Stream transfer with 'chunked'");
+    result->type           = HTTP_TRANSFER_CHUNKED;
+    result->chunk_size     = -1;
+    result->received       = -1;
+    result->stream_ready   = _http_input_stream_is_chunked_ready;
+    result->stream_read    = _http_input_stream_chunked_read;
+  }
+  /* Assume connection close */
+  else
+  {
+    log_verbose("Stream transfer with 'Connection: close'");
+    result->type              = HTTP_TRANSFER_CONNECTION_CLOSE;
+    result->connection_closed = 0;
+    result->received          = 0;
+    result->stream_ready      = _http_input_stream_is_connection_closed_ready;
+    result->stream_read       = _http_input_stream_connection_closed_read;
+  }
+  
+  return result;
+}
+
+/**
+  Creates a new input stream from file. 
+  This function was added for MIME messages 
+  and for debugging.
+*/
+struct http_input_stream_t *
+http_input_stream_new_from_file(const char *filename)
+{
+  struct http_input_stream_t *result;
+  FILE *fd;
+ 
+  if (!(fd = fopen(filename, "rb"))) {
+
+    log_error("fopen failed (%s)", os_strerror(ng_errno));
+    return NULL;
+  }
+
+  /* Create object */
+  if (!(result = (struct http_input_stream_t *) 
+      http_malloc(sizeof(struct http_input_stream_t)))) 
+  {
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    fclose(fd);
+    return NULL;
+  }
+
+  result->type = HTTP_TRANSFER_FILE;
+  result->fd = fd;
+  result->err = H_OK;
+  result->deleteOnExit = 0;
+  strcpy(result->filename, filename);
+  result->stream_ready = _http_input_stream_is_file_ready;
+  result->stream_read  = _http_input_stream_file_read;
+
+  return result;
+}
+
+/**
   Returns the actual status of the stream.
 */
 int
-http_input_stream_is_ready(struct http_input_stream_t * stream)
+http_input_stream_is_ready(struct http_input_stream_t *stream)
 {
   /* paranoia check */
   if (stream == NULL)
@@ -512,19 +523,7 @@ http_input_stream_is_ready(struct http_input_stream_t * stream)
     herror_release(stream->err);
   stream->err = H_OK;
 
-  switch (stream->type)
-  {
-  case HTTP_TRANSFER_CONTENT_LENGTH:
-    return _http_input_stream_is_content_length_ready(stream);
-  case HTTP_TRANSFER_CHUNKED:
-    return _http_input_stream_is_chunked_ready(stream);
-  case HTTP_TRANSFER_CONNECTION_CLOSE:
-    return _http_input_stream_is_connection_closed_ready(stream);
-  case HTTP_TRANSFER_FILE:
-    return _http_input_stream_is_file_ready(stream);
-  default:
-    return 0;
-  }
+  return stream->stream_ready(stream);
 }
 
 /**
@@ -532,11 +531,9 @@ http_input_stream_is_ready(struct http_input_stream_t * stream)
   <0 on error
 */
 size_t
-http_input_stream_read(struct http_input_stream_t * stream, 
+http_input_stream_read(struct http_input_stream_t *stream, 
   unsigned char *dest, size_t size)
 {
-  size_t len = 0;
-
   /* paranoia check */
   if (stream == NULL)
     return -1;
@@ -546,34 +543,14 @@ http_input_stream_read(struct http_input_stream_t * stream,
     herror_release(stream->err);
   stream->err = H_OK;
 
-  switch (stream->type)
-  {
-  case HTTP_TRANSFER_CONTENT_LENGTH:
-    len = _http_input_stream_content_length_read(stream, dest, size);
-    break;
-  case HTTP_TRANSFER_CHUNKED:
-    len = _http_input_stream_chunked_read(stream, dest, size);
-    break;
-  case HTTP_TRANSFER_CONNECTION_CLOSE:
-    len = _http_input_stream_connection_closed_read(stream, dest, size);
-    break;
-  case HTTP_TRANSFER_FILE:
-    len = _http_input_stream_file_read(stream, dest, size);
-    break;
-  default:
-    stream->err = herror_new("http_input_stream_read",
-                             STREAM_ERROR_INVALID_TYPE,
-                             "%d is invalid stream type", stream->type);
-    return -1;
-  }
-  return len;
+  return stream->stream_read(stream, dest, size);
 }
 
 /**
   Creates a new output stream. Transfer code will be found from header.
 */
 struct http_output_stream_t *
-http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
+http_output_stream_new(struct hsocket_t *sock, ng_list_head_s *header)
 {
   struct http_output_stream_t *result;
 
@@ -581,7 +558,7 @@ http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
   result = (struct http_output_stream_t *)http_malloc(sizeof(*result));
   if (result == NULL)
   {
-    log_error("http_malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
 
@@ -596,7 +573,7 @@ http_output_stream_new(struct hsocket_t *sock, hpair_t * header)
   {
     hpair_t *cl;
     log_verbose("Stream transfer with 'Content-length'");
-    cl = hpairnode_get_ignore_case_len(header, 
+    cl = hpairnode_get_ignore_case(header, 
       __HDR_BUF(HEADER_CONTENT_LENGTH));
     assert(cl != NULL);
     result->content_length = ng_atoi(cl->val.cptr, cl->val.len);

@@ -165,6 +165,8 @@ typedef void *herror_t;
 extern "C" {
 #endif
 
+extern void herror_log(herror_t err);
+
 /**
  *
  * Creates a new error structure.
@@ -360,7 +362,7 @@ enum __ng_errno{
 #define ng_set_errno(err)         errno = err
 #define ng_set_socket_errno(err)  errno = err
 #define OS_ERR_ETIMEDOUT          ETIMEDOUT
-#define os_strerror               strerror
+#define os_strerror               __os_strerror
 #endif
 
 const ng_str_s *ng_strerror(ng_errno_e err);

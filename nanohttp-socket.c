@@ -148,6 +148,7 @@
 #include "nanohttp-file.h"
 #include "nanohttp-system.h"
 #include "nanohttp-inet.h"
+#include "nanohttp-buffer.h"
 #ifdef HAVE_SSL
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
@@ -252,14 +253,16 @@ _hsocket_sys_accept(struct hsocket_t *sock, struct hsocket_t *dest)
 
   while (1)
   {
+    int err;
     dest->sock = accept(sock->sock, (struct sockaddr *)&dest->addr, &len);
     if (dest->sock != HSOCKET_FREE)
       break;
-    if (!_hsocket_should_again(errno))
+    err = ng_socket_errno;
+    if (!_hsocket_should_again(err))
     {
-      log_warn("accept failed (%s)", strerror(errno));
+      log_warn("accept failed (%s)", os_strerror(err));
       return herror_new("hsocket_accept", HSOCKET_ERROR_ACCEPT, 
-        "Cannot accept network connection (%s)", strerror(errno));
+        "Cannot accept network connection (%s)", os_strerror(err));
     }
   }
   
@@ -293,14 +296,16 @@ hsocket_module_init(int argc, char **argv)
 
   if ((status = _hsocket_module_sys_init(argc, argv)) != H_OK)
   {
-    log_error("_hsocket_module_sys_init failed (%s)", herror_message(status));
+    herror_log(status);
+    log_error("_hsocket_module_sys_init failed.");
     return status;
   }
 
 #ifdef HAVE_SSL
   if ((status = hssl_module_init(argc, argv)) != H_OK)
   {
-    log_error("hssl_module_init failed (%s)", herror_message(status));
+    herror_log(status);
+    log_error("hssl_module_init failed.");
     return status;
   }
 #endif
@@ -321,11 +326,17 @@ hsocket_module_destroy(void)
 herror_t
 hsocket_init(struct hsocket_t *sock)
 {
-  memset(sock, 0, sizeof(struct hsocket_t));
+  sock->bytes_transmitted = 0;
+  sock->bytes_received    = 0;
+  sock->salen             = 0;
+  sock->ssl               = NULL;
+  sock->status            = H_OK;
+
   sock->sock = HSOCKET_FREE;
 #if __NHTTP_USE_EPOLL
   sock->ep   = HSOCKET_FREE;
 #endif
+  BUF_SIZE_INIT(&sock->data, NULL, 0);
 
   log_info("[OK]: hsocket_init [%p].", sock);
   return H_OK;
@@ -335,12 +346,11 @@ void
 hsocket_free(struct hsocket_t * sock)
 {
   /* nop */
-
   return;
 }
 
 herror_t
-hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
+hsocket_open(struct hsocket_t *dsock, const char *hostname, int port, int ssl)
 {
   int s;
   herror_t status;
@@ -348,7 +358,8 @@ hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
 
   if ((dsock->sock = socket(AF_INET, SOCK_STREAM, 0)) <= 0)
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
-                      "Socket error (%s)", strerror(errno));
+                      "Socket error (%s)", 
+                      os_strerror(ng_socket_errno));
 
   // Set FD_CLOEXEC on the file descriptor
   status = hsocket_setexec(dsock->sock, HSOCKET_ERROR_CREATE);
@@ -359,7 +370,7 @@ hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
   s = inet_pton(AF_INET, hostname, &address.sin_addr);
   if (s <= 0) {
     return herror_new("hsocket_open", HSOCKET_ERROR_GET_HOSTNAME,
-                      "Socket error (%s)", strerror(errno));
+                      "inet_pton invalid address.");
   }
 
   /* set server addresss */
@@ -371,7 +382,8 @@ hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
   /* connect to the server */
   if (connect(dsock->sock, (struct sockaddr *) &address, sizeof(address)) != 0)
     return herror_new("hsocket_open", HSOCKET_ERROR_CONNECT, 
-                "Socket error (%s)", strerror(errno));
+                "Socket error (%s)", 
+                os_strerror(ng_socket_errno));
 
   if (ssl)
   {
@@ -380,7 +392,8 @@ hsocket_open(struct hsocket_t * dsock, const char *hostname, int port, int ssl)
 
     if ((status = hssl_client_ssl(dsock)) != H_OK)
     {
-      log_error("hssl_client_ssl failed (%s)", herror_message(status));
+      herror_log(status);
+      log_error("hssl_client_ssl failed.");
       return status;
     }
 #else
@@ -489,7 +502,7 @@ hsocket_epoll_create(struct hsocket_t *dest)
   if (dest->ep == HSOCKET_FREE) 
   {
     return herror_new("hsocket_accept", HSOCKET_ERROR_INIT, 
-      "epoll_create1 (%s)", strerror(errno));
+      "epoll_create1 (%s)", os_strerror(ng_socket_errno));
   }
   return H_OK;
 }
@@ -507,7 +520,7 @@ hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
       log_verbose("epoll_ctl %d failed", sock);
       return herror_new("__httpd_run", HSOCKET_ERROR_RECEIVE,
                         "Cannot epoll_ctl on this socket (%s)", 
-                        strerror(errno));
+                        os_strerror(ng_socket_errno));
     }
   }
 
@@ -529,20 +542,23 @@ hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
 
   if ((status = _hsocket_sys_accept(sock, dest)) != H_OK)
   {
-    log_error("_hsocket_sys_accept failed (%s)", herror_message(status));
+    herror_log(status);
+    log_error("_hsocket_sys_accept failed.");
     return status;
   }
 #if __NHTTP_USE_EPOLL
   if ((status = hsocket_epoll_create(dest)) != H_OK)
   {
-    log_error("hsocket_epoll_create failed (%s)", herror_message(status));
+    herror_log(status);
+    log_error("hsocket_epoll_create failed.");
     return status;
   }
 
   if ((status = hsocket_epoll_ctl(dest->ep, dest->sock, 
     &dest->event, EPOLL_CTL_ADD, EPOLLIN|EPOLLRDHUP|EPOLLERR)) != H_OK)
   {
-    log_error("hsocket_epoll_ctl failed (%s)", herror_message(status));
+    herror_log(status);
+    log_error("hsocket_epoll_ctl failed.");
     return status;
   }
 #endif
@@ -550,12 +566,14 @@ hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
 #ifdef HAVE_SSL
   if ((status = hssl_server_ssl(dest)) != H_OK)
   {
-    log_warn("SSL startup failed (%s)", herror_message(status));
+    herror_log(status);
+    log_warn("SSL startup failed.");
     return status;
   }
 #endif
 
-  log_verbose("accepting connection from '%pISc' socket=%d", &dest->addr, dest->sock);
+  log_verbose("accepting connection from '%pISc' socket=%d", 
+        &dest->addr, dest->sock);
   return H_OK;
 }
 
@@ -568,9 +586,10 @@ hsocket_listen(struct hsocket_t *sock, int pend_max)
 
   if (listen(sock->sock, pend_max) == -1)
   {
-    log_error("listen failed (%s)", strerror(errno));
+    int err = ng_socket_errno;
+    log_error("listen failed (%s)", os_strerror(err));
     return herror_new("hsocket_listen", HSOCKET_ERROR_LISTEN,
-                      "Cannot listen on this socket (%s)", strerror(errno));
+                      "Cannot listen on this socket (%s)", os_strerror(err));
   }
 
   return H_OK;
@@ -587,6 +606,7 @@ hsocket_close(struct hsocket_t *sock)
     hssl_cleanup(sock);
 #endif
 
+    ng_free_data_block(&sock->data.b);
     _hsocket_sys_close(sock);
 
     sock->bytes_received = 0;
@@ -615,17 +635,18 @@ hsocket_send(struct hsocket_t *sock, const unsigned char *bytes, size_t n)
 #ifdef HAVE_SSL
     if ((status = hssl_write(sock, bytes + total, n, &size)) != H_OK)
     {
-      log_warn("hssl_write failed (%s)", herror_message(status));
+      herror_log(status);
+      log_warn("hssl_write failed.");
     }
 #else
     if ((size = send(sock->sock, (const char *)bytes + total, n, 0)) == -1)
     {
       status = herror_new("hsocket_send", HSOCKET_ERROR_SEND, 
-        "send failed (%s)", strerror(errno));
+        "send failed (%s)", os_strerror(ng_socket_errno));
     }
 #endif
 
-    if (status != H_OK && _hsocket_should_again(errno))
+    if (status != H_OK && _hsocket_should_again(ng_socket_errno))
     {
       herror_release(status);
       continue;
@@ -642,10 +663,54 @@ hsocket_send(struct hsocket_t *sock, const unsigned char *bytes, size_t n)
   return H_OK;
 }
 
-herror_t
-hsocket_send_string(struct hsocket_t * sock, const char *str)
+static int
+__send_snprintf_out(void *arg, const char *string, size_t length)
 {
-  return hsocket_send(sock, (unsigned char *)str, strlen(str));
+  struct hsocket_t *sock = (struct hsocket_t *)arg;
+  herror_t status;
+  status = hsocket_send(sock, (const unsigned char *)string, length);
+  if (status != H_OK)
+  {
+    sock->status = status;
+    return -1;
+  }
+  
+  return length;
+}
+
+/**
+  Writes 'strlen()' bytes of 'str' into stream.
+  Returns socket error flags or H_OK.
+*/
+herror_t
+hsocket_send_string(struct hsocket_t *sock, 
+  const char *format, ...)
+{
+  int n;
+  va_list ap;
+
+  va_start(ap, format);
+  n = __ng_vsnprintf_cb(__send_snprintf_out, sock, format, ap);
+  va_end(ap);
+
+  if (n < 0)
+  {
+    herror_t status = sock->status;
+    if (status == H_OK)
+    {
+      status = herror_new("hsocket_send_string",
+                 GENERAL_ERROR,
+                 "__send_snprintf_out error.");
+    }
+    else
+    {
+      sock->status = NULL;
+    }
+    
+    return status;
+  }
+  
+  return H_OK;
 }
 
 #if __NHTTP_USE_EPOLL
@@ -671,7 +736,7 @@ hsocket_select_recv(struct hsocket_t *sock,
     }
     else if (n == 0)
     {
-      ng_set_errno(OS_ERR_ETIMEDOUT);
+      ng_set_socket_errno(OS_ERR_ETIMEDOUT);
       log_verbose("Socket %d timed out", sock->sock);
       return -1;
     }
@@ -679,9 +744,7 @@ hsocket_select_recv(struct hsocket_t *sock,
     {
       if (event.events & (EPOLLRDHUP|EPOLLERR))
       {
-        n = ng_socket_errno;
-        log_verbose("Socket %d EPOLLRDHUP|EPOLLERR. (%d:%s)", 
-          sock->sock, n, os_strerror(n));
+        log_verbose("Socket %d EPOLLRDHUP|EPOLLERR.", sock->sock);
         return -1;
       }
       if ((event.events & EPOLLIN) 
@@ -724,7 +787,7 @@ hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
     }
     else if (ret == 0)
     {
-      ng_set_errno(OS_ERR_ETIMEDOUT);
+      ng_set_socket_errno(OS_ERR_ETIMEDOUT);
       log_verbose("Socket %d timed out", sock->sock);
       return -1;
     }
@@ -732,9 +795,7 @@ hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
     {
       if ((pfd.revents & (POLLERR|POLLHUP|POLLNVAL)))
       {
-        ret = ng_socket_errno;
-        log_verbose("WSAPoll %d EPOLLRDHUP|EPOLLERR. (%d:%s)", 
-          sock->sock, ret, os_strerror(ret));
+        log_warn("WSAPoll %d EPOLLRDHUP|EPOLLERR.", sock->sock);
         return -1;
       }
       
@@ -785,7 +846,7 @@ hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
     n = select(sock->sock + 1, &fds, NULL, NULL, &timeout);
     if (n == 0)
     {
-      ng_set_errno(OS_ERR_ETIMEDOUT);
+      ng_set_socket_errno(OS_ERR_ETIMEDOUT);
       log_verbose("Socket %d timed out", sock->sock);
       return -1;
     }
@@ -826,16 +887,40 @@ hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
 #endif
 
 herror_t
-hsocket_recv(struct hsocket_t *sock, unsigned char * buffer, 
+hsocket_recv(struct hsocket_t *sock, unsigned char *buffer, 
   size_t total, int force, size_t *received)
 {
   herror_t status = H_OK;
   size_t totalRead;
   size_t count;
 
-/* log_verbose("Entering hsocket_recv(total=%d,force=%d)", total, force); */
-
-  totalRead = 0;
+  if (BUF_LEN(&sock->data))
+  {
+    size_t len = RTE_MIN(BUF_LEN(&sock->data), total);
+    ng_memcpy(buffer, BUF_CUR_PTR(&sock->data), len);
+    sock->data.len -= len;
+    sock->data.p   += len;
+    if (force)
+    {
+      if (len == total)
+      {
+        *received = len;
+        return H_OK;
+      }
+      totalRead = len;
+    }
+    else
+    {
+      *received = len;
+      return H_OK;
+    }
+  }
+  else
+  {
+    ng_free_data_block(&sock->data.b);
+    totalRead = 0;
+  }
+  
   do
   {
 
@@ -843,14 +928,15 @@ hsocket_recv(struct hsocket_t *sock, unsigned char * buffer,
     if ((status = hssl_read(sock, (char *)buffer + totalRead, 
       (size_t) total - totalRead, &count)) != H_OK)
     {
-      log_warn("hssl_read failed (%s)", herror_message(status));
+      herror_log(status);
+      log_warn("hssl_read failed.");
     }
 #else
     if ((count = hsocket_select_recv(sock, (char *)buffer + totalRead, 
       (size_t) total - totalRead)) == -1)
     {
-      status = herror_new("hsocket_recv", HSOCKET_ERROR_RECEIVE, 
-        "recv failed (%s)", os_strerror(ng_socket_errno));
+      status = herror_new("hsocket_recv", HSOCKET_ERROR_RECEIVE, "recv failed.");
+      log_warn("hsocket_select_recv failed.");
     }
 #endif
     if (status != H_OK)
@@ -914,7 +1000,8 @@ herror_t http_header_recv(struct hsocket_t *sock, char *buffer,
     if ((status = hsocket_recv(sock, (unsigned char *)BUF_CUR_PTR(&p), 
       BUF_REMAIN(&p), 0, &readed)) != H_OK)
     {
-      log_error("hsocket_recv failed (%s)", herror_message(status));
+      herror_log(status);
+      log_error("hsocket_recv failed.");
       return status;
     }
     BUF_GO(&p, readed);

@@ -145,7 +145,7 @@ hsocket_setexec(int sock, int err)
   int flags = fcntl(sock, F_GETFD);
   if (flags == -1 || fcntl(sock, F_SETFD, flags | FD_CLOEXEC) == -1) {
     return herror_new("hsocket_open", err,
-                      "Socket error (%s)", strerror(errno));
+                      "Socket error (%s)", os_strerror(ng_errno));
   }
   return H_OK;
 }
@@ -232,7 +232,8 @@ nanohttp_dir_free(void)
   log_info("[OK]: nanohttp_dir_free.");
 }
 
-static char *nanohttp_file_get_path(const char *file)
+static char *
+nanohttp_file_get_path(const char *file, int flen)
 {
   ng_block_s url;
   ng_block_s *b = &httpd_base_path;
@@ -240,7 +241,6 @@ static char *nanohttp_file_get_path(const char *file)
   if (path == NULL)
     return NULL;
 
-  size_t flen = ng_strlen(file);
   if (file[0] == __PATH_DLIM 
     ||(flen >= b->len 
         && (!ng_memcmp(b->buf, file, b->len))))
@@ -277,9 +277,9 @@ static char *nanohttp_file_get_path(const char *file)
 }
 
 static void *nanohttp_file_open(const char *file, 
-  const char *mode)
+  int len, const char *mode)
 {
-  char *fpath = nanohttp_file_get_path(file);
+  char *fpath = nanohttp_file_get_path(file, len);
   // Open a file in write mode
   if (fpath != NULL)
   {
@@ -291,15 +291,15 @@ static void *nanohttp_file_open(const char *file,
   return NULL;
 }
 
-void *nanohttp_file_open_for_read(const char *file)
+void *nanohttp_file_open_for_read(const char *file, int len)
 {
-  return nanohttp_file_open(file, "rb");
+  return nanohttp_file_open(file, len, "rb");
 }
 
 herror_t nanohttp_file_read_all(const char *file, 
-  rwfile_f cb, void *arg)
+  int len, rwfile_f cb, void *arg)
 {
-  FILE *fptr=nanohttp_file_open_for_read(file);
+  FILE *fptr=nanohttp_file_open_for_read(file, len);
   if (fptr == NULL)
   {
     return herror_new("nanohttp_file_read", FILE_ERROR_OPEN, 
@@ -370,9 +370,9 @@ herror_t nanohttp_file_read(void *file,
   return NULL;
 }
 
-void *nanohttp_file_open_for_write(const char *file)
+void *nanohttp_file_open_for_write(const char *file, int len)
 {
-  return nanohttp_file_open(file, "wb");
+  return nanohttp_file_open(file, len, "wb");
 }
 
 void nanohttp_file_close(void *file)
@@ -384,6 +384,29 @@ void nanohttp_file_close(void *file)
   { 
     fclose(fptr);
   }
+}
+
+int nanohttp_file_delete(const char *file, int len)
+{
+  char *fpath = nanohttp_file_get_path(file, len);
+  // Open a file in write mode
+  if (fpath == NULL)
+  {
+    log_error("Failed to build file path.");
+    return -1;
+  }
+
+  if (remove(fpath) != 0)
+  {
+    int err = errno;
+    http_free(fpath);
+    log_error("Failed to remove file %s (%d:%s).", 
+      fpath, err, os_strerror(err));
+    return -1;
+  }
+
+  http_free(fpath);
+  return 0;
 }
 
 size_t nanohttp_file_write(void *file, 
@@ -409,14 +432,14 @@ size_t nanohttp_file_write(void *file,
   } 
 }
 
-size_t nanohttp_file_size(const char *file)
+size_t nanohttp_file_size(const char *file, int len)
 {
   int fd;
   size_t size = 0;
   struct stat fileStat;
 
   // Open a file in write mode
-  char *fpath = nanohttp_file_get_path(file);
+  char *fpath = nanohttp_file_get_path(file, len);
   if (fpath == NULL)
     return 0;
   
@@ -439,3 +462,82 @@ error0:
   http_free(fpath);
   return size;
 }
+
+static int __nanohttp_dir_isok(const char *dir_path) 
+{
+  struct stat statbuf;
+  if (stat(dir_path, &statbuf) == 0) 
+  {
+    if (S_ISDIR(statbuf.st_mode)) {
+      return NDIR_OK;
+    }
+    else 
+    {
+      return NDIR_NOT_DIR;
+    }
+  }
+  else 
+  {
+    return NDIR_NOT_EXIST;
+  }
+
+  return 0;
+}
+
+int nanohttp_dir_isok(const ng_block_s *path) 
+{
+  char *fpath = nanohttp_file_get_path(path->cptr, path->len);
+  if (fpath == NULL)
+  {
+    log_error("Failed to build file path.");
+    return -1;
+  }
+
+  switch (__nanohttp_dir_isok(fpath))
+  {
+    case NDIR_OK:
+      http_free(fpath);
+      return 0;
+    default:
+    case NDIR_NOT_EXIST:
+    case NDIR_NOT_DIR:
+      http_free(fpath);
+      return -1;
+  }
+}
+
+int nanohttp_dir_create(const ng_block_s *path) 
+{
+  char *fpath = nanohttp_file_get_path(path->cptr, path->len);
+  // Open a file in write mode
+  if (fpath == NULL)
+  {
+    log_error("Failed to build file path.");
+    return -1;
+  }
+
+  switch (__nanohttp_dir_isok(fpath))
+  {
+    case NDIR_NOT_EXIST:
+      break;
+    case NDIR_OK:
+      http_free(fpath);
+      return 0;
+    default:
+    case NDIR_NOT_DIR:
+      http_free(fpath);
+      return -1;
+  }
+
+  switch (mkdir(fpath, 0755)) // 0755 sets the permissions
+  {
+    case 0:
+      http_free(fpath);
+      return 0;
+    default:
+      http_free(fpath);
+      log_error("Failed to create file path: %pS.", path);
+      return -1;
+  }
+}
+

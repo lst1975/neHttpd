@@ -70,10 +70,10 @@
 #include <syslog.h>
 
 #include "nanohttp-logging.h"
+#include "nanohttp-mime.h"
 #include "nanohttp-server.h"
 #include "nanohttp-json.h"
 #include "nanohttp-file.h"
-#include "nanohttp-form.h"
 #include "nanohttp-urlencode.h"
 #include "nanohttp-base64.h"
 #include "nanohttp-user.h"
@@ -84,6 +84,7 @@
 #include "nanohttp-header.h"
 #include "nanohttp-vsprintf.h"
 #include "nanohttp-url.h"
+#include "nanohttp-const.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const ng_block_s *user, 
@@ -135,11 +136,12 @@ static void
 headers_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   hpair_t *walker;
-  char buf[512];
-  size_t len;
+  herror_t status;
 
-  httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
-  http_output_stream_write_string(conn->out,
+  status = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+  if (status != H_OK) goto clean0;
+  
+  status = http_output_stream_write_string(conn->out,
     "<html>"
       "<head>"
         "<title>Request headers</title>"
@@ -147,17 +149,23 @@ headers_service(httpd_conn_t *conn, struct hrequest_t *req)
       "<body>"
         "<h1>Request headers</h1>"
         "<ul>");
+  if (status != H_OK) goto clean0;
 
-  for (walker=req->header; walker; walker=walker->next)
+  ng_list_for_each_entry(walker,hpair_t,&req->header,link)
   {
-    len = ng_snprintf(buf, 512, "<li>%pS: %pS</li>", &walker->key, &walker->val);
-    http_output_stream_write(conn->out, (unsigned char *)buf, len);
+    status = http_output_stream_write_printf(conn->out, 
+      "<li>%pS: %pS</li>", &walker->key, &walker->val);
+    if (status != H_OK) goto clean0;
   }
 
-  http_output_stream_write_string(conn->out,
+  status = http_output_stream_write_string(conn->out,
         "</ul>"
       "</body>"
     "</html>");
+  if (status != H_OK) goto clean0;
+
+clean0:
+  herror_release(status);
 }
 
 static void
@@ -166,124 +174,12 @@ mime_service(httpd_conn_t *conn, struct hrequest_t *req)
   httpd_send_not_implemented(conn, "mime_service");
 }
 
-/*"Content-Disposition: form-data; name=\"File\"; filename=\"nanoHttpd-2.10.tar.xz\"\r\n
-   Content-Type: application/x-xz\r\n\r\ny7zXZ"*/
-static size_t 
-__multipart_cb_headers_complete(multipartparser *p)
-{
-  if (p->arg != NULL)
-  {
-    return 0;
-  }
-  else
-  {
-    char *file = NULL;
-
-    if (p->value_length)
-    {
-      if (p->field_length == 19 && !strncmp("Content-Disposition",p->field,19))
-      {
-        char *f = strstr(p->value,"filename");
-        char *end = p->value + p->value_length;
-
-        if (f != NULL)
-        {
-          for (f += 8;f < end;f++)
-          {
-            if (*f == '"')
-              break;
-          }
-          if (f < end)
-          {
-            char *e;
-            f++;
-            while(f < end && isspace((int)*f))
-            {
-              f++;
-            }
-            e = memchr(f, '"', end - f);
-            if (e != NULL)
-            {
-              while(e > f && isspace((int)e[-1]))
-              {
-                e--;
-              }
-              if (e > f && e - f < PATH_MAX)
-              {
-                char *buf = NULL;
-                buf = http_malloc(PATH_MAX);
-                if (buf == NULL)
-                {
-                  log_error("Failed to malloc temporary buffer.");
-                  return -1;
-                }
-                ng_snprintf(buf,PATH_MAX,"%s/%.*s","uploads",(int)(e-f), f);
-                file = buf;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (file == NULL)
-    {
-      log_error("Try to open the file uploads/gw.bin for writing.");
-      if (p->arg == NULL)
-        log_error("Not able to open the file uploads/gw.bin for writing.");
-    }
-    else
-    {
-      log_error("Try to open the file %s for writing.", file);
-      p->arg = nanohttp_file_open_for_write(file);
-      http_free(file);
-      if (p->arg == NULL)
-        log_error("Not able to open the file %s for writing.", file);
-    }
-    
-    if (p->arg == NULL)
-    {
-      return -1;
-    }
-    
-    return 0;
-  }
-}
-
-static size_t
-__multipart_cb_data(multipartparser *p, const char* data, size_t size)
-{
-  return nanohttp_file_write(p->arg, data, size) != size;
-}
-
-static size_t
-__multipart_cb_header_field(multipartparser *p, const char* data, size_t size)
-{
-  if (p->content_disposition_parsed)
-    return 0;
-
-  p->field_length+=ng_snprintf(p->field+p->field_length, 
-    sizeof(p->field)-p->field_length, "%.*s", (int)size, data);
-  return 0;
-}
-
-static size_t
-__multipart_cb_header_value(multipartparser *p, const char* data, size_t size)
-{
-  if (p->field_length == 19 && !strncmp("Content-Disposition",p->field,19))
-  {
-    p->content_disposition_parsed = 1;
-  }
-  p->value_length+=ng_snprintf(p->value+p->value_length, 
-    sizeof(p->value)-p->value_length, "%.*s", (int)size, data);
-  return 0;
-}
-
 static herror_t
 __post_internal_error(httpd_conn_t *conn, herror_t r)
 {
   herror_t sr;
-  log_error("%s", herror_message(r));
+
+  herror_log(r);
   sr = httpd_send_header(conn, 500, HTTP_STATUS_500_REASON_PHRASE);
   if (sr != H_OK) 
   {
@@ -300,90 +196,31 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
   const char *file)
 {
   herror_t r;
+  
   if (req->method == HTTP_REQUEST_POST)
   {
-    hpair_t *pair;
-    content_type_t *ct;
     multipartparser p;
-    multipartparser_callbacks settings;
-    multipartparser_callbacks_init(&settings);
-    settings.on_data = __multipart_cb_data;
-    settings.on_header_field = __multipart_cb_header_field;
-    settings.on_header_value = __multipart_cb_header_value;
-    settings.on_headers_complete = __multipart_cb_headers_complete;
 
-    ct = req->content_type;
-    if (ct == NULL
-      || ct->type_len != 19
-      || memcmp(ct->type, "multipart/form-data", 19))
+    r = multipartparser_init(&p, req, req->content_type);
+    if (r != H_OK)
     {
-      ng_free_data_buffer(&req->data);
-      log_warn("Bad POST data format, must 'multipart/form-data' for %pS", &req->path);
-      return httpd_send_not_implemented(conn, "post_service");
-    }
-
-    pair = ct->params;
-    if (pair == NULL
-      || !ng_block_isequal(&pair->key, "boundary", 8)
-      || pair->val.cptr == NULL
-      || !pair->val.len)
-    {
-      ng_free_data_buffer(&req->data);
-      r = herror_new("post_service", FILE_ERROR_READ, 
-        "Bad POST data format, must 'multipart/form-data' for %pS", &req->path);
+      herror_log(r);
+      log_error("multipartparser_init failed.");
       return __post_internal_error(conn, r);
     }
 
-    if (multipartparser_init(&p, NULL, pair->val.cptr, pair->val.len))
+    r = multipart_get_attachment(&p, req->in);
+    if (r != H_OK)
     {
-      ng_free_data_buffer(&req->data);
-      r = herror_new("post_service", GENERAL_ERROR, 
-        "Failed to do multipartparser for 'multipart/form-data'");
+      herror_log(r);
+      log_error("multipart_get_attachment failed.");
       return __post_internal_error(conn, r);
     }
     
-    while (http_input_stream_is_ready(req->in))
-    {
-      char *buffer;
-      size_t len;
-      if (!req->data.len)
-      {
-        len = http_input_stream_read(req->in, req->data.ptr, req->data.size);
-        if (len == -1)
-        {
-          ng_free_data_buffer(&req->data);
-          nanohttp_file_close(p.arg);
-          r = herror_new("post_service", FILE_ERROR_READ, 
-            "Failed to read stream %pS", &req->path);
-          return __post_internal_error(conn, r);
-        }
-        buffer = req->data.buf;
-      }
-      else
-      {
-        buffer = req->data.p;
-        len = req->data.len;
-        req->data.len = 0;
-        req->in->received = len;
-      }
-      
-      if (len != multipartparser_execute(&p, &settings, buffer, len))
-      {
-        ng_free_data_buffer(&req->data);
-        nanohttp_file_close(p.arg);
-        r = herror_new("post_service", FILE_ERROR_WRITE, 
-          "Failed to read stream %pS", &req->path);
-        return __post_internal_error(conn, r);
-      }
-    }
-
-    ng_free_data_buffer(&req->data);
-    nanohttp_file_close(p.arg);
     return httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
   }
   else
   {
-    ng_free_data_buffer(&req->data);
     return httpd_send_not_implemented(conn, "post_service");
   }
 }
@@ -573,7 +410,8 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
 #else      
         len = base64_decode_string((const unsigned char *)favorICON, bf);
 #endif
-        if (httpd_set_header(conn, __HDR_BUF(HEADER_CONTENT_TYPE), "image/png", 9)) 
+        if (hpairnode_set_header(&conn->header, 
+          &__HDR_BUF__(HEADER_CONTENT_TYPE), &cstr_image_png)) 
         {
           log_error("httpd_set_header failed");
           break;
@@ -601,7 +439,8 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
     {
       log_debug("Try to open the file %pS.", &req->path);
 
-      void *file = nanohttp_file_open_for_read(req->path.cptr+1);
+      void *file = nanohttp_file_open_for_read(req->path.cptr+1, 
+        req->path.len - 1);
       if (file == NULL)
       {
         // If the file does not exist
@@ -659,27 +498,27 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
   }
 #endif
 
-  if (req->query != NULL)
+  if (!ng_list_empty(&req->query))
   {
     char buf[126]={0};
     int n, len, id;
     unsigned char *query;
-    unsigned char *data = NULL;
+    hpair_t *data;
     JSONPair_t *pair,*p;
     JSONStatus_t result;
     httpd_buf_t in;
 
-    data = (unsigned char *)hpairnode_get(req->query, "data");
+    data = hpairnode_get(&req->query, &cstr_data);
     if (data == NULL)
     {
-      log_error("No query data");
+      log_error("No query data.");
       goto finished;
     }
     
-    log_debug("try to decode %s\n",(char *)data);
+    log_debug("try to decode %pS\n", data);
     
     /* decode_url malloced new data */
-    if (0 > decode_url(&in, (const uint8_t*)data, strlen((char *)data)))
+    if (0 > decode_url(&in, data->val.ptr, data->val.len))
     {
       log_error("Failed to parse query");
       goto finished;
@@ -1063,7 +902,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
       {
         goto finished;
       }
-      if (p->val.len == 3 && !memcmp(p->val.cptr,"2.0",3))
+      if (p->val.len == 3 && !ng_memcmp(p->val.cptr,"2.0",3))
       {
         if (req->userLevel != _N_http_user_type_SUPER)
         {
@@ -1072,13 +911,13 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           goto finished;
         }
 
-        if (ng_dup_data_block_str(&req->path, &__TMP_USR_FILE) < 0)
+        if (ng_dup_data_block(&req->path, &__TMP_USR_FILE, ng_TRUE) < 0)
         {
           n = ng_snprintf(buf, sizeof buf, CFG_RET0("Malloc Failed."), id);
           goto finished;
         }
       }
-      else if (p->val.len > 2 && !memcmp(p->val.cptr, "1.", 2))
+      else if (p->val.len > 2 && !ng_memcmp(p->val.cptr, "1.", 2))
       {
         if (req->userLevel > _N_http_user_type_ADMIN)
         {
@@ -1086,7 +925,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
           n = ng_snprintf(buf, sizeof buf, CFG_RET0("Authorization Failed."), id);
           goto finished;
         }
-        if (ng_dup_data_block_str(&req->path, &__TMP_INT_FILE) < 0)
+        if (ng_dup_data_block(&req->path, &__TMP_INT_FILE, ng_TRUE) < 0)
         {
           n = ng_snprintf(buf, sizeof buf, CFG_RET0("Malloc Failed."), id);
           goto finished;
@@ -1324,8 +1163,7 @@ main(int argc, char **argv)
   if ((status = httpd_register_secure("/", 1, root_service, 
     simple_authenticator, "ROOT", 4)) != H_OK)
   {
-    log_stderr("Cannot register service (%s)\n", 
-      herror_message(status));
+    log_stderr("Cannot register service.");
     goto error2;
   }
 
@@ -1333,48 +1171,42 @@ main(int argc, char **argv)
     sizeof(_nanoConfig_HTTPD_FILE_SERVICE)-1,
     file_service, "FILE", 4)) != H_OK)
   {
-    log_stderr("Cannot register service (%s)\n", 
-      herror_message(status));
+    log_stderr("Cannot register service.");
     goto error2;
   }
 
   if ((status = httpd_register_secure("/secure", 7, secure_service, 
     simple_authenticator, "SECURE", 6)) != H_OK)
   {
-    log_stderr("Cannot register secure service (%s)\n", 
-      herror_message(status));
+    log_stderr("Cannot register secure service.");
     goto error2;
   }
 
   if ((status = httpd_register_secure("/headers", 8, headers_service, 
     simple_authenticator, "HEAD", 4)) != H_OK)
   {
-    log_stderr("Cannot register headers service (%s)\n", 
-      herror_message(status));
+    log_stderr("Cannot register headers service.");
     goto error2;
   }
 
   if ((status = httpd_register_secure("/mime", 5, mime_service, 
     simple_authenticator, "MIME", 4)) != H_OK)
   {
-    log_stderr("Cannot register MIME service (%s)\n", 
-      herror_message(status));
+    log_stderr("Cannot register MIME service.");
     goto error2;
   }
 
   if ((status = httpd_register_secure("/post/wia.bin", 13, post_service, 
     simple_authenticator, "POST", 4)) != H_OK)
   {
-    log_stderr("Cannot register POST service (%s)\n", 
-      herror_message(status));
+    log_stderr("Cannot register POST service.");
     goto error2;
   }
 
   if ((status = httpd_register("/favicon.ico", 12, root_service, 
     "FAVICON", 7)) != H_OK)
   {
-    log_stderr("Cannot register default service (%s)\n", 
-      herror_message(status));
+    log_stderr("Cannot register default service.");
     goto error2;
   }
 
@@ -1382,16 +1214,14 @@ main(int argc, char **argv)
     sizeof(_nanoConfig_HTTPD_DATA_SERVICE)-1,
     data_service, simple_authenticator, "DATA", 4)) != H_OK)
   {
-    log_stderr("Cannot register DATA service (%s)\n", 
-      herror_message(status));
+    log_stderr("Cannot register DATA service.");
     goto error2;
   }
 
   if ((status = httpd_register_default_secure("/error", 6, default_service, 
     simple_authenticator)) != H_OK)
   {
-    log_stderr("Cannot register default service (%s)\n", 
-      herror_message(status));
+    log_stderr("Cannot register default service.");
     goto error2;
   }
 
@@ -1417,6 +1247,7 @@ main(int argc, char **argv)
   return EXIT_SUCCESS;
     
 error2:
+  herror_log(status);
   herror_release(status);
 error1:
   httpd_destroy();

@@ -69,6 +69,9 @@
     extern "C" {
 #endif
 
+#define HTTP_FILED_NAME_LEN_MAX  128
+#define HTTP_FILED_VALUE_LEN_MAX 2048
+
 /* @ingroup NANOHTTP
  *
  * There are a few header fields which have general applicability for both
@@ -981,8 +984,10 @@ enum __http_header {
        and password.      
      */
  ,HTTP_HEADER_CONTENT_ID
+ ,HTTP_HEADER_CONTENT_DISPOSITION
  ,HTTP_HEADER_CONTENT_TRANSFER_ENCODING
  ,HTTP_HEADER_PROXY_AUTHENTICATE
+ ,HTTP_HEADER_PROXY_AUTHORIZATION
  ,HTTP_HEADER_X_FRAME_OPTIONS
  ,HTTP_HEADER_X_XSS_PROTECTION
  ,HTTP_HEADER_MAX
@@ -998,6 +1003,17 @@ extern const ng_block_s ng_http_headers_byid[];
 #define __HDR_BUF(x) __HDR_BUF__(x).cptr, __HDR_BUF__(x).len
 #define __HDR_BUF_PTR(x) __HDR_BUF__(x).cptr
 #define __HDR_BUF_DEF(x) (x), sizeof(x)-1
+
+#if __HTTP_SMALL_SIZE
+extern const uint8_t __isValidToken[256];
+#define ng_isValidFieldName(c) (__isValidToken[c]&0x1)
+#define ng_isValidFieldValue(c) (__isValidToken[c]&0x2)
+#else
+extern const uint8_t __isValidFieldValue[256];
+extern const uint8_t __isValidFieldName[256];
+#define ng_isValidFieldName(c) (__isValidFieldName[c])
+#define ng_isValidFieldValue(c) (__isValidFieldValue[c])
+#endif
 
 #ifdef __cplusplus
 }

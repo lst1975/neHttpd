@@ -224,7 +224,7 @@ _hssl_get_error(SSL * ssl, int ret)
   case SSL_ERROR_SYSCALL:
     if (ERR_get_error() == 0 && ret == -1)
     {
-      return strerror(errno);
+      return os_strerror(ng_errno);
     }
     return "Syscall failed";
   case SSL_ERROR_SSL:
@@ -629,14 +629,13 @@ hssl_read(struct hsocket_t * sock, char *buf, size_t len, size_t * received)
   {
     if ((count = SSL_read(sock->ssl, buf, len)) < 1)
       return herror_new("hssl_read", HSOCKET_ERROR_RECEIVE,
-                        "SSL_read failed (%s)", _hssl_get_error(sock->ssl,
-                                                                count));
+                        "SSL_read failed (%s)", _hssl_get_error(sock->ssl, count));
   }
   else
   {
     if ((count = hsocket_select_recv(sock->sock, buf, len)) == -1)
       return herror_new("hssl_read", HSOCKET_ERROR_RECEIVE,
-                        "recv failed (%s)", strerror(errno));
+                        "recv failed (%s)", os_strerror(ng_socket_errno));
   }
   *received = count;
 
@@ -662,7 +661,7 @@ hssl_write(struct hsocket_t * sock, const char *buf, size_t len, size_t * sent)
   {
     if ((count = send(sock->sock, buf, len, 0)) == -1)
       return herror_new("hssl_write", HSOCKET_ERROR_SEND, "send failed (%s)",
-                        strerror(errno));
+                        os_strerror(ng_socket_errno));
   }
   *sent = count;
 

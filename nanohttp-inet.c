@@ -90,9 +90,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#define ng_FALSE 0
-#define ng_TRUE  1
-
 #define NG_INT64SZ    8      /* for systems without 64-bit ints */
 #define NG_INT32SZ    4      /* for systems without 32-bit ints */
 #define NG_INT16SZ    2      /* for systems without 16-bit ints */

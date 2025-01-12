@@ -77,6 +77,9 @@
 #define RTE_FORCE_INTRINSICS 1
 #define fallthrough() (void)(0)
 
+#define ng_FALSE 0
+#define ng_TRUE  1
+
 #if defined(__GNUC__)
 #define GCC_VERSION (__GNUC__ * 10000 \
                      + __GNUC_MINOR__ * 100 \

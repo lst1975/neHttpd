@@ -263,7 +263,7 @@ typedef struct httpd_conn
   struct hsocket_t *sock;
   char content_type[25];
   struct http_output_stream_t *out;
-  hpair_t *header;
+  ng_list_head_s header;
 }
 httpd_conn_t;
 
@@ -452,49 +452,6 @@ httpd_response_set_content_type(httpd_conn_t *res, const char *content_type, int
 }
 
 extern herror_t httpd_send_header(httpd_conn_t * res, int code, const char *text);
-
-extern int httpd_set_header(httpd_conn_t *conn, const char *key, int keylen, 
-                  const char *value, int valuelen);
-extern int httpd_set_headers(httpd_conn_t * conn, hpair_t *header);
-
-extern int httpd_add_header(httpd_conn_t * conn, const char *key, const char *value);
-extern int httpd_add_headers(httpd_conn_t * conn, const hpair_t * values);
-
-/**
- *
- * @todo move to nanohttp-mime.c merge with httpc_mime_* functions
- *
- * MIME multipart/related POST 
- * @returns H_OK on success or error flag
- *
- */
-extern herror_t httpd_mime_send_header(httpd_conn_t * conn, 
-  const char *related_start, const char *related_start_info, 
-  const char *related_type, int code, const char *text);
-
-/**
- *
- * Send boundary and part header and continue with next part
- *
- */
-extern herror_t httpd_mime_next(httpd_conn_t * conn, 
-  const char *content_id, const char *content_type, 
-  const char *transfer_encoding);
-
-/**
- *
- * Send boundary and part header and continue with next part
- *
- */
-extern herror_t httpd_mime_send_file(httpd_conn_t * conn, 
-  const char *content_id, const char *content_type, 
-  const char *transfer_encoding, const char *filename);
-
-/** This function finishes a MIME request.
- *
- * @return H_OK on success.
- */
-extern herror_t httpd_mime_end(httpd_conn_t * conn);
 
 /** This function sends a minimalistic HTML error document with HTTP
  * status 400.

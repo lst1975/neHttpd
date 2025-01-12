@@ -119,6 +119,7 @@
 #include "nanohttp-request.h"
 #include "nanohttp-time.h"
 #include "nanohttp-header.h"
+#include "nanohttp-system.h"
 
 static struct hrequest_t *hrequest_new(void)
 {
@@ -126,25 +127,23 @@ static struct hrequest_t *hrequest_new(void)
  
   if (!(req = (struct hrequest_t *)http_malloc(sizeof(*req))))
   {
-    log_error("http_malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     goto clean0;
   }
 
   req->statistics.time = ng_get_time();
   req->method       = HTTP_REQUEST_GET;
   req->version      = HTTP_1_1;
-  req->query        = NULL;
-  req->header       = NULL;
   req->in           = NULL;
   req->attachments  = NULL;
   req->content_type = NULL;
-  req->data.buf     = NULL;
-  req->data.len     = 0;
   req->statistics.bytes_transmitted = 0;
   req->statistics.bytes_received    = 0;
   req->content_length = -1;
-
   ng_block_init(&req->path);
+  
+  ng_INIT_LIST_HEAD(&req->header);
+  ng_INIT_LIST_HEAD(&req->query);
   
 clean0:
   return req;
@@ -153,8 +152,8 @@ clean0:
 static struct hrequest_t *
 _hrequest_parse_header(char *data, size_t len)
 {
+  hpair_t *tmppair;
   struct hrequest_t *req;
-  hpair_t *hpair = NULL, *qpair = NULL, *tmppair = NULL;
 
   char *tmp;
   char *result;
@@ -185,7 +184,7 @@ _hrequest_parse_header(char *data, size_t len)
         goto clean1;
       }
     }
-    result = memchr(tmp, '\n', end - tmp);
+    result = ng_memchr(tmp, '\n', end - tmp);
     if (result == NULL)
       break;
     if (*--result!='\r')
@@ -202,27 +201,27 @@ _hrequest_parse_header(char *data, size_t len)
 
       /* parse [GET|POST] [PATH] [SPEC] */
       t = result;
-      result = (char *) memchr(key, ' ', t - key);
+      result = (char *) ng_memchr(key, ' ', t - key);
       if (result == NULL)
         break;
       
       /* save method (get or post) */
       key_len = result - key;
-      if (key_len == 3 && !memcmp(key, "GET", 3))
+      if (key_len == 3 && !ng_memcmp(key, "GET", 3))
         req->method = HTTP_REQUEST_GET;
-      else if (key_len == 4 && !memcmp(key, "POST", 4))
+      else if (key_len == 4 && !ng_memcmp(key, "POST", 4))
         req->method = HTTP_REQUEST_POST;
-      else if (key_len == 7 && !memcmp(key, "OPTIONS", 7))
+      else if (key_len == 7 && !ng_memcmp(key, "OPTIONS", 7))
         req->method = HTTP_REQUEST_OPTIONS;
-      else if (key_len == 4 && !memcmp(key, "HEAD", 4))
+      else if (key_len == 4 && !ng_memcmp(key, "HEAD", 4))
         req->method = HTTP_REQUEST_HEAD;
-      else if (key_len == 3 && !memcmp(key, "PUT", 3))
+      else if (key_len == 3 && !ng_memcmp(key, "PUT", 3))
         req->method = HTTP_REQUEST_PUT;
-      else if (key_len == 6 && !memcmp(key, "DELETE", 6))
+      else if (key_len == 6 && !ng_memcmp(key, "DELETE", 6))
         req->method = HTTP_REQUEST_DELETE;
-      else if (key_len == 5 && !memcmp(key, "TRACE", 5))
+      else if (key_len == 5 && !ng_memcmp(key, "TRACE", 5))
         req->method = HTTP_REQUEST_TRACE;
-      else if (key_len == 7 && !memcmp(key, "CONNECT", 7))
+      else if (key_len == 7 && !ng_memcmp(key, "CONNECT", 7))
         req->method = HTTP_REQUEST_CONNECT;
       else
         req->method = HTTP_REQUEST_UNKOWN;
@@ -236,7 +235,7 @@ _hrequest_parse_header(char *data, size_t len)
 
       /* below is key the path and tmp2 the spec */
       result++;
-      key = (char *)memchr(result, ' ', t - result);
+      key = (char *)ng_memchr(result, ' ', t - result);
       /* save version */
       if (key == NULL)
       {
@@ -265,7 +264,7 @@ _hrequest_parse_header(char *data, size_t len)
        * parse and save path+query parse:
        * /path/of/target?key1=value1&key2=value2...
        */
-      opt_key = memchr(result, '?', key-result);
+      opt_key = ng_memchr(result, '?', key-result);
 
       /* save path */
       /* req->path = (char *) http_malloc(strlen(key) + 1); */
@@ -281,7 +280,7 @@ _hrequest_parse_header(char *data, size_t len)
       {
         req->path.len = 0;
         log_error("Failed to malloc buffer for path (%s)", 
-          strerror(errno));
+          os_strerror(ng_errno));
         goto clean1;
       }
 
@@ -292,9 +291,12 @@ _hrequest_parse_header(char *data, size_t len)
       {
         for (;result;)
         {
+          ng_block_s k, v;
+          hpair_t *tmppair;
+          
           result++;
           opt_key = result;
-          key = memchr(result, '&', t - result);
+          key = ng_memchr(result, '&', t - result);
           if (key == NULL)
           {
             key = t;
@@ -305,37 +307,36 @@ _hrequest_parse_header(char *data, size_t len)
             result = key;
           }
           
-          opt_value = memchr(opt_key, '=', key - opt_key);
-
+          opt_value = ng_memchr(opt_key, '=', key - opt_key);
+          
           /* create option pair */
           if (!(tmppair = (hpair_t *)http_malloc(sizeof(hpair_t))))
           {
-            log_error("http_malloc failed (%s)", strerror(errno));
+            log_error("http_malloc failed (%s)", os_strerror(ng_errno));
             goto clean1;
           }
 
           /* fill hpairnode_t struct */
-          tmppair->next = NULL;
-          tmppair->val.len = opt_value == NULL ? 0 : key - opt_value - 1;
-          tmppair->key.len = opt_value == NULL ? key - opt_key : opt_value - opt_key;
-          tmppair->key.buf = http_strdup_size(opt_key, tmppair->key.len);
-          if (opt_value)
-            tmppair->val.buf = http_strdup_size(opt_value+1, tmppair->val.len);
-          if (tmppair->key.buf == NULL || tmppair->val.buf == NULL)
+          if (opt_value != NULL)
           {
-            log_error("http_strdup_size failed (%s)", strerror(errno));
-            goto clean1;
-          }
-          
-          if (req->query == NULL)
-          {
-            req->query = tmppair;
+            v.buf = opt_value+1;
+            v.len = key - v.buf;
+            k.len = opt_value - opt_key;
+            k.buf = opt_key;
           }
           else
           {
-            qpair->next = tmppair;
-           }
-          qpair = tmppair;
+            k.len = key - opt_key;
+            k.buf = opt_key;
+            v.buf = NULL;
+            v.len = 0;
+          }
+          tmppair = hpairnode_new(&k, &v, &req->query);
+          if (tmppair == NULL)
+          {
+            log_error("hpairnode_new failed (%s)", os_strerror(ng_errno));
+            goto clean1;
+          }
         }
       }
     }
@@ -343,37 +344,29 @@ _hrequest_parse_header(char *data, size_t len)
     {
       if (result - key == 0)
         continue;
-      tmppair = hpairnode_parse(key, result-key, ':', NULL);
+      tmppair = hpairnode_parse(key, result-key, ':', &req->header);
       if (tmppair == NULL)
       {
         log_error("hpairnode_parse failed.");
         goto clean1;
       }
-        
-      if (req->header == NULL)
-      {
-        req->header = hpair = tmppair;
-      }
-      else
-      {
-        hpair->next = tmppair;
-        hpair = tmppair;
-      }
     }
   }
 
   /* Check Content-type */
-  tmppair = hpairnode_get_ignore_case_len(req->header, 
+  tmppair = hpairnode_get_ignore_case(&req->header, 
                       __HDR_BUF(HEADER_CONTENT_TYPE));
   if (tmppair != NULL)
   {
-    req->content_type = content_type_new(tmppair->val.cptr, tmppair->val.len);
+    req->content_type = content_type_new(tmppair->val.cptr, 
+              tmppair->val.len);
     if (req->content_type == NULL)
     {
       log_error("content_type_new failed.");
       goto clean1;
     }
   }
+
   return req;
   
 clean1:
@@ -388,8 +381,8 @@ hrequest_free(struct hrequest_t * req)
   if (req == NULL)
     return;
 
-  hpairnode_free_deep(req->header);
-  hpairnode_free_deep(req->query);
+  hpairnode_free_deep(&req->header);
+  hpairnode_free_deep(&req->query);
 
   if (req->in)
     http_input_stream_free(req->in);
@@ -398,10 +391,9 @@ hrequest_free(struct hrequest_t * req)
     content_type_free(req->content_type);
 
   if (req->attachments)
-    attachments_free(req->attachments);
+    attachments_free((attachments_t *)req->attachments);
 
   ng_free_data_block(&req->path);
-  ng_free_data_buffer(&req->data);
   http_free(req);
 
   return;
@@ -415,9 +407,8 @@ hrequest_new_from_socket(struct hsocket_t *sock,
   size_t rcvbytes;
   herror_t status = H_OK;
   char *buffer;
-  content_type_t *ct;
   struct hrequest_t *req;
-  struct attachments_t *mimeMessage;
+  httpd_buf_t data;
 
   buffer = http_malloc(MAX_HEADER_SIZE + 1);
   if (buffer == NULL)
@@ -443,38 +434,15 @@ hrequest_new_from_socket(struct hsocket_t *sock,
     goto clean1;
   }
 
-  req->data.buf  = buffer;
-  req->data.p    = buffer + hdrlen;
-  req->data.len  = rcvbytes - hdrlen;
-  req->data.size = MAX_HEADER_SIZE + 1;
+  data.buf  = buffer;
+  data.p    = buffer + hdrlen;
+  data.len  = rcvbytes - hdrlen;
+  data.size = MAX_HEADER_SIZE + 1;
   
-  hpairnode_dump_deep(req->header);
+  hpairnode_dump_deep(&req->header);
   
-  /* Check for MIME message */
-  ct = req->content_type;
-  if ((ct != NULL && ct->type_len == 17 && 
-    !memcmp(ct->type, "multipart/related", 17)))
-  {
-    status = mime_get_attachments(req->content_type, 
-      req->in, &mimeMessage);
-    if (status != H_OK)
-    {
-      /* TODO (#1#): Handle error */
-      goto clean2;
-    }
-    else
-    {
-      req->attachments = mimeMessage;
-      req->in =
-        http_input_stream_new_from_file(mimeMessage->root_part->filename);
-    }
-  }
-  else
-  {
-    /* Create input stream */
-    req->in = http_input_stream_new(sock, req->header);
-  }
-
+  /* Create input stream */
+  req->in = http_input_stream_new(sock, &req->header, &data);
   if (req->in == NULL)
   {
     status = herror_new("hrequest_new_from_socket", GENERAL_ERROR, 
@@ -482,18 +450,11 @@ hrequest_new_from_socket(struct hsocket_t *sock,
     goto clean2;
   }
 
-  if (ct == NULL || ct->type_len != 19 
-    || memcmp(ct->type, "multipart/form-data", 19))
-  {
-    ng_free_data_buffer(&req->data);
-  }
-  
   *out = req;
   return H_OK;
   
 clean2:  
   hrequest_free(req);
-  return status;
 clean1:  
   http_free(buffer);
 clean0:  

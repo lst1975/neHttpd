@@ -148,8 +148,11 @@ struct http_input_stream_t
   size_t chunk_size;
   char connection_closed;
 
+  int (*stream_ready)(struct http_input_stream_t *stream);
+  size_t (*stream_read)(struct http_input_stream_t *stream, unsigned char *dest, size_t size);
+  
   /* file handling */
-  FILE *fd;
+  void *fd;
   char filename[255];
   int deleteOnExit;             /* default is 0 */
 };
@@ -183,7 +186,8 @@ extern "C" {
  * @see http_input_stream_free()
  */
 extern struct http_input_stream_t *
-http_input_stream_new(struct hsocket_t *sock, hpair_t *header);
+http_input_stream_new(struct hsocket_t *sock, ng_list_head_s *header, 
+  httpd_buf_t *data);
 
 /** This function creates a new input stream from file. It was added
  * for MIME messages and for debugging purposes. The transfer style
@@ -205,7 +209,7 @@ http_input_stream_new_from_file(const char *filename);
  * @param stream the input stream to http_free.
  */
 extern void 
-http_input_stream_free(struct http_input_stream_t * stream);
+http_input_stream_free(struct http_input_stream_t *stream);
 
 /** This function returns the actual status of the stream.
  *
@@ -215,7 +219,7 @@ http_input_stream_free(struct http_input_stream_t * stream);
  *         - 0, if no more data exists.
  */
 extern int 
-http_input_stream_is_ready(struct http_input_stream_t * stream);
+http_input_stream_is_ready(struct http_input_stream_t *stream);
 
 /** This function tries to read 'size' bytes from the stream. Check
  * always with http_input_stream_is_ready() if there are some data to
@@ -236,7 +240,7 @@ http_input_stream_is_ready(struct http_input_stream_t * stream);
  * @return the actual read bytes or -1 on error.
  */
 extern size_t 
-http_input_stream_read(struct http_input_stream_t * stream, 
+http_input_stream_read(struct http_input_stream_t *stream, 
                   unsigned char *dest, size_t size);
 
 /** Creates a new output stream. Transfer style will be found from the
@@ -252,7 +256,7 @@ http_input_stream_read(struct http_input_stream_t * stream,
  * @see http_output_stream_free()
  */
 extern struct http_output_stream_t *
-http_output_stream_new(struct hsocket_t *sock, hpair_t * header);
+http_output_stream_new(struct hsocket_t *sock, ng_list_head_s *header);
 
 
 /** This function frees the given output stream. Note that this

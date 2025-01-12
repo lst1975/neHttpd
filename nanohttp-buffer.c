@@ -63,6 +63,7 @@
 
 #include "nanohttp-buffer.h"
 #include "nanohttp-mem.h"
+#include "nanohttp-logging.h"
 
 void
 ng_free_data_buffer(httpd_buf_t *data)
@@ -81,29 +82,39 @@ ng_free_data_block(ng_block_s *block)
   {
     http_free(block->buf);
     block->buf = NULL;
+    block->len = 0;
   }
 }
 
 int
-ng_dup_data_block(ng_block_s *block, const ng_block_s *n)
+ng_dup_data_block(ng_block_s *block, const ng_block_s *n, int free_old)
 {
-  void *p = http_malloc(n->len);
-  if (p == NULL)
-    return -1;
-  ng_free_data_block(block);
-  ng_memcpy(p, n->data, n->len);
-  block->data = p;
-  block->len  = n->len;
+  if (n->data != NULL && n->len)
+  {
+    void *p = http_malloc(n->len);
+    if (p == NULL)
+    {
+      log_fatal("ng_dup_data_block failed.");
+      return -1;
+    }
+    if (free_old)
+      ng_free_data_block(block);
+    ng_memcpy(p, n->data, n->len);
+    block->data = p;
+    block->len  = n->len;
+  }
+
   return 0;
 }
 
 int
-ng_dup_data_block_str(ng_block_s *block, const ng_block_s *n)
+ng_dup_data_block_str(ng_block_s *block, const ng_block_s *n, int free_old)
 {
   void *p = http_malloc(n->len+1);
   if (p == NULL)
     return -1;
-  ng_free_data_block(block);
+  if (free_old)
+    ng_free_data_block(block);
   ng_memcpy(p, n->data, n->len);
   block->data = p;
   block->len  = n->len;

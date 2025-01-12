@@ -109,6 +109,11 @@
 #include "nanohttp-logging.h"
 #include "nanohttp-error.h"
 #include "nanohttp-mem.h"
+#include "nanohttp-system.h"
+
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 typedef struct _herror_impl_t
 {
@@ -125,7 +130,7 @@ herror_new(const char *func, int errcode, const char *format, ...)
  
   if (!(impl = (herror_impl_t *) http_malloc(sizeof(herror_impl_t))))
   {
-    log_error("http_malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
 
@@ -170,6 +175,13 @@ herror_message(herror_t err)
     return "";
 
   return impl->message;
+}
+
+void 
+herror_log(herror_t err)
+{
+  herror_impl_t *impl = (herror_impl_t *) err;
+  log_error("%s", impl->message);
 }
 
 void

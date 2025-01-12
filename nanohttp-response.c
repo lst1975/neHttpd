@@ -114,6 +114,7 @@
 #include "nanohttp-mime.h"
 #include "nanohttp-response.h"
 #include "nanohttp-header.h"
+#include "nanohttp-system.h"
 
 static hresponse_t *
 _hresponse_new(void)
@@ -122,19 +123,17 @@ _hresponse_new(void)
 
   if (!(res = (hresponse_t *) http_malloc(sizeof(hresponse_t))))
   {
-    log_error("http_malloc failed (%s)", strerror(errno));
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
 
   res->version = HTTP_1_1;
   res->errcode = -1;
   res->desc   = NULL;
-  res->header = NULL;
   res->in = NULL;
   res->content_type = NULL;
   res->attachments = NULL;
-  res->data.buf = NULL;
-  res->data.len = 0;
+  ng_INIT_LIST_HEAD(&res->header);
   return res;
 }
 
@@ -159,7 +158,7 @@ _hresponse_parse_header(const char *buffer, size_t len)
   end = buffer + len;
   
   /* stage 1: HTTP spec */
-  str = memchr(buffer, ' ', len);
+  str = ng_memchr(buffer, ' ', len);
   if (str == NULL)
   {
     log_error("Parse error reading HTTP spec");
@@ -183,7 +182,7 @@ _hresponse_parse_header(const char *buffer, size_t len)
 
   /* stage 2: http code */
   s1 = str+1;
-  str = memchr(s1, ' ', end - s1);
+  str = ng_memchr(s1, ' ', end - s1);
   if (str == NULL)
   {
     log_error("Parse error reading HTTP code");
@@ -198,7 +197,7 @@ _hresponse_parse_header(const char *buffer, size_t len)
 
   /* stage 3: description text */
   s1 = str+1;
-  str = memchr(s1, '\r', end - s1);
+  str = ng_memchr(s1, '\r', end - s1);
   if (unlikely(str == NULL || str + 1 >= end || str[1] != '\n'))
   {
     log_error("Parse error reading HTTP description");
@@ -220,7 +219,7 @@ _hresponse_parse_header(const char *buffer, size_t len)
   for (;;)
   {
     /* check if header ends without body */
-    str = memchr(s1, '\r', end - s1);
+    str = ng_memchr(s1, '\r', end - s1);
     if (str == NULL)
     {
       break;
@@ -232,18 +231,16 @@ _hresponse_parse_header(const char *buffer, size_t len)
       goto clean1;
     }
 
-    pair = hpairnode_parse(s1, str - s1, ':', NULL);
+    pair = hpairnode_parse(s1, str - s1, ':', &res->header);
     if (pair == NULL)
     {
       log_error("hpairnode_parse failed.");
       goto clean1;
     }
-    pair->next  = res->header;
-    res->header = pair;
   }
 
   /* Check Content-type */
-  pair = hpairnode_get_ignore_case_len(res->header, 
+  pair = hpairnode_get_ignore_case(&res->header, 
             __HDR_BUF(HEADER_CONTENT_TYPE));
   if (pair != NULL)
   {
@@ -271,8 +268,8 @@ hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t **out)
   size_t rcvbytes;
   herror_t status;
   hresponse_t *res;
-  struct attachments_t *mimeMessage;
   char *buffer;
+  httpd_buf_t data;
 
   buffer = http_malloc(MAX_HEADER_SIZE + 1);
   if (buffer == NULL)
@@ -284,7 +281,8 @@ hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t **out)
 
 read_header:                   /* for errorcode: 100 (continue) */
   /* Read header */
-  status = http_header_recv(sock, buffer, MAX_HEADER_SIZE, &hdrlen, &rcvbytes);
+  status = http_header_recv(sock, buffer, MAX_HEADER_SIZE, 
+              &hdrlen, &rcvbytes);
   if (status != H_OK)
   {
     goto clean1;
@@ -301,11 +299,12 @@ read_header:                   /* for errorcode: 100 (continue) */
     goto clean1;
   }
 
-  res->data.buf  = buffer;
-  res->data.p    = buffer + hdrlen;
-  res->data.len  = rcvbytes - hdrlen;
-  res->data.size = MAX_HEADER_SIZE + 1;
-  hpairnode_dump_deep(res->header);
+  data.buf  = buffer;
+  data.p    = buffer + hdrlen;
+  data.len  = rcvbytes - hdrlen;
+  data.size = MAX_HEADER_SIZE + 1;
+  
+  hpairnode_dump_deep(&res->header);
 
   /* Chec for Errorcode: 100 (continue) */
   if (res->errcode == 100)
@@ -314,28 +313,8 @@ read_header:                   /* for errorcode: 100 (continue) */
     goto read_header;
   }
 
-  /* Create input stream */
   /* Check for MIME message */
-  if ((res->content_type &&
-       !strcmp(res->content_type->type, "multipart/related")))
-  {
-    status = mime_get_attachments(res->content_type, res->in, &mimeMessage);
-    if (status != H_OK)
-    {
-      /* TODO (#1#): Handle error */
-      goto clean2;
-    }
-    else
-    {
-      res->attachments = mimeMessage;
-      res->in = http_input_stream_new_from_file(mimeMessage->root_part->filename);
-    }
-  }
-  else
-  {
-    res->in = http_input_stream_new(sock, res->header);
-  }
-
+  res->in = http_input_stream_new(sock, &res->header, &data);
   if (res->in == NULL)
   {
     status = herror_new("hresponse_new_from_socket", GENERAL_ERROR, 
@@ -343,13 +322,11 @@ read_header:                   /* for errorcode: 100 (continue) */
     goto clean2;
   }
 
-  ng_free_data_buffer(&res->data);
   *out = res;
   return H_OK;
   
 clean2:  
   hresponse_free(res);
-  return status;
 clean1:  
   http_free(buffer);
 clean0:  
@@ -364,8 +341,7 @@ hresponse_free(hresponse_t *res)
     if (res->desc)
       http_free(res->desc);
     
-    if (res->header)
-      hpairnode_free_deep(res->header);
+    hpairnode_free_deep(&res->header);
 
     if (res->in)
       http_input_stream_free(res->in);
@@ -374,9 +350,8 @@ hresponse_free(hresponse_t *res)
       content_type_free(res->content_type);
 
     if (res->attachments)
-      attachments_free(res->attachments);
+      attachments_free((attachments_t *)res->attachments);
 
-    ng_free_data_buffer(&res->data);
     http_free(res);
   }
   return;

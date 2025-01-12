@@ -375,27 +375,27 @@ _httpd_admin_handle_get(httpd_conn_t * conn, struct hrequest_t *req)
 {
   hpair_t *param;
 #define ___(X) (X), sizeof(X)-1
-  if ((param = hpairnode_get_ignore_case_len(req->query, 
+  if ((param = hpairnode_get_ignore_case(&req->query, 
         ___(NHTTPD_ADMIN_QUERY_SERVICES))))
   {
     _httpd_admin_list_services(conn);
   }
-  else if ((param = hpairnode_get_ignore_case_len(req->query, 
+  else if ((param = hpairnode_get_ignore_case(&req->query, 
         ___(NHTTPD_ADMIN_QUERY_STATISTICS))))
   {
     _httpd_admin_list_statistics(conn, param->val.cptr, param->val.len);
   }
-  else if ((param = hpairnode_get_ignore_case_len(req->query, 
+  else if ((param = hpairnode_get_ignore_case(&req->query, 
         ___(NHTTPD_ADMIN_QUERY_ACTIVATE_SERVICE))))
   {
     _httpd_admin_enable_service(conn, param->val.cptr, param->val.len);
   }
-  else if ((param = hpairnode_get_ignore_case_len(req->query, 
+  else if ((param = hpairnode_get_ignore_case(&req->query, 
         ___(NHTTPD_ADMIN_QUERY_PASSIVATE_SERVICE))))
   {
     _httpd_admin_disable_service(conn, param->val.cptr, param->val.len);
   }
-  else if ((param = hpairnode_get_ignore_case_len(req->query, 
+  else if ((param = hpairnode_get_ignore_case(&req->query, 
     ___(NHTTPD_ADMIN_QUERY_SET_LOGLEVEL))))
   {
     _httpd_admin_set_loglevel(conn, param->val.cptr);

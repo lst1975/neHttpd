@@ -166,7 +166,7 @@ int nanohttp_users_init(void)
   JSONStatus_t result;
   httpd_buf_t tmp, _b, *b = &_b;
   
-  b->len = nanohttp_file_size(__USER_FILE);
+  b->len = nanohttp_file_size(__USER_FILE, sizeof(__USER_FILE)-1);
   if (b->len == 0)
   {
     log_verbose("failed to get file size");
@@ -180,10 +180,11 @@ int nanohttp_users_init(void)
   }
   tmp.len = 0;
 
-  r = nanohttp_file_read_all(__USER_FILE, __file_user, &tmp);
+  r = nanohttp_file_read_all(__USER_FILE, sizeof(__USER_FILE)-1, 
+    __file_user, &tmp);
   if (r != NULL)
   {
-    log_verbose("%s", herror_message(r));
+    herror_log(r);
     herror_release(r);
     goto clean1;
   }
@@ -515,7 +516,8 @@ __nanohttp_users2file(void)
 
   json_print(json,0,"  ");
   
-  fp = nanohttp_file_open_for_write(__USER_FILE);
+  fp = nanohttp_file_open_for_write(__USER_FILE, 
+    sizeof(__USER_FILE)-1);
   if (fp == NULL)
   {
     goto clean1;

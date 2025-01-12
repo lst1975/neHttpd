@@ -60,146 +60,24 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef __nanohttp_buffer_h
-#define __nanohttp_buffer_h
 
-#include <stdint.h>
-#include <string.h>
-#include "nanohttp-defs.h"
+#include "nanohttp-config.h"
+#include "nanohttp-buffer.h"
 
-#define __STRUCT_BLOCK_DEF \
-  union{ \
-    void *data; \
-    const char *cptr; \
-    unsigned char *ptr;\
-    char *buf; \
-  }; \
-  uint64_t len:53; \
-  uint64_t n:10; \
-  uint64_t x:1
+const ng_block_s cstr_mime_form_data = DECL_CONST_STR("multipart/form-data");
+const ng_block_s cstr_mime_related = DECL_CONST_STR("multipart/related");
+const ng_block_s cstr_mime_filename = DECL_CONST_STR("filename");
+const ng_block_s cstr_mime_boundary = DECL_CONST_STR("boundary");
+const ng_block_s cstr_chunked = DECL_CONST_STR("boundary");
+const ng_block_s cstr_text_plain = DECL_CONST_STR("text/plain");
+const ng_block_s cstr_binary = DECL_CONST_STR("binary");
+const ng_block_s cstr_close = DECL_CONST_STR("close");
+const ng_block_s cstr_data = DECL_CONST_STR("data");
+const ng_block_s cstr_start = DECL_CONST_STR("start");
+const ng_block_s cstr_name = DECL_CONST_STR("name");
+const ng_block_s cstr_image_png = DECL_CONST_STR("image/png");
+const ng_block_s cstr_form_data = DECL_CONST_STR("form-data");
 
-typedef struct {
-  __STRUCT_BLOCK_DEF;
-} ng_block_s;
+const ng_block_s cstr_dir_uploads   = DECL_CONST_STR("uploads/");
+const ng_block_s cstr_dir_downloads = DECL_CONST_STR("downloads/");
 
-typedef struct {
-  union{
-    struct{
-      __STRUCT_BLOCK_DEF; // MUST start from the first byte
-    };
-    ng_block_s b;
-  };
-  char *p;
-  size_t size;
-  size_t nbytes;
-} httpd_buf_t;
-
-typedef httpd_buf_t ng_str_s;
-typedef httpd_buf_t ng_buffer_s;
-
-#define DECL_CONST_STR_N(a,v) { .n=a, .cptr=v, .len=sizeof(v)-1 }
-#define DECL_CONST_STR_NULL() { .cptr=NULL, .len=0 }
-#define DECL_CONST_STR(v) { .cptr=v, .len=sizeof(v)-1 }
-
-static inline void BUF_GO(httpd_buf_t *b, size_t len)
-{
-  b->p   += len;
-  b->len += len;
-}
-
-static inline void BUF_SET_CHR(httpd_buf_t *b, char c)
-{
-  b->p[0] = (char)c;
-}
-
-static inline size_t BUF_LEN(httpd_buf_t *b)
-{
-  return b->len;
-}
-
-static inline char *BUF_CUR_PTR(httpd_buf_t *b)
-{
-  return b->p;
-}
-
-static inline size_t BUF_REMAIN(httpd_buf_t *b)
-{
-  return b->size - b->len;
-}
-
-static inline void BUF_SET(httpd_buf_t *b, char *ptr, size_t len)
-{
-  b->buf = ptr;
-  b->len = len;
-}
-
-static inline void BUF_SIZE_INIT(httpd_buf_t *b, char *buf, size_t size)
-{
-  b->p      = buf;
-  b->data   = buf;
-  b->len    = 0;
-  b->size   = size;
-  b->nbytes = 0;
-}
-
-static inline void BUF_CLEAR(httpd_buf_t *b)
-{
-  b->p      = b->buf;
-  b->len    = 0;
-  b->nbytes = 0;
-}
-
-static inline void ng_block_init(ng_block_s *blk)
-{ 
-  blk->data = NULL;
-  blk->len  = 0;
-}
-
-static inline void ng_block_set(ng_block_s *blk, const char *ptr, size_t len)
-{ 
-  blk->cptr = ptr;
-  blk->len  = len;
-}
-
-static inline int ng_block_isequal(const void *blk, const void *buf, size_t size)
-{
-  const ng_block_s *b = (const ng_block_s *)blk;
-  return b->len == size && !ng_memcmp(b->data, buf, size);
-}
-
-static inline int ng_block_isequal__(const void *blka, const void *blkb)
-{
-  const ng_block_s *a = (const ng_block_s *)blka;
-  const ng_block_s *b = (const ng_block_s *)blkb;
-  return ng_block_isequal(a, b->data, b->len);
-}
-
-static inline int ng_block_isequal_case(const void *blka, const void *blkb)
-{
-  const ng_block_s *a = (const ng_block_s *)blka;
-  const ng_block_s *b = (const ng_block_s *)blkb;
-  return ng_block_isequal(a, b->buf, b->len);
-}
-
-static inline int ng_block_isequal_nocase(const void *blka, const void *blkb)
-{
-  const ng_block_s *a = (const ng_block_s *)blka;
-  const ng_block_s *b = (const ng_block_s *)blkb;
-  if (a->len != b->len) return 0;
-  return !ng_strnocasecmp(a->cptr, b->cptr, b->len);
-}
-
-static inline const char *ng_block_end(const void *blka)
-{
-  const ng_block_s *a = (const ng_block_s *)blka;
-  return a->cptr + a->len;
-}
-
-extern void ng_free_data_buffer(httpd_buf_t *data);
-extern void ng_free_data_block(ng_block_s *block);
-extern int ng_dup_data_block(ng_block_s *block, const ng_block_s *n, int free_old);
-extern int ng_dup_data_block_str(ng_block_s *block, const ng_block_s *n, int free_old);
-
-extern const ng_block_s __ng_uint8_string[];
-
-#endif

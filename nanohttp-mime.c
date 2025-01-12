@@ -60,1047 +60,1374 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-/** @file nanohttp-mime.c MIME handling */
-/******************************************************************
-*  _  _   _   _  _   __
-* | \/ | | | | \/ | | _/
-* |_''_| |_| |_''_| |_'/  PARSER
-*
-*  $Id: nanohttp-mime.c,v 1.20 2007/11/03 22:40:11 m0gg Exp $
-*
-* CSOAP Project:  A http client/server library in C
-* Copyright (C) 2003-2004  Ferhat Ayaz
-*
-* This library is http_free software; you can redistribute it and/or
-* modify it under the terms of the GNU Library General Public
-* License as published by the Free Software Foundation; either
-* version 2 of the License, or (at your option) any later version.
-*
-* This library is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-* Library General Public License for more details.
-*
-* You should have received a copy of the GNU Library General Public
-* License along with this library; if not, write to the
-* Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-* Boston, MA  02111-1307, USA.
-*
-* Email: ferhatayaz@yahoo.com
-******************************************************************/
-#include "nanohttp-config.h"
-
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-
-#ifdef HAVE_STRING_H
 #include <string.h>
-#endif
-
-#ifdef HAVE_ERRNO_H
 #include <errno.h>
-#endif
+#include <assert.h>
 
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-
-/*----------------------------------------------------------------
-Buffered Reader. A helper object to read bytes from a source
-----------------------------------------------------------------*/
-
-#include "nanohttp-defs.h"
-#include "nanohttp-logging.h"
-#include "nanohttp-error.h"
-#include "nanohttp-common.h"
-#include "nanohttp-socket.h"
-#include "nanohttp-stream.h"
+#include "nanohttp-config.h"
 #include "nanohttp-mime.h"
-#include "nanohttp-header.h"
+#include "nanohttp-logging.h"
+#include "nanohttp-const.h"
+#include "nanohttp-file.h"
+#include "nanohttp-socket.h"
+#include "nanohttp-system.h"
 
-/* ------------------------------------------------------------------
-  MIME Parser
- ------------------------------------------------------------------*/
-typedef void (*MIME_part_begin) (void *);
-typedef void (*MIME_part_end) (void *);
-typedef void (*MIME_parse_begin) (void *);
-typedef void (*MIME_parse_end) (void *);
-typedef void (*MIME_ERROR_bytes) (void *, const unsigned char *, int);
+#define CALLBACK_NOTIFY(NAME)                           \
+    if (callbacks->on_##NAME != NULL) {                 \
+        if (callbacks->on_##NAME(parser) != 0)          \
+            goto error;                                 \
+    }
 
-typedef enum _MIME_parser_status
+#define CALLBACK_DATA(NAME, P, S)                       \
+    if (callbacks->on_##NAME != NULL) {                 \
+        if (callbacks->on_##NAME(parser, P, S) != 0)    \
+            goto error;                                 \
+    }
+
+static size_t __multipart_cb_header_begin(multipartparser *p);
+static size_t __multipart_cb_header_value(multipartparser *p, const char *data, size_t size);
+static size_t __multipart_cb_header_field(multipartparser *p, const char *data, size_t size);
+static size_t __multipart_cb_data(multipartparser *p, const char *data, size_t size);
+static size_t __multipart_cb_part_end(multipartparser *p);
+static size_t __multipart_cb_part_begin(multipartparser *p);
+static size_t __multipart_cb_body_end(multipartparser *p);
+static size_t __multipart_cb_body_begin(multipartparser *p);
+static size_t __multipart_cb_headers_complete(multipartparser *p);
+
+#define CR '\r'
+#define LF '\n'
+#define SP ' '
+#define HT '\t'
+#define HYPHEN '-'
+
+/*
+
+ ***********************************************************************************
+ 
+ POST /upload HTTP/1.1
+ Host: example.com
+ Content-Type: multipart/form-data; boundary=---1234567890
+ 
+ -----1234567890
+ Content-Disposition: form-data; name="username"
+ 
+ jane_doe
+ -----1234567890
+ Content-Disposition: form-data; name="file1"; filename="document.pdf"
+ Content-Type: application/pdf
+ 
+ [Binary data of the first file]
+ -----1234567890
+ Content-Disposition: form-data; name="file2"; filename="image.png"
+ Content-Type: image/png
+ 
+ [Binary data of the second file]
+ -----1234567890--
+
+ ***********************************************************************************
+ POST /post/wia.bin HTTP/1.1
+ Accept: \*\/\*
+ Accept-Encoding: gzip, deflate, br, zstd
+ Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6
+ Authorization: Basic Ym9iOmJ1aWxkZXI=
+ Connection: keep-alive
+ Content-Length: 322
+ Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryYKVURI44VQAmaON1
+ Host: localhost:8080
+ Origin: http://localhost:8080
+ Referer: http://localhost:8080/
+ Sec-Fetch-Dest: empty
+ Sec-Fetch-Mode: cors
+ Sec-Fetch-Site: same-origin
+ User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0
+ sec-ch-ua: "Microsoft Edge";v="131", "Chromium";v="131", "Not_A Brand";v="24"
+ sec-ch-ua-mobile: ?0
+ sec-ch-ua-platform: "Windows"
+ ------WebKitFormBoundaryYKVURI44VQAmaON1
+ Content-Disposition: form-data; name="File"; filename="a.txt"
+ Content-Type: text/plain
+ 
+ aaaa
+ ------WebKitFormBoundaryYKVURI44VQAmaON1
+ Content-Disposition: form-data; name="File"; filename="b.txt"
+ Content-Type: text/plain
+ 
+ bbbb
+ ------WebKitFormBoundaryYKVURI44VQAmaON1--
+
+ ***********************************************************************************
+
+ POST /upload HTTP/1.1
+ Host: example.com
+ Content-Type: multipart/related; boundary="boundary123"
+ 
+ --boundary123
+ Content-Type: text/html
+ 
+ <html>
+   <body>
+     <h1>Hello World</h1>
+     <img src="cid:image1" alt="Example Image">
+   </body>
+ </html>
+ --boundary123
+ Content-Type: image/png
+ Content-ID: <image1>
+ 
+ [Binary data of the image]
+ --boundary123--
+
+ ***********************************************************************************
+
+ "--------------A940F1230E6F0105F03DB2CB\r\n" \
+ "Content-Type: text/html; charset=\"utf-8\"\r\n" \
+ "Content-Transfer-Encoding: 8bit\r\n\r\n" \
+ "<html><head>\r\n" \
+ "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n" \
+ "  </head>\r\n" \
+ "  <body bgcolor=\"#FFFFFF\" text=\"#000000\">\r\n" \
+ "    <p>This is a test.&nbsp; <img src=\"cid:part1.E16AE3B4.1505C436@chilkatsoft.com\" height=\"20\" width=\"20\"></p>\r\n" \
+ "  </body>\r\n" \
+ "</html>\r\n" \
+ "--------------A940F1230E6F0105F03DB2CB\r\n" \
+ "Content-Transfer-Encoding: base64\r\n" \
+ "Content-Type: image/jpeg; name=\"starfish20.jpg\"\r\n" \
+ "Content-Disposition: inline; filename=\"starfish20.jpg\"\r\n" \
+ "Content-ID: <part1.E16AE3B4.1505C436@chilkatsoft.com>\r\n\r\n" \
+ "/9j/4AAQSkZJRgABAQEASABIAAD//gAmRmlsZSB3cml0dGVuIGJ5IEFkb2JlIFBob3Rvc2hvcD8g\r\n" \
+ "NC4w/9sAQwAQCwwODAoQDg0OEhEQExgoGhgWFhgxIyUdKDozPTw5Mzg3QEhcTkBEV0U3OFBtUVdf\r\n" \
+ "YmdoZz5NcXlwZHhcZWdj/9sAQwEREhIYFRgvGhovY0I4QmNjY2NjY2NjY2NjY2NjY2NjY2NjY2Nj\r\n" \
+ "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2Nj/8IAEQgAFAAUAwERAAIRAQMRAf/EABcAAAMBAAAA\r\n" \
+ "AAAAAAAAAAAAAAIDBAX/xAAYAQADAQEAAAAAAAAAAAAAAAABAgMEAP/aAAwDAQACEAMQAAAB2kZY\r\n" \
+ "NNEijWKddfTmLgALWH//xAAbEAACAgMBAAAAAAAAAAAAAAABAgMRAAQSE//aAAgBAQABBQL0XqN+\r\n" \
+ "pM2aqJGMiqFFCyg7z//EABwRAAICAgMAAAAAAAAAAAAAAAERAAIQIQMSUf/aAAgBAwEBPwHqU5aq\r\n" \
+ "Axx+y1tMQl4elj//xAAcEQEAAQUBAQAAAAAAAAAAAAABEQACEBIhA1H/2gAIAQIBAT8B3Bhqy7Zc\r\n" \
+ "enyiwmGgDhiOzj//xAAdEAABAwUBAAAAAAAAAAAAAAABAAIREBIhIkFR/9oACAEBAAY/ArZyn+Cg\r\n" \
+ "xtxWuJaoCnqDuin/xAAcEAABBAMBAAAAAAAAAAAAAAABABEhYRAxQVH/2gAIAQEAAT8hkEwPUUR9\r\n" \
+ "DYfE4nxtRpIkBTsayuALIiuY/9oADAMBAAIAAwAAABDWPTsf/8QAGhEAAwADAQAAAAAAAAAAAAAA\r\n" \
+ "AAEREDFBIf/aAAgBAwEBPxC0DVPcWm+Ce4OesrkE6bjH/8QAGBEBAQEBAQAAAAAAAAAAAAAAAREA\r\n" \
+ "QRD/2gAIAQIBAT8QahMiOc8YgSrnTY3ELclHXn//xAAcEAEBAAIDAQEAAAAAAAAAAAABEQAhMUFx\r\n" \
+ "EFH/2gAIAQEAAT8Qn3igmSZSj+c4N4zapMy9IjFV98wncN2iuLFsCEbDGxQkI6RO/n//2Q==\r\n" \
+ "--------------A940F1230E6F0105F03DB2CB--"
+ 
+ ***********************************************************************************
+
+ "--------------A940F1230E6F0105F03DB2CB\r\n" \
+ "Content-Type: text/html; charset=\"utf-8\"\r\n" \
+ "Content-Transfer-Encoding: 8bit\r\n\r\n" \
+ "<html><head>\r\n" \
+ "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n" \
+ "  </head>\r\n" \
+ "  <body bgcolor=\"#FFFFFF\" text=\"#000000\">\r\n" \
+ "    <p>This is a test.&nbsp; <img src=\"cid:part1.E16AE3B4.1505C436@chilkatsoft.com\" height=\"20\" width=\"20\"></p>\r\n" \
+ "  </body>\r\n" \
+ "</html>\r\n----------A940F1230E6F0105F03DB2CB\r\n" \
+ "--------------A940F1230E6F0105F03DB2CB\r\n" \
+ "Content-Transfer-Encoding: base64\r\n" \
+ "Content-Type: image/jpeg; name=\"starfish20.jpg\"\r\n" \
+ "Content-Disposition: inline; filename=\"starfish20.jpg\"\r\n" \
+ "Content-ID: <part1.E16AE3B4.1505C436@chilkatsoft.com>\r\n\r\n" \
+ "/9j/4AAQSkZJRgABAQEASABIAAD//gAmRmlsZSB3cml0dGVuIGJ5IEFkb2JlIFBob3Rvc2hvcD8g\r\n" \
+ "NC4w/9sAQwAQCwwODAoQDg0OEhEQExgoGhgWFhgxIyUdKDozPTw5Mzg3QEhcTkBEV0U3OFBtUVdf\r\n" \
+ "YmdoZz5NcXlwZHhcZWdj/9sAQwEREhIYFRgvGhovY0I4QmNjY2NjY2NjY2NjY2NjY2NjY2NjY2Nj\r\n" \
+ "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2Nj/8IAEQgAFAAUAwERAAIRAQMRAf/EABcAAAMBAAAA\r\n" \
+ "AAAAAAAAAAAAAAIDBAX/xAAYAQADAQEAAAAAAAAAAAAAAAABAgMEAP/aAAwDAQACEAMQAAAB2kZY\r\n" \
+ "NNEijWKddfTmLgALWH//xAAbEAACAgMBAAAAAAAAAAAAAAABAgMRAAQSE//aAAgBAQABBQL0XqN+\r\n" \
+ "pM2aqJGMiqFFCyg7z//EABwRAAICAgMAAAAAAAAAAAAAAAERAAIQIQMSUf/aAAgBAwEBPwHqU5aq\r\n" \
+ "Axx+y1tMQl4elj//xAAcEQEAAQUBAQAAAAAAAAAAAAABEQACEBIhA1H/2gAIAQIBAT8B3Bhqy7Zc\r\n" \
+ "enyiwmGgDhiOzj//xAAdEAABAwUBAAAAAAAAAAAAAAABAAIREBIhIkFR/9oACAEBAAY/ArZyn+Cg\r\n" \
+ "xtxWuJaoCnqDuin/xAAcEAABBAMBAAAAAAAAAAAAAAABABEhYRAxQVH/2gAIAQEAAT8hkEwPUUR9\r\n" \
+ "DYfE4nxtRpIkBTsayuALIiuY/9oADAMBAAIAAwAAABDWPTsf/8QAGhEAAwADAQAAAAAAAAAAAAAA\r\n" \
+ "AAEREDFBIf/aAAgBAwEBPxC0DVPcWm+Ce4OesrkE6bjH/8QAGBEBAQEBAQAAAAAAAAAAAAAAAREA\r\n" \
+ "QRD/2gAIAQIBAT8QahMiOc8YgSrnTY3ELclHXn//xAAcEAEBAAIDAQEAAAAAAAAAAAABEQAhMUFx\r\n" \
+ "EFH/2gAIAQEAAT8Qn3igmSZSj+c4N4zapMy9IjFV98wncN2iuLFsCEbDGxQkI6RO/n//2Q==\r\n" \
+ "--------------A940F1230E6F0105F03DB2CB--"
+   
+ ***********************************************************************************
+
+ "--f93dcbA3\r\n" \
+ "Content-Type: application/xml; charset=UTF-8\r\n" \
+ "Content-ID: <980119.X53GGT@example.com>\r\n\r\n" \
+ "<?xml version=\"1.0\"?>\r\n" \
+ "<uploadDocument>\r\n" \
+ "  <title>My Proposal</title>\r\n" \
+ "  <author>E. X. Ample</author>\r\n" \
+ "  <summary>A proposal for a new project.</summary>\r\n" \
+ "  <notes image=\"cid:980119.X17AXM@example.com\">(see handwritten region)</notes>\r\n" \
+ "  <keywords>project proposal funding</keywords>\r\n" \
+ "  <readonly>false</readonly>\r\n" \
+ "  <filename>image.png</filename>\r\n" \
+ "  <content>cid:980119.X25MNC@example.com</content>\r\n" \
+ "</uploadDocument>\r\n" \
+ "--f93dcbA3\r\n" \
+ "Content-Type: image/png\r\n" \
+ "Content-Transfer-Encoding: binary\r\n" \
+ "Content-ID: <980119.X25MNC@example.com>\r\n\r\n" \
+ "...Binary data here...\r\n" \
+ "--f93dcbA3\r\n" \
+ "Content-Type: image/png\r\n" \
+ "Content-Transfer-Encoding: binary\r\n" \
+ "Content-ID: <980119.X17AXM@example.com>\r\n\r\n" \
+ "...Binary data here...\r\n" \
+ "--f93dcbA3--"
+ 
+ ***********************************************************************************
+
+ "--boundary_1\r\n" \
+ "Content-Type: text/html; charset=UTF-8\r\n" \
+ "Content-ID: <page1.html>\r\n" \
+ "Content-Disposition: inline\r\n\r\n" \
+ "<!DOCTYPE html>\r\n" \
+ "<html>\r\n" \
+ "  <head><title>Multipart Example</title></head>\r\n" \
+ "  <body>\r\n" \
+ "    <h1>Welcome to Multipart Example</h1>\r\n" \
+ "    <img src=\"cid:image1\" alt=\"Image 1\">\r\n" \
+ "  </body>\r\n" \
+ "</html>\r\n" \
+ "--boundary_1\r\n" \
+ "Content-Type: image/jpeg\r\n" \
+ "Content-ID: <image1>\r\n" \
+ "Content-Disposition: inline; filename=\"image1.jpg\"\r\n\r\n" \
+ "...binary image data...\r\n" \
+ "--boundary_1--"
+
+ ***********************************************************************************
+
+ //"POST /users HTTP/1.1\r\n"
+ //"Content-Type: multipart/related; boundary=\"the_boundary\"; type=\"application/json\"; start=\"json\"\r\n"
+ "--the_boundary\r\n" \
+ "Content-Type: application/json; charset=UTF-8\r\n" \
+ "Content-Disposition: inline; name=\"json\"\r\n\r\n" \
+ "{\"user\":{\"name\": \"Jhon\", \"avatar\": \"cid:avatar_image\" }}\r\n" \
+ "--the_boundary\r\n" \
+ "Content-Type: image/png\r\n" \
+ "Content-Disposition: inline; name=\"avatar_image\"; filename=\"avatar.png\"\r\n\r\n" \
+ "<the binary content of image comes here>\r\n" \
+ "--the_boundary--"
+ 
+ ***********************************************************************************
+ */
+
+enum state {
+  s_preamble,
+  s_preamble_hy_hy,
+  s_first_boundary,
+  s_header_field_start,
+  s_header_field,
+  s_header_value_start,
+  s_header_value,
+  s_header_value_cr,
+  s_headers_done,
+  s_data,
+  s_data_cr,
+  s_data_cr_lf,
+  s_data_cr_lf_hy,
+  s_data_boundary_start,
+  s_data_boundary,
+  s_data_boundary_done,
+  s_data_boundary_done_cr_lf,
+  s_data_boundary_done_hy_hy,
+  s_epilogue,
+};
+
+/* SP or HTAB : ((x) == 9 || (x) == 32) : 0x101 || 0x10 */
+#define __is_OWS(x) ((x) == 9 || (x) == 32)
+
+static inline const char *
+__http_strnstr(char *str, const char *p, size_t len)
 {
-  MIME_PARSER_INCOMPLETE_MESSAGE,
-  MIME_PARSER_READ_ERROR,
-  MIME_PARSER_OK
-} MIME_parser_status;
-
-typedef enum _MIME_read_status
-{
-  MIME_READ_OK,
-  MIME_READ_EOF,
-  MIME_READ_ERROR
-} MIME_read_status;
-
-#define MIME_READER_MAX_BUFFER_SIZE  1054
-#define MIME_PARSER_BUFFER_SIZE 1054
-
-
-typedef MIME_read_status(*MIME_read_function) (void *, unsigned char *, int *);
-
-
-/**
-  Reader structure. This will be use 
-  by the parser
-*/
-typedef struct _MIME_reader
-{
-  int size;
-  int marker;
-  int current;
-  MIME_read_function read_function;
-  char buffer[MIME_READER_MAX_BUFFER_SIZE];
-  void *userdata;
-} MIME_reader;
-
-
-MIME_read_status MIME_filereader_function(void *userdata,
-                                          unsigned char *dest, int *size);
-
-typedef struct _MIME_callbacks
-{
-  MIME_part_begin part_begin_cb;
-  MIME_part_end part_end_cb;
-  MIME_parse_begin parse_begin_cb;
-  MIME_parse_end parse_end_cb;
-  MIME_ERROR_bytes received_bytes_cb;
-} MIME_callbacks;
-
-
-MIME_parser_status MIME_parse(MIME_read_function reader_function,
-                              void *reader_userdata,
-                              const char *user_boundary,
-                              const MIME_callbacks * callbacks,
-                              void *callbacks_userdata);
-
-
-/**
-  Initialize a reader
-*/
-void
-MIME_reader_init(MIME_reader * reader,
-                 MIME_read_function reader_function, void *userdata)
-{
-  reader->size = 0;
-  reader->marker = -1;
-  reader->current = 0;
-  reader->userdata = userdata;
-  reader->read_function = reader_function;
-
+  char c = str[len];
+  const char *r;
+  str[len]='\0';
+  r = strstr(str, p);
+  str[len]=c;
+  return r;
 }
 
-/**
-  Read data from a reader source. 
-*/
-MIME_read_status
-MIME_reader_read(MIME_reader * reader, unsigned char *buffer, int size)
+size_t multipartparser_execute(multipartparser *parser,
+                 multipartparser_callbacks *callbacks,
+                 const char *data,
+                 size_t size)
 {
-  MIME_read_status status;
-  int len;
-  int rest_size;
+  const char   *mark;
+  const char   *end;
+  const char   *p;
+  unsigned char c;
 
-  /* Check if buffer is full */
-  if (reader->size == reader->current)
+  end = data + size;
+
+  printf("%.*s\n", (int)size, data);
+  
+  for (p = data; p < end; ++p) {
+    c = *p;
+
+reexecute:
+    switch (parser->state) {
+
+      case s_preamble:
+        if (c == HYPHEN)
+          parser->state = s_preamble_hy_hy;
+        // else ignore everything before first boundary
+        break;
+
+      case s_preamble_hy_hy:
+        if (c == HYPHEN)
+          parser->state = s_first_boundary;
+        else
+          parser->state = s_preamble;
+        break;
+
+      case s_first_boundary:
+        if (!parser->index && end - p >= parser->boundary.len)
+        {
+          if (ng_memcmp(p, parser->boundary.cptr, parser->boundary.len))
+          {
+            goto error;
+          }
+          parser->index = parser->boundary.len;
+          p += parser->boundary.len - 1;
+          break;
+        }
+        if (parser->index == parser->boundary.len) {
+          if (c != CR)
+            goto error;
+          parser->index++;
+          break;
+        }
+        if (parser->index == parser->boundary.len + 1) {
+          if (c != LF)
+            goto error;
+          CALLBACK_NOTIFY(body_begin);
+          CALLBACK_NOTIFY(part_begin);
+          parser->index = 0;
+          parser->state = s_header_field_start;
+          break;
+        }
+        if (c == parser->boundary.cptr[parser->index]) {
+          parser->index++;
+          break;
+        }
+        goto error;
+
+      case s_header_field_start:
+        if (c == CR) {
+          parser->state = s_headers_done;
+          break;
+        }
+        CALLBACK_NOTIFY(header_begin);
+        parser->state = s_header_field;
+        // fallthrough;
+
+      case s_header_field:
+        /* Header field name as defined by rfc 2616. Also lowercases them.
+         *     field-name   = token
+         *     token        = 1*<any CHAR except CTLs or tspecials>
+         *     CTL          = <any US-ASCII control character (octets 0 - 31) and DEL (127)>
+         *     tspecials    = "(" | ")" | "<" | ">" | "@"
+         *                  | "," | ";" | ":" | "\" | DQUOTE
+         *                  | "/" | "[" | "]" | "?" | "="
+         *                  | "{" | "}" | SP | HT
+         *     DQUOTE       = <US-ASCII double-quote mark (34)>
+         *     SP           = <US-ASCII SP, space (32)>
+         *     HT           = <US-ASCII HT, horizontal-tab (9)>
+         */
+        mark = ng_memchr(p, ':', end - p);
+        if (unlikely(mark != NULL))
+        {
+          if (mark > p) {
+            CALLBACK_DATA(header_field, p, mark - p);
+            p = mark;
+          }
+          parser->state = s_header_value_start;
+          break;
+        }
+        mark = ng_memchr(p, CR, end - p);
+        if (mark != NULL)
+        {
+          if (mark > p) {
+            CALLBACK_DATA(header_field, p, mark - p);
+            p = mark;
+          }
+          /* No headers */
+          parser->state = s_header_value_cr;
+          break;
+        }
+        
+        if (end > p) {
+          CALLBACK_DATA(header_field, p, end - p);
+          p = end;
+        }
+        break;
+
+      case s_header_value_start:
+        if (c == SP || c == HT) {
+          break;
+        }
+        parser->state = s_header_value;
+        // fallthrough;
+
+      case s_header_value:
+        /**
+         *  field-value    = *( field-content / obs-fold )
+         *  field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+         *  field-vchar    = VCHAR / obs-text
+            obs-fold       = CRLF 1*( SP / HTAB )
+                        ; obsolete line folding
+                        ; see Section 3.2.4     
+        
+         field-value    = *field-content
+         field-content  = field-vchar
+                          [ 1*( SP / HTAB / field-vchar ) field-vchar ]
+         field-vchar    = VCHAR / obs-text
+         
+         VCHAR          =  %x21-7E[visible (printing) characters]
+         obs-text       = %x80-FF
+         
+         >>>>>>>>>>>>>>https://httpwg.org/specs/rfc9110.html#fields.values
+         **/
+        mark = ng_memchr(p, CR, end - p);
+        if (mark != NULL)
+        {
+          if (mark > p) {
+            CALLBACK_DATA(header_value, p, mark - p);
+          }
+          p = mark;
+          parser->state = s_header_value_cr;
+          break;
+        }
+        if (end > p) {
+          CALLBACK_DATA(header_value, p, end - p);
+          p = end;
+        }
+        break;
+
+      case s_header_value_cr:
+        if (c == LF) {
+          parser->state = s_header_field_start;
+          break;
+        }
+        goto error;
+
+      case s_headers_done:
+        if (c == LF) {
+          CALLBACK_NOTIFY(headers_complete);
+          parser->state = s_data;
+          break;
+        }
+        goto error;
+
+      case s_data:
+        mark = ng_memchr(p, CR, end - p);
+        if (mark != NULL)
+        {
+          if (mark > p) 
+          {
+            CALLBACK_DATA(data, p, mark - p);
+          }
+          parser->state = s_data_cr;
+          p = mark;
+          break;
+        }
+        if (end > p) 
+        {
+          CALLBACK_DATA(data, p, end - p);
+          p = end;
+        }
+        break;
+
+      case s_data_cr:
+        if (c == LF) {
+          parser->state = s_data_cr_lf;
+          break;
+        }
+        CALLBACK_DATA(data, "\r", 1);
+        parser->state = s_data;
+        goto reexecute;
+
+      case s_data_cr_lf:
+        if (c == HYPHEN) {
+          parser->state = s_data_cr_lf_hy;
+          break;
+        }
+        CALLBACK_DATA(data, "\r\n", 2);
+        parser->state = s_data;
+        goto reexecute;
+
+      case s_data_cr_lf_hy:
+        if (c == HYPHEN) {
+          parser->state = s_data_boundary_start;
+          break;
+        }
+        CALLBACK_DATA(data, "\r\n-", 3);
+        parser->state = s_data;
+        goto reexecute;
+
+      case s_data_boundary_start:
+        parser->index = 0;
+        parser->state = s_data_boundary;
+        // fallthrough;
+
+      case s_data_boundary:
+        if (!parser->index && end - p >= parser->boundary.len)
+        {
+          if (!ng_memcmp(p, parser->boundary.cptr, parser->boundary.len))
+          {
+            parser->index = 0;
+            parser->state = s_data_boundary_done;
+            p += parser->boundary.len - 1;
+            break;
+          }
+        }
+        if (parser->index == parser->boundary.len) {
+          parser->index = 0;
+          parser->state = s_data_boundary_done;
+          goto reexecute;
+        }
+        if (c == parser->boundary.cptr[parser->index]) {
+          parser->index++;
+          break;
+        }
+        CALLBACK_DATA(data, "\r\n--", 4);
+        CALLBACK_DATA(data, parser->boundary.cptr, parser->index);
+        parser->state = s_data;
+        goto reexecute;
+
+      case s_data_boundary_done:
+        if (c == CR) {
+          parser->state = s_data_boundary_done_cr_lf;
+          break;
+        }
+        if (c == HYPHEN) {
+          parser->state = s_data_boundary_done_hy_hy;
+          break;
+        }
+        goto error;
+
+      case s_data_boundary_done_cr_lf:
+        if (c == LF) {
+          CALLBACK_NOTIFY(part_end);
+          CALLBACK_NOTIFY(part_begin);
+          parser->state = s_header_field_start;
+          break;
+        }
+        goto error;
+
+      case s_data_boundary_done_hy_hy:
+        if (c == HYPHEN) {
+          CALLBACK_NOTIFY(part_end);
+          CALLBACK_NOTIFY(body_end);
+          parser->state = s_epilogue;
+          break;
+        }
+        goto error;
+
+      case s_epilogue:
+        // Must be ignored according to rfc 1341.
+        break;
+    }
+  }
+  return size;
+
+error:
+  return p - data;
+}
+
+void
+multipartpart_init(multipartpart *part)
+{
+  ng_INIT_LIST_HEAD(&part->header);
+  part->content_disposition = NULL;
+  part->id      = 0;
+  part->file_ch = NULL;
+  return;
+}
+
+multipartpart * 
+multipartpart_new(void)
+{
+  multipartpart *part;
+
+  part = http_malloc(sizeof(*part));
+  if (part == NULL)
   {
-    /* Yes, so read some data */
-
-    /* First handle marker */
-    if (reader->marker > -1)
-    {
-      if (reader->marker != 0)
-      {
-        reader->current = reader->size - reader->marker;
-        memcpy(reader->buffer, reader->buffer + reader->marker, reader->current);
-      }
-      else if (reader->current == MIME_READER_MAX_BUFFER_SIZE - 1)
-      {
-        log_error("%s", "Marker error");
-        return MIME_READ_ERROR;
-      }
-      reader->marker = 0;
-    }
-    else
-      reader->current = 0;
-
-    len = MIME_READER_MAX_BUFFER_SIZE - reader->current - 1;
-    status = reader->read_function(reader->userdata,
-                                   (unsigned char *)reader->buffer + reader->current,
-                                   &len);
-
-    if (status == MIME_READ_OK)
-    {
-      reader->size = len + reader->current;
-    }
-    else
-      return status;
+    log_fatal("Failed to malloc multipartpart.");
+    return NULL;
   }
 
-  if (size <= reader->size - reader->current)
+  multipartpart_init(part);
+  return part;
+}
+
+void
+multipartpart_free(multipartpart *part)
+{
+  if (part == NULL)
+    return;
+
+  content_type_free(part->content_disposition);
+  hpairnode_free_deep(&part->header);
+  part->content_disposition = NULL;
+  return;
+}
+
+static multipartparser_callbacks __multipart_settings = {
+  .on_data             = __multipart_cb_data,
+  .on_header_begin     = __multipart_cb_header_begin,
+  .on_header_field     = __multipart_cb_header_field,
+  .on_header_value     = __multipart_cb_header_value,
+  .on_headers_complete = __multipart_cb_headers_complete,
+  .on_body_begin       = __multipart_cb_body_begin,
+  .on_body_end         = __multipart_cb_body_end,
+  .on_part_begin       = __multipart_cb_part_begin,
+  .on_part_end         = __multipart_cb_part_end,
+};
+
+herror_t 
+multipartparser_init(multipartparser *parser, 
+  void *arg, content_type_t *ct)
+{
+  hpair_t *pair;
+  herror_t status;
+
+  /* Check for MIME message */
+  if (ct != NULL)
   {
-    memcpy(buffer, reader->buffer + reader->current, size);
-    reader->current += size;
-    return MIME_READ_OK;
+    if (ng_block_isequal__(&ct->type, &cstr_mime_related))
+      parser->mime_type = MIME_TYPE_related;
+    else if (ng_block_isequal__(&ct->type, &cstr_mime_form_data))
+      parser->mime_type = MIME_TYPE_form_data;
+    else
+      parser->mime_type = MIME_TYPE_none;
   }
   else
   {
-    /* Fill rest data */
-    rest_size = reader->size - reader->current;
-    memcpy(buffer, reader->buffer + reader->current, (unsigned int)rest_size);
-
-    reader->current = reader->size;
-    return MIME_reader_read(reader, buffer + rest_size, size - rest_size);
+    parser->mime_type = MIME_TYPE_none;
   }
-}
 
-
-void
-MIME_reader_set_marker(MIME_reader * reader)
-{
-  reader->marker = reader->current;
-}
-
-void
-MIME_reader_unset_marker(MIME_reader * reader)
-{
-  reader->marker = -1;
-}
-
-void
-MIME_reader_jump_marker(MIME_reader * reader)
-{
-  reader->current = reader->marker;
-}
-
-
-
-typedef struct _MIME_buffer
-{
-  unsigned char data[MIME_PARSER_BUFFER_SIZE];
-  int size;
-} MIME_buffer;
-
-
-void
-MIME_buffer_init(MIME_buffer * buffer)
-{
-  buffer->size = 0;
-}
-
-void
-MIME_buffer_add(MIME_buffer * buffer, unsigned char ch)
-{
-  buffer->data[buffer->size++] = ch;
-}
-
-void
-MIME_buffer_add_bytes(MIME_buffer * buffer, unsigned char *bytes, int size)
-{
-  memcpy(buffer->data, bytes, size);
-  buffer->size += size;
-}
-
-int
-MIME_buffer_is_full(MIME_buffer * buffer)
-{
-  return buffer->size + 150 >= MIME_PARSER_BUFFER_SIZE;
-}
-
-int
-MIME_buffer_is_empty(MIME_buffer * buffer)
-{
-  return buffer->size == 0;
-}
-
-void
-MIME_buffer_clear(MIME_buffer * buffer)
-{
-  buffer->size = 0;
-}
-
-
-MIME_parser_status
-MIME_parse(MIME_read_function reader_function,
-           void *reader_userdata,
-           const char *user_boundary,
-           const MIME_callbacks * callbacks, void *callbacks_userdata)
-{
-  char boundary[150];
-  unsigned char ch[153];
-  int boundary_length, n, ignore = 0;
-  MIME_reader reader;
-  MIME_buffer buffer;
-  MIME_read_status status;
-
-  /* Init reader */
-  MIME_reader_init(&reader, reader_function, reader_userdata);
-
-  /* Init buffer */
-  MIME_buffer_init(&buffer);
-
-  /* Set boundary related stuff */
-  ng_snprintf(boundary, sizeof(boundary), "\n--%s", user_boundary);
-  boundary_length = strlen(boundary);
-
-  /* Call parse begin callback */
-  callbacks->parse_begin_cb(callbacks_userdata);
-
-  while (1)
+  switch (parser->mime_type)
   {
-  set_marker:
+    case MIME_TYPE_none:
+      status = herror_new("multipartparser_init", 
+                        MIME_ERROR_NOT_MIME_MESSAGE,
+                        "Not a MIME message '%pS'", 
+                        &ct->type);
+      return status;
+    case MIME_TYPE_related:
+      pair = hpairnode_get(&ct->params, &cstr_start);
+      if (pair == NULL)
+      {
+        /* TODO (#1#): Handle Error in http form */
+        status = herror_new("multipartparser_init", 
+                        MIME_ERROR_NO_START_PARAM,
+                        "No 'start' in %pS.", 
+                        &ct->type);
+        return status;
+      }
+      parser->part.start = pair->val;
+      break;
+      
+    case MIME_TYPE_form_data:
+      break;
+  }
 
-    /* Set marker */
-    MIME_reader_set_marker(&reader);
+  pair = hpairnode_get(&ct->params, &cstr_mime_boundary);
+  if (pair == NULL || pair->val.cptr == NULL || !pair->val.len)
+  {
+    status = herror_new("multipartparser_init", 
+                      MIME_ERROR_NO_BOUNDARY_PARAM, 
+                      "No 'boundary' in '%pS'.",
+                      &ct->type);
+    return status;
+  }
+  
+  parser->boundary     = pair->val;
+  parser->arg          = arg;
+  parser->data         = NULL;
+  parser->index        = 0;
+  parser->state        = s_preamble;
+  parser->skipdata     = ng_FALSE;
+  parser->rootpart     = ng_FALSE;
+  parser->err          = 0;
+  
+  BUF_SIZE_INIT(&parser->field, 
+        parser->buffer, HTTP_FILED_NAME_LEN_MAX);
+  BUF_SIZE_INIT(&parser->value, 
+        parser->buffer+HTTP_FILED_NAME_LEN_MAX, 
+        HTTP_FILED_VALUE_LEN_MAX);
+  
+  multipartpart_init(&parser->part);
+  parser->settings = &__multipart_settings;
+  
+  return H_OK;
+}
 
-  read_byte:
+void 
+multipartparser_free(multipartparser *parser)
+{
+  multipartpart_free(&parser->part);
+}
 
-    /* Read 1 byte */
-    status = MIME_reader_read(&reader, ch, 1);
-    if (status == MIME_READ_EOF)
-      return MIME_PARSER_INCOMPLETE_MESSAGE;
-    else if (status == MIME_READ_ERROR)
-      return MIME_PARSER_READ_ERROR;
-
-    if (ch[0] == '\r' && !ignore)
+static size_t
+__build_header_field_value(multipartparser *p)
+{
+  if (BUF_LEN(&p->field))
+  {
+    if (NULL == hpairnode_new(&p->field.b,
+      &p->value.b, &p->part.header))
     {
-      n = 0;
-      while (n < boundary_length)
+      log_warn("Field length is too long, max is %d.", 
+        HTTP_FILED_NAME_LEN_MAX);
+      return -1;
+    }
+    BUF_CLEAR(&p->field);
+    BUF_CLEAR(&p->value);
+  }
+  
+  return 0;
+}
+
+static size_t 
+__multipart_cb_header_begin(multipartparser *p)
+{
+  return __build_header_field_value(p);
+}
+
+/*
+  Content-Disposition: form-data; name=\"File\"; 
+                       filename=\"nanoHttpd-2.10.tar.xz\"\r\n
+  Content-Type: application/x-xz\r\n\r\n
+ */
+static size_t 
+__multipart_cb_headers_complete(multipartparser *p)
+{
+  int n;
+  hpair_t *pair;
+  content_type_t *ct;
+  multipartpart *part = &p->part;
+
+  if (__build_header_field_value(p) < 0)
+  {
+    log_warn("__build_header_field_value failed.");
+    return -1;
+  }
+  
+  switch (p->mime_type)
+  {
+    case MIME_TYPE_none:
+      log_fatal("Unsupported mime type.");
+      p->err = MIME_ERROR_NOT_MIME_MESSAGE;
+      return -1;
+    case MIME_TYPE_related:
+      pair = hpairnode_get(&part->header, 
+                &__HDR_BUF__(HEADER_CONTENT_ID));
+      if (pair == NULL)
       {
-        /* Read 1 byte */
-        status = MIME_reader_read(&reader, ch, 1);
-        if (status == MIME_READ_EOF)
-          return MIME_PARSER_INCOMPLETE_MESSAGE;
-        else if (status == MIME_READ_ERROR)
-          return MIME_PARSER_READ_ERROR;
-
-        /* Check if byte is in boundary */
-        if (ch[0] == boundary[n])
-        {
-          n = n + 1;
-          continue;
-        }
-        else
-        {
-          MIME_reader_jump_marker(&reader);
-          ignore = 1;
-          goto read_byte;
-        }
-
-      }                         /* while n < boundary_length */
-
-      /* Read 1 byte */
-      status = MIME_reader_read(&reader, ch, 1);
-
-
-      if (status == MIME_READ_EOF)
-        return MIME_PARSER_INCOMPLETE_MESSAGE;
-      else if (status == MIME_READ_ERROR)
-        return MIME_PARSER_READ_ERROR;
-
-      /* Show if byte is '\r' */
-      if (ch[0] == '\r')
-      {
-        /* Read 1 byte */
-        status = MIME_reader_read(&reader, ch, 1);
-
-
-        if (status == MIME_READ_EOF)
-          return MIME_PARSER_INCOMPLETE_MESSAGE;
-        else if (status == MIME_READ_ERROR)
-          return MIME_PARSER_READ_ERROR;
-
-        /* Check if byte is '\n' */
-        if (ch[0] == '\n')
-        {
-          if (!MIME_buffer_is_empty(&buffer))
-          {
-            /* Invoke callback */
-            callbacks->received_bytes_cb(callbacks_userdata, buffer.data,
-                                         buffer.size);
-
-            /* Empty the buffer */
-            MIME_buffer_clear(&buffer);
-
-            /* Invoke End Part */
-            callbacks->part_end_cb(callbacks_userdata);
-          }
-
-          /* Invoke start new Part */
-          callbacks->part_begin_cb(callbacks_userdata);
-          goto set_marker;
-
-        }                       /* if (ch[0] == '\n') */
-        else
-        {
-          /* Jump to marker and read bytes */
-          MIME_reader_jump_marker(&reader);
-          MIME_reader_read(&reader, ch, boundary_length + 2);
-
-          MIME_buffer_add_bytes(&buffer, ch, boundary_length + 2);
-
-          if (MIME_buffer_is_full(&buffer))
-          {
-            /* Invoke callback */
-            callbacks->received_bytes_cb(callbacks_userdata, buffer.data,
-                                         buffer.size);
-
-
-            /* Empty the buffer */
-            MIME_buffer_clear(&buffer);
-          }
-        }                       /* else of if (ch[0] == '\n') */
-
-      }                         /* if (ch[0] == '\r') */
+        p->skipdata = ng_TRUE;
+        return 0;
+      }
       else
       {
-        if (ch[0] == '-')
+        if (!p->rootpart 
+          && ng_block_isequal__(&pair->val, &part->start))
         {
-          /* Read 1 byte */
-          status = MIME_reader_read(&reader, ch, 1);
+          p->rootpart = ng_TRUE;
+          p->skipdata = ng_FALSE;
+        }
+      }
+      break;
+      
+    case MIME_TYPE_form_data:
+      break;
+  }
 
-          if (status == MIME_READ_EOF)
-            return MIME_PARSER_INCOMPLETE_MESSAGE;
-          else if (status == MIME_READ_ERROR)
-            return MIME_PARSER_READ_ERROR;
-
-          if (ch[0] == '-')
-          {
-            if (!MIME_buffer_is_empty(&buffer))
-            {
-              /* Invoke callback */
-              callbacks->received_bytes_cb(callbacks_userdata, buffer.data,
-                                           buffer.size);
-
-              /* Empty the buffer */
-              MIME_buffer_clear(&buffer);
-
-              /* Invoke End Part */
-              callbacks->part_end_cb(callbacks_userdata);
-            }
-
-            /* Invoke start new Part */
-            callbacks->parse_end_cb(callbacks_userdata);
-
-            /* Finish parsing */
-            /* TODO (#1#): We assume that after -- comes \r\n This is not
-               always correct */
-
-            return MIME_PARSER_OK;
-
-          }                     /* if (ch[0] == '-') */
-          else
-          {
-            MIME_reader_jump_marker(&reader);
-            ignore = 1;
-            goto read_byte;
-          }                     /* else of if (ch[0] == '-') */
-
-        }                       /* if (ch[0] == '-') */
-        else
-        {
-          MIME_reader_jump_marker(&reader);
-          ignore = 1;
-          goto read_byte;
-        }                       /* else of if (ch[0] == '-') */
-
-      }                         /* else of if (ch[0] == '\r') */
-
-    }                           /* if ch[0] == '\r' && !ignore */
+  pair = hpairnode_get(&part->header, 
+            &__HDR_BUF__(HEADER_CONTENT_DISPOSITION));
+  if (pair == NULL)
+  {
+    if (p->part.id == 1)
+    {
+      log_fatal("No Content-Disposition in header.");
+      return -1;
+    }
     else
     {
-      ignore = 0;
-      MIME_buffer_add(&buffer, ch[0]);
-
-      /* Chec if buffer is full */
-      if (MIME_buffer_is_full(&buffer))
-      {
-        /* Invoke callback */
-        callbacks->received_bytes_cb(callbacks_userdata, buffer.data,
-                                     buffer.size);
-
-        /* Empty the buffer */
-        MIME_buffer_clear(&buffer);
-      }
-    }                           /* else of if ch[0] == '\r' && !ignore */
-  }                             /* while (1) */
-}
-
-MIME_read_status
-MIME_filereader_function(void *userdata, unsigned char *dest, int *size)
-{
-  FILE *f = (FILE *) userdata;
-
-  if (feof(f))
-    return MIME_READ_EOF;
-
-  *size = fread(dest, 1, *size, f);
-  return MIME_READ_OK;
-}
-
-
-/* ------------------------------------------------------------------
-  "multipart/related"  MIME Message Builder
- ------------------------------------------------------------------*/
-
-/*
-  Callback data to use internally
-*/
-typedef struct _mime_callback_data
-{
-  int part_id;
-  struct attachments_t *message;
-  struct part_t *current_part;
-  int buffer_capacity;
-  char header[4064];
-  char root_id[256];
-  int header_index;
-  int header_search;
-  FILE *current_fd;
-  char root_dir[512];
-} mime_callback_data_t;
-
-
-MIME_read_status
-mime_streamreader_function(void *userdata, unsigned char *dest, int *size)
-{
-  size_t len = 0;
-  struct http_input_stream_t *in = (struct http_input_stream_t *) userdata;
-
-  if (!http_input_stream_is_ready(in))
-    return MIME_READ_EOF;
-
-  len = http_input_stream_read(in, dest, *size);
-  /* 
-     log_info("http_input_stream_read() returned 0"); */
-  if (len == -1)
-  {
-    log_error("[%d] %s():%s ", herror_code(in->err), herror_func(in->err),
-               herror_message(in->err));
+      return 0;
+    }
   }
-
-  *size = len;
-  if (*size != -1)
+  part->Disposition = &pair->val;
+  part->content_disposition = content_type_new(pair->val.cptr, 
+          pair->val.len);
+  if (part->content_disposition == NULL)
   {
-    return MIME_READ_OK;
+    log_fatal("content_type_new failed.");
+    return -1;
   }
-  return MIME_READ_ERROR;
-}
-
-
-/*
-  Start Callback functions
-*/
-static void
-_mime_parse_begin(void *data)
-{
-/* Nothing to do
-  mime_callback_data_t *cbdata = (mime_callback_data_t)data;
- */
-  log_verbose("Begin parse (%p)", data);
-
-  return;
-}
-
-
-static void
-_mime_parse_end(void *data)
-{
-/* Nothing to do
-  mime_callback_data_t *cbdata = (mime_callback_data_t)data;
- */
-  log_verbose("End parse (%p)", data);
-
-  return;
-}
-
-
-static void
-_mime_part_begin(void *data)
-{
-  char *buffer;
-  struct part_t *part;
-  mime_callback_data_t *cbdata;
+  ct = part->content_disposition;
   
-#define _TMP_SIZE 1054
-  buffer = (char *)http_malloc(_TMP_SIZE);
+  if (!ng_block_isequal__(&ct->type, &cstr_form_data))
+  {
+    log_warn("ContentType is not form-data.");
+    return -1;
+  }
+  
+  pair = hpairnode_get(&ct->params, &cstr_name);
+  if (pair == NULL)
+  {
+    log_warn("Content-Disposition does not has param 'name'.");
+    return -1;
+  }
+
+  pair = hpairnode_get(&ct->params, &cstr_mime_filename);
+  if (pair == NULL)
+  {
+    log_warn("Content-Disposition does not has param 'filename'.");
+    return -1;
+  }
+
+  part->filename = pair->val;
+    
+  log_info("Try to open the file %pS for writing.", &pair->val);
+  
+  if (nanohttp_dir_create(&cstr_dir_uploads) < 0)
+  {
+    log_fatal("nanohttp_dir_create failed.");
+    return -1;
+  }
+
+  if (part->file_ch != NULL)
+    nanohttp_file_close(part->file_ch);
+  
+  n = ng_snprintf(p->buffer, sizeof(p->buffer), 
+          "uploads/%pS", &pair->val);
+  part->file_ch = nanohttp_file_open_for_write(p->buffer, n);
+  if (part->file_ch == NULL)
+  {
+    log_warn("Not able to open the file %pS for writing.", &pair->val);
+    return -1;
+  }
+  
+  return 0;
+}
+
+static size_t 
+__multipart_cb_body_begin(multipartparser *p)
+{
+  return 0;
+}
+
+static size_t 
+__multipart_cb_body_end(multipartparser *p)
+{
+  switch (p->mime_type)
+  {
+    case MIME_TYPE_none:
+      log_fatal("Unsupported mime type.");
+      p->err = MIME_ERROR_NOT_MIME_MESSAGE;
+      return -1;
+      
+    case MIME_TYPE_related:
+      if (!p->rootpart)
+      {
+        log_fatal("No root part.");
+        p->err = MIME_ERROR_NO_ROOT_PART;
+        return -1;
+      }
+      break;
+      
+    case MIME_TYPE_form_data:
+      break;
+  }
+
+  return 0;
+}
+
+static size_t 
+__multipart_cb_part_begin(multipartparser *p)
+{
+  p->part.id++;
+  return 0;
+}
+
+static size_t 
+__multipart_cb_part_end(multipartparser *p)
+{
+  multipartpart_free(&p->part);
+  return 0;
+}
+
+static size_t
+__multipart_cb_data(multipartparser *p, const char *data, 
+  size_t size)
+{
+  size_t nbytes;
+
+  if (p->skipdata)
+    return 0;
+  
+  nbytes = nanohttp_file_write(p->part.file_ch, data, size);
+  if (nbytes != size)
+  {
+    log_warn("nanohttp_file_write failed.");
+    return -1;
+  }
+  
+  return 0;
+}
+
+static size_t
+__multipart_cb_header_field(multipartparser *p, 
+  const char *data, size_t size)
+{
+  if (BUF_REMAIN(&p->field) < size)
+  {
+    log_warn("Field length is too long, max is %d.", 
+      HTTP_FILED_NAME_LEN_MAX);
+    return -1;
+  }
+  ng_memcpy(BUF_CUR_PTR(&p->field), data, size);
+  BUF_GO(&p->field, size);
+  return 0;
+}
+
+static size_t
+__multipart_cb_header_value(multipartparser *p, 
+  const char *data, size_t size)
+{
+  if (BUF_REMAIN(&p->value) < size)
+  {
+    log_warn("Value length is too long, max is %d.", 
+      HTTP_FILED_VALUE_LEN_MAX);
+    return -1;
+  }
+  ng_memcpy(BUF_CUR_PTR(&p->value), data, size);
+  BUF_GO(&p->value, size);
+  return 0;
+}
+
+herror_t
+multipart_get_attachment(multipartparser *p, 
+  struct http_input_stream_t *in)
+{
+  herror_t r = H_OK;
+  
+  while (http_input_stream_is_ready(in))
+  {
+    size_t len;
+    unsigned char buffer[4096];
+    
+    len = http_input_stream_read(in, buffer, sizeof(buffer));
+    if (len == -1)
+    {
+      r = herror_new("multipart_get_attachment", HSOCKET_ERROR_RECEIVE, 
+        "Failed to read stream %pS", p->part.filename);
+      goto finished;
+    }
+    
+    if (len != multipartparser_execute(p, p->settings, (char *)buffer, len))
+    {
+      if (!p->err) p->err = MIME_ERROR;
+      r = herror_new("multipart_get_attachment", p->err, 
+        "multipartparser_execute failed.");
+      goto finished;
+    }
+  }
+
+finished:  
+  nanohttp_file_close(p->part.file_ch);
+  p->part.file_ch = NULL;
+  return r;
+}
+
+void
+mime_part_free(multipartpart *part)
+{
+  if (part == NULL)
+    return;
+
+  hpairnode_free_deep(&part->header);
+  content_type_free(part->content_disposition);
+  part->content_disposition = NULL;
+  http_free(part);
+}
+
+void
+attachments_init(attachments_t *attachments)               
+{
+  ng_INIT_LIST_HEAD(&attachments->parts);
+  attachments->boundary = NULL;
+  attachments->root_id  = NULL;
+}
+
+attachments_t *
+attachments_new(ng_list_head_s *attachments_list)               
+{
+  attachments_t *attachments;
+
+  attachments = (attachments_t *)http_malloc(sizeof(attachments_t));
+  if (attachments == NULL)
+  {
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    return NULL;
+  }
+
+  attachments_init(attachments);
+  if (attachments_list != NULL)
+    ng_list_add_tail(&attachments->link, attachments_list);
+
+  return attachments;
+}
+
+void
+attachments_add_part(attachments_t *attachments, multipartpart *part)
+{
+  if (!attachments)
+    return;
+
+  ng_list_add_tail(&part->link, &attachments->parts);
+  return;
+}
+
+/*
+  Free a mime message 
+*/
+void
+attachments_free(attachments_t *message)
+{
+  if (!message)
+    return;
+
+  while (!ng_list_empty(&message->parts))
+  {
+    multipartpart *part;
+    part = ng_list_first_entry(&message->parts,multipartpart,link);
+    assert(part != NULL);
+    ng_list_del(&part->link);
+    mime_part_free(part);
+  }
+
+  http_free(message);
+
+  return;
+}
+
+#define _HTTPC_MIME_BOUNDARY_SIZE_MAX 75
+
+static herror_t _mime_toolarge(const char *func, size_t size)
+{
+  return herror_new(func, 
+                    MIME_ERROR,
+                    "Tempary buffer is too short: \"%d\"", 
+                    size);
+}
+
+static inline herror_t
+_mime_copy3(char *buffer, size_t blen, const char *d1, size_t d1len, 
+  const char *d2, size_t d2len, const char *d3, size_t d3len)
+{
+  if (blen < d1len+d2len+d3len)
+  {
+    return _mime_toolarge("httpc_mime_copy3", blen);
+  }
+  memcpy(buffer, d1, d1len);
+  memcpy(buffer+d1len, d2, d2len);
+  memcpy(buffer+d1len+d2len, d3, d3len);
+  return H_OK;
+}
+
+herror_t
+mime_add_content_type_header(ng_list_head_s *header, 
+  void *conn_ptr, int conn_id, const ng_block_s *params)
+{
+  int n;
+  size_t tsize;
+  httpd_buf_t b;
+  char *buffer;
+  herror_t status = H_OK;
+  const ng_block_s *type; 
+  const ng_block_s *related_start;
+  const ng_block_s *related_start_info; 
+  const ng_block_s *related_type;
+
+  type               = &params[MIME_CONTENT_TYPE_PARAM_ct_type];
+  related_start      = &params[MIME_CONTENT_TYPE_PARAM_ct_related_start_info];
+  related_start_info = &params[MIME_CONTENT_TYPE_PARAM_ct_related_start];
+  related_type       = &params[MIME_CONTENT_TYPE_PARAM_ct_related_type];
+  
+#define ___BUFSZ 512
+  tsize = ___BUFSZ+_HTTPC_MIME_BOUNDARY_SIZE_MAX;
+  buffer = (char *)http_malloc(tsize);
   if (buffer == NULL)
   {
     log_fatal("Failed to malloc temp buffer.");
-    return;
+    status = herror_new("httpc_mime_begin", 
+                      HSERVER_ERROR_MALLOC,
+                      "Can malloc \"%d\" (%s)", 
+                      tsize, 
+                      os_strerror(ng_errno));
+    goto clean0;
   }
+  
+  BUF_SIZE_INIT(&b, buffer, ___BUFSZ);
 
-  cbdata = (mime_callback_data_t *) data;
-  log_verbose("Begin Part (%p)", data);
-  if (!(part = (struct part_t *) http_malloc(sizeof(struct part_t))))
+  /* 
+     Set Content-type Set multipart/related parameter type=..; start=.. ;
+     start-info= ..; boundary=...
+
+   */
+  ng_memcpy(BUF_CUR_PTR(&b), type->cptr, type->len);
+  BUF_GO(&b, type->len);
+  BUF_SET_CHR(&b, ';');
+  BUF_GO(&b, 1);
+
+  if (related_type)
   {
-    log_error("http_malloc failed (%s)", strerror(errno));
-    return;
+    status = _mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
+      " type=\"", 7, related_type->cptr, related_type->len, "\";", 2);
+    if (status != H_OK) goto clean1;
   }
-  part->next = NULL;
 
+  if (related_start)
+  {
+    status = _mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
+      " start=\"", 8, related_start->cptr, related_start->len, "\";", 2);
+    if (status != H_OK) goto clean1;
+  }
 
-  if (cbdata->current_part)
-    cbdata->current_part->next = part;
+  if (related_start_info)
+  {
+    status = _mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
+      " start-info=\"", 13, related_start_info->cptr, 
+      related_start_info->len, "\";", 2);
+    if (status != H_OK) goto clean1;
+  }
 
-  cbdata->current_part = part;
-
-  if (!cbdata->message->parts)
-    cbdata->message->parts = part;
-
-  cbdata->header[0] = '\0';
-  cbdata->header_index = 0;
-  cbdata->header_search = 0;
-
-#ifdef WIN32
-  ng_snprintf(buffer, _TMP_SIZE, "%s\\mime_%p_%d.part", cbdata->root_dir,
-          cbdata, cbdata->part_id++);
-#else
-  ng_snprintf(buffer, _TMP_SIZE, "%s/mime_%p_%d.part", cbdata->root_dir,
-          cbdata, cbdata->part_id++);
-#endif
+  n = ng_snprintf(BUF_CUR_PTR(&b), BUF_REMAIN(&b), 
+    " boundary=\""HTTP_BOUNDARY_FMT"\"", conn_ptr, conn_id);
+  BUF_GO(&b, n);
+  if (n != HTTP_BOUNDARY_LEN)
+  {
+    status = _mime_toolarge("mime_add_content_type_header", tsize);
+    goto clean1;
+  }
+  
+  if (hpairnode_set_header(header, &__HDR_BUF__(HEADER_CONTENT_TYPE), &b.b) < 0)
+  {
+    status = herror_new("mime_add_content_type_header", 
+                      GENERAL_ERROR,
+                      "hpairnode_set_header failed.");
+  }
+  
+#undef ___BUFSZ
+  
+clean1:
   http_free(buffer);
-
-#undef _TMP_SIZE
-  /*  log_info("Creating FILE ('%s') deleteOnExit=1", buffer);*/
-  part->deleteOnExit = 1;
-  cbdata->current_fd = fopen(buffer, "wb");
-  if (cbdata->current_fd)
-    strcpy(cbdata->current_part->filename, buffer);
-  else
-    log_error("Can not open file for write '%s'", buffer);
+clean0:
+  return status;
 }
 
-
-static void
-_mime_part_end(void *data)
+multipartpart *
+mime_part_new(ng_list_head_s *part_list, const ng_block_s *params)
 {
-  mime_callback_data_t *cbdata = (mime_callback_data_t *) data;
-  log_verbose("End Part (%p)", data);
-  if (cbdata->current_fd)
-  {
-    fclose(cbdata->current_fd);
-    cbdata->current_fd = NULL;
-  }
+  int n;
+  multipartpart  *part;
+  char    *buffer;
+  hpair_t *pair;
+  httpd_buf_t disposition;
 
-  return;
-}
+  const ng_block_s *id;
+  const ng_block_s *filename; 
+  const ng_block_s *content_type;
+  const ng_block_s *type;
+  const ng_block_s *name;
+  const ng_block_s *transfer_encoding;
 
-
-static hpair_t *
-_mime_process_header(char *buffer)
-{
-  int i = 0, c = 0, proc_key, begin = 0, key_len = 0;
-  hpair_t *first = NULL, *last = NULL, *pair;
-  char *key, *value;
-
-#define __KV_SIZE 912
-  key = (char *)http_malloc(__KV_SIZE*2+2);
-  if (key == NULL)
+  type              = &params[MIME_CONTENT_TYPE_PARAM_part_type];
+  name              = &params[MIME_CONTENT_TYPE_PARAM_part_name];
+  filename          = &params[MIME_CONTENT_TYPE_PARAM_part_filename];
+  id                = &params[MIME_CONTENT_TYPE_PARAM_part_content_id];
+  content_type      = &params[MIME_CONTENT_TYPE_PARAM_part_content_type];
+  transfer_encoding = &params[MIME_CONTENT_TYPE_PARAM_part_transfer_encoding];
+  
+#define ___BUFSZ 1892
+  buffer = (char *)http_malloc(___BUFSZ);
+  if (buffer == NULL)
   {
     log_fatal("Failed to malloc temp buffer.");
     goto clean0;
   }
-  value = key + __KV_SIZE+1;
-  key[0] = '\0';
-  value[0] = '\0';
-  proc_key = 1;
+  BUF_SIZE_INIT(&disposition, buffer, ___BUFSZ);
 
-  while (buffer[i] != '\0')
+  part = (multipartpart *)http_malloc(sizeof(multipartpart));
+  if (part == NULL)
   {
-    if (buffer[i] == '\r' && buffer[i + 1] == '\n')
-    {
-      value[c%__KV_SIZE] = '\0';
-      pair = hpairnode_new_len(key, key_len, value, c, NULL);
-      if (pair == NULL)
-      {
-        log_fatal("Failed to hpairnode_new_len.");
-        goto clean1;
-      }
-      if (last)
-      {
-        last->next = pair;
-        last = last->next;
-      }
-      else
-      {
-        first = last = pair;
-      }
-      proc_key = 1;
-      c = 0;
-      i++;
-    }
-    else if (buffer[i] == ':')
-    {
-      key[c%__KV_SIZE] = '\0';
-      key_len = c;
-      c = 0;
-      begin = 0;
-      proc_key = 0;
-    }
-    else
-    {
-      if (proc_key)
-      {
-        key[c%__KV_SIZE] = buffer[i];
-        c++;
-      }
-      else
-      {
-        if (buffer[i] != ' ')
-          begin = 1;
-        if (begin)
-        {
-          value[c%__KV_SIZE] = buffer[i];
-          c++;
-        }
-      }
-    }
-    i++;
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    goto clean1;
   }
-#undef __KV_SIZE
+  part->content_disposition = NULL;
 
-  http_free(key);
-  return first;
+  if (id != NULL)
+  {
+    pair = hpairnode_new(&__HDR_BUF__(HEADER_CONTENT_ID), 
+      id, &part->header);
+    if (pair == NULL)
+    {
+      log_error("hpairnode_new Id failed.");
+      goto clean2;
+    }
+    part->ContentID = &pair->val;
+  }
+
+  /* TODO (#1#): encoding is always binary. implement also others! */
+  if (transfer_encoding == NULL) 
+    transfer_encoding = &cstr_binary;
+  pair = hpairnode_new(&__HDR_BUF__(HEADER_CONTENT_TRANSFER_ENCODING), 
+    transfer_encoding, &part->header);
+  if (pair == NULL)
+  {
+    log_error("hpairnode_new Id failed.");
+    goto clean2;
+  }
+  part->TransferEncoding = &pair->val;
+    
+  if (content_type != NULL)
+  {
+    pair = hpairnode_new(&__HDR_BUF__(HEADER_CONTENT_TYPE), 
+      content_type, &part->header);
+    if (pair == NULL)
+    {
+      log_error("hpairnode_new Id failed.");
+      goto clean2;
+    }
+    part->ContentType = &pair->val;
+  }
+
+  n = ng_snprintf(BUF_CUR_PTR(&disposition), BUF_REMAIN(&disposition),
+    "%pS", type);
+  ng_block_set(&part->type, BUF_CUR_PTR(&disposition), type->len);
+  BUF_GO(&disposition, n);
+  if (name != NULL)
+  {
+    n = ng_snprintf(BUF_CUR_PTR(&disposition), BUF_REMAIN(&disposition),
+      "; name=\"%pS\"", name);
+    BUF_GO(&disposition, n);
+  }
+  if (filename != NULL)
+  {
+    n = ng_snprintf(BUF_CUR_PTR(&disposition), BUF_REMAIN(&disposition),
+      "; filename=\"%pS\"", filename);
+    ng_block_set(&part->filename, BUF_CUR_PTR(&disposition)+12, filename->len);
+    BUF_GO(&disposition, n);
+  }
+
+  pair = hpairnode_new(&__HDR_BUF__(HEADER_CONTENT_DISPOSITION), 
+    &disposition.b, &part->header);
+  if (pair == NULL)
+  {
+    log_error("hpairnode_new Content-Type failed.");
+    goto clean2;
+  }
+  part->Disposition = &pair->val;
+
+  ng_list_add_tail(&part->link, part_list);
+  ng_free_data_block(&disposition.b);
+  return part;
+#undef ___BUFSZ
   
+clean2:
+  mime_part_free(part);
 clean1:
-  hpairnode_free_deep(first);
+  ng_free_data_block(&disposition.b);
 clean0:
   return NULL;
 }
 
-
-static void
-_mime_received_bytes(void *data, const unsigned char *bytes, int size)
+static herror_t
+mime_write_begin(void *conn, unsigned int id, 
+  struct http_output_stream_t *out)
 {
-  int i = 0;
-  mime_callback_data_t *cbdata = (mime_callback_data_t *) data;
+  /* Send Content header */
+  return http_output_stream_write_printf(out, 
+            "\r\n----"HTTP_BOUNDARY_FMT"\r\n",
+            conn, id);
+}
 
-  if (!cbdata)
-  {
-    log_error
-      ("MIME transport error Called <received bytes> without initializing\n");
-    return;
-  }
-  if (!cbdata->current_part)
-  {
-    log_error
-      ("MIME transport error Called <received bytes> without initializing\n");
-    return;
-  }
-/*  log_verbose("Received %d bytes (%p), header_search = %d", 
-    size, data, cbdata->header_search);
+static herror_t
+mime_write_next(void *conn, unsigned int id, 
+  struct http_output_stream_t *out)
+{
+  /* Send Content header */
+  return http_output_stream_write_printf(out, 
+            "\r\n--"HTTP_BOUNDARY_FMT"\r\n",
+            conn, id);
+}
+
+static herror_t
+mime_write_end(void *conn, unsigned int id, 
+  struct http_output_stream_t *out)
+{
+  herror_t status;
+  
+  status = http_output_stream_write_printf(out, 
+    "\r\n--"HTTP_BOUNDARY_FMT"--\r\n\r\n", conn, id);
+  if (status != H_OK) return status;
+
+  status = http_output_stream_flush(out);
+  if (status != H_OK) return status;
+
+  return H_OK;
+}
+
+struct _mime_send_param{
+  void *conn;
+  unsigned int id; 
+  struct http_output_stream_t *out;
+};
+
+static herror_t 
+__file_send(void *arg, const char *buf, size_t length) 
+{
+  struct _mime_send_param *param = (struct _mime_send_param *)arg;
+  
+  herror_t status = mime_write_next(param->conn, param->id, param->out);
+  if (status != H_OK)
+    return status;
+
+  return http_output_stream_write(param->out, (unsigned char *)buf, length);
+}
+
+/**
+  Send boundary and part header and continue 
+  with next part
 */
-  if (cbdata->header_search < 4)
-  {
-    /* Find \r\n\r\n in bytes */
-    for (i = 0; i < size; i++)
-    {
-      if (cbdata->header_search == 0)
-      {
-        if (bytes[i] == '\r')
-          cbdata->header_search++;
-        else
-        {
-          cbdata->header[cbdata->header_index++] = bytes[i];
-          cbdata->header_search = 0;
-        }
-      }
-
-      else if (cbdata->header_search == 1)
-      {
-        if (bytes[i] == '\n')
-          cbdata->header_search++;
-        else
-        {
-          cbdata->header[cbdata->header_index++] = '\r';
-          cbdata->header[cbdata->header_index++] = bytes[i];
-          cbdata->header_search = 0;
-        }
-      }
-
-      else if (cbdata->header_search == 2)
-      {
-        if (bytes[i] == '\r')
-          cbdata->header_search++;
-        else
-        {
-          cbdata->header[cbdata->header_index++] = '\r';
-          cbdata->header[cbdata->header_index++] = '\n';
-          cbdata->header[cbdata->header_index++] = bytes[i];
-          cbdata->header_search = 0;
-        }
-      }
-
-      else if (cbdata->header_search == 3)
-      {
-        if (bytes[i] == '\n')
-        {
-          hpair_t *pair;
-          cbdata->header[cbdata->header_index++] = '\r';
-          cbdata->header[cbdata->header_index++] = '\n';
-          cbdata->header[cbdata->header_index++] = '\0';
-          cbdata->header_search = 4;
-          cbdata->current_part->header = _mime_process_header(cbdata->header);
-          hpairnode_dump_deep(cbdata->current_part->header);
-          /* set id */
-          pair = hpairnode_get_len(cbdata->current_part->header, 
-                          __HDR_BUF(HEADER_CONTENT_ID));
-          if (pair != NULL)
-          {
-            int len = RTE_MIN(sizeof(cbdata->current_part->id)-1, pair->val.len);
-            ng_memcpy(cbdata->current_part->id, pair->val.ptr, len);
-            cbdata->current_part->id[len] = '\0';
-            if (!strcmp(pair->val.cptr, cbdata->root_id))
-              cbdata->message->root_part = cbdata->current_part;
-          }
-          pair = hpairnode_get_len(cbdata->current_part->header,
-                          __HDR_BUF(HEADER_CONTENT_LOCATION));
-          if (pair != NULL)
-          {
-            int len = RTE_MIN(sizeof(cbdata->current_part->location)-1, pair->val.len);
-            ng_memcpy(cbdata->current_part->location, pair->val.ptr, len);
-            cbdata->current_part->location[len] = '\0';
-          }
-          pair = hpairnode_get_len(cbdata->current_part->header, 
-                          __HDR_BUF(HEADER_CONTENT_TYPE));
-          if (pair != NULL)
-          {
-            int len = RTE_MIN(sizeof(cbdata->current_part->content_type)-1, pair->val.len);
-            ng_memcpy(cbdata->current_part->content_type, pair->val.ptr, len);
-            cbdata->current_part->content_type[len] = '\0';
-          }
-          i++;
-          break;
-        }
-        else
-        {
-          cbdata->header[cbdata->header_index++] = '\r';
-          cbdata->header[cbdata->header_index++] = '\n';
-          cbdata->header[cbdata->header_index++] = '\r';
-          cbdata->header[cbdata->header_index++] = bytes[i];
-          cbdata->header_search = 0;
-        }
-      }
-      /* TODO (#1#): Check for cbdata->header overflow */
-
-    }                           /* for (i=0;i<size;i++) */
-  }                             /* if (cbdata->header_search < 4) */
-
-  if (i >= size - 1)
-    return;
-
-  /* Write remaining bytes into the file or buffer (if root) (buffer is
-     disabled in this version) */
-  if (cbdata->current_fd)
-    fwrite(&(bytes[i]), 1, size - i, cbdata->current_fd);
-
-  return;
-}
-
-
-/*
-  The mime message parser
-*/
-
-struct attachments_t *
-mime_message_parse(struct http_input_stream_t * in, const char *root_id,
-                   const char *boundary, const char *dest_dir)
-{
-  MIME_parser_status status;
-  MIME_callbacks callbacks;
-  struct attachments_t *message;
-
-  mime_callback_data_t *cbdata;
- 
-  if (!(cbdata = (mime_callback_data_t *) http_malloc(sizeof(mime_callback_data_t))))
-  {
-    log_error("http_malloc failed (%s)", strerror(errno));
-    return NULL;
-  }
-
-  cbdata->part_id = 100;
-  cbdata->buffer_capacity = 0;
-  cbdata->current_fd = NULL;
-  cbdata->current_part = NULL;
-  cbdata->header_index = 0;
-  cbdata->header_search = 0;
-  strcpy(cbdata->root_id, root_id);
-  strcpy(cbdata->root_dir, dest_dir);
-
-  if (!(message = (struct attachments_t *) http_malloc(sizeof(struct attachments_t))))
-  {
-    log_error("http_malloc failed (%s)", strerror(errno));
-    http_free(cbdata);
-    return NULL;
-  }
-  cbdata->message = message;
-  cbdata->message->parts = NULL;
-  cbdata->message->root_part = NULL;
-
-  callbacks.parse_begin_cb = _mime_parse_begin;
-  callbacks.parse_end_cb = _mime_parse_end;
-  callbacks.part_begin_cb = _mime_part_begin;
-  callbacks.part_end_cb = _mime_part_end;
-  callbacks.received_bytes_cb = _mime_received_bytes;
-
-  status = MIME_parse(mime_streamreader_function,
-                      in, boundary, &callbacks, cbdata);
-
-  if (status == MIME_PARSER_OK)
-  {
-    http_free(cbdata);
-    return message;
-  }
-  else
-  {
-    log_error("MIME parser error '%s'!",
-               status ==
-               MIME_PARSER_READ_ERROR ? "read error" : "Incomplete message");
-    return NULL;
-  }
-}
-
-struct attachments_t *
-mime_message_parse_from_file(FILE * in, const char *root_id,
-                             const char *boundary, const char *dest_dir)
-{
-  MIME_parser_status status;
-  MIME_callbacks callbacks;
-  struct attachments_t *message;
-
-  mime_callback_data_t *cbdata;
- 
-  if (!(cbdata = (mime_callback_data_t *) http_malloc(sizeof(mime_callback_data_t))))
-  {
-    log_error("http_malloc failed (%s)", strerror(errno));
-    return NULL;
-  }
-
-  cbdata->part_id = 100;
-  cbdata->buffer_capacity = 0;
-  cbdata->current_fd = NULL;
-  cbdata->current_part = NULL;
-  cbdata->header_index = 0;
-  cbdata->header_search = 0;
-  strcpy(cbdata->root_id, root_id);
-  strcpy(cbdata->root_dir, dest_dir);
-
-  if (!(message = (struct attachments_t *) http_malloc(sizeof(struct attachments_t))))
-  {
-    log_error("http_malloc failed (%s)", strerror(errno));
-    http_free(cbdata);
-    return NULL;
-  }
-
-  cbdata->message = message;
-  cbdata->message->parts = NULL;
-  cbdata->message->root_part = NULL;
-
-  callbacks.parse_begin_cb = _mime_parse_begin;
-  callbacks.parse_end_cb = _mime_parse_end;
-  callbacks.part_begin_cb = _mime_part_begin;
-  callbacks.part_end_cb = _mime_part_end;
-  callbacks.received_bytes_cb = _mime_received_bytes;
-
-  status = MIME_parse(MIME_filereader_function,
-                      in, boundary, &callbacks, cbdata);
-
-  if (status == MIME_PARSER_OK)
-  {
-    http_free(cbdata);
-    return message;
-  }
-  else
-  {
-    /* TODO (#1#): Free objects */
-
-    log_error("MIME parser error '%s'!",
-               status ==
-               MIME_PARSER_READ_ERROR ? "general error" :
-               "Incomplete message");
-    return NULL;
-  }
-}
-
 herror_t
-mime_get_attachments(content_type_t * ctype, struct http_input_stream_t * in,
-                     struct attachments_t ** dest)
+mime_send_file(void *conn, unsigned int id, 
+  struct http_output_stream_t *out, ng_block_s *file)
 {
-  /* MIME variables */
-  struct attachments_t *mimeMessage;
-  struct part_t *part, *tmp_part = NULL;
-  char *boundary, *root_id;
+  herror_t status;
+  struct _mime_send_param param;
 
-  /* Check for MIME message */
-  if (!(ctype && !strcmp(ctype->type, "multipart/related")))
-    return herror_new("mime_get_attachments", MIME_ERROR_NOT_MIME_MESSAGE,
-                      "Not a MIME message '%s'", ctype->type);
+  param.conn = conn;
+  param.id = id;
+  param.out = out;
+  
+  status = mime_write_begin(conn, id, out);
+  if (status != H_OK)
+    return status;
 
-  boundary = hpairnode_get(ctype->params, "boundary");
-  root_id = hpairnode_get(ctype->params, "start");
-  if (boundary == NULL)
+  status = nanohttp_file_read_all(file->cptr, file->len, __file_send, &param);
+  if (status != H_OK)
   {
-    /* TODO (#1#): Handle Error in http form */
-    log_error("'boundary' not set for multipart/related");
-    return herror_new("mime_get_attachments", MIME_ERROR_NO_BOUNDARY_PARAM,
-                      "'boundary' not set for multipart/related");
+    herror_log(status);
+    return status;
   }
 
-  if (root_id == NULL)
-  {
-    /* TODO (#1#): Handle Error in http form */
-    log_error("'start' not set for multipart/related");
-    return herror_new("mime_get_attachments", MIME_ERROR_NO_START_PARAM,
-                      "'start' not set for multipart/related");
-  }
+  status = mime_write_end(conn, id, out);
+  if (status != H_OK)
+    return status;
 
-  mimeMessage = mime_message_parse(in, root_id, boundary, ".");
-  if (mimeMessage == NULL)
-  {
-    /* TODO (#1#): Handle Error in http form */
-    log_error("MIME Parse Error");
-    return herror_new("mime_get_attachments", MIME_ERROR_PARSE_ERROR,
-                      "MIME Parse Error");
-  }
+  log_verbose("file sent!");
 
-  /* Find root */
-  if (!mimeMessage->root_part)
-  {
-    attachments_free(mimeMessage);
-    return herror_new("mime_get_attachments", MIME_ERROR_NO_ROOT_PART,
-                      "No root part found!");
-  }
-
-  /* delete root_part from list */
-  part = mimeMessage->parts;
-  while (part)
-  {
-    if (part == mimeMessage->root_part)
-    {
-      if (tmp_part)
-        tmp_part->next = part->next;
-      else
-        mimeMessage->parts = part->next;
-
-      break;
-    }
-    tmp_part = part;
-    part = part->next;
-  }
-  *dest = mimeMessage;
   return H_OK;
 }
 

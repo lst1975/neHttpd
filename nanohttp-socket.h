@@ -156,6 +156,8 @@ struct hsocket_t
   size_t bytes_received;
   int salen;
   void *ssl;
+  herror_t status;
+  httpd_buf_t data;
 };
 
 #ifdef __cplusplus
@@ -280,7 +282,7 @@ extern herror_t hsocket_send(struct hsocket_t *sock, const unsigned char *bytes,
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_SEND
  */
-extern herror_t hsocket_send_string(struct hsocket_t *sock, const char *str);
+extern herror_t hsocket_send_string(struct hsocket_t *sock, const char *fmt, ...);
 
 extern int hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len);
 #if __NHTTP_USE_EPOLL
