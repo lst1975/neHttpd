@@ -357,7 +357,7 @@ size_t multipartparser_execute(multipartparser *parser,
 
   end = data + size;
 
-  printf("%.*s\n", (int)size, data);
+  //printf("%.*s\n", (int)size, data);
   
   for (p = data; p < end; ++p) {
     c = *p;
