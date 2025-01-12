@@ -334,17 +334,6 @@ enum state {
 /* SP or HTAB : ((x) == 9 || (x) == 32) : 0x101 || 0x10 */
 #define __is_OWS(x) ((x) == 9 || (x) == 32)
 
-static inline const char *
-__http_strnstr(char *str, const char *p, size_t len)
-{
-  char c = str[len];
-  const char *r;
-  str[len]='\0';
-  r = strstr(str, p);
-  str[len]=c;
-  return r;
-}
-
 size_t multipartparser_execute(multipartparser *parser,
                  multipartparser_callbacks *callbacks,
                  const char *data,

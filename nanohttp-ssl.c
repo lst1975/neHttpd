@@ -594,7 +594,8 @@ hssl_server_ssl(struct hsocket_t *sock)
 
     log_error("SSL_accept failed (%s)", _hssl_get_error(ssl, ret));
 
-    err = herror_new("hssl_server_ssl", HSSL_ERROR_SERVER, "SSL_accept failed (%s)", _hssl_get_error(ssl, ret));
+    err = herror_new("hssl_server_ssl", HSSL_ERROR_SERVER, 
+      "SSL_accept failed (%s)", _hssl_get_error(ssl, ret));
     SSL_free(ssl);
 
     return err;

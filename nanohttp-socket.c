@@ -991,41 +991,83 @@ herror_t http_header_recv(struct hsocket_t *sock, char *buffer,
   httpd_buf_t p;
   const char *ptr, *pln;
 
+#define __HTTP_header_state_0      0
+#define __HTTP_header_state_LN     1
+  int state = __HTTP_header_state_0;
+  
   BUF_SIZE_INIT(&p, buffer, size);
   ptr = p.buf;
 
   /* Read header */
   while (1)
   {
-    if ((status = hsocket_recv(sock, (unsigned char *)BUF_CUR_PTR(&p), 
-      BUF_REMAIN(&p), 0, &readed)) != H_OK)
+    if (!BUF_REMAIN(&p))
     {
-      herror_log(status);
-      log_error("hsocket_recv failed.");
+      status = herror_new("http_header_recv", 
+        HSOCKET_ERROR_RECEIVE, "http header is too large.");
+      log_warn("http header is too large.");
+      return status;
+    }
+
+    status = hsocket_recv(sock, (unsigned char *)BUF_CUR_PTR(&p), 
+      BUF_REMAIN(&p), 0, &readed);
+    if (status != H_OK)
+    {
+      log_error("hsocket_recv failed (%s).", herror_message(status));
       return status;
     }
     BUF_GO(&p, readed);
 
-    /* log_error("buffer=\"%s\"", buffer); */
-    if (BUF_CUR_PTR(&p) - ptr < 3)
-      continue;
-    
-    BUF_SET_CHR(&p, '\0');
-    pln = strstr(ptr, "\n\r\n");
-    if (pln != NULL)
+    while (ptr < BUF_CUR_PTR(&p)) 
     {
-      *rcvbytes = BUF_LEN(&p); 
-      *hdrlen = pln + 3 - buffer;
-      break;
+      pln = ng_memchr(ptr, '\n', BUF_CUR_PTR(&p) - ptr);
+      switch (state)
+      {
+        default:
+        case __HTTP_header_state_0:
+          if (likely(pln != NULL))
+          {
+            state = __HTTP_header_state_LN;
+            ptr = pln + 1;
+            break;
+          }
+          ptr  = BUF_CUR_PTR(&p);
+          break;
+        case __HTTP_header_state_LN:
+          if (likely(pln != NULL))
+          {
+            if (likely(pln > ptr + 1))
+            {
+              state = __HTTP_header_state_LN;
+              ptr = pln + 1;
+              break;
+            }
+            else if (pln == ptr + 1)
+            {
+              if (pln[-1] == '\r')
+              {
+                *rcvbytes = BUF_LEN(&p); 
+                *hdrlen = pln + 1 - buffer;
+                return H_OK;
+              }
+              state = __HTTP_header_state_0;
+              ptr  = BUF_CUR_PTR(&p);
+              break;
+            }
+            else if (pln == ptr)
+            {
+              *rcvbytes = BUF_LEN(&p); 
+              *hdrlen = pln + 1 - buffer;
+              return H_OK;
+            }
+            break;
+          }
+          
+          state = __HTTP_header_state_0;
+          ptr  = BUF_CUR_PTR(&p);
+          break;
+      }
     }
-    pln = strstr(ptr, "\n\n");
-    if (pln != NULL)
-    {
-      *rcvbytes = BUF_LEN(&p); 
-      *hdrlen = pln + 2 - buffer;
-      break;
-    }
-    ptr = BUF_CUR_PTR(&p) - 3;
   }
 
   return H_OK;

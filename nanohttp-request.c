@@ -421,6 +421,7 @@ hrequest_new_from_socket(struct hsocket_t *sock,
   if ((status = http_header_recv(sock, buffer, MAX_HEADER_SIZE, 
     &hdrlen, &rcvbytes)) != H_OK)
   {
+    log_error("http_header_recv failed (%s).", herror_message(status));
     goto clean1;
   }
 

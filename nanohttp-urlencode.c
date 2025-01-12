@@ -487,21 +487,25 @@ int utf8_char_lenth(const unsigned char *data, int len)
   return bytes;
 }
 
-int encode_url(httpd_buf_t *b, const uint8_t* input, int len) 
+int encode_url(httpd_buf_t *b, const uint8_t *input, int len) 
 {
-  uint8_t* encoded;
+  int in_cursor;
+  int out_cursor;
+  uint8_t *encoded;
 
-  if (!len) len = strlen((const char *)input);
-  b->ptr = encoded = (uint8_t*)http_malloc(sizeof(uint8_t) * len * 6);
+  if (!len) 
+    len = strlen((const char *)input);
+  
+  encoded = (uint8_t*)http_malloc(sizeof(uint8_t) * len * 6);
   if (encoded == NULL)
   {
     log_fatal("Failed to http_malloc.");
     return -1;
   }
+  b->ptr = encoded;
 
-  int in_cursor = 0;
-  int out_cursor = 0;
-
+  in_cursor = 0;
+  out_cursor = 0;
   while (in_cursor < len) 
   {
     uint8_t charlen;
@@ -509,20 +513,24 @@ int encode_url(httpd_buf_t *b, const uint8_t* input, int len)
     if (charlen == 1)
     {
       const uint8_t c = input[in_cursor++];
-      switch (url_str_enc[c].len)
+      const struct _str_enc *enc=&url_str_enc[c];
+      switch (enc->len)
       {
         case 1:
-          encoded[out_cursor]                = url_str_enc[c].v1;
+          *(uint8_t  *)&encoded[out_cursor]  = enc->v1;
           out_cursor += 1;
           break;
+          
         case 3:
-          *(uint32_t *)&encoded[out_cursor]  = url_str_enc[c].v4;
+          *(uint32_t *)&encoded[out_cursor]  = enc->v4;
           out_cursor += 3;
           break;
+          
         case 6:
-          *(uint64_t *)&encoded[out_cursor]  = url_str_enc[c].v8;
+          *(uint64_t *)&encoded[out_cursor]  = enc->v8;
           out_cursor += 6;
           break;
+          
         default:
           assert(0);
           break;
