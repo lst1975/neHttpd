@@ -194,33 +194,33 @@ function MAIN_UPGRADE_display(p)
     });
     submit.attr("disabled", true);
     input.on("change", function(e){
+        if (!e.target.files.length)
+          return;
         var file = e.target.files[0] //getting file and [0] this means if user has selected multiples files then get first one only
-        if (file) {
-            if (!validFileType(file))
-            {
-              name.text(gmtLangBuild(["WrongFileType"],0)+file.type);
-              return;
-            }
-            //if file is selected
-            var fileName = file.name //getting selected file name
-            if (fileName.length >= 12) {
-                //if filename length is greater or equal to 12 the split the name and add...
-                let splitName = fileName.split('.')
-                fileName = splitName[0].substring(0, 12) + '... .' + splitName[1]
-            }
-            name.text(fileName);
-            submit.css({
-                "color":"black",
-                "pointer-events":"all"
-            });
-            submit.attr("disabled", false);
-            submit.attr("filename", fileName);
-            txt.css({
-              "background-color":"#2eb9e3",
-              "background":"linear-gradient(90deg, #0ff, #2eb9e3 0%, transparent 0)",
-            });
-            txt.text("0%");
+        if (!validFileType(file))
+        {
+          name.text(gmtLangBuild(["WrongFileType"],0)+file.type);
+          return;
         }
+        //if file is selected
+        var fileName = file.name //getting selected file name
+        if (fileName.length >= 12) {
+            //if filename length is greater or equal to 12 the split the name and add...
+            let splitName = fileName.split('.')
+            fileName = splitName[0].substring(0, 12) + '... .' + splitName[1]
+        }
+        name.text(fileName);
+        submit.css({
+            "color":"black",
+            "pointer-events":"all"
+        });
+        submit.attr("disabled", false);
+        submit.attr("filename", fileName);
+        txt.css({
+          "background-color":"#2eb9e3",
+          "background":"linear-gradient(90deg, #0ff, #2eb9e3 0%, transparent 0)",
+        });
+        txt.text("0%");
     });
 
     function uploadFile(fileName) {
@@ -228,25 +228,25 @@ function MAIN_UPGRADE_display(p)
       xhr.open('POST', 'post/wia.bin') //sending post request to the specified URL/File
       xhr.upload.addEventListener('progress', ({ loaded, total }) => {
         var fileLoaded = Math.floor((loaded / total) * 100) //getting percentage of loaded file size
-        var fileTotal = Math.floor(total / 1000) // getting file size in KB from bytes
         var fileSize;
         
         //if file size is less than 1024 then add only KB else convert size into KB to MB
-        if (!fileTotal)
-          fileSize = total + 'B';
+        if (loaded < 1024)
+          fileSize = loaded + 'B';
+        else if (loaded < 1024 * 1024)
+          fileSize = (loaded / (1024)).toFixed(2) + 'KB';
+        else if (loaded < 1024 * 1024 * 1024)
+          fileSize = (loaded / (1024 * 1024)).toFixed(2) + 'MB';
         else 
-        {
-          fileTotal < 1024
-            ? (fileSize = fileTotal + 'KB')
-            : (fileSize = (loaded / (1024 * 1024)).toFixed(2) + 'MB');
-        }
+          fileSize = (loaded / (1024 * 1024 * 1024)).toFixed(2) + 'GB';
           
         txt.css({
           "background-color":"#2eb9e3",
           "background":"linear-gradient(90deg, #0ff, #2eb9e3 "+fileLoaded+"%, transparent 0)",
         });
         txt.text(fileLoaded+"%");
-        name.html(fileName+"&nbsp;&#8226;&nbsp;"+gmtLangBuild([loaded === total ? "Uploaded" : "Uploading"],0)+"&nbsp;&#8226;&nbsp;" +fileSize);
+        name.html(fileName+"&nbsp;&#8226;&nbsp;"+gmtLangBuild([loaded === total ? 
+          "Uploaded" : "Uploading"],0)+"&nbsp;&#8226;&nbsp;" +fileSize);
       })
       // Set up the callback function to handle the response
       xhr.onreadystatechange = function () {
