@@ -81,7 +81,6 @@ objects = \
 	nanohttp-json.o \
 	nanohttp-ssl.o \
 	nanohttp-file.o \
-	nanohttp-form.o \
 	nanohttp-url.o \
 	nanohttp-user.o \
 	nanohttp-ring.o \
@@ -98,6 +97,7 @@ objects = \
 	nanohttp-inet.o \
 	nanohttp-header.o \
 	nanohttp-code.o \
+	nanohttp-const.o \
 	nanohttp-vsprintf.o \
 	nanohttp-urlencode.o
 
@@ -112,7 +112,7 @@ all: httpd
 
 -include $(depends)
 
-CFLAGS = -Wall -O3 -g3 -I.
+CFLAGS = -Wall -Og -g3 -I.
 LDFLAGS = 
 
 # Check if __CYGWIN__ is defined and set a Makefile variable
