@@ -134,7 +134,10 @@ typedef enum http_transfer_type
   HTTP_TRANSFER_FILE              /**< This transfer style will be used
 				       by MIME support and for debug
 				       purposes. */
-} http_transfer_type_t;
+} http_transfer_type_e;
+
+typedef struct http_input_stream_t http_input_stream_s;
+typedef struct http_output_stream_t http_output_stream_s;
 
 /** HTTP INPUT STREAM. Receives data from a socket/file and cares
  * about the transfer style. */
@@ -142,19 +145,19 @@ struct http_input_stream_t
 {
   struct hsocket_t *sock;
   herror_t err;
-  http_transfer_type_t type;
   size_t received;
   size_t content_length;
   size_t chunk_size;
   char connection_closed;
 
-  int (*stream_ready)(struct http_input_stream_t *stream);
-  size_t (*stream_read)(struct http_input_stream_t *stream, unsigned char *dest, size_t size);
+  int (*stream_ready)(http_input_stream_s *stream);
+  size_t (*stream_read)(http_input_stream_s *stream, unsigned char *dest, size_t size);
   
   /* file handling */
   void *fd;
-  char filename[255];
+  ng_block_s filename;
   int deleteOnExit;             /* default is 0 */
+  http_transfer_type_e type;
 };
 
 /** HTTP OUTPUT STREAM. Sends data to a socket and cares about the
@@ -162,7 +165,7 @@ struct http_input_stream_t
 struct http_output_stream_t
 {
   struct hsocket_t *sock;
-  http_transfer_type_t type;
+  http_transfer_type_e type;
   size_t content_length;
   size_t sent;
   herror_t status;
@@ -185,7 +188,7 @@ extern "C" {
  *
  * @see http_input_stream_free()
  */
-extern struct http_input_stream_t *
+extern http_input_stream_s *
 http_input_stream_new(struct hsocket_t *sock, ng_list_head_s *header, 
   httpd_buf_t *data);
 
@@ -200,8 +203,8 @@ http_input_stream_new(struct hsocket_t *sock, ng_list_head_s *header,
  *
  * @see http_input_stream_free()
  */
-extern struct http_input_stream_t *
-http_input_stream_new_from_file(const char *filename);
+extern http_input_stream_s *
+http_input_stream_new_from_file(const char *filename, int len);
 
 /** Free input stream. Note that the socket will not be closed by this
  * functions.
@@ -209,7 +212,7 @@ http_input_stream_new_from_file(const char *filename);
  * @param stream the input stream to http_free.
  */
 extern void 
-http_input_stream_free(struct http_input_stream_t *stream);
+http_input_stream_free(http_input_stream_s *stream);
 
 /** This function returns the actual status of the stream.
  *
@@ -219,7 +222,7 @@ http_input_stream_free(struct http_input_stream_t *stream);
  *         - 0, if no more data exists.
  */
 extern int 
-http_input_stream_is_ready(struct http_input_stream_t *stream);
+http_input_stream_is_ready(http_input_stream_s *stream);
 
 /** This function tries to read 'size' bytes from the stream. Check
  * always with http_input_stream_is_ready() if there are some data to
@@ -240,7 +243,7 @@ http_input_stream_is_ready(struct http_input_stream_t *stream);
  * @return the actual read bytes or -1 on error.
  */
 extern size_t 
-http_input_stream_read(struct http_input_stream_t *stream, 
+http_input_stream_read(http_input_stream_s *stream, 
                   unsigned char *dest, size_t size);
 
 /** Creates a new output stream. Transfer style will be found from the
@@ -255,7 +258,7 @@ http_input_stream_read(struct http_input_stream_t *stream,
  *
  * @see http_output_stream_free()
  */
-extern struct http_output_stream_t *
+extern http_output_stream_s *
 http_output_stream_new(struct hsocket_t *sock, ng_list_head_s *header);
 
 
@@ -265,7 +268,7 @@ http_output_stream_new(struct hsocket_t *sock, ng_list_head_s *header);
  * @param stream The stream to http_free.
  */
 extern void 
-http_output_stream_free(struct http_output_stream_t *stream);
+http_output_stream_free(http_output_stream_s *stream);
 
 /** This function writes 'size' bytes of 'bytes' into stream.
  *
@@ -278,11 +281,11 @@ http_output_stream_free(struct http_output_stream_t *stream);
  *         - HSOCKET_ERROR_SEND
  */
 extern herror_t 
-http_output_stream_write(struct http_output_stream_t *stream, 
+http_output_stream_write(http_output_stream_s *stream, 
                   const unsigned char *bytes, size_t size);
 
 extern herror_t
-http_output_stream_write_printf(struct http_output_stream_t *stream, 
+http_output_stream_write_printf(http_output_stream_s *stream, 
   const char *format, ...);
 
 /**
@@ -290,7 +293,7 @@ http_output_stream_write_printf(struct http_output_stream_t *stream,
   Returns socket error flags or H_OK.
 */
 static inline herror_t
-http_output_stream_write_buffer(struct http_output_stream_t * stream,
+http_output_stream_write_buffer(http_output_stream_s * stream,
                          ng_block_s *b)
 {
   return http_output_stream_write(stream, b->ptr, b->len);
@@ -306,7 +309,7 @@ http_output_stream_write_buffer(struct http_output_stream_t * stream,
  *         - HSOCKET_ERROR_SEND
  */
 extern herror_t 
-http_output_stream_write_string(struct http_output_stream_t *stream, 
+http_output_stream_write_string(http_output_stream_s *stream, 
                         const char *str);
 
 /** This function sends finish flags if nesseccary (like in chunked
@@ -319,7 +322,7 @@ http_output_stream_write_string(struct http_output_stream_t *stream,
  *         - HSOCKET_ERROR_SEND
  */
 extern herror_t 
-http_output_stream_flush(struct http_output_stream_t *stream);
+http_output_stream_flush(http_output_stream_s *stream);
 
 #ifdef __cplusplus
 }

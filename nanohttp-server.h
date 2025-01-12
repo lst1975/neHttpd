@@ -262,7 +262,7 @@ typedef struct httpd_conn
 {
   struct hsocket_t *sock;
   char content_type[25];
-  struct http_output_stream_t *out;
+  http_output_stream_s *out;
   ng_list_head_s header;
 }
 httpd_conn_t;

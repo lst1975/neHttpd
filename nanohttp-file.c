@@ -296,78 +296,83 @@ void *nanohttp_file_open_for_read(const char *file, int len)
   return nanohttp_file_open(file, len, "rb");
 }
 
+int nanohttp_file_iseof(void *file)
+{
+  return feof((FILE *)file);
+}
+
+void nanohttp_file_flush(void *file)
+{
+  fflush((FILE *)file);
+}
+
 herror_t nanohttp_file_read_all(const char *file, 
   int len, rwfile_f cb, void *arg)
 {
-  FILE *fptr=nanohttp_file_open_for_read(file, len);
+  FILE *fptr;
+  herror_t status;
+
+  fptr = nanohttp_file_open_for_read(file, len);
   if (fptr == NULL)
   {
-    return herror_new("nanohttp_file_read", FILE_ERROR_OPEN, 
+    status = herror_new("nanohttp_file_read_all", FILE_ERROR_OPEN, 
       "Failed to open file %s.", file);
+    goto clean0;
   }
 
-  // If the file exist
-  // Store the content of the file
-  char buffer[_nanoConfig_HTTPD_FILE_BLOCK];
-  int n;
-  
-  while (!feof(fptr))
-  {
-    herror_t r;
-    n = fread(buffer, 1, sizeof(buffer), fptr);
-    if (n != sizeof(buffer))
-    {
-      if (!feof(fptr))
-      {
-        nanohttp_file_close(fptr);
-        return herror_new("nanohttp_file_read", FILE_ERROR_READ, 
-          "Failed to read file %s.", file);
-      }
-    }
-
-    r = cb(arg, buffer, n);
-    if (r != NULL)
-    {
-      nanohttp_file_close(fptr);
-      return r;
-    }
-  }
-
+  status = nanohttp_file_read_callback(fptr, cb, arg);
   nanohttp_file_close(fptr);
-  return NULL;
+  
+clean0:
+  return status;
 }
 
-herror_t nanohttp_file_read(void *file, 
-  rwfile_f cb, void *arg)
+size_t nanohttp_file_read_tobuffer(void *file, 
+  unsigned char *buffer, size_t size)
 {
   FILE *fptr=(FILE *)file;
-
-  // If the file exist
-  // Store the content of the file
-  char buffer[_nanoConfig_HTTPD_FILE_BLOCK];
-  int n;
-  
-  while (!feof(fptr))
+  size_t n = fread(buffer, 1, size, fptr);
+  if (n != size)
   {
-    herror_t r;
-    n = fread(buffer, 1, sizeof(buffer), fptr);
-    if (n != sizeof(buffer))
+    if (!nanohttp_file_iseof(fptr))
     {
-      if (!feof(fptr))
-      {
-        return herror_new("nanohttp_file_read", FILE_ERROR_READ, 
-          "Failed to read file.");
-      }
-    }
-
-    r = cb(arg, buffer, n);
-    if (r != NULL)
-    {
-      return r;
+      return -1;
     }
   }
 
-  return NULL;
+  return n;
+}
+
+herror_t 
+nanohttp_file_read_callback(void *file, rwfile_f cb, void *arg)
+{
+  herror_t status;
+  FILE *fptr=(FILE *)file;
+  unsigned char buffer[_nanoConfig_HTTPD_FILE_BLOCK];
+
+  // If the file exist
+  // Store the content of the file
+  while (!nanohttp_file_iseof(fptr))
+  {
+    size_t n = nanohttp_file_read_tobuffer(fptr, buffer, sizeof(buffer));
+    if (n < 0)
+    {
+      status = herror_new("nanohttp_file_read", FILE_ERROR_READ, 
+        "Failed to read file %s.", file);
+      goto clean0;
+    }
+
+    status = cb(arg, (char *)buffer, n);
+    if (status != H_OK)
+    {
+      goto clean0;
+    }
+  }
+
+  status = H_OK;
+  
+clean0:
+  return status;
 }
 
 void *nanohttp_file_open_for_write(const char *file, int len)
@@ -412,24 +417,20 @@ int nanohttp_file_delete(const char *file, int len)
 size_t nanohttp_file_write(void *file, 
   const char *buffer, size_t length)
 {
-  FILE *fptr = (FILE *)file;
-
-  if (fptr == NULL) 
+  if (file == NULL) 
   { 
     return -1;
   }
   else
-  { // If the file exist
-    // Store the content of the file
-    // if (-1 == fseek(FILE *stream, SEEK_SET, SEEK_END))
-  	//   return -1;
-    int n = fwrite(buffer, 1, length, fptr);
+  {
+    size_t n = fwrite(buffer, 1, length, (FILE *)file);
     if (n != length)
     {
       return -1;
     }
-    return length;
-  } 
+
+    return n;
+  }
 }
 
 size_t nanohttp_file_size(const char *file, int len)

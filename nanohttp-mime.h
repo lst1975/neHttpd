@@ -278,7 +278,7 @@ multipartpart *multipartpart_new(void);
 void multipartpart_free(multipartpart *part);
 void multipartpart_init(multipartpart *part);
 herror_t multipart_get_attachment(multipartparser *p, 
-  struct http_input_stream_t *in);
+  http_input_stream_s *in);
 
 size_t multipartparser_execute(
     multipartparser* parser, 
@@ -317,7 +317,7 @@ extern ng_result_t ng_http_mime_type_init(void);
 extern void ng_http_mime_type_free(void);
 
 herror_t mime_send_file(void *conn, unsigned int id, 
-  struct http_output_stream_t *out, ng_block_s *file);
+  http_output_stream_s *out, ng_block_s *file);
 
 #ifdef __cplusplus
 }

@@ -131,6 +131,7 @@
 #include "nanohttp-vsprintf.h"
 #include "nanohttp-dtoa.h"
 #include "nanohttp-server.h"
+#include "nanohttp-file.h"
 
 #define PRIVATE static
 #define PUBLIC
@@ -1649,7 +1650,7 @@ __ng_std_out(void *arg, const char *string, size_t length)
 
   if (data->nbytes + length > data->length)
   {
-    int n = fwrite(data->holder, 1, data->nbytes, (FILE*)data->arg);
+    size_t n = nanohttp_file_write(data->arg, data->holder, data->nbytes);
     if (n < 0)
     {
       data->err = n;
@@ -1658,7 +1659,7 @@ __ng_std_out(void *arg, const char *string, size_t length)
       
     data->counter += n;
     data->nbytes = 0;
-    fflush((FILE*)data->arg);
+    nanohttp_file_flush(data->arg);
   }
   else
   {
@@ -1689,14 +1690,14 @@ __ng_vfprintf(void *fp, char const *format, va_list args)
   counter = __ng_vsnprintf_internal(&data, args);
   if (data.nbytes)
   {
-    int n = fwrite(data.holder, 1, data.nbytes, (FILE*)fp);
+    size_t n = nanohttp_file_write(fp, data.holder, data.nbytes);
     if (n < 0)
     {
       data.err = n;
       return -1;
     }
     counter += n;
-    fflush((FILE*)fp);
+    nanohttp_file_flush(fp);
   }
   return counter;
 }
@@ -1715,8 +1716,8 @@ __ng_fprintf(void *fp, char const * format, ...)
 }
 
 PUBLIC int
-__ng_vsnprintf(char *string, size_t length, char const *format, 
-  va_list args)
+__ng_vsnprintf(char *string, size_t length, 
+  char const *format, va_list args)
 {
   struct DATA data;
   data.length  = length - 1; /* leave room for '\0' */

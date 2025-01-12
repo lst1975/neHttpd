@@ -452,7 +452,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
         r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
         if (r == NULL)
         {
-          r = nanohttp_file_read(file, __root_service_read, conn);
+          r = nanohttp_file_read_callback(file, __root_service_read, conn);
           if (r != NULL)
           {
             herror_release(r);

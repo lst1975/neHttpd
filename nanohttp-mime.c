@@ -1007,7 +1007,7 @@ __multipart_cb_header_value(multipartparser *p,
 
 herror_t
 multipart_get_attachment(multipartparser *p, 
-  struct http_input_stream_t *in)
+  http_input_stream_s *in)
 {
   herror_t r = H_OK;
   
@@ -1344,7 +1344,7 @@ clean0:
 
 static herror_t
 mime_write_begin(void *conn, unsigned int id, 
-  struct http_output_stream_t *out)
+  http_output_stream_s *out)
 {
   /* Send Content header */
   return http_output_stream_write_printf(out, 
@@ -1354,7 +1354,7 @@ mime_write_begin(void *conn, unsigned int id,
 
 static herror_t
 mime_write_next(void *conn, unsigned int id, 
-  struct http_output_stream_t *out)
+  http_output_stream_s *out)
 {
   /* Send Content header */
   return http_output_stream_write_printf(out, 
@@ -1364,7 +1364,7 @@ mime_write_next(void *conn, unsigned int id,
 
 static herror_t
 mime_write_end(void *conn, unsigned int id, 
-  struct http_output_stream_t *out)
+  http_output_stream_s *out)
 {
   herror_t status;
   
@@ -1381,7 +1381,7 @@ mime_write_end(void *conn, unsigned int id,
 struct _mime_send_param{
   void *conn;
   unsigned int id; 
-  struct http_output_stream_t *out;
+  http_output_stream_s *out;
 };
 
 static herror_t 
@@ -1402,7 +1402,7 @@ __file_send(void *arg, const char *buf, size_t length)
 */
 herror_t
 mime_send_file(void *conn, unsigned int id, 
-  struct http_output_stream_t *out, ng_block_s *file)
+  http_output_stream_s *out, ng_block_s *file)
 {
   herror_t status;
   struct _mime_send_param param;

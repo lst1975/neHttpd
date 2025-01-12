@@ -274,7 +274,7 @@ typedef struct httpc_conn
 
   int errcode;
   char errmsg[150];
-  struct http_output_stream_t *out;
+  http_output_stream_s *out;
   int id;                       /* uniq id */
 } httpc_conn_t;
 

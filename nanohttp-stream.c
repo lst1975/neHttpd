@@ -115,6 +115,7 @@
 #include "nanohttp-stream.h"
 #include "nanohttp-header.h"
 #include "nanohttp-system.h"
+#include "nanohttp-file.h"
 
 static int
 _http_stream_has_content_length(ng_list_head_s *header)
@@ -142,49 +143,51 @@ _http_stream_is_chunked(ng_list_head_s *header)
 }
 
 void
-http_input_stream_free(struct http_input_stream_t * stream)
+http_input_stream_free(http_input_stream_s *stream)
 {
-  if (stream->type == HTTP_TRANSFER_FILE && stream->fd)
+  if (stream->type == HTTP_TRANSFER_FILE && stream->fd != NULL)
   {
-    fclose((FILE *)stream->fd);
+    nanohttp_file_close(stream->fd);
     if (stream->deleteOnExit)
-      log_info("Removing '%s'", stream->filename);
-    /* remove(stream->filename); */
+    {
+      log_info("Removing '%pS'", &stream->filename);
+      nanohttp_file_delete(stream->filename.cptr, stream->filename.len); 
+    }
   }
-
+  ng_free_data_block(&stream->filename);
   herror_release(stream->err);
   http_free(stream);
 }
 
 static int
 _http_input_stream_is_content_length_ready(
-  struct http_input_stream_t *stream)
+  http_input_stream_s *stream)
 {
   return (stream->content_length > stream->received);
 }
 
 static int
-_http_input_stream_is_chunked_ready(struct http_input_stream_t * stream)
+_http_input_stream_is_chunked_ready(http_input_stream_s *stream)
 {
   return stream->chunk_size != 0;
 }
 
 static int
 _http_input_stream_is_connection_closed_ready(
-  struct http_input_stream_t * stream)
+  http_input_stream_s *stream)
 {
   return !stream->connection_closed;
 }
 
 static int
-_http_input_stream_is_file_ready(struct http_input_stream_t * stream)
+_http_input_stream_is_file_ready(http_input_stream_s *stream)
 {
-  return !feof((FILE *)stream->fd);
+  return !nanohttp_file_iseof(stream->fd);
 }
 
 static size_t
 _http_input_stream_content_length_read(
-  struct http_input_stream_t *stream, unsigned char *dest, size_t size)
+  http_input_stream_s *stream, unsigned char *dest, size_t size)
 {
   herror_t status;
   size_t read;
@@ -205,7 +208,7 @@ _http_input_stream_content_length_read(
 }
 
 static int
-_http_input_stream_chunked_read_chunk_size(struct http_input_stream_t * stream)
+_http_input_stream_chunked_read_chunk_size(http_input_stream_s *stream)
 {
   char chunk[25];
   size_t status, i = 0;
@@ -271,7 +274,7 @@ _http_input_stream_chunked_read_chunk_size(struct http_input_stream_t * stream)
 }
 
 static size_t
-_http_input_stream_chunked_read(struct http_input_stream_t *stream, 
+_http_input_stream_chunked_read(http_input_stream_s *stream, 
   unsigned char *dest, size_t size)
 {
   size_t status, counter;
@@ -375,7 +378,7 @@ _http_input_stream_chunked_read(struct http_input_stream_t *stream,
 
 
 static size_t
-_http_input_stream_connection_closed_read(struct http_input_stream_t *stream, 
+_http_input_stream_connection_closed_read(http_input_stream_s *stream, 
   unsigned char *dest, size_t size)
 {
   size_t status;
@@ -396,15 +399,15 @@ _http_input_stream_connection_closed_read(struct http_input_stream_t *stream,
 }
 
 static size_t
-_http_input_stream_file_read(struct http_input_stream_t *stream, 
+_http_input_stream_file_read(http_input_stream_s *stream, 
   unsigned char *dest, size_t size)
 {
-  size_t len;
+  size_t len = nanohttp_file_read_tobuffer(stream->fd, dest, size);
 
-  if ((len = fread(dest, 1, size, (FILE *)stream->fd)) == -1)
+  if (len< 0)
   {
     stream->err = herror_new("_http_input_stream_file_read",
-                             HSOCKET_ERROR_RECEIVE, "fread() returned -1");
+                    FILE_ERROR_READ, "fread() returned -1");
     return -1;
   }
 
@@ -414,14 +417,14 @@ _http_input_stream_file_read(struct http_input_stream_t *stream,
 /**
   Creates a new input stream. 
 */
-struct http_input_stream_t *
+http_input_stream_s *
 http_input_stream_new(struct hsocket_t *sock, ng_list_head_s *header, 
   httpd_buf_t *data)
 {
-  struct http_input_stream_t *result;
+  http_input_stream_s *result;
 
-  if (!(result = (struct http_input_stream_t *) 
-    http_malloc(sizeof(struct http_input_stream_t))))
+  if (!(result = (http_input_stream_s *) 
+    http_malloc(sizeof(http_input_stream_s))))
   {
     log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
@@ -476,51 +479,65 @@ http_input_stream_new(struct hsocket_t *sock, ng_list_head_s *header,
   This function was added for MIME messages 
   and for debugging.
 */
-struct http_input_stream_t *
-http_input_stream_new_from_file(const char *filename)
+http_input_stream_s *
+http_input_stream_new_from_file(const char *filename,
+  int len)
 {
-  struct http_input_stream_t *result;
-  FILE *fd;
- 
-  if (!(fd = fopen(filename, "rb"))) {
+  http_input_stream_s *result;
+  void *fd;
+  
+  fd = nanohttp_file_open_for_read(filename, len);
+  if (fd == NULL) {
 
     log_error("fopen failed (%s)", os_strerror(ng_errno));
-    return NULL;
+    goto clean0;
   }
 
   /* Create object */
-  if (!(result = (struct http_input_stream_t *) 
-      http_malloc(sizeof(struct http_input_stream_t)))) 
+  result = (http_input_stream_s *) 
+      http_malloc(sizeof(http_input_stream_s));
+  if (result == NULL) 
   {
     log_error("http_malloc failed (%s)", os_strerror(ng_errno));
-    fclose(fd);
-    return NULL;
+    goto clean1;
   }
 
   result->type = HTTP_TRANSFER_FILE;
   result->fd = fd;
   result->err = H_OK;
   result->deleteOnExit = 0;
-  strcpy(result->filename, filename);
   result->stream_ready = _http_input_stream_is_file_ready;
   result->stream_read  = _http_input_stream_file_read;
-
+  result->filename.data = http_strdup_size(filename, len);
+  if (result->filename.data == NULL)
+  {
+    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    goto clean2;
+  }
+  result->filename.len = len;
+  
   return result;
+
+clean2:
+  http_free(result);
+clean1:
+  nanohttp_file_close(fd);
+clean0:
+  return NULL;
 }
 
 /**
   Returns the actual status of the stream.
 */
 int
-http_input_stream_is_ready(struct http_input_stream_t *stream)
+http_input_stream_is_ready(http_input_stream_s *stream)
 {
   /* paranoia check */
   if (stream == NULL)
     return 0;
 
   /* reset error flag */
-  if (stream->err)
-    herror_release(stream->err);
+  herror_release(stream->err);
   stream->err = H_OK;
 
   return stream->stream_ready(stream);
@@ -531,7 +548,7 @@ http_input_stream_is_ready(struct http_input_stream_t *stream)
   <0 on error
 */
 size_t
-http_input_stream_read(struct http_input_stream_t *stream, 
+http_input_stream_read(http_input_stream_s *stream, 
   unsigned char *dest, size_t size)
 {
   /* paranoia check */
@@ -539,8 +556,7 @@ http_input_stream_read(struct http_input_stream_t *stream,
     return -1;
 
   /* reset error flag */
-  if (stream->err)
-    herror_release(stream->err);
+  herror_release(stream->err);
   stream->err = H_OK;
 
   return stream->stream_read(stream, dest, size);
@@ -549,13 +565,14 @@ http_input_stream_read(struct http_input_stream_t *stream,
 /**
   Creates a new output stream. Transfer code will be found from header.
 */
-struct http_output_stream_t *
-http_output_stream_new(struct hsocket_t *sock, ng_list_head_s *header)
+http_output_stream_s *
+http_output_stream_new(struct hsocket_t *sock, 
+  ng_list_head_s *header)
 {
-  struct http_output_stream_t *result;
+  http_output_stream_s *result;
 
   /* Create object */
-  result = (struct http_output_stream_t *)http_malloc(sizeof(*result));
+  result = (http_output_stream_s *)http_malloc(sizeof(*result));
   if (result == NULL)
   {
     log_error("http_malloc failed (%s)", os_strerror(ng_errno));
@@ -599,7 +616,7 @@ http_output_stream_new(struct hsocket_t *sock, ng_list_head_s *header)
   Free output stream
 */
 void
-http_output_stream_free(struct http_output_stream_t * stream)
+http_output_stream_free(http_output_stream_s *stream)
 {
   herror_release(stream->status);
   http_free(stream);
@@ -611,7 +628,7 @@ http_output_stream_free(struct http_output_stream_t * stream)
   Returns socket error flags or H_OK.
 */
 herror_t
-http_output_stream_write(struct http_output_stream_t * stream,
+http_output_stream_write(http_output_stream_s *stream,
                          const unsigned char *bytes, size_t size)
 {
   herror_t status;
@@ -644,7 +661,7 @@ http_output_stream_write(struct http_output_stream_t * stream,
   Returns socket error flags or H_OK.
 */
 herror_t
-http_output_stream_write_string(struct http_output_stream_t * stream,
+http_output_stream_write_string(http_output_stream_s *stream,
                                 const char *str)
 {
   return http_output_stream_write(stream, (const unsigned char *)str, strlen(str));
@@ -653,7 +670,7 @@ http_output_stream_write_string(struct http_output_stream_t * stream,
 static int
 __http_snprintf_out(void *arg, const char *string, size_t length)
 {
-  struct http_output_stream_t *stream = (struct http_output_stream_t *)arg;
+  http_output_stream_s *stream = (http_output_stream_s *)arg;
   herror_t status;
   status = http_output_stream_write(stream, (const unsigned char *)string, length);
   if (status != H_OK)
@@ -669,7 +686,7 @@ __http_snprintf_out(void *arg, const char *string, size_t length)
   Returns socket error flags or H_OK.
 */
 herror_t
-http_output_stream_write_printf(struct http_output_stream_t *stream, 
+http_output_stream_write_printf(http_output_stream_s *stream, 
   const char *format, ...)
 {
   int n;
@@ -700,13 +717,14 @@ http_output_stream_write_printf(struct http_output_stream_t *stream,
 }
 
 herror_t
-http_output_stream_flush(struct http_output_stream_t *stream)
+http_output_stream_flush(http_output_stream_s *stream)
 {
   herror_t status;
 
   if (stream->type == HTTP_TRANSFER_CHUNKED)
   {
-    if ((status = hsocket_send(stream->sock, (const unsigned char *)"0\r\n\r\n", 5)) != H_OK)
+	status = hsocket_send(stream->sock, (const unsigned char *)"0\r\n\r\n", 5);
+    if (status != H_OK)
       return status;
   }
 

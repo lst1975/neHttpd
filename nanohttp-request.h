@@ -230,7 +230,7 @@ struct hrequest_t
   size_t   content_length;
   struct request_statistics statistics;
 
-  struct http_input_stream_t *in;
+  http_input_stream_s *in;
   content_type_t *content_type;
   void *attachments;
   hreq_method_t  method;

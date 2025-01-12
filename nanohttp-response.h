@@ -762,7 +762,7 @@ typedef struct hresponse
 
   ng_list_head_s header;
 
-  struct http_input_stream_t *in;
+  http_input_stream_s *in;
   content_type_t *content_type;
   void *attachments;
   char root_part_id[150];

@@ -103,7 +103,7 @@
 typedef herror_t (*rwfile_f)(void *arg, const char *buf, size_t length); 
 
 size_t nanohttp_file_write(void *file, const char *buffer, size_t length);
-herror_t nanohttp_file_read(void *file, rwfile_f cb, void *arg);
+herror_t nanohttp_file_read_callback(void *file, rwfile_f cb, void *arg);
 void nanohttp_file_close(void *file);
 void *nanohttp_file_open_for_write(const char *file, int len);
 int nanohttp_file_delete(const char *file, int len);
@@ -116,6 +116,9 @@ void nanohttp_dir_free(void);
 herror_t hsocket_setexec(int sock, int err);
 int nanohttp_dir_create(const ng_block_s *path);
 int nanohttp_dir_isok(const ng_block_s *path);
+int nanohttp_file_iseof(void *file);
+size_t nanohttp_file_read_tobuffer(void *file, unsigned char *buffer, size_t size);
+void nanohttp_file_flush(void *file);
 
 #define NDIR_OK        0
 #define NDIR_NOT_DIR   1
