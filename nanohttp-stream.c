@@ -433,6 +433,7 @@ http_input_stream_new(struct hsocket_t *sock, ng_list_head_s *header,
   sock->data   = *data;
   result->sock = sock;
   result->err  = H_OK;
+  ng_block_init(&result->filename);
 
   /* Find connection type */
   hpairnode_dump_deep(header);
