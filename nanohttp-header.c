@@ -64,6 +64,11 @@
 #include "nanohttp-buffer.h"
 #include "nanohttp-header.h"
 #include "nanohttp-ctype.h"
+#include "nanohttp-error.h"
+#include "nanohttp-socket.h"
+#include "nanohttp-stream.h"
+#include "nanohttp-request.h"
+#include "nanohttp-code.h"
 
 struct _nu{
   int8_t  i;
@@ -503,3 +508,25 @@ const uint8_t __rte_aligned(1) __isValidFieldValue[256] ={
 };
 #endif
 
+void http_header_parser_init(header_parser_s *p, int type)
+{
+  ng_INIT_LIST_HEAD(&p->header);
+  BUF_SIZE_INIT(&p->data, p->buffer, sizeof(p->buffer));
+  p->state = __HTTP_header_state_0;
+  switch (type)
+  {
+    case __HTTP_header_type_request:
+      p->method  = HTTP_REQUEST_METHOD_UNKOWN;
+      p->version = HTTP_VERSION_UNKOWN;
+      ng_block_init(&p->path);
+      break;
+    case __HTTP_header_type_response:
+      p->code    = HTTP_RESPONSE_CODE_000_UNKNOWN;
+      p->version = HTTP_VERSION_UNKOWN;
+      ng_block_init(&p->desc);
+      break;
+    default:
+      assert(0);
+      break;
+  }
+}

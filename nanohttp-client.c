@@ -182,7 +182,7 @@ httpc_new(void)
     goto clean3;
   }
 
-  res->version = HTTP_1_1;
+  res->version = HTTP_VERSION_1_1;
   res->out = NULL;
   res->id = counter++;
   ng_INIT_LIST_HEAD(&res->header);
@@ -442,17 +442,12 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn,
 
   switch(method)
   {
-    case HTTP_REQUEST_GET:
-
-      len = ng_snprintf(buffer, ___BUFSZ, "GET %pS HTTP/%s\r\n",
-          &conn->url.context, (conn->version == HTTP_1_0) ? "1.0" : "1.1");
-      break;
-
-    case HTTP_REQUEST_POST:
-
-      len = ng_snprintf(buffer, ___BUFSZ, "POST %pS HTTP/%s\r\n",
-          &conn->url.context,
-          (conn->version == HTTP_1_0) ? "1.0" : "1.1");
+    case HTTP_REQUEST_METHOD_GET:
+    case HTTP_REQUEST_METHOD_POST:
+      len = ng_snprintf(buffer, ___BUFSZ, "%s %pS HTTP/%s\r\n", 
+          method == HTTP_REQUEST_METHOD_GET ? "GET" : "POST",
+          &conn->url.context, 
+          (conn->version == HTTP_VERSION_1_0) ? "1.0" : "1.1");
       break;
 
     default:
@@ -499,7 +494,7 @@ httpc_get(httpc_conn_t *conn, hresponse_t **out, const ng_block_s *urlstr)
 {
   herror_t status;
 
-  if ((status = _httpc_talk_to_server(HTTP_REQUEST_GET, conn, urlstr)) != H_OK)
+  if ((status = _httpc_talk_to_server(HTTP_REQUEST_METHOD_GET, conn, urlstr)) != H_OK)
   {
     herror_log(status);
     log_error("_httpc_talk_to_server failed.");
@@ -521,7 +516,7 @@ httpc_post_begin(httpc_conn_t *conn, const ng_block_s *url)
 {
   herror_t status;
 
-  if ((status = _httpc_talk_to_server(HTTP_REQUEST_POST, conn, url)) != H_OK)
+  if ((status = _httpc_talk_to_server(HTTP_REQUEST_METHOD_POST, conn, url)) != H_OK)
   {
     herror_log(status);
     log_error("_httpc_talk_to_server failed.");

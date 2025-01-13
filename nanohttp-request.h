@@ -109,7 +109,7 @@ typedef enum _hreq_method
    *   data-handling process;
    * - Extending a database through an append operation.
    */
- HTTP_REQUEST_POST,
+ HTTP_REQUEST_METHOD_POST,
   /**
    * The GET method means retrieve whatever information (in the form of an entity)
    * is identified by the Request-URI. If the Request-URI refers to a
@@ -117,7 +117,7 @@ typedef enum _hreq_method
    * the entity in the response and not the source text of the process, unless
    * that text happens to be the output of the process.
    */
-  HTTP_REQUEST_GET,
+  HTTP_REQUEST_METHOD_GET,
   /**
    * The OPTIONS method represents a request for information about the
    * communication options available on the request/response chain identified by
@@ -126,7 +126,7 @@ typedef enum _hreq_method
    * server, without implying a resource action or initiating a resource
    * retrieval.
    */
-  HTTP_REQUEST_OPTIONS,
+  HTTP_REQUEST_METHOD_OPTIONS,
   /**
    * The HEAD method is identical to GET except that the server MUST NOT return
    * a message-body in the response. The metainformation contained in the HTTP
@@ -136,7 +136,7 @@ typedef enum _hreq_method
    * the entity-body itself. This method is often used for testing hypertext
    * links for validity, accessibility, and recent modification.
    */
-  HTTP_REQUEST_HEAD,
+  HTTP_REQUEST_METHOD_HEAD,
   /**
    * The PUT method requests that the enclosed entity be stored under the
    * supplied Request-URI. If the Request-URI refers to an already existing
@@ -154,7 +154,7 @@ typedef enum _hreq_method
    * Content-Range) headers that it does not understand or implement and MUST
    * return a 501 (Not Implemented) response in such cases.
    */
-  HTTP_REQUEST_PUT,
+  HTTP_REQUEST_METHOD_PUT,
   /**
    * The DELETE method requests that the origin server delete the resource
    * identified by the Request-URI. This method MAY be overridden by human
@@ -165,7 +165,7 @@ typedef enum _hreq_method
    * time the response is given, it intends to delete the resource or move it to
    * an inaccessible location.
    */
-  HTTP_REQUEST_DELETE,
+  HTTP_REQUEST_METHOD_DELETE,
   /**
    * The TRACE method is used to invoke a remote, application-layer loop-back of
    * the request message. The final recipient of the request SHOULD reflect the
@@ -174,13 +174,13 @@ typedef enum _hreq_method
    * or gateway to receive a Max-Forwards value of zero (0) in the request (see
    * section 14.31). A TRACE request MUST NOT include an entity.
    */
-  HTTP_REQUEST_TRACE,
+  HTTP_REQUEST_METHOD_TRACE,
   /**
    * This specification reserves the method name CONNECT for use with a proxy
    * that can dynamically switch to being a tunnel (e.g. SSL tunneling [44]).
    */
-  HTTP_REQUEST_CONNECT,
-  HTTP_REQUEST_UNKOWN
+  HTTP_REQUEST_METHOD_CONNECT,
+  HTTP_REQUEST_METHOD_UNKOWN
 } hreq_method_t;
 
 /** @file nanohttp-request.h HTTP request handling

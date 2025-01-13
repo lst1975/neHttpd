@@ -141,8 +141,9 @@ typedef struct hpair hpair_t;
  */
 typedef enum _http_version
 {
-  HTTP_1_0,
-  HTTP_1_1                      /* default */
+  HTTP_VERSION_UNKOWN,
+  HTTP_VERSION_1_0,
+  HTTP_VERSION_1_1                      /* default */
 } http_version_t;
 
 

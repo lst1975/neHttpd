@@ -127,7 +127,7 @@ _hresponse_new(void)
     return NULL;
   }
 
-  res->version = HTTP_1_1;
+  res->version = HTTP_VERSION_1_1;
   res->errcode = -1;
   res->desc   = NULL;
   res->in = NULL;
@@ -169,9 +169,9 @@ _hresponse_parse_header(const char *buffer, size_t len)
   if (str - buffer == 8)
   {
     if (*(uint64_t *)buffer == *(const uint64_t *)"HTTP/1.0")
-      res->version = HTTP_1_0;
+      res->version = HTTP_VERSION_1_0;
     else if (*(uint64_t *)buffer == *(const uint64_t *)"HTTP/1.1")
-      res->version = HTTP_1_1;
+      res->version = HTTP_VERSION_1_1;
   }
   if (res->version == -1)
   {

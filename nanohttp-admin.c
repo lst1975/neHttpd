@@ -110,13 +110,14 @@
 #include "nanohttp-stream.h"
 #include "nanohttp-request.h"
 #include "nanohttp-server.h"
+#include "nanohttp-code.h"
 
 #include "nanohttp-admin.h"
 
 static void
 _httpd_admin_send_title(httpd_conn_t *conn, const char *title)
 {
-  httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+  httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
 
   http_output_stream_write_string(conn->out,
    "<html>"
@@ -431,13 +432,13 @@ _httpd_admin_handle_get(httpd_conn_t * conn, struct hrequest_t *req)
 static void
 _httpd_admin_entry(httpd_conn_t * conn, struct hrequest_t *req)
 {
-  if (req->method == HTTP_REQUEST_GET)
+  if (req->method == HTTP_REQUEST_METHOD_GET)
   {
     _httpd_admin_handle_get(conn, req);
   }
   else
   {
-    httpd_send_header(conn, 501, HTTP_STATUS_501_REASON_PHRASE);
+    httpd_send_header(conn, HTTP_RESPONSE_CODE_501_Not_Implemented);
     http_output_stream_write_string(conn->out,
       "<html>"
         "<head>"

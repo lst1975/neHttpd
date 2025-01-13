@@ -136,8 +136,8 @@
 #define PRIVATE static
 #define PUBLIC
 
-#define ngrtos_FALSE 0
-#define ngrtos_TRUE  1
+#define ngrtos_FALSE ng_FALSE
+#define ngrtos_TRUE  ng_TRUE
 
 /*
  * For the FLOATING POINT FORMAT :
@@ -868,21 +868,21 @@ __ip4_string(char *p, const uint8_t *addr, const char *fmt)
   case 'h':
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
     index = 0;
-    step = 1;
+    step  = 1;
 #else
     index = 3;
-    step = -1;
+    step  = -1;
 #endif
     break;
   case 'l':
     index = 3;
-    step = -1;
+    step  = -1;
     break;
   case 'n':
   case 'b':
   default:
     index = 0;
-    step = 1;
+    step  = 1;
     break;
   }
   
@@ -986,15 +986,19 @@ ip6_compressed_string(char *p, const uint8_t *addr)
     range = 8;
 
   /* find position of longest 0 run */
-  for (i = 0; i < range; i++) {
-    for (j = i; j < range; j++) {
+  for (i = 0; i < range; i++) 
+  {
+    for (j = i; j < range; j++) 
+    {
       if (ng_s6_addr16(&in6, j) != 0)
         break;
       zerolength[i]++;
     }
   }
-  for (i = 0; i < range; i++) {
-    if (zerolength[i] > longest) {
+  for (i = 0; i < range; i++) 
+  {
+    if (zerolength[i] > longest) 
+    {
       longest = zerolength[i];
       colonpos = i;
     }
@@ -1003,8 +1007,10 @@ ip6_compressed_string(char *p, const uint8_t *addr)
     colonpos = -1;
 
   /* emit address */
-  for (i = 0; i < range; i++) {
-    if (i == colonpos) {
+  for (i = 0; i < range; i++) 
+  {
+    if (i == colonpos) 
+    {
       if (needcolon || i == 0)
         *p++ = ':';
       *p++ = ':';
@@ -1012,7 +1018,8 @@ ip6_compressed_string(char *p, const uint8_t *addr)
       i += longest - 1;
       continue;
     }
-    if (needcolon) {
+    if (needcolon) 
+    {
       *p++ = ':';
       needcolon = ngrtos_FALSE;
     }
@@ -1020,7 +1027,8 @@ ip6_compressed_string(char *p, const uint8_t *addr)
     word = ng_ntohs(ng_s6_addr8(&in6, i));
     hi = word >> 8;
     lo = word & 0xff;
-    if (hi) {
+    if (hi) 
+    {
       if (hi > 0x0f)
         p = hex_byte_pack(p, hi);
       else
@@ -1034,7 +1042,8 @@ ip6_compressed_string(char *p, const uint8_t *addr)
     needcolon = ngrtos_TRUE;
   }
 
-  if (useIPv4) {
+  if (useIPv4) 
+  {
     if (needcolon)
       *p++ = ':';
     p = __ip4_string(p, (const uint8_t *)&ng_s6_addr8(&in6, 12), "I4");
@@ -1053,7 +1062,8 @@ ip6_string(char *p, const uint8_t *addr, const char *fmt)
 {
   int i;
 
-  for (i = 0; i < 8; i++) {
+  for (i = 0; i < 8; i++) 
+  {
     p = hex_byte_pack(p, *addr++);
     p = hex_byte_pack(p, *addr++);
     if (fmt[0] == 'I' && i != 7)
@@ -1117,28 +1127,30 @@ ip6_addr_string_sa(struct DATA *d, const struct sockaddr_in6 *sa)
   
   while (meet) 
   {
-    switch (d->pf[1]) {
-    case 'p':
-      have_p = ngrtos_TRUE;
-      break;
-    case 'f':
-      have_f = ngrtos_TRUE;
-      break;
-    case 's':
-      have_s = ngrtos_TRUE;
-      break;
-    case 'c':
-      have_c = ngrtos_TRUE;
-      break;
-    default:
-      meet = 0;
-      break;
+    switch (d->pf[1]) 
+    {
+      case 'p':
+        have_p = ngrtos_TRUE;
+        break;
+      case 'f':
+        have_f = ngrtos_TRUE;
+        break;
+      case 's':
+        have_s = ngrtos_TRUE;
+        break;
+      case 'c':
+        have_c = ngrtos_TRUE;
+        break;
+      default:
+        meet = 0;
+        break;
     }
     if (meet)
       d->pf++;
   }
 
-  if (have_p || have_s || have_f) {
+  if (have_p || have_s || have_f) 
+  {
     *p = '[';
     off = 1;
   }
@@ -1151,11 +1163,13 @@ ip6_addr_string_sa(struct DATA *d, const struct sockaddr_in6 *sa)
   if (have_p || have_s || have_f)
     *p++ = ']';
 
-  if (have_p) {
+  if (have_p) 
+  {
     *p++ = ':';
     p += ng_itoa(ng_ntohs(sa->sin6_port), p, pend - p);
   }
-  if (have_f) {
+  if (have_f) 
+  {
     *p++ = '/';
 #define IPV6_FLOWINFO_MASK rte_cpu_to_be_32(0x0FFFFFFF)
     p += ng_itoa(ng_ntohl(sa->sin6_flowinfo & IPV6_FLOWINFO_MASK),
@@ -1203,7 +1217,8 @@ ip4_addr_string_sa(struct DATA *d, const struct sockaddr_in *sa)
   }
 
   p = __ip4_string(ip4_addr, addr, fmt4);
-  if (have_p) {
+  if (have_p) 
+  {
     *p++ = ':';
     p += ng_itoa(ng_ntohs(sa->sin_port), p, pend - p);
   }

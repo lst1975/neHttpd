@@ -446,12 +446,12 @@ static inline void
 httpd_response_set_content_type(httpd_conn_t *res, const char *content_type, int len)
 {
   len = RTE_MIN(sizeof(res->content_type)-1, len);
-  memcpy(res->content_type, content_type, len);
+  ng_memcpy(res->content_type, content_type, len);
   res->content_type[len] = 0;
   return;
 }
 
-extern herror_t httpd_send_header(httpd_conn_t * res, int code, const char *text);
+extern herror_t httpd_send_header(httpd_conn_t *res, int code);
 
 /** This function sends a minimalistic HTML error document with HTTP
  * status 400.

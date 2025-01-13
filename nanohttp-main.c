@@ -85,6 +85,7 @@
 #include "nanohttp-vsprintf.h"
 #include "nanohttp-url.h"
 #include "nanohttp-const.h"
+#include "nanohttp-code.h"
 
 static int
 simple_authenticator(struct hrequest_t *req, const ng_block_s *user, 
@@ -117,7 +118,7 @@ default_service(httpd_conn_t *conn, struct hrequest_t *req)
 
   if (ng_block_isequal__(&__TEST_DEV_FILE, &req->path))
   {
-    httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+    httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
     http_output_stream_write_string(conn->out,
       "{"
         "'shortAddr':10,"
@@ -138,7 +139,7 @@ headers_service(httpd_conn_t *conn, struct hrequest_t *req)
   hpair_t *walker;
   herror_t status;
 
-  status = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+  status = httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
   if (status != H_OK) goto clean0;
   
   status = http_output_stream_write_string(conn->out,
@@ -180,7 +181,7 @@ __post_internal_error(httpd_conn_t *conn, herror_t r)
   herror_t sr;
 
   herror_log(r);
-  sr = httpd_send_header(conn, 500, HTTP_STATUS_500_REASON_PHRASE);
+  sr = httpd_send_header(conn, HTTP_RESPONSE_CODE_500_Internal_Server_Error);
   if (sr != H_OK) 
   {
     herror_release(sr);
@@ -197,27 +198,25 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
 {
   herror_t r;
   
-  if (req->method == HTTP_REQUEST_POST)
+  if (req->method == HTTP_REQUEST_METHOD_POST)
   {
     multipartparser p;
 
     r = multipartparser_init(&p, req, req->content_type);
     if (r != H_OK)
     {
-      herror_log(r);
-      log_error("multipartparser_init failed.");
+      log_error("multipartparser_init failed (%s).", herror_message(r));
       return __post_internal_error(conn, r);
     }
 
     r = multipart_get_attachment(&p, req->in);
     if (r != H_OK)
     {
-      herror_log(r);
-      log_error("multipart_get_attachment failed.");
+      log_error("multipart_get_attachment failed (%s).", herror_message(r));
       return __post_internal_error(conn, r);
     }
     
-    return httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+    return httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
   }
   else
   {
@@ -229,7 +228,11 @@ static void
 post_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   herror_t r = __post_service(conn, req, "config/gw.bin");
-  herror_release(r);
+  if (r != H_OK)
+  {
+    herror_log(r);
+    herror_release(r);
+  }
 }
 
 static herror_t
@@ -293,7 +296,7 @@ __send_root_html(httpd_conn_t *conn, struct hrequest_t *req)
 
   do
   {
-    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+    r = httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
     if (r != H_OK) break;
 
     r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_DECL1);
@@ -327,7 +330,7 @@ secure_service(httpd_conn_t *conn, struct hrequest_t *req)
 {
   herror_t r;
 
-  r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+  r = httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
   if (r == H_OK)
   {
     log_info("secure_service received, redirect to index.html");
@@ -416,7 +419,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
           log_error("httpd_set_header failed");
           break;
         }
-        r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+        r = httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
         if (r != NULL) break;
         r = http_output_stream_write(conn->out, bf, len);
         if (r != NULL) break;
@@ -445,11 +448,11 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
       {
         // If the file does not exist
         log_error("Not able to open the file %pS for reading.", &req->path);
-        r = httpd_send_header(conn, 404, HTTP_STATUS_404_REASON_PHRASE);
+        r = httpd_send_header(conn, HTTP_RESPONSE_CODE_404_Not_Found);
       }
       else
       {
-        r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+        r = httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
         if (r == NULL)
         {
           r = nanohttp_file_read_callback(file, __root_service_read, conn);
@@ -957,7 +960,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
 finished:  
     http_free(query);
     json_pairs_free(pair);
-    r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+    r = httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
     herror_release(r);
     if (*buf)
     {
@@ -971,11 +974,11 @@ finished:
     if (ng_block_isequal__(&__SYS_FILE, &req->path))
     {
       // Generate system.json
-      r = httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
+      r = httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
     }
     else
     {
-      r = httpd_send_header(conn, 204, HTTP_STATUS_204_REASON_PHRASE);
+      r = httpd_send_header(conn, HTTP_RESPONSE_CODE_204_No_Content);
     }
     herror_release(r);
     return;

@@ -132,8 +132,8 @@ static struct hrequest_t *hrequest_new(void)
   }
 
   req->statistics.time = ng_get_time();
-  req->method       = HTTP_REQUEST_GET;
-  req->version      = HTTP_1_1;
+  req->method       = HTTP_REQUEST_METHOD_UNKOWN;
+  req->version      = HTTP_VERSION_1_1;
   req->in           = NULL;
   req->attachments  = NULL;
   req->content_type = NULL;
@@ -208,25 +208,25 @@ _hrequest_parse_header(char *data, size_t len)
       /* save method (get or post) */
       key_len = result - key;
       if (key_len == 3 && !ng_memcmp(key, "GET", 3))
-        req->method = HTTP_REQUEST_GET;
+        req->method = HTTP_REQUEST_METHOD_GET;
       else if (key_len == 4 && !ng_memcmp(key, "POST", 4))
-        req->method = HTTP_REQUEST_POST;
+        req->method = HTTP_REQUEST_METHOD_POST;
       else if (key_len == 7 && !ng_memcmp(key, "OPTIONS", 7))
-        req->method = HTTP_REQUEST_OPTIONS;
+        req->method = HTTP_REQUEST_METHOD_OPTIONS;
       else if (key_len == 4 && !ng_memcmp(key, "HEAD", 4))
-        req->method = HTTP_REQUEST_HEAD;
+        req->method = HTTP_REQUEST_METHOD_HEAD;
       else if (key_len == 3 && !ng_memcmp(key, "PUT", 3))
-        req->method = HTTP_REQUEST_PUT;
+        req->method = HTTP_REQUEST_METHOD_PUT;
       else if (key_len == 6 && !ng_memcmp(key, "DELETE", 6))
-        req->method = HTTP_REQUEST_DELETE;
+        req->method = HTTP_REQUEST_METHOD_DELETE;
       else if (key_len == 5 && !ng_memcmp(key, "TRACE", 5))
-        req->method = HTTP_REQUEST_TRACE;
+        req->method = HTTP_REQUEST_METHOD_TRACE;
       else if (key_len == 7 && !ng_memcmp(key, "CONNECT", 7))
-        req->method = HTTP_REQUEST_CONNECT;
+        req->method = HTTP_REQUEST_METHOD_CONNECT;
       else
-        req->method = HTTP_REQUEST_UNKOWN;
+        req->method = HTTP_REQUEST_METHOD_UNKOWN;
 
-      if (req->method > HTTP_REQUEST_GET)
+      if (req->method > HTTP_REQUEST_METHOD_GET)
       {
         log_error("Not supported request method (%.*s)", 
           key_len, key);
@@ -249,9 +249,9 @@ _hrequest_parse_header(char *data, size_t len)
       if (t - key - 1 == 8)
       {
         if (*(uint64_t *)(key + 1) == *(const uint64_t *)"HTTP/1.0")
-          req->version = HTTP_1_0;
+          req->version = HTTP_VERSION_1_0;
         else if (*(uint64_t *)(key + 1) == *(const uint64_t *)"HTTP/1.1")
-          req->version = HTTP_1_1;
+          req->version = HTTP_VERSION_1_1;
       }
       if (req->version == -1)
       {
@@ -405,7 +405,7 @@ hrequest_new_from_socket(struct hsocket_t *sock,
 {
   size_t hdrlen;
   size_t rcvbytes;
-  herror_t status = H_OK;
+  herror_t status;
   char *buffer;
   struct hrequest_t *req;
   httpd_buf_t data;

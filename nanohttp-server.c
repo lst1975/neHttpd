@@ -162,6 +162,7 @@ static inline int hssl_enabled(void) { return 0; }
 #include "nanohttp-mime.h"
 #include "nanohttp-header.h"
 #include "nanohttp-const.h"
+#include "nanohttp-code.h"
 
 #ifndef WIN32
 #define __NHTTP_LISTEN_DUAL_STACK 0
@@ -919,8 +920,9 @@ httpd_find_service(const char *context, int context_len)
 
   for (cur = _httpd_services_head; cur; cur = cur->next)
   {
-    if (cur->name_len == 4 && (*(uint32_t*)cur->name == *(const uint32_t*)"FILE"
-      || *(uint32_t*)cur->name == *(const uint32_t*)"DATA"))
+    if (cur->name_len == 4 
+      &&  (*(uint32_t*)cur->name == *(const uint32_t*)"FILE"
+        || *(uint32_t*)cur->name == *(const uint32_t*)"DATA"))
     {
       if (!memcmp(cur->context, context, cur->context_len))
         return cur;
@@ -934,7 +936,7 @@ httpd_find_service(const char *context, int context_len)
 }
 
 herror_t
-httpd_send_header(httpd_conn_t *res, int code, const char *text)
+httpd_send_header(httpd_conn_t *res, int code)
 {
   char *header;
   hpair_t *cur;
@@ -956,7 +958,7 @@ httpd_send_header(httpd_conn_t *res, int code, const char *text)
   BUF_SIZE_INIT(&b, header, __BUF_SZ);
   
   /* set status code */
-  n = ng_snprintf(__BUF, "HTTP/1.1 %d %s\r\n", code, text);
+  n = ng_snprintf(__BUF, "HTTP/1.1 %pS\r\n", http_code2name(code));
   BUF_GO(&b, n);
 
   /* set date */
@@ -1047,21 +1049,22 @@ clean0:
 
 static herror_t
 _httpd_send_html_message(httpd_conn_t *conn, int reason, 
-  const char *phrase, const char *msg)
+  const char *msg)
 {
   herror_t r;
   char *buf;
   char slen[5];
   size_t len;
   ng_block_s b;
+  const ng_block_s *c = http_code2name(reason);
   
   const char *tmpl =
     "<html>"
       "<head>"
-        "<title>%s</title>"
+        "<title>%pS</title>"
       "</head>"
       "<body>"
-        "<h3>%s</h3>"
+        "<h3>%.*s</h3>"
       	"<hr/>"
         "<div>Message: '%s'</div>"
       "</body>"
@@ -1076,18 +1079,17 @@ _httpd_send_html_message(httpd_conn_t *conn, int reason,
     goto clean0;
   }
   
-  len = ng_snprintf(buf, __BUF_SZ, tmpl, phrase, phrase, msg);
+  len = ng_snprintf(buf, __BUF_SZ, tmpl, c, c->len-4, c->ptr+4, msg);
   b.len = ng_snprintf(slen, 5, "%lu", len);
   b.buf = slen;
-  if (hpairnode_set_header(&conn->header, 
-    &__HDR_BUF__(HEADER_CONTENT_LENGTH), &b))
+  if (hpairnode_set_header(&conn->header, &__HDR_BUF__(HEADER_CONTENT_LENGTH), &b))
   {
     r = herror_new("_httpd_send_html_message", GENERAL_ERROR,
                       "Failed to httpd_set_header!");
     goto clean1;
   }
 
-  if ((r = httpd_send_header(conn, reason, phrase)) != H_OK)
+  if ((r = httpd_send_header(conn, reason)) != H_OK)
   {
     goto clean1;
   }
@@ -1104,7 +1106,7 @@ clean0:
 herror_t
 httpd_send_bad_request(httpd_conn_t *conn, const char *msg)
 {
-  return _httpd_send_html_message(conn, 400, HTTP_STATUS_400_REASON_PHRASE, msg);
+  return _httpd_send_html_message(conn, HTTP_RESPONSE_CODE_400_Bad_Request, msg);
 }
 
 #define _(x) { .cptr = x, .len = sizeof(x) -1}
@@ -1123,75 +1125,55 @@ httpd_send_unauthorized(httpd_conn_t *conn, const char *realm)
 {
   herror_t r;
 
-  log_debug("httpd_send_unauthorized: building HTTP_STATUS_401_REASON_PHRASE.");
+  log_debug("httpd_send_unauthorized: building %pS.",
+    http_code2name(HTTP_RESPONSE_CODE_401_Unauthorized));
 
-  if (1)
+  r = httpd_send_header(conn, HTTP_RESPONSE_CODE_401_Unauthorized);
+  if (r != H_OK)
   {
-    r = httpd_send_header(conn, 401, HTTP_STATUS_401_REASON_PHRASE);
-    if (r != H_OK)
-    {
-      herror_log(r);
-      log_debug("httpd_send_header failed.");
-      return r;
-    }
-    
-    log_info("secure_service received, redirect to login.html");
-
-    do {
-      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_DECL1);
-      if (r != H_OK) break;
-      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_JS_MENU_GUEST);
-      if (r != H_OK) break;
-      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_DECL2);
-      if (r != H_OK) break;
-      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_LOGIN);
-    } 
-    while (0);
-    
+    log_debug("httpd_send_header failed (5s).", herror_message(r));
     return r;
   }
-  else
-  {
-    char buf[128];
-    ng_block_s b;
-    
-    b.len = ng_snprintf(buf, 128, "Basic realm=\"%s\"", realm);
-    b.buf = buf;
-    if (hpairnode_set_header(&conn->header, &__HDR_BUF__(HEADER_WWW_AUTHENTICATE), &b) < 0)
-    {
-      r = herror_new("httpd_send_unauthorized", GENERAL_ERROR,
-                        "Failed to httpd_set_header!");
-      return r;
-    }
-    
-    r = httpd_send_header(conn, 401, HTTP_STATUS_401_REASON_PHRASE);
-    if (r != H_OK)
-    {
-      herror_log(r);
-      log_debug("httpd_send_header failed.");
-      return r;
-    }
-    return _httpd_send_html_message(conn, 401, 
-      HTTP_STATUS_401_REASON_PHRASE, "Unauthorized request logged");
-  }
+  
+  log_info("secure_service received, redirect to login.html");
+
+  do {
+    r = http_output_stream_write_buffer(conn->out, 
+          nanohttp_index_html_head_DECL1);
+    if (r != H_OK) break;
+    r = http_output_stream_write_buffer(conn->out, 
+          nanohttp_index_html_head_JS_MENU_GUEST);
+    if (r != H_OK) break;
+    r = http_output_stream_write_buffer(conn->out, 
+          nanohttp_index_html_head_DECL2);
+    if (r != H_OK) break;
+    r = http_output_stream_write_buffer(conn->out, 
+          nanohttp_index_html_head_LOGIN);
+  } 
+  while (0);
+  
+  return r;
 }
 
 herror_t
 httpd_send_not_found(httpd_conn_t *conn, const char *msg)
 {
-  return _httpd_send_html_message(conn, 404, HTTP_STATUS_404_REASON_PHRASE, msg);
+  return _httpd_send_html_message(conn, 
+    HTTP_RESPONSE_CODE_404_Not_Found, msg);
 }
 
 herror_t
 httpd_send_internal_error(httpd_conn_t *conn, const char *msg)
 {
-  return _httpd_send_html_message(conn, 500, HTTP_STATUS_500_REASON_PHRASE, msg);
+  return _httpd_send_html_message(conn, 
+    HTTP_RESPONSE_CODE_500_Internal_Server_Error, msg);
 }
 
 herror_t
 httpd_send_not_implemented(httpd_conn_t *conn, const char *msg)
 {
-  return _httpd_send_html_message(conn, 501, HTTP_STATUS_501_REASON_PHRASE, msg);
+  return _httpd_send_html_message(conn, 
+    HTTP_RESPONSE_CODE_501_Not_Implemented, msg);
 }
 
 static void
@@ -1202,10 +1184,10 @@ _httpd_request_print(struct hrequest_t * req)
 
   log_verbose("++++++ Request +++++++++");
   log_verbose(" Method : %s",
-               (req->method == HTTP_REQUEST_POST) ? "POST" : "GET");
+               (req->method == HTTP_REQUEST_METHOD_POST) ? "POST" : "GET");
   log_verbose(" Path   : %pS", &req->path);
   log_verbose(" Spec   : %s",
-               (req->version == HTTP_1_0) ? "HTTP/1.0" : "HTTP/1.1");
+               (req->version == HTTP_VERSION_1_0) ? "HTTP/1.0" : "HTTP/1.1");
   log_verbose(" ++++++ Parsed Query string :");
 
   ng_list_for_each_entry(pair,hpair_t,&req->query,link)
@@ -1274,7 +1256,7 @@ _httpd_decode_authorization(int *tmplen,
     log_error("http_calloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
-  value = memchr(_value, ' ', inlen);
+  value = ng_memchr(_value, ' ', inlen);
   if (value == NULL)
   {
     log_error("Authorization malformed.");
@@ -1300,7 +1282,7 @@ _httpd_decode_authorization(int *tmplen,
   log_verbose("Authorization (ascii) = \"%.*s\"", len, tmp);
 
   *tmplen = len;
-  tmp2 = (unsigned char *)memchr((char *)tmp, ':', len);
+  tmp2 = (unsigned char *)ng_memchr((char *)tmp, ':', len);
   if (tmp2 != NULL)
   {
     user->len = tmp2 - tmp;
@@ -1394,7 +1376,8 @@ httpd_session_main(void *data)
     log_verbose("starting HTTP request on socket %d (%p).", 
       conn->sock.sock, conn);
 
-    if ((status = hrequest_new_from_socket(&(conn->sock), &req)) != H_OK)
+    status = hrequest_new_from_socket(&(conn->sock), &req);
+    if (status != H_OK)
     {
       int code;
 
@@ -1409,10 +1392,12 @@ httpd_session_main(void *data)
           herror_log(status);
           log_error("hrequest_new_from_socket failed.");
           break;
+          
         default:
           httpd_send_bad_request(rconn, herror_message(status));
           break;
       }
+      
       herror_release(status);
       done = 1;
     }
@@ -1432,7 +1417,7 @@ httpd_session_main(void *data)
         done = 1;
 
       if (!done)
-        done = req->version == HTTP_1_0 ? 1 : 0;
+        done = req->version == HTTP_VERSION_1_0 ? 1 : 0;
 
       if ((service = httpd_find_service(req->path.cptr, req->path.len)))
       {
@@ -2344,7 +2329,7 @@ httpd_get_postdata(httpd_conn_t *conn, struct hrequest_t *req,
   size_t content_length = 0, rcved, total_len;
   unsigned char *postdata = NULL;
 
-  if (req->method == HTTP_REQUEST_POST)
+  if (req->method == HTTP_REQUEST_METHOD_POST)
   {
     hpair_t *content_length_pair;
     content_length_pair = hpairnode_get_ignore_case(&req->header, 
