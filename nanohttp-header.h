@@ -2258,32 +2258,115 @@ enum __http_header {
       standard. The field's value is a single token specifying the type of encoding, 
       as enumerated below. Formally:
 
-      Content-Transfer-Encoding := "BASE64" / "QUOTED-PRINTABLE" / 
-                                   "8BIT"   / "7BIT" / 
-                                   "BINARY" / x-token
-             
-      These values are not case sensitive. That is, Base64 and BASE64 and bAsE64 are all 
-      equivalent. An encoding type of 7BIT requires that the body is already in a seven-bit 
-      mail-ready representation. This is the default value -- that is, 
-      "Content-Transfer-Encoding: 7BIT" is assumed if the Content-Transfer-Encoding header 
-      field is not present.
-      
-      The values "8bit", "7bit", and "binary" all imply that NO encoding has been performed. 
-      However, they are potentially useful as indications of the kind of data contained in 
-      the object, and therefore of the kind of encoding that might need to be performed for 
-      transmission in a given transport system. "7bit" means that the data is all represented 
-      as short lines of US-ASCII data. "8bit" means that the lines are short, but there may 
-      be non-ASCII characters (octets with the high-order bit set). "Binary" means that not 
-      only may non-ASCII characters be present, but also that the lines are not necessarily 
-      short enough for SMTP transport.
+      Syntax
+        Content-Transfer-Encoding := "BASE64" / "QUOTED-PRINTABLE" / 
+                                     "8BIT"   / "7BIT" / 
+                                     "BINARY" / x-token
+               
+        These values are not case sensitive. That is, Base64 and BASE64 and bAsE64 are all 
+        equivalent. An encoding type of 7BIT requires that the body is already in a 7-bit 
+        mail-ready representation. This is the default value -- that is, 
+        "Content-Transfer-Encoding: 7BIT" is assumed if the Content-Transfer-Encoding header 
+        field is not present.
+        
+        The values "8bit", "7bit", and "binary" all imply that NO encoding has been performed. 
+        However, they are potentially useful as indications of the kind of data contained in 
+        the object, and therefore of the kind of encoding that might need to be performed for 
+        transmission in a given transport system. "7bit" means that the data is all represented 
+        as short lines of US-ASCII data. "8bit" means that the lines are short, but there may 
+        be non-ASCII characters (octets with the high-order bit set). "Binary" means that not 
+        only may non-ASCII characters be present, but also that the lines are not necessarily 
+        short enough for SMTP transport.
 
-      The difference between "8bit" (or any other conceivable bit-width token) and the 
-      "binary" token is that "binary" does not require adherence to any limits on line 
-      length or to the SMTP CRLF semantics, while the bit-width tokens do require such 
-      adherence. If the body contains data in any bit-width other than 7-bit, the 
-      appropriate bit-width Content-Transfer-Encoding token must be used (e.g., "8bit" 
-      for unencoded 8 bit wide data). If the body contains binary data, the "binary" 
-      Content-Transfer-Encoding token must be used.
+        The difference between "8bit" (or any other conceivable bit-width token) and the 
+        "binary" token is that "binary" does not require adherence to any limits on line 
+        length or to the SMTP CRLF semantics, while the bit-width tokens do require such 
+        adherence. If the body contains data in any bit-width other than 7-bit, the 
+        appropriate bit-width Content-Transfer-Encoding token must be used (e.g., "8bit" 
+        for unencoded 8 bit wide data). If the body contains binary data, the "binary" 
+        Content-Transfer-Encoding token must be used.
+
+      Directives
+        7Bit Encoding
+          7bit simply means "My data consists only of US-ASCII characters, which only use 
+          the lower 7 bits for each character." You're basically guaranteeing that all of 
+          the bytes in your content already adhere to the restrictions of SMTP, and so it
+          needs no special treatment. You can just read it as-is.
+
+          Note that when you choose 7bit, you're agreeing that all of the lines in your 
+          content are less than 1000 characters in length.
+
+          As long as your content adheres to these rule, 7bit is the best transfer encoding, 
+          since there's no extra work necessary; you just read/write the bytes as they 
+          come off the pipe. It's also easy to eyeball 7bit content and make sense of it. 
+          The idea here is that if you're just writing in "plain English text" you'll be 
+          fine. But that wasn't true in 2005 and it isn't true today.
+
+        8Bit Encoding
+          8bit means "My data may include extended ASCII characters; they may use the 8th 
+          (highest) bit to indicate special characters outside of the standard US-ASCII 
+          7-bit characters." As with 7bit, there's still a 1000-character line limit.
+
+          8bit, just like 7bit, does not actually do any transformation of the bytes as 
+          they're written to or read from the wire. It just means that you're not 
+          guaranteeing that none of the bytes will have the highest bit set to "1".
+
+          This seems like a step up from 7bit, since it gives you more freedom in your 
+          content. However, RFC 1341 contains this tidbit:
+
+          As of the publication of this document, there are no standardized Internet 
+          transports for which it is legitimate to include unencoded 8-bit or binary 
+          data in mail bodies. Thus there are no circumstances in which the "8bit" 
+          or "binary" Content-Transfer-Encoding is actually legal on the Internet.
+
+          RFC 1341 came out over 20 years ago. Since then we've gotten 8bit MIME 
+          Extensions in RFC 6152. But even then, line limits still may apply:
+
+          Note that this extension does NOT eliminate the possibility of an SMTP 
+          server limiting line length; servers are free to implement this extension 
+          but nevertheless set a line length limit no lower than 1000 octets.
+
+        Binary Encoding
+          binary is the same as 8bit, except that there's no line length restriction. 
+          You can still include any characters you want, and there's no extra encoding. 
+          Similar to 8bit, RFC 1341 states that it's not really a legitimate encoding 
+          transfer encoding. RFC 3030 extended this with BINARYMIME.
+
+        Quoted Printable
+          Before the 8BITMIME extension, there needed to be a way to send content 
+          that couldn't be 7bit over SMTP. HTML files (which might have more than 
+          1000-character lines) and files with international characters are good
+          examples of this. The quoted-printable encoding (Defined in Section 5.1 
+          of RFC 1341) is designed to handle this. It does two things:
+
+          Defines how to escape non-US-ASCII characters so that they can be represented 
+          in only 7-bit characters. (Short version: they get displayed as an equals 
+          sign plus two 7-bit characters.)
+          
+          Defines that lines will be no greater than 76 characters, and that line breaks 
+          will be represented using special characters (which are then escaped).
+          Quoted Printable, because of the escaping and short lines, is much harder to 
+          read by a human than 7bit or 8bit, but it does support a much wider range 
+          of possible content.
+
+        Base64 Encoding
+          If your data is largely non-text (ex: an image file), you don't have many 
+          options. 7bit is off the table. 8bit and binary were unsupported prior to 
+          the MIME extension RFCs. quoted-printable would work, but is really 
+          inefficient (every byte is going to be represented by 3 characters).
+
+          base64 is a good solution for this type of data. It encodes 3 raw bytes as 
+          4 US-ASCII characters, which is relatively efficient. RFC 1341 further 
+          limits the line length of base64-encoded data to 76 characters to fit 
+          within an SMTP message, but that's relatively easy to manage when you're 
+          just splitting or concatenating arbitrary characters at fixed lengths.
+
+          The big downside is that base64-encoded data is pretty much entirely 
+          unreadable by humans, even if it's just "plain" text underneath.
+
+        Examples
+          Content-Type: text/plain; charset=ISO-8859-1 
+          Content-transfer-encoding: base64
       */
  ,HTTP_HEADER_CONTENT_TRANSFER_ENCODING
      /**

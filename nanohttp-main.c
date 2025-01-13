@@ -482,7 +482,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
 #define ___USER_PFX_LEN 4 
 
 #define __CFG_ret0(x) "{\"id\":%d,\"err\":[{\"id\":\"" x "\",\"reason\":\""
-#define CFG_ret1 __CFG_ret0("%.*s")
+#define CFG_ret1 __CFG_ret0("%pS")
 #define CFG_ret3 "\"}]}"
 #define CFG_RET0(msg) __CFG_ret0("") msg CFG_ret3
 #define CFG_RET1(msg) CFG_ret1 msg CFG_ret3
@@ -700,6 +700,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
                   CFG_RET1("For testing received error message from our product."), 
                   id, 
                   &p->key);
+          goto finished;
         }
       }
     }
