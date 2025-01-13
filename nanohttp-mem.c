@@ -4,7 +4,7 @@
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
@@ -35,7 +35,7 @@
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
@@ -131,6 +131,7 @@ static void __http_malloced_list_deq(http_mentry_s *e)
     httpd_enter_mutex(&msg_mutex_lock);
     ng_list_del(&e->link);
     httpd_leave_mutex(&msg_mutex_lock);
+    e->isinq = 0;
   }
 #else
   HTTPD_UNUSED(e);

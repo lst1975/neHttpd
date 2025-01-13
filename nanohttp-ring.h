@@ -4,7 +4,7 @@
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
@@ -35,7 +35,7 @@
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
@@ -97,20 +97,6 @@
 #include <linux/atomic.h>
 #include <asm/barrier.h>
 //--------------------- wordsize ----------------------------------------------
-#ifndef __WORDSIZE
-  #if defined(__64BIT__) || defined(_LP64) || defined(__LP64__) || defined(_WIN64) ||\
-    defined(__x86_64__) || defined(_M_X64) ||\
-    defined(__ia64) || defined(_M_IA64) ||\
-    defined(__aarch64__) ||\
-    defined(__mips64) ||\
-    defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__) ||\
-    defined(__RISCV64__) || defined(__riscv64__) ||\
-    defined(__s390x__)
-#define __WORDSIZE 64
-  #else
-#define __WORDSIZE 32
-  #endif
-#endif
 #  ifndef PRIu32
 #   define PRIu32 "u"
 #  endif /* PRIu32 */
@@ -145,26 +131,14 @@ typedef uint32_t NG_U32;
 /* We provide internal macro here to allow conditional expansion
  * in the body of the per-arch rte_atomic_thread_fence inline functions.
  */
-#define ng_smp_mb() __atomic_thread_fence(__ATOMIC_ACQ_REL)
+#define ng_smp_mb()  __atomic_thread_fence(__ATOMIC_ACQ_REL)
 #define ng_smp_wmb() __atomic_thread_fence(__ATOMIC_RELEASE)
 #define ng_smp_rmb() __atomic_thread_fence(__ATOMIC_CONSUME)
 #define ng_barrier() HTTPD_UNUSED(0)
-static inline void ng_atomic_inc(NG_U32 *x)
-{
-  __atomic_add_fetch(x, 1, __ATOMIC_RELAXED); 
-}
-static inline void ng_atomic_dec(NG_U32 *x)
-{
-  __atomic_add_fetch(x, -1, __ATOMIC_RELAXED); 
-}
-static inline NG_U32 ng_atomic_read(NG_U32 *x)
-{
-  return __atomic_load_n(x, __ATOMIC_RELAXED); 
-}
-static inline void ng_atomic_set(NG_U32 *x, int n)
-{
-  __atomic_store_n(x, n, __ATOMIC_RELAXED); 
-}
+#define ng_atomic_inc(x)    __atomic_add_fetch(&(x), 1, __ATOMIC_RELAXED)
+#define ng_atomic_dec(x)    __atomic_add_fetch(&(x), -1, __ATOMIC_RELAXED)
+#define ng_atomic_read(x)   __atomic_load_n(&(x), __ATOMIC_RELAXED)
+#define ng_atomic_set(x,n)  __atomic_store_n(&(x), n, __ATOMIC_RELAXED)
 #endif
 
 struct ng_singleRW_ring
@@ -194,7 +168,7 @@ static inline void *
 ng_singlerw_ring_get(ng_singlerw_ring_s *ring)
 {
   void *elem;
-  int count = ng_atomic_read(&ring->__N);
+  int count = ng_atomic_read(ring->__N);
   if (count == 0)
     return NULL;
 
@@ -204,15 +178,15 @@ ng_singlerw_ring_get(ng_singlerw_ring_s *ring)
   NG_RING_DEBUG_RING("  R:%u"__LN,  ring->__R & ring->mask);
   ng_smp_mb();
 
-  ng_atomic_dec(&ring->__N);
-  NG_RING_DEBUG_RING("  count:%u"__LN,  ng_atomic_read(&ring->__N));
+  ng_atomic_dec(ring->__N);
+  NG_RING_DEBUG_RING("  count:%u"__LN,  ng_atomic_read(ring->__N));
   return elem;
 };
 
 static inline int 
 ng_singlerw_ring_set(ng_singlerw_ring_s *ring, void *elem)
 {
-  int count = ng_atomic_read(&ring->__N);
+  int count = ng_atomic_read(ring->__N);
   if (count > ring->mask)
     return -1;
   
@@ -222,8 +196,8 @@ ng_singlerw_ring_set(ng_singlerw_ring_s *ring, void *elem)
   NG_RING_DEBUG_RING("  W:%u"__LN,  ring->__W & ring->mask);
   ng_smp_mb();
 
-  ng_atomic_inc(&ring->__N);
-  NG_RING_DEBUG_RING("  count:%u"__LN,  ng_atomic_read(&ring->__N));
+  ng_atomic_inc(ring->__N);
+  NG_RING_DEBUG_RING("  count:%u"__LN,  ng_atomic_read(ring->__N));
   return 0;
 };
 
@@ -233,7 +207,7 @@ ng_singlerw_ring_set(ng_singlerw_ring_s *ring, void *elem)
 static inline void 
 ng_singlerw_ring_dump(ng_singlerw_ring_s *ring)
 {
-  int count = ng_atomic_read(&ring->__N);
+  int count = ng_atomic_read(ring->__N);
   NG_RING_DEBUG("%s","NG-RING: 1 consumers/1 producers."__LN);
   NG_RING_DEBUG("  count:%u"__LN,      count & ring->mask);
   NG_RING_DEBUG("   size:%u"__LN,  ring->size);

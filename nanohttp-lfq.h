@@ -60,51 +60,191 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef __ngRTOS_ITOA_H__
-#define __ngRTOS_ITOA_H__
+#ifndef __nanohttp_lfq_h
+#define __nanohttp_lfq_h
+
+/*
+ * rculfqueue-static.h
+ *
+ * Userspace RCU library - Lock-Free RCU Queue
+ *
+ * Copyright 2010 - Mathieu Desnoyers <mathieu.desnoyers@efficios.com>
+ *
+ * TO BE INCLUDED ONLY IN LGPL-COMPATIBLE CODE. See rculfqueue.h for linking
+ * dynamically with the userspace rcu library.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
 
 #ifdef __cplusplus
-    extern "C" {
+extern "C" {
 #endif
 
-size_t u32toa_jeaiii(uint32_t u, char* b, size_t len);
-size_t i32toa_jeaiii(int32_t i, char* b, size_t len);
-size_t u64toa_jeaiii(uint64_t n, char* b, size_t len);
-size_t i64toa_jeaiii(int64_t i, char* b, size_t len);
+struct lfq_node {
+	struct lfq_node *next; /* struct cds_lfq_node_rcu */
+};
+typedef struct lfq_node lfq_node_s;
 
-static __ng_inline__ size_t __u32toa_jeaiii(uint32_t u, char* b)
+struct lfq_queue {
+	_Atomic(lfq_node_s *) head;
+  _Atomic(lfq_node_s *) tail;
+  lfq_node_s dummy;
+};
+typedef struct lfq_queue lfq_queue_s;
+
+static inline void 
+_lfq_node_init(lfq_node_s *node)
 {
-  return u32toa_jeaiii(u, b, UINT_MAX);
+	node->next = NULL;
 }
 
-static __ng_inline__ size_t __i32toa_jeaiii(int32_t i, char* b)
-{
-  return i32toa_jeaiii(i, b, UINT_MAX);
+static inline void 
+_lfq_init_rcu(lfq_queue_s *q)
+{ 
+  _lfq_node_init(&q->dummy);
+  q->head = &q->dummy;
+  q->tail = &q->dummy;
 }
 
-static __ng_inline__ size_t __u64toa_jeaiii(uint64_t n, char* b)
+/*
+ * The queue should be emptied before calling destroy.
+ *
+ * Return 0 on success, -1 if queue is not empty.
+ */
+static inline int 
+_lfq_destroy(lfq_queue_s *q)
 {
-  return u64toa_jeaiii(n, b, UINT_MAX);
+  lfq_node_s *old_head;
+  lfq_node_s *old_tail;
+
+  old_head  = atomic_load(&q->head);
+  old_tail  = atomic_load(&q->tail);
+  
+  if (old_head != old_tail) 
+  {
+    return -1;
+  } 
+	return 0;
 }
 
-static __ng_inline__ size_t __i64toa_jeaiii(int64_t i, char* b)
+static inline void 
+_lfq_enqueue_one(lfq_queue_s *q, lfq_node_s *new_node)
 {
-  return i64toa_jeaiii(i, b, UINT_MAX);
-}
+  lfq_node_s *null_node = NULL;
 
-int u32toh_jeaiii(uint32_t num, char *s, int len, int lowerAlpha);
-int u64toh_jeaiii(uint64_t num, char *s, int len, int lowerAlpha);
-
-#define ng_u32toa(u,b,l) u32toa_jeaiii(u,b,l)
-#define ng_i32toa(i,b,l) i32toa_jeaiii(i,b,l)
-#define ng_u64toa(u,b,l) u32toa_jeaiii(u,b,l)
-#define ng_i64toa(i,b,l) u32toa_jeaiii(i,b,l)
-#define ng_u32toh_generic(num,s,len) u32toa_jeaiii(num,s,len)
-#define ng_u64toh_generic(num,s,len) u64toa_jeaiii(num,s,len)
-
-#ifdef __cplusplus
+  new_node->next = NULL;
+  
+  while (1) 
+  {
+    lfq_node_s *old_tail = atomic_load(&q->tail);
+    if (atomic_compare_exchange_weak(&old_tail->next, &null_node, new_node)) 
+    {
+      atomic_compare_exchange_weak(&q->tail, &old_tail, new_node);
+      break;
+    } 
+    else 
+    {
+      atomic_compare_exchange_weak(&q->tail, &old_tail, old_tail->next);
     }
+  }
+}
+
+static inline void 
+_lfq_enqueue_list(lfq_queue_s *q, lfq_node_s *new_node, lfq_node_s *new_tail)
+{
+  lfq_node_s *null_node = NULL;
+
+  while (1) 
+  {
+    lfq_node_s *old_tail = atomic_load(&q->tail);
+    if (atomic_compare_exchange_weak(&old_tail->next, &null_node, new_node)) 
+    {
+      atomic_compare_exchange_weak(&q->tail, &old_tail, new_tail);
+      break;
+    } 
+    else 
+    {
+      atomic_compare_exchange_weak(&q->tail, &old_tail, old_tail->next);
+    }
+  }
+  
+}
+
+static inline lfq_node_s *
+_lfq_dequeue_one(lfq_queue_s *q)
+{
+  while (1) 
+  {
+    lfq_node_s *old_head;
+    lfq_node_s *old_tail;
+    lfq_node_s *next_node;
+    
+    old_head  = atomic_load(&q->head);
+    old_tail  = atomic_load(&q->tail);
+    next_node = atomic_load(&old_head->next);
+  
+    if (old_head == old_tail) 
+    {
+      if (next_node == NULL) 
+      {
+        return NULL; // Queue is empty
+      }
+    } 
+    else 
+    {
+      if (atomic_compare_exchange_weak(&q->head, &old_head, next_node)) 
+      {
+        return next_node; // Success
+      }
+    }
+  }
+}
+
+static inline lfq_node_s *
+_lfq_dequeue_list(lfq_queue_s *q)
+{
+  while (1) 
+  {
+    lfq_node_s *old_head;
+    lfq_node_s *old_tail;
+    lfq_node_s *next_node;
+    
+    old_head  = atomic_load(&q->head);
+    old_tail  = atomic_load(&q->tail);
+    next_node = atomic_load(&old_head->next);
+  
+    if (old_head == old_tail) 
+    {
+      if (next_node == NULL) 
+      {
+        return NULL; // Queue is empty
+      }
+    } 
+    else 
+    {
+      if (atomic_compare_exchange_weak(&q->head, &old_head, old_tail)) 
+      {
+        return next_node; // Success
+      }
+    }
+  }
+}
+
+#ifdef __cplusplus
+}
 #endif
 
-#endif /* __ngRTOS_ITOA_H__ */
+#endif /* _URCU_RCULFQUEUE_STATIC_H */
 

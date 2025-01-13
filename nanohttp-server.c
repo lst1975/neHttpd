@@ -4,7 +4,7 @@
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
@@ -35,7 +35,7 @@
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
@@ -1992,7 +1992,7 @@ int httpd_create_cond(COND_T *cond)
 {
   int err = 0;
 
-  ng_atomic_set(&cond->set, 0);
+  ng_atomic_set(cond->set, 0);
   
 #ifdef WIN32
   cond->handle = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -2050,7 +2050,7 @@ void httpd_wait_cond(COND_T *cond)
   WaitForSingleObject(cond->handle, INFINITE);
 #else
   httpd_enter_mutex(&cond->mutex);
-  while (!ng_atomic_read(&cond->set)) 
+  while (!ng_atomic_read(cond->set)) 
   {
     log_debug("Httpd Eenter WAIT.");
     pthread_cond_wait(&cond->handle, &cond->mutex); // Wait for the condition
@@ -2062,16 +2062,16 @@ void httpd_wait_cond(COND_T *cond)
 }
 void httpd_signal_cond(COND_T *cond)
 {
-  int already_set = ng_atomic_read(&cond->set);
+  int already_set = ng_atomic_read(cond->set);
   if (already_set)
   {
     log_debug("httpd signal already set.");
     return;
   }
   // Set the condition
-  ng_atomic_set(&cond->set, 1);
+  ng_atomic_set(cond->set, 1);
   log_debug("httpd condition set write: %d.", 
-    ng_atomic_read(&cond->set));
+    ng_atomic_read(cond->set));
   ng_smp_mb();
   
 #ifdef WIN32

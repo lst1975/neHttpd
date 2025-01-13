@@ -4,7 +4,7 @@
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
@@ -35,7 +35,7 @@
  * Copyright (C) 2022 Songtao Liu, 980680431@qq.com.  All Rights Reserved.
  **************************************************************************************
  *
- * Permission is hereby granted, http_free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
@@ -73,6 +73,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdatomic.h>
+
+#include "nanohttp-lfq.h"
 
 #define RTE_FORCE_INTRINSICS 1
 #define fallthrough() (void)(0)
@@ -405,6 +407,9 @@ typedef int ng_result_t;
 /** Cache line mask. */
 #define RTE_CACHE_LINE_MASK (RTE_CACHE_LINE_SIZE-1)
 
+/** Return the first cache-aligned value greater or equal to size. */
+#define RTE_CACHE_LINE_ROUNDUP(size) RTE_ALIGN_CEIL(size, RTE_CACHE_LINE_SIZE)
+
 #define HSERVER_ERROR			            (1100)
 #define HSERVER_ERROR_MALLOC		      (HSERVER_ERROR + 1)
 #define HSERVER_ERROR_SYSTEM		      (HSERVER_ERROR + 2)
@@ -434,6 +439,10 @@ typedef int ng_result_t;
 #else
 #define NG_SIZET_STR_LEN_MAX NG_UINT32_STR_LEN_MAX
 #define __NG_BITS_PER_LONG 32
+#endif
+//--------------------- wordsize ----------------------------------------------
+#ifndef __WORDSIZE
+#define __WORDSIZE __NG_BITS_PER_LONG
 #endif
 
 /* -1.79769313486231570E+308 -4.94065645841246544E-324 1.79769313486231570E+308 */
@@ -767,7 +776,7 @@ typedef struct {
 static inline void
 rte_atomic64_init(rte_atomic64_t *v)
 {
-#ifdef __LP64__
+#if NG_IS_64BIT_SYS
 	v->cnt = 0;
 #else
 	int success = 0;
@@ -792,7 +801,7 @@ rte_atomic64_init(rte_atomic64_t *v)
 static inline int64_t
 rte_atomic64_read(rte_atomic64_t *v)
 {
-#ifdef __LP64__
+#if NG_IS_64BIT_SYS
 	return v->cnt;
 #else
 	int success = 0;
@@ -819,7 +828,7 @@ rte_atomic64_read(rte_atomic64_t *v)
 static inline void
 rte_atomic64_set(rte_atomic64_t *v, int64_t new_value)
 {
-#ifdef __LP64__
+#if NG_IS_64BIT_SYS
 	v->cnt = new_value;
 #else
 	int success = 0;
