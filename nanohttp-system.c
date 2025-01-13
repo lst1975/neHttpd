@@ -266,7 +266,7 @@ clean0:
   return ng_ERR_ESYSTEM;
 }
 
-static bool init__done = false;
+static BOOL init__done = FALSE;
 static INIT_ONCE init__once = INIT_ONCE_STATIC_INIT;
 
 static BOOL CALLBACK init__once_callback(INIT_ONCE *once,
@@ -279,7 +279,7 @@ static BOOL CALLBACK init__once_callback(INIT_ONCE *once,
   if (__os_socket_init_once(parameter) != ng_ERR_NONE)
     return FALSE;
 
-  init__done = true;
+  init__done = TRUE;
   return TRUE;
 }
 

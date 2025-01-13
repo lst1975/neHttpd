@@ -92,10 +92,6 @@
 #ifndef CORE_JSON_H_
 #define CORE_JSON_H_
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
 #include "nanohttp-user.h"
 
 /* *INDENT-OFF* */

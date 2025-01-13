@@ -92,6 +92,7 @@ typedef uint64_t ng_time_t;
 typedef uint64_t ng_time_t;
 #endif
 typedef unsigned long ng_ulong_t;
+typedef int ng_bool_t;
 
 #include "nanohttp-vsprintf.h"
 #include "nanohttp-utils.h"

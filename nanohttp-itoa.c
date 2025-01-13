@@ -84,8 +84,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <stdint.h>
-#include <inttypes.h>
 #include "nanohttp-defs.h"
 #include "nanohttp-itoa.h"
 

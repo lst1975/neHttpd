@@ -61,14 +61,6 @@
  **************************************************************************************
  */
 #include "nanohttp-config.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
-#include <limits.h>  // For PATH_MAX
-#include <syslog.h>
-
 #include "nanohttp-logging.h"
 #include "nanohttp-mime.h"
 #include "nanohttp-server.h"
@@ -697,7 +689,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
         {
           // Process set operation
           n = ng_snprintf(buf, sizeof buf, 
-                  CFG_RET1("For testing received error message from our product."), 
+                  CFG_RET1("For testing! received error message from our product."), 
                   id, 
                   &p->key);
           goto finished;

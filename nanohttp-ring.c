@@ -94,7 +94,6 @@ ng_singlerw_ring_free(ng_singlerw_ring_s *ring)
   return;
 }
 
-#define LOG_ERR 0
 #define RING_LOG(t, fmt, ...) NG_RING_DEBUG("%d"fmt,LOG_ ## t, __VA_ARGS__)
 
 /* mask of all valid flag values to ring_create() */

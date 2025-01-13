@@ -63,12 +63,20 @@
 #ifndef __nanohttp_utils_h
 #define __nanohttp_utils_h
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void signal_handler_segfault(int sig);
 void http_daemonize(int nochdir, int noclose);
 void ng_print_cpufreq(const char *n, double hz);
 int ng_get_tzname(char *tz, int size);
 void __ng_gettimeofday(void *tp);
 int ng_local_strncasecmp(const char *s1, const char *s2, size_t n);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

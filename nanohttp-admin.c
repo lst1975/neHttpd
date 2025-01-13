@@ -86,24 +86,6 @@
 ******************************************************************/
 
 #include "nanohttp-config.h"
-
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#ifdef HAVE_PTHREAD_H
-#include <pthread.h>
-#endif
-#include <inttypes.h>
-
 #include "nanohttp-error.h"
 #include "nanohttp-logging.h"
 #include "nanohttp-common.h"

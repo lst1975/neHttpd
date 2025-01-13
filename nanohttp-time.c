@@ -61,7 +61,6 @@
  **************************************************************************************
  */
 
-#include <math.h>
 #include "nanohttp-defs.h"
 #include "nanohttp-time.h"
 #include "nanohttp-system.h"

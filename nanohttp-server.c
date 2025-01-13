@@ -85,53 +85,6 @@
 * Email: ayaz@jprogrammer.net
 ******************************************************************/
 #include "nanohttp-config.h"
-
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-
-#ifdef HAVE_SIGNAL_H
-#include <signal.h>
-#endif
-
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#ifdef HAVE_ERRNO_H
-#include <errno.h>
-#endif
-
-#ifdef HAVE_PTHREAD_H
-#include <pthread.h>
-#endif
-
-#include <limits.h>  // For PATH_MAX
-
 #include "nanohttp-logging.h"
 #include "nanohttp-error.h"
 #include "nanohttp-defs.h"
@@ -142,14 +95,6 @@
 #include "nanohttp-response.h"
 #include "nanohttp-server.h"
 #include "nanohttp-base64.h"
-#ifdef HAVE_SSL
-#ifdef HAVE_OPENSSL_SSL_H
-#include <openssl/ssl.h>
-#endif
-#include "nanohttp-ssl.h"
-#else
-static inline int hssl_enabled(void) { return 0; }
-#endif
 #include "nanohttp-admin.h"
 #include "nanohttp-file.h"
 #include "nanohttp-user.h"
@@ -163,6 +108,15 @@ static inline int hssl_enabled(void) { return 0; }
 #include "nanohttp-header.h"
 #include "nanohttp-const.h"
 #include "nanohttp-code.h"
+
+#ifdef HAVE_SSL
+#ifdef HAVE_OPENSSL_SSL_H
+#include <openssl/ssl.h>
+#endif
+#include "nanohttp-ssl.h"
+#else
+static inline int hssl_enabled(void) { return 0; }
+#endif
 
 #ifndef WIN32
 #define __NHTTP_LISTEN_DUAL_STACK 0

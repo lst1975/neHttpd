@@ -60,11 +60,6 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdarg.h>
-
 #include "nanohttp-config.h"
 #include "nanohttp-json.h"
 #include "nanohttp-file.h"

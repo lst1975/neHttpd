@@ -60,16 +60,12 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <sys/stat.h>
+
 #include <fcntl.h>
 #include <unistd.h>
-#include <limits.h>  // For PATH_MAX
-#include <errno.h>
+#include <sys/stat.h>
 
+#include "nanohttp-config.h"
 #include "nanohttp-common.h"
 #include "nanohttp-defs.h"
 #include "nanohttp-file.h"

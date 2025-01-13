@@ -60,10 +60,6 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#include <string.h>
-#include <errno.h>
-#include <assert.h>
-
 #include "nanohttp-config.h"
 #include "nanohttp-mime.h"
 #include "nanohttp-logging.h"
@@ -1279,17 +1275,24 @@ mime_part_new(ng_list_head_s *part_list, const ng_block_s *params)
   }
   part->TransferEncoding = &pair->val;
     
-  if (content_type != NULL)
+  if (content_type == NULL)
   {
-    pair = hpairnode_new(&__HDR_BUF__(HEADER_CONTENT_TYPE), 
-      content_type, &part->header);
-    if (pair == NULL)
+    if (filename != NULL)
     {
-      log_error("hpairnode_new Id failed.");
-      goto clean2;
+      content_type = ng_http_get_mime_type_from_file(filename);
     }
-    part->ContentType = &pair->val;
   }
+
+  if (content_type == NULL)
+    content_type = ng_http_get_mime_type(NULL);
+  pair = hpairnode_new(&__HDR_BUF__(HEADER_CONTENT_TYPE), 
+    content_type, &part->header);
+  if (pair == NULL)
+  {
+    log_error("hpairnode_new Id failed.");
+    goto clean2;
+  }
+  part->ContentType = &pair->val;
 
   n = ng_snprintf(BUF_CUR_PTR(&disposition), BUF_REMAIN(&disposition),
     "%pS", type);

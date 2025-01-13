@@ -85,75 +85,27 @@
 * Email: ferhatayaz@yahoo.com
 ******************************************************************/
 #include "nanohttp-config.h"
-
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-
-#ifdef HAVE_SYS_WAIT_H
-#include <sys/wait.h>
-#endif
-
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-
-#ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
-#endif
-
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
-
-#ifdef HAVE_NETDB_H
-#include <netdb.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-
-#ifdef HAVE_ERRNO_H
-#include <errno.h>
-#endif
-
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#ifdef WIN32
-#include <windows.h>
-#include <winsock2.h>
-#include <process.h>
-
-#undef errno
-#define errno WSAGetLastError()
-
-#endif
-
 #include "nanohttp-error.h"
 #include "nanohttp-logging.h"
-
 #include "nanohttp-common.h"
 #include "nanohttp-socket.h"
 #include "nanohttp-file.h"
 #include "nanohttp-system.h"
 #include "nanohttp-inet.h"
 #include "nanohttp-buffer.h"
+
 #ifdef HAVE_SSL
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
 #endif
 #include "nanohttp-ssl.h"
+#endif
+
+#ifdef WIN32
+#include <Winsock2.h>
+#include <Ws2tcpip.h>
+#undef errno
+#define errno WSAGetLastError()
 #endif
 
 #if __NHTTP_USE_EPOLL || __NHTTP_USE_WSAPOLL

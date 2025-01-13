@@ -85,26 +85,7 @@
 * Email: ayaz@jprogrammer.net
 ******************************************************************/
 
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-
-#ifdef HAVE_ERRNO_H
-#include <errno.h>
-#endif
-
+#include "nanohttp-config.h"
 #include "nanohttp-common.h"
 #include "nanohttp-logging.h"
 #include "nanohttp-error.h"

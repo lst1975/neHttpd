@@ -103,6 +103,10 @@ Alain Magloire: alainm@rcsm.ee.mcgill.ca
 
 #include <stdarg.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if 0
 struct in_addr {
   uint32_t s_addr;
@@ -159,5 +163,9 @@ int __ng_vsnprintf_cb(ng_vsout_f out, void *arg, char const * format, va_list ar
 int snprintf_test(void);
 #endif
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __ngRTOS_SNPRINTF_H__ */

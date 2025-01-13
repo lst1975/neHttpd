@@ -112,18 +112,6 @@
 */
 
 #include "nanohttp-defs.h"
-
-#include <stdarg.h>
-#include <stdint.h>
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef WIN32
-#include <Windows.h>
-#include <Winsock2.h>
-#include <Ws2tcpip.h>
-#endif
-
 #include "nanohttp-ctype.h"
 #include "nanohttp-itoa.h"
 #include "nanohttp-atoi.h"
@@ -132,6 +120,11 @@
 #include "nanohttp-dtoa.h"
 #include "nanohttp-server.h"
 #include "nanohttp-file.h"
+
+#ifdef WIN32
+#include <Winsock2.h>
+#include <Ws2tcpip.h>
+#endif
 
 #define PRIVATE static
 #define PUBLIC

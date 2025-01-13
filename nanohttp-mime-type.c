@@ -92,15 +92,15 @@
 #include "nanohttp-logging.h"
 
 struct _mime_types {
-	ng_str_s extension;
-	ng_str_s mime_type;
+	ng_block_s extension;
+	ng_block_s mime_type;
   ng_list_head_s link;
 };
 typedef struct _mime_types mime_types_s;
 #define _MIME_HASH_TBLSZ 1024
 #define _MIME_HASH_MASK  1023
 
-static const ng_str_s _mime_type_default = DECL_CONST_STR("application/octet-stream");
+static const ng_block_s _mime_type_default = DECL_CONST_STR("application/octet-stream");
 static ng_list_head_s _mime_types_htbl[_MIME_HASH_TBLSZ];
 static size_t NUM_MIME_TYPES;		
 
@@ -648,14 +648,14 @@ void ng_http_mime_type_free(void)
  * If no matching file extension could be found in the list, the default value
  * of "text/plain" is returned instead.
  */
-const ng_str_s *
-ng_http_get_mime_type(ng_str_s *ext) 
+const ng_block_s *
+ng_http_get_mime_type(const ng_block_s *ext) 
 {
   uint32_t hash;
   mime_types_s *m;
   ng_list_head_s *h;
 
-  if (!ext->len)
+  if (ext == NULL || !ext->len)
     return &_mime_type_default;
 
   hash = ng_hash_string(ext->cptr, ext->len);
@@ -669,4 +669,24 @@ ng_http_get_mime_type(ng_str_s *ext)
   return &_mime_type_default;
 } 
 
+const ng_block_s *
+ng_http_get_mime_type_from_file(const ng_block_s *file) 
+{
+  ng_block_s dot;
 
+  if (file == NULL || !file->len)
+    return &_mime_type_default;
+
+  dot.cptr = ng_memchr(file->cptr, '.', file->len);
+  dot.len  = dot.buf == NULL ? 0 : ng_block_end(file) - dot.cptr;
+  while (1) 
+  {
+    const char *n = ng_memchr(dot.buf + 1, '.', file->len);
+    if (n == NULL)
+      break;
+    dot.cptr = n;
+    dot.len  = ng_block_end(file) - n;
+  }
+
+  return ng_http_get_mime_type(&dot);
+}

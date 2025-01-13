@@ -88,17 +88,7 @@
  * @file core_json.c
  * @brief The source file that implements the user-facing functions in core_json.h.
  */
-
-#include <assert.h>
-#include <limits.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <limits.h>
-#include <stdarg.h>
-
+#include "nanohttp-config.h"
 #include "nanohttp-json.h"
 #include "nanohttp-user.h"
 #include "nanohttp-logging.h"
@@ -197,10 +187,10 @@ static size_t countHighBits( uint8_t c )
  *
  * @note Disallow ASCII, as this is called only for multibyte sequences.
  */
-static bool shortestUTF8( size_t length,
+static ng_bool_t shortestUTF8( size_t length,
               uint32_t value )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   uint32_t min = 0U, max = 0U;
 
   assert( ( length >= 2U ) && ( length <= 4U ) );
@@ -226,7 +216,7 @@ static bool shortestUTF8( size_t length,
   if( ( value >= min ) && ( value <= max ) &&
     ( ( value < 0xD800U ) || ( value > 0xDFFFU ) ) )
   {
-    ret = true;
+    ret = ng_TRUE;
   }
 
   return ret;
@@ -255,11 +245,11 @@ static bool shortestUTF8( size_t length,
  * would introduce a non-shortest sequence, and F5 or above would
  * introduce a value greater than the last code point, 0x10FFFF.
  */
-static bool skipUTF8MultiByte( const char * buf,
+static ng_bool_t skipUTF8MultiByte( const char * buf,
                  size_t * start,
                  size_t max )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   size_t i = 0U, bitCount = 0U, j = 0U;
   uint32_t value = 0U;
   char_ c = { 0 };
@@ -299,10 +289,10 @@ static bool skipUTF8MultiByte( const char * buf,
       value = ( value << 6U ) | ( c.u & 0x3FU );
     }
 
-    if( ( j == 0U ) && ( shortestUTF8( bitCount, value ) == true ) )
+    if( ( j == 0U ) && ( shortestUTF8( bitCount, value ) == ng_TRUE ) )
     {
       *start = i + 1U;
-      ret = true;
+      ret = ng_TRUE;
     }
   }
 
@@ -319,11 +309,11 @@ static bool skipUTF8MultiByte( const char * buf,
  * @return true if a valid code point was present;
  * false otherwise.
  */
-static bool skipUTF8( const char * buf,
+static ng_bool_t skipUTF8( const char * buf,
             size_t * start,
             size_t max )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
 
   assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
@@ -332,7 +322,7 @@ static bool skipUTF8( const char * buf,
     if( isascii_( buf[ *start ] ) )
     {
       *start += 1U;
-      ret = true;
+      ret = ng_TRUE;
     }
     else
     {
@@ -393,12 +383,12 @@ static uint8_t hexToInt( char c )
  *
  * @note For the sake of security, \u0000 is disallowed.
  */
-static bool skipOneHexEscape( const char * buf,
+static ng_bool_t skipOneHexEscape( const char * buf,
                 size_t * start,
                 size_t max,
                 uint16_t * outValue )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   size_t i = 0U, end = 0U;
   uint16_t value = 0U;
 
@@ -429,7 +419,7 @@ static bool skipOneHexEscape( const char * buf,
 
   if( ( i == end ) && ( value > 0U ) )
   {
-    ret = true;
+    ret = ng_TRUE;
     *outValue = value;
     *start = i;
   }
@@ -457,11 +447,11 @@ static bool skipOneHexEscape( const char * buf,
 #define isHighSurrogate( x )  ( ( ( x ) >= 0xD800U ) && ( ( x ) <= 0xDBFFU ) )
 #define isLowSurrogate( x )   ( ( ( x ) >= 0xDC00U ) && ( ( x ) <= 0xDFFFU ) )
 
-static bool skipHexEscape( const char * buf,
+static ng_bool_t skipHexEscape( const char * buf,
                size_t * start,
                size_t max )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   size_t i = 0U;
   uint16_t value = 0U;
 
@@ -469,14 +459,14 @@ static bool skipHexEscape( const char * buf,
 
   i = *start;
 
-  if( skipOneHexEscape( buf, &i, max, &value ) == true )
+  if( skipOneHexEscape( buf, &i, max, &value ) == ng_TRUE )
   {
     if( isHighSurrogate( value ) )
     {
-      if( ( skipOneHexEscape( buf, &i, max, &value ) == true ) &&
+      if( ( skipOneHexEscape( buf, &i, max, &value ) == ng_TRUE ) &&
         ( isLowSurrogate( value ) ) )
       {
-        ret = true;
+        ret = ng_TRUE;
       }
     }
     else if( isLowSurrogate( value ) )
@@ -485,11 +475,11 @@ static bool skipHexEscape( const char * buf,
     }
     else
     {
-      ret = true;
+      ret = ng_TRUE;
     }
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     *start = i;
   }
@@ -509,11 +499,11 @@ static bool skipHexEscape( const char * buf,
  *
  * @note For the sake of security, \NUL is disallowed.
  */
-static bool skipEscape( const char * buf,
+static ng_bool_t skipEscape( const char * buf,
             size_t * start,
             size_t max )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   size_t i = 0U;
 
   assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
@@ -542,7 +532,7 @@ static bool skipEscape( const char * buf,
       case 'r':
       case 't':
         i += 2U;
-        ret = true;
+        ret = ng_TRUE;
         break;
 
       default:
@@ -551,14 +541,14 @@ static bool skipEscape( const char * buf,
         if( iscntrl_( c ) )
         {
           i += 2U;
-          ret = true;
+          ret = ng_TRUE;
         }
 
         break;
     }
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     *start = i;
   }
@@ -576,11 +566,11 @@ static bool skipEscape( const char * buf,
  * @return true if a valid string was present;
  * false otherwise.
  */
-static bool skipString( const char * buf,
+static ng_bool_t skipString( const char * buf,
             size_t * start,
             size_t max )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   size_t i = 0;
 
   assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
@@ -595,14 +585,14 @@ static bool skipString( const char * buf,
     {
       if( buf[ i ] == '"' )
       {
-        ret = true;
+        ret = ng_TRUE;
         i++;
         break;
       }
 
       if( buf[ i ] == '\\' )
       {
-        if( skipEscape( buf, &i, max ) != true )
+        if( skipEscape( buf, &i, max ) != ng_TRUE )
         {
           break;
         }
@@ -612,7 +602,7 @@ static bool skipString( const char * buf,
       {
         break;
       }
-      else if( skipUTF8( buf, &i, max ) != true )
+      else if( skipUTF8( buf, &i, max ) != ng_TRUE )
       {
         break;
       }
@@ -623,7 +613,7 @@ static bool skipString( const char * buf,
     }
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     *start = i;
   }
@@ -641,7 +631,7 @@ static bool skipString( const char * buf,
  * @return true if the sequences are the same;
  * false otherwise
  */
-static bool strnEq( const char * a,
+static ng_bool_t strnEq( const char * a,
           const char * b,
           size_t n )
 {
@@ -657,7 +647,7 @@ static bool strnEq( const char * a,
     }
   }
 
-  return ( i == n ) ? true : false;
+  return ( i == n ) ? ng_TRUE : ng_FALSE;
 }
 
 /**
@@ -672,13 +662,13 @@ static bool strnEq( const char * a,
  * @return true if the literal was present;
  * false otherwise.
  */
-static bool skipLiteral( const char * buf,
+static ng_bool_t skipLiteral( const char * buf,
              size_t * start,
              size_t max,
              const char * literal,
              size_t length )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
 
   assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
   assert( literal != NULL );
@@ -688,7 +678,7 @@ static bool skipLiteral( const char * buf,
     ret = strnEq( &buf[ *start ], literal, length );
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     *start += length;
   }
@@ -706,30 +696,30 @@ static bool skipLiteral( const char * buf,
  * @return true if a valid literal was present;
  * false otherwise.
  */
-static bool skipAnyLiteral( const char * buf,
+static ng_bool_t skipAnyLiteral( const char * buf,
               size_t * start,
               size_t max )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
 
 #define skipLit_( x ) \
-  ( skipLiteral( buf, start, max, ( x ), ( sizeof( x ) - 1UL ) ) == true )
+  ( skipLiteral( buf, start, max, ( x ), ( sizeof( x ) - 1UL ) ) == ng_TRUE )
 
   if( skipLit_( "true" ) )
   {
-    ret = true;
+    ret = ng_TRUE;
   }
   else if( skipLit_( "false" ) )
   {
-    ret = true;
+    ret = ng_TRUE;
   }
   else if( skipLit_( "null" ) )
   {
-    ret = true;
+    ret = ng_TRUE;
   }
   else
   {
-    ret = false;
+    ret = ng_FALSE;
   }
 
   return ret;
@@ -751,12 +741,12 @@ static bool skipAnyLiteral( const char * buf,
  * false otherwise.
  */
 #define MAX_FACTOR  ( MAX_INDEX_VALUE / 10 )
-static bool skipDigits( const char * buf,
+static ng_bool_t skipDigits( const char * buf,
             size_t * start,
             size_t max,
             int32_t * outValue )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   size_t i = 0U, saveStart = 0U;
   int32_t value = 0U;
 
@@ -788,7 +778,7 @@ static bool skipDigits( const char * buf,
 
   if( i > saveStart )
   {
-    ret = true;
+    ret = ng_TRUE;
     *start = i;
 
     if( outValue != NULL )
@@ -821,7 +811,7 @@ static void skipDecimals( const char * buf,
   {
     i++;
 
-    if( skipDigits( buf, &i, max, NULL ) == true )
+    if( skipDigits( buf, &i, max, NULL ) == ng_TRUE )
     {
       *start = i;
     }
@@ -854,7 +844,7 @@ static void skipExponent( const char * buf,
       i++;
     }
 
-    if( skipDigits( buf, &i, max, NULL ) == true )
+    if( skipDigits( buf, &i, max, NULL ) == ng_TRUE )
     {
       *start = i;
     }
@@ -871,11 +861,11 @@ static void skipExponent( const char * buf,
  * @return true if a valid number was present;
  * false otherwise.
  */
-static bool skipNumber( const char * buf,
+static ng_bool_t skipNumber( const char * buf,
             size_t * start,
             size_t max )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   size_t i = 0U;
 
   assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
@@ -898,7 +888,7 @@ static bool skipNumber( const char * buf,
      * will judge this an illegal document. */
     if( buf[ i ] == '0' )
     {
-      ret = true;
+      ret = ng_TRUE;
       i++;
     }
     else
@@ -907,7 +897,7 @@ static bool skipNumber( const char * buf,
     }
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     skipDecimals( buf, &i, max );
     skipExponent( buf, &i, max );
@@ -927,27 +917,27 @@ static bool skipNumber( const char * buf,
  * @return true if a scalar value was present;
  * false otherwise.
  */
-static bool skipAnyScalar( const char * buf,
+static ng_bool_t skipAnyScalar( const char * buf,
                size_t * start,
                size_t max )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
 
-  if( skipString( buf, start, max ) == true )
+  if( skipString( buf, start, max ) == ng_TRUE )
   {
-    ret = true;
+    ret = ng_TRUE;
   }
-  else if( skipAnyLiteral( buf, start, max ) == true )
+  else if( skipAnyLiteral( buf, start, max ) == ng_TRUE )
   {
-    ret = true;
+    ret = ng_TRUE;
   }
-  else if( skipNumber( buf, start, max ) == true )
+  else if( skipNumber( buf, start, max ) == ng_TRUE )
   {
-    ret = true;
+    ret = ng_TRUE;
   }
   else
   {
-    ret = false;
+    ret = ng_FALSE;
   }
 
   return ret;
@@ -967,11 +957,11 @@ static bool skipAnyScalar( const char * buf,
  * @return true if a non-terminal comma was present;
  * false otherwise.
  */
-static bool skipSpaceAndComma( const char * buf,
+static ng_bool_t skipSpaceAndComma( const char * buf,
                  size_t * start,
                  size_t max )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   size_t i = 0U;
 
   assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
@@ -986,7 +976,7 @@ static bool skipSpaceAndComma( const char * buf,
 
     if( ( i < max ) && !isCloseBracket_( buf[ i ] ) )
     {
-      ret = true;
+      ret = ng_TRUE;
       *start = i;
     }
   }
@@ -1015,12 +1005,12 @@ static void skipArrayScalars( const char * buf,
 
   while( i < max )
   {
-    if( skipAnyScalar( buf, &i, max ) != true )
+    if( skipAnyScalar( buf, &i, max ) != ng_TRUE )
     {
       break;
     }
 
-    if( skipSpaceAndComma( buf, &i, max ) != true )
+    if( skipSpaceAndComma( buf, &i, max ) != ng_TRUE )
     {
       break;
     }
@@ -1049,7 +1039,7 @@ static void skipObjectScalars( const char * buf,
                  size_t max )
 {
   size_t i = 0U;
-  bool comma = false;
+  ng_bool_t comma = ng_FALSE;
 
   assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
@@ -1057,7 +1047,7 @@ static void skipObjectScalars( const char * buf,
 
   while( i < max )
   {
-    if( skipString( buf, &i, max ) != true )
+    if( skipString( buf, &i, max ) != ng_TRUE )
     {
       break;
     }
@@ -1078,7 +1068,7 @@ static void skipObjectScalars( const char * buf,
       break;
     }
 
-    if( skipAnyScalar( buf, &i, max ) != true )
+    if( skipAnyScalar( buf, &i, max ) != ng_TRUE )
     {
       break;
     }
@@ -1086,7 +1076,7 @@ static void skipObjectScalars( const char * buf,
     comma = skipSpaceAndComma( buf, &i, max );
     *start = i;
 
-    if( comma != true )
+    if( comma != ng_TRUE )
     {
       break;
     }
@@ -1180,7 +1170,7 @@ static JSONStatus_t skipCollection( const char * buf,
         {
           depth--;
 
-          if( ( skipSpaceAndComma( buf, &i, max ) == true ) &&
+          if( ( skipSpaceAndComma( buf, &i, max ) == ng_TRUE ) &&
             isOpenBracket_( stack[ depth ] ) )
           {
             skipScalars( buf, &i, max, stack[ depth ] );
@@ -1240,7 +1230,7 @@ JSONStatus_t JSON_Validate( const char * buf,
 
     /** @cond DO_NOT_DOCUMENT */
     #ifndef JSON_VALIDATE_COLLECTIONS_ONLY
-      if( skipAnyScalar( buf, &i, max ) == true )
+      if( skipAnyScalar( buf, &i, max ) == ng_TRUE )
       {
         ret = JSONSuccess;
       }
@@ -1283,13 +1273,13 @@ JSONStatus_t JSON_Validate( const char * buf,
  * @return true if a value was present;
  * false otherwise.
  */
-static bool nextValue( const char * buf,
+static ng_bool_t nextValue( const char * buf,
              size_t * start,
              size_t max,
              size_t * value,
              size_t * valueLength )
 {
-  bool ret = true;
+  ng_bool_t ret = ng_TRUE;
   size_t i = 0U, valueStart = 0U;
 
   assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
@@ -1298,7 +1288,7 @@ static bool nextValue( const char * buf,
   i = *start;
   valueStart = i;
 
-  if( skipAnyScalar( buf, &i, max ) == true )
+  if( skipAnyScalar( buf, &i, max ) == ng_TRUE )
   {
     *value = valueStart;
     *valueLength = i - valueStart;
@@ -1310,10 +1300,10 @@ static bool nextValue( const char * buf,
   }
   else
   {
-    ret = false;
+    ret = ng_FALSE;
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     *start = i;
   }
@@ -1338,7 +1328,7 @@ static bool nextValue( const char * buf,
  * @return true if a key-value pair was present;
  * false otherwise.
  */
-static bool nextKeyValuePair( const char * buf,
+static ng_bool_t nextKeyValuePair( const char * buf,
                 size_t * start,
                 size_t max,
                 size_t * key,
@@ -1346,7 +1336,7 @@ static bool nextKeyValuePair( const char * buf,
                 size_t * value,
                 size_t * valueLength )
 {
-  bool ret = true;
+  ng_bool_t ret = ng_TRUE;
   size_t i = 0U, keyStart = 0U;
 
   assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
@@ -1356,17 +1346,17 @@ static bool nextKeyValuePair( const char * buf,
   i = *start;
   keyStart = i;
 
-  if( skipString( buf, &i, max ) == true )
+  if( skipString( buf, &i, max ) == ng_TRUE )
   {
     *key = keyStart + 1U;
     *keyLength = i - keyStart - 2U;
   }
   else
   {
-    ret = false;
+    ret = ng_FALSE;
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     skipSpace( buf, &i, max );
 
@@ -1377,16 +1367,16 @@ static bool nextKeyValuePair( const char * buf,
     }
     else
     {
-      ret = false;
+      ret = ng_FALSE;
     }
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     ret = nextValue( buf, &i, max, value, valueLength );
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     *start = i;
   }
@@ -1411,14 +1401,14 @@ static bool nextKeyValuePair( const char * buf,
  *
  * @note Parsing stops upon finding a match.
  */
-static bool objectSearch( const char * buf,
+static ng_bool_t objectSearch( const char * buf,
               size_t max,
               const char * query,
               size_t queryLength,
               size_t * outValue,
               size_t * outValueLength )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
 
   size_t i = 0U, key = 0U, keyLength = 0U, value = 0U, valueLength = 0U;
 
@@ -1435,26 +1425,26 @@ static bool objectSearch( const char * buf,
     while( i < max )
     {
       if( nextKeyValuePair( buf, &i, max, &key, &keyLength,
-                  &value, &valueLength ) != true )
+                  &value, &valueLength ) != ng_TRUE )
       {
         break;
       }
 
       if( ( queryLength == keyLength ) &&
-        ( strnEq( query, &buf[ key ], keyLength ) == true ) )
+        ( strnEq( query, &buf[ key ], keyLength ) == ng_TRUE ) )
       {
-        ret = true;
+        ret = ng_TRUE;
         break;
       }
 
-      if( skipSpaceAndComma( buf, &i, max ) != true )
+      if( skipSpaceAndComma( buf, &i, max ) != ng_TRUE )
       {
         break;
       }
     }
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     *outValue = value;
     *outValueLength = valueLength;
@@ -1479,13 +1469,13 @@ static bool objectSearch( const char * buf,
  *
  * @note Parsing stops upon finding a match.
  */
-static bool arraySearch( const char * buf,
+static ng_bool_t arraySearch( const char * buf,
              size_t max,
              uint32_t queryIndex,
              size_t * outValue,
              size_t * outValueLength )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   size_t i = 0U, value = 0U, valueLength = 0U;
   uint32_t currentIndex = 0U;
 
@@ -1501,18 +1491,18 @@ static bool arraySearch( const char * buf,
 
     while( i < max )
     {
-      if( nextValue( buf, &i, max, &value, &valueLength ) != true )
+      if( nextValue( buf, &i, max, &value, &valueLength ) != ng_TRUE )
       {
         break;
       }
 
       if( currentIndex == queryIndex )
       {
-        ret = true;
+        ret = ng_TRUE;
         break;
       }
 
-      if( ( skipSpaceAndComma( buf, &i, max ) != true ) ||
+      if( ( skipSpaceAndComma( buf, &i, max ) != ng_TRUE ) ||
         ( currentIndex == UINT32_MAX ) )
       {
         break;
@@ -1522,7 +1512,7 @@ static bool arraySearch( const char * buf,
     }
   }
 
-  if( ret == true )
+  if( ret == ng_TRUE )
   {
     *outValue = value;
     *outValueLength = valueLength;
@@ -1549,12 +1539,12 @@ static bool arraySearch( const char * buf,
   #define JSON_QUERY_KEY_SEPARATOR  '.'
 #endif
 #define isSeparator_( x )  ( ( x ) == JSON_QUERY_KEY_SEPARATOR )
-static bool skipQueryPart( const char * buf,
+static ng_bool_t skipQueryPart( const char * buf,
                size_t * start,
                size_t max,
                size_t * outLength )
 {
-  bool ret = false;
+  ng_bool_t ret = ng_FALSE;
   size_t i = 0U;
 
   assert( ( buf != NULL ) && ( start != NULL ) && ( outLength != NULL ) );
@@ -1571,7 +1561,7 @@ static bool skipQueryPart( const char * buf,
 
   if( i > *start )
   {
-    ret = true;
+    ret = ng_TRUE;
     *outLength = i - *start;
     *start = i;
   }
@@ -1612,7 +1602,7 @@ static JSONStatus_t multiSearch( const char * buf,
 
   while( i < queryLength )
   {
-    bool found = false;
+    ng_bool_t found = ng_FALSE;
 
     if( isSquareOpen_( query[ i ] ) )
     {
@@ -1639,7 +1629,7 @@ static JSONStatus_t multiSearch( const char * buf,
 
       queryStart = i;
 
-      if( ( skipQueryPart( query, &i, queryLength, &keyLength ) != true ) ||
+      if( ( skipQueryPart( query, &i, queryLength, &keyLength ) != ng_TRUE ) ||
         /* catch an empty key part or a trailing separator */
         ( i == ( queryLength - 1U ) ) )
       {
@@ -1651,7 +1641,7 @@ static JSONStatus_t multiSearch( const char * buf,
         &query[ queryStart ], keyLength, &value, &length );
     }
 
-    if( found == false )
+    if( found == ng_FALSE )
     {
       ret = JSONNotFound;
       break;
@@ -1818,7 +1808,7 @@ static JSONStatus_t iterate( const char * buf,
                size_t * outValueLength )
 {
   JSONStatus_t ret = JSONNotFound;
-  bool found = false;
+  ng_bool_t found = ng_FALSE;
 
   assert( ( buf != NULL ) && ( max > 0U ) );
   assert( ( start != NULL ) && ( next != NULL ) );
@@ -1832,7 +1822,7 @@ static JSONStatus_t iterate( const char * buf,
       case '[':
       found = nextValue( buf, next, max, outValue, outValueLength );
 
-      if( found == true )
+      if( found == ng_TRUE )
       {
         *outKey = 0;
         *outKeyLength = 0;
@@ -1851,7 +1841,7 @@ static JSONStatus_t iterate( const char * buf,
     }
   }
 
-  if( found == true )
+  if( found == ng_TRUE )
   {
     ret = JSONSuccess;
     ( void ) skipSpaceAndComma( buf, next, max );

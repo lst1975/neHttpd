@@ -67,10 +67,6 @@
     extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
-#include <limits.h>
-
 size_t u32toa_jeaiii(uint32_t u, char* b, size_t len);
 size_t i32toa_jeaiii(int32_t i, char* b, size_t len);
 size_t u64toa_jeaiii(uint64_t n, char* b, size_t len);

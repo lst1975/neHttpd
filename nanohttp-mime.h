@@ -289,7 +289,6 @@ size_t multipartparser_execute(
 /** "multipart/related"  MIME Message Builder
  *
  */
-extern const ng_str_s *ng_http_get_mime_type(ng_str_s *ext);
 extern ng_result_t ng_http_mime_type_init(void);
 extern herror_t mime_add_content_type_header(ng_list_head_s *header, 
   void *conn_ptr, int conn_id, const ng_block_s *params);
@@ -312,7 +311,8 @@ extern void attachments_free(attachments_t *message);
 extern void attachments_add_part(attachments_t *attachments, 
   multipartpart *part);
 
-extern const ng_str_s *ng_http_get_mime_type(ng_str_s *ext);
+extern const ng_block_s *ng_http_get_mime_type_from_file(const ng_block_s *file);
+extern const ng_block_s *ng_http_get_mime_type(const ng_block_s *ext);
 extern ng_result_t ng_http_mime_type_init(void);
 extern void ng_http_mime_type_free(void);
 

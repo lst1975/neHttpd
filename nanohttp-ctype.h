@@ -37,8 +37,6 @@
 extern "C" {
 #endif
 
-#include <string.h>
-
 /*
  * NOTE! This ctype does not handle EOF like the standard C
  * library is required to.

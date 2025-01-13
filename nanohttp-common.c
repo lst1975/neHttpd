@@ -85,35 +85,6 @@
 * Email: ayaz@jprogrammer.net
 ******************************************************************/
 #include "nanohttp-config.h"
-
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
-#endif
-
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#ifdef HAVE_ERRNO_H
-#include <errno.h>
-#endif
-
-#ifdef HAVE_CTYPE_H
-#include <ctype.h>
-#endif
-
-#ifdef HAVE_PTHREAD_H
-#include <pthread.h>
-#endif
-
 #include "nanohttp-logging.h"
 #include "nanohttp-error.h"
 #include "nanohttp-defs.h"

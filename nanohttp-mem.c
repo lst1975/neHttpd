@@ -60,11 +60,15 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#include <pthread.h>
 #include "nanohttp-config.h"
 #include "nanohttp-mem.h"
 #include "nanohttp-list.h"
 #include "nanohttp-ring.h"
+#include "nanohttp-server.h"
+
+#ifdef WIN32
+#include <Windows.h>
+#endif
 
 struct _mentry {
   ng_list_head_s link;
@@ -96,21 +100,24 @@ static uint8_t *msg_array_ptr;
 static uint8_t *msg_array_end;
 static uint8_t msg_cache_array[(TSN_MEM_Cache_Max-1)*TSN_MEM_ENTRY_SIZE]={0};
 struct rte_ring *__http_mem_ring = NULL;
-#if __NHTTP_MEM_DEBUG  
-static ng_list_head_s msg_malloced_list;
-static pthread_spinlock_t msg_spin_lock;
-#endif  
 
-#define ____pthread_spin_lock(l) while(pthread_spin_lock(l)){}
-#define ____pthread_spin_unlock(l) while(pthread_spin_unlock(l)){}
+#if __NHTTP_MEM_DEBUG  
+#ifdef WIN32
+typedef HANDLE MUTEXT_T;
+#else
+typedef pthread_mutex_t MUTEXT_T;
+#endif
+static ng_list_head_s msg_malloced_list;
+static MUTEXT_T msg_mutex_lock;
+#endif  
 
 static void __http_malloced_list_enq(http_mentry_s *e)
 {
 #if __NHTTP_MEM_DEBUG  
-  ____pthread_spin_lock(&msg_spin_lock);
+  httpd_enter_mutex(&msg_mutex_lock);
   e->isinq = 1;
   ng_list_add_tail(&e->link, &msg_malloced_list);
-  ____pthread_spin_unlock(&msg_spin_lock);
+  httpd_leave_mutex(&msg_mutex_lock);
 #else
   HTTPD_UNUSED(e);
 #endif
@@ -121,9 +128,9 @@ static void __http_malloced_list_deq(http_mentry_s *e)
 #if __NHTTP_MEM_DEBUG  
   if (e->isinq)
   {
-    ____pthread_spin_lock(&msg_spin_lock);
+    httpd_enter_mutex(&msg_mutex_lock);
     ng_list_del(&e->link);
-    ____pthread_spin_unlock(&msg_spin_lock);
+    httpd_leave_mutex(&msg_mutex_lock);
   }
 #else
   HTTPD_UNUSED(e);
@@ -154,7 +161,7 @@ int http_memcache_init(void)
 #if __NHTTP_MEM_DEBUG  
   int err;
   ng_INIT_LIST_HEAD(&msg_malloced_list);
-  if ((err = pthread_spin_init(&msg_spin_lock, PTHREAD_PROCESS_PRIVATE)))
+  if (0 > (err = httpd_create_mutex(&msg_mutex_lock)))
   {
     log_fatal("pthread_spin_init failed.");
     goto clean0;
@@ -193,7 +200,7 @@ int http_memcache_init(void)
   
 clean1:
 #if __NHTTP_MEM_DEBUG  
-  pthread_spin_destroy(&msg_spin_lock);
+  httpd_destroy_mutex(&msg_mutex_lock);
 clean0:
 #endif
   return -1;
@@ -246,7 +253,7 @@ void http_memcache_free(void)
 #endif
   rte_ring_free(__http_mem_ring);
 #if __NHTTP_MEM_DEBUG  
-  pthread_spin_destroy(&msg_spin_lock);
+  httpd_destroy_mutex(&msg_mutex_lock);
 #endif
 
   log_info("[OK]: http_memcache_free.");

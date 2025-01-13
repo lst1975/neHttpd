@@ -61,6 +61,7 @@
  **************************************************************************************
  */
 
+#include "nanohttp-config.h"
 #include "nanohttp-buffer.h"
 #include "nanohttp-mem.h"
 #include "nanohttp-logging.h"

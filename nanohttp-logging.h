@@ -85,8 +85,6 @@
 #ifndef __nanohttp_logging_h
 #define __nanohttp_logging_h
 
-#include <stdarg.h>
-
 /** @file nanohttp-logging.h Logging definitions and prototypes
  *
  * @defgroup NANOHTTP_LOGGING Logging interface

@@ -84,32 +84,6 @@
 *
 ******************************************************************/
 #include "nanohttp-config.h"
-
-#ifdef HAVE_CTYPE_H
-#include <ctype.h>
-#endif
-
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
-#endif
-
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#ifdef HAVE_SYSLOG_H
-#include <syslog.h>
-#endif
-
-#include "nanohttp-config.h"
 #include "nanohttp-logging.h"
 #include "nanohttp-mem.h"
 #include "nanohttp-server.h"

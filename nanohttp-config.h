@@ -87,6 +87,7 @@
 #define HAVE_ARPA_INET_H
 #define HAVE_SYS_WAIT_H
 #define HAVE_FCNTL_H
+#define HAVE_NETDB_H
 #else
 #undef HAVE_SYS_TIME_H
 #undef HAVE_NETINET_IN_H
@@ -101,6 +102,7 @@
 #undef HAVE_ARPA_INET_H
 #undef HAVE_SYS_WAIT_H
 #undef HAVE_FCNTL_H
+#undef HAVE_NETDB_H
 #endif
 
 #define HAVE_STDARG_H
@@ -147,5 +149,76 @@
 #endif
 
 #define __NHTTP_USE_NATIVE_MEM 0
+
+#include <stdint.h>
+#include <math.h>
+#include <limits.h>  // For PATH_MAX
+#include <assert.h>
+#include <syslog.h>
+#include <inttypes.h>
+
+#ifdef HAVE_STDIO_H
+#include <stdio.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
+
+#ifdef HAVE_ERRNO_H
+#include <errno.h>
+#endif
+
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+
+#ifdef HAVE_STDARG_H
+#include <stdarg.h>
+#endif
+
+#ifdef HAVE_PTHREAD_H
+#include <pthread.h>
+#endif
+
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+
+#ifdef HAVE_SYS_WAIT_H
+#include <sys/wait.h>
+#endif
+
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 #endif

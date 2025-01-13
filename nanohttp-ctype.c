@@ -32,40 +32,40 @@
 #include "nanohttp-defs.h"
 #include "nanohttp-ctype.h"
 
-#define _U  ngctype_U	  /* upper */
-#define _L  ngctype_L	  /* lower */
-#define _D  ngctype_D	  /* digit */
-#define _C  ngctype_C	  /* cntrl */
-#define _P  ngctype_P	  /* punct */
-#define _S  ngctype_S	  /* white space (space/lf/tab) */
-#define _X  ngctype_X   /* hex digit */
-#define _SP ngctype_SP	/* hard space (0x20) */
+#define __xU  ngctype_U	  /* upper */
+#define __xL  ngctype_L	  /* lower */
+#define __xD  ngctype_D	  /* digit */
+#define __xC  ngctype_C	  /* cntrl */
+#define __xP  ngctype_P	  /* punct */
+#define __xS  ngctype_S	  /* white space (space/lf/tab) */
+#define __xX  ngctype_X   /* hex digit */
+#define __xSP ngctype_SP	/* hard space (0x20) */
 
 const unsigned char __ng_cache_aligned __ng_ctype[] = {
-_C,_C,_C,_C,_C,_C,_C,_C,				/* 0-7 */
-_C,_C|_S,_C|_S,_C|_S,_C|_S,_C|_S,_C,_C,			/* 8-15 */
-_C,_C,_C,_C,_C,_C,_C,_C,				/* 16-23 */
-_C,_C,_C,_C,_C,_C,_C,_C,				/* 24-31 */
-_S|_SP,_P,_P,_P,_P,_P,_P,_P,				/* 32-39 */
-_P,_P,_P,_P,_P,_P,_P,_P,				/* 40-47 */
-_D,_D,_D,_D,_D,_D,_D,_D,				/* 48-55 */
-_D,_D,_P,_P,_P,_P,_P,_P,				/* 56-63 */
-_P,_U|_X,_U|_X,_U|_X,_U|_X,_U|_X,_U|_X,_U,		/* 64-71 */
-_U,_U,_U,_U,_U,_U,_U,_U,				/* 72-79 */
-_U,_U,_U,_U,_U,_U,_U,_U,				/* 80-87 */
-_U,_U,_U,_P,_P,_P,_P,_P,				/* 88-95 */
-_P,_L|_X,_L|_X,_L|_X,_L|_X,_L|_X,_L|_X,_L,		/* 96-103 */
-_L,_L,_L,_L,_L,_L,_L,_L,				/* 104-111 */
-_L,_L,_L,_L,_L,_L,_L,_L,				/* 112-119 */
-_L,_L,_L,_P,_P,_P,_P,_C,				/* 120-127 */
+__xC,__xC,__xC,__xC,__xC,__xC,__xC,__xC,				/* 0-7 */
+__xC,__xC|__xS,__xC|__xS,__xC|__xS,__xC|__xS,__xC|__xS,__xC,__xC,			/* 8-15 */
+__xC,__xC,__xC,__xC,__xC,__xC,__xC,__xC,				/* 16-23 */
+__xC,__xC,__xC,__xC,__xC,__xC,__xC,__xC,				/* 24-31 */
+__xS|__xSP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,				/* 32-39 */
+__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,				/* 40-47 */
+__xD,__xD,__xD,__xD,__xD,__xD,__xD,__xD,				/* 48-55 */
+__xD,__xD,__xP,__xP,__xP,__xP,__xP,__xP,				/* 56-63 */
+__xP,__xU|__xX,__xU|__xX,__xU|__xX,__xU|__xX,__xU|__xX,__xU|__xX,__xU,		/* 64-71 */
+__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,				/* 72-79 */
+__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,				/* 80-87 */
+__xU,__xU,__xU,__xP,__xP,__xP,__xP,__xP,				/* 88-95 */
+__xP,__xL|__xX,__xL|__xX,__xL|__xX,__xL|__xX,__xL|__xX,__xL|__xX,__xL,		/* 96-103 */
+__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,				/* 104-111 */
+__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,				/* 112-119 */
+__xL,__xL,__xL,__xP,__xP,__xP,__xP,__xC,				/* 120-127 */
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,			/* 128-143 */
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,			/* 144-159 */
-_S|_SP,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,	/* 160-175 */
-_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,_P,	/* 176-191 */
-_U,_U,_U,_U,_U,_U,_U,_U,_U,_U,_U,_U,_U,_U,_U,_U,	/* 192-207 */
-_U,_U,_U,_U,_U,_U,_U,_P,_U,_U,_U,_U,_U,_U,_U,_L,	/* 208-223 */
-_L,_L,_L,_L,_L,_L,_L,_L,_L,_L,_L,_L,_L,_L,_L,_L,	/* 224-239 */
-_L,_L,_L,_L,_L,_L,_L,_P,_L,_L,_L,_L,_L,_L,_L,_L};	/* 240-255 */
+__xS|__xSP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,	/* 160-175 */
+__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,__xP,	/* 176-191 */
+__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xU,	/* 192-207 */
+__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xP,__xU,__xU,__xU,__xU,__xU,__xU,__xU,__xL,	/* 208-223 */
+__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL,	/* 224-239 */
+__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xP,__xL,__xL,__xL,__xL,__xL,__xL,__xL,__xL};	/* 240-255 */
 
 /*
  * Our own known-fast translation table for casecmp by character.
