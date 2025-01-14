@@ -23,7 +23,6 @@
 
 #include <assert.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -35,7 +34,7 @@ static char* s(uint128_t v) {
   int len = decimalLength(v);
   char* b = (char*) malloc((len + 1) * sizeof(char));
   for (int i = 0; i < len; i++) {
-    const uint32_t c = (uint32_t) (v % 10);
+    const ng_uint32_t c = (ng_uint32_t) (v % 10);
     v /= 10;
     b[len - 1 - i] = (char) ('0' + c);
   }
@@ -57,7 +56,7 @@ static char* s(uint128_t v) {
 #endif
 
 struct floating_decimal_128 float_to_fd128(float f) {
-  uint32_t bits = *(uint32_t *)&f;
+  ng_uint32_t bits = *(ng_uint32_t *)&f;
   return generic_binary_to_decimal(bits, FLOAT_MANTISSA_BITS, FLOAT_EXPONENT_BITS, false);
 }
 
@@ -65,7 +64,7 @@ struct floating_decimal_128 float_to_fd128(float f) {
 #define DOUBLE_EXPONENT_BITS 11
 
 struct floating_decimal_128 double_to_fd128(double d) {
-  uint64_t bits = *(uint64_t *)&d;
+  ng_uint64_t bits = *(ng_uint64_t *)&d;
   return generic_binary_to_decimal(bits, DOUBLE_MANTISSA_BITS, DOUBLE_EXPONENT_BITS, false);
 }
 
@@ -91,19 +90,19 @@ struct floating_decimal_128 long_double_to_fd128(long double d) {
 #endif
 
 struct floating_decimal_128 generic_binary_to_decimal(
-    const uint128_t bits, const uint32_t mantissaBits, const uint32_t exponentBits, const bool explicitLeadingBit) {
+    const uint128_t bits, const ng_uint32_t mantissaBits, const ng_uint32_t exponentBits, const bool explicitLeadingBit) {
 #ifdef RYU_DEBUG
   printf("IN=");
-  for (int32_t bit = 127; bit >= 0; --bit) {
-    printf("%u", (uint32_t) ((bits >> bit) & 1));
+  for (ng_int32_t bit = 127; bit >= 0; --bit) {
+    printf("%u", (ng_uint32_t) ((bits >> bit) & 1));
   }
   printf("\n");
 #endif
 
-  const uint32_t bias = (1u << (exponentBits - 1)) - 1;
+  const ng_uint32_t bias = (1u << (exponentBits - 1)) - 1;
   const bool ieeeSign = ((bits >> (mantissaBits + exponentBits)) & 1) != 0;
   const uint128_t ieeeMantissa = bits & ((ONE << mantissaBits) - 1);
-  const uint32_t ieeeExponent = (uint32_t) ((bits >> mantissaBits) & ((ONE << exponentBits) - 1u));
+  const ng_uint32_t ieeeExponent = (ng_uint32_t) ((bits >> mantissaBits) & ((ONE << exponentBits) - 1u));
 
   if (ieeeExponent == 0 && ieeeMantissa == 0) {
     struct floating_decimal_128 fd;
@@ -120,7 +119,7 @@ struct floating_decimal_128 generic_binary_to_decimal(
     return fd;
   }
 
-  int32_t e2;
+  ng_int32_t e2;
   uint128_t m2;
   // We subtract 2 in all cases so that the bounds computation has 2 additional bits.
   if (explicitLeadingBit) {
@@ -150,23 +149,23 @@ struct floating_decimal_128 generic_binary_to_decimal(
   // Step 2: Determine the interval of legal decimal representations.
   const uint128_t mv = 4 * m2;
   // Implicit bool -> int conversion. True is 1, false is 0.
-  const uint32_t mmShift =
+  const ng_uint32_t mmShift =
       (ieeeMantissa != (explicitLeadingBit ? ONE << (mantissaBits - 1) : 0))
       || (ieeeExponent == 0);
 
   // Step 3: Convert to a decimal power base using 128-bit arithmetic.
   uint128_t vr, vp, vm;
-  int32_t e10;
+  ng_int32_t e10;
   bool vmIsTrailingZeros = false;
   bool vrIsTrailingZeros = false;
   if (e2 >= 0) {
     // I tried special-casing q == 0, but there was no effect on performance.
     // This expression is slightly faster than max(0, log10Pow2(e2) - 1).
-    const uint32_t q = log10Pow2(e2) - (e2 > 3);
+    const ng_uint32_t q = log10Pow2(e2) - (e2 > 3);
     e10 = q;
-    const int32_t k = FLOAT_128_POW5_INV_BITCOUNT + pow5bits(q) - 1;
-    const int32_t i = -e2 + q + k;
-    uint64_t pow5[4];
+    const ng_int32_t k = FLOAT_128_POW5_INV_BITCOUNT + pow5bits(q) - 1;
+    const ng_int32_t i = -e2 + q + k;
+    ng_uint64_t pow5[4];
     generic_computeInvPow5(q, pow5);
     vr = mulShift(4 * m2, pow5, i);
     vp = mulShift(4 * m2 + 2, pow5, i);
@@ -192,12 +191,12 @@ struct floating_decimal_128 generic_binary_to_decimal(
     }
   } else {
     // This expression is slightly faster than max(0, log10Pow5(-e2) - 1).
-    const uint32_t q = log10Pow5(-e2) - (-e2 > 1);
+    const ng_uint32_t q = log10Pow5(-e2) - (-e2 > 1);
     e10 = q + e2;
-    const int32_t i = -e2 - q;
-    const int32_t k = pow5bits(i) - FLOAT_128_POW5_BITCOUNT;
-    const int32_t j = q - k;
-    uint64_t pow5[4];
+    const ng_int32_t i = -e2 - q;
+    const ng_int32_t k = pow5bits(i) - FLOAT_128_POW5_BITCOUNT;
+    const ng_int32_t j = q - k;
+    ng_uint64_t pow5[4];
     generic_computePow5(i, pow5);
     vr = mulShift(4 * m2, pow5, j);
     vp = mulShift(4 * m2 + 2, pow5, j);
@@ -238,14 +237,14 @@ struct floating_decimal_128 generic_binary_to_decimal(
 #endif
 
   // Step 4: Find the shortest decimal representation in the interval of legal representations.
-  uint32_t removed = 0;
-  uint8_t lastRemovedDigit = 0;
+  ng_uint32_t removed = 0;
+  ng_uint8_t lastRemovedDigit = 0;
   uint128_t output;
 
   while (vp / 10 > vm / 10) {
     vmIsTrailingZeros &= vm % 10 == 0;
     vrIsTrailingZeros &= lastRemovedDigit == 0;
-    lastRemovedDigit = (uint8_t) (vr % 10);
+    lastRemovedDigit = (ng_uint8_t) (vr % 10);
     vr /= 10;
     vp /= 10;
     vm /= 10;
@@ -258,7 +257,7 @@ struct floating_decimal_128 generic_binary_to_decimal(
   if (vmIsTrailingZeros) {
     while (vm % 10 == 0) {
       vrIsTrailingZeros &= lastRemovedDigit == 0;
-      lastRemovedDigit = (uint8_t) (vr % 10);
+      lastRemovedDigit = (ng_uint8_t) (vr % 10);
       vr /= 10;
       vp /= 10;
       vm /= 10;
@@ -276,7 +275,7 @@ struct floating_decimal_128 generic_binary_to_decimal(
   // We need to take vr+1 if vr is outside bounds or we need to round up.
   output = vr +
       ((vr == vm && (!acceptBounds || !vmIsTrailingZeros)) || (lastRemovedDigit >= 5));
-  const int32_t exp = e10 + removed;
+  const ng_int32_t exp = e10 + removed;
 
 #ifdef RYU_DEBUG
   printf("V+=%s\nV =%s\nV-=%s\n", s(vp), s(vr), s(vm));
@@ -315,7 +314,7 @@ int generic_to_chars(const struct floating_decimal_128 v, char* const result) {
   }
 
   uint128_t output = v.mantissa;
-  const uint32_t olength = decimalLength(output);
+  const ng_uint32_t olength = decimalLength(output);
 
 #ifdef RYU_DEBUG
   printf("DIGITS=%s\n", s(v.mantissa));
@@ -323,12 +322,12 @@ int generic_to_chars(const struct floating_decimal_128 v, char* const result) {
   printf("EXP=%u\n", v.exponent + olength);
 #endif
 
-  for (uint32_t i = 0; i < olength - 1; ++i) {
-    const uint32_t c = (uint32_t) (output % 10);
+  for (ng_uint32_t i = 0; i < olength - 1; ++i) {
+    const ng_uint32_t c = (ng_uint32_t) (output % 10);
     output /= 10;
     result[index + olength - i] = (char) ('0' + c);
   }
-  result[index] = '0' + (uint32_t) (output % 10); // output should be < 10 by now.
+  result[index] = '0' + (ng_uint32_t) (output % 10); // output should be < 10 by now.
 
   // Print decimal point if needed.
   if (olength > 1) {
@@ -340,15 +339,15 @@ int generic_to_chars(const struct floating_decimal_128 v, char* const result) {
 
   // Print the exponent.
   result[index++] = 'E';
-  int32_t exp = v.exponent + olength - 1;
+  ng_int32_t exp = v.exponent + olength - 1;
   if (exp < 0) {
     result[index++] = '-';
     exp = -exp;
   }
 
-  uint32_t elength = decimalLength(exp);
-  for (uint32_t i = 0; i < elength; ++i) {
-    const uint32_t c = exp % 10;
+  ng_uint32_t elength = decimalLength(exp);
+  for (ng_uint32_t i = 0; i < elength; ++i) {
+    const ng_uint32_t c = exp % 10;
     exp /= 10;
     result[index + elength - 1 - i] = (char) ('0' + c);
   }

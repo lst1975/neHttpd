@@ -19,7 +19,6 @@
 
 #include <assert.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -43,21 +42,21 @@
 #if defined(_MSC_VER)
 #include <intrin.h>
 
-static inline uint32_t floor_log2(const uint64_t value) {
+static inline ng_uint32_t floor_log2(const ng_uint64_t value) {
   long index;
   return _BitScanReverse64(&index, value) ? index : 64;
 }
 
 #else
 
-static inline uint32_t floor_log2(const uint64_t value) {
+static inline ng_uint32_t floor_log2(const ng_uint64_t value) {
   return 63 - __builtin_clzll(value);
 }
 
 #endif
 
 // The max function is already defined on Windows.
-static inline int32_t max32(int32_t a, int32_t b) {
+static inline ng_int32_t max32(ng_int32_t a, ng_int32_t b) {
   return a < b ? b : a;
 }
 
@@ -68,7 +67,7 @@ static inline int32_t max32(int32_t a, int32_t b) {
 #endif
 #endif
 
-static inline double int64Bits2Double(uint64_t bits) {
+static inline double int64Bits2Double(ng_uint64_t bits) {
   return *(double *)&bits;
 }
 
@@ -86,8 +85,8 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   int e10digits = 0;
   int dotIndex = len;
   int eIndex = len;
-  uint64_t m10 = 0;
-  int32_t e10 = 0;
+  ng_uint64_t m10 = 0;
+  ng_int32_t e10 = 0;
   bool signedM = false;
   bool signedE = false;
   int i = 0;
@@ -158,21 +157,21 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
 
   if ((m10digits + e10 <= -324) || (m10 == 0)) {
     // Number is less than 1e-324, which should be rounded down to 0; return +/-0.0.
-    uint64_t ieee = ((uint64_t) signedM) << (DOUBLE_EXPONENT_BITS + DOUBLE_MANTISSA_BITS);
+    ng_uint64_t ieee = ((ng_uint64_t) signedM) << (DOUBLE_EXPONENT_BITS + DOUBLE_MANTISSA_BITS);
     *result = int64Bits2Double(ieee);
     return SUCCESS;
   }
   if (m10digits + e10 >= 310) {
     // Number is larger than 1e+309, which should be rounded to +/-Infinity.
-    uint64_t ieee = (((uint64_t) signedM) << (DOUBLE_EXPONENT_BITS + DOUBLE_MANTISSA_BITS)) | (0x7ffull << DOUBLE_MANTISSA_BITS);
+    ng_uint64_t ieee = (((ng_uint64_t) signedM) << (DOUBLE_EXPONENT_BITS + DOUBLE_MANTISSA_BITS)) | (0x7ffull << DOUBLE_MANTISSA_BITS);
     *result = int64Bits2Double(ieee);
     return SUCCESS;
   }
 
   // Convert to binary float m2 * 2^e2, while retaining information about whether the conversion
   // was exact (trailingZeros).
-  int32_t e2;
-  uint64_t m2;
+  ng_int32_t e2;
+  ng_uint64_t m2;
   bool trailingZeros;
   if (e10 >= 0) {
     // The length of m * 10^e in bits is:
@@ -191,7 +190,7 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
     int j = e2 - e10 - ceil_log2pow5(e10) + DOUBLE_POW5_BITCOUNT;
     assert(j >= 0);
 #if defined(RYU_OPTIMIZE_SIZE)
-    uint64_t pow5[2];
+    ng_uint64_t pow5[2];
     double_computePow5(e10, pow5);
     m2 = mulShift64(m10, pow5, j);
 #else
@@ -208,7 +207,7 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
     e2 = floor_log2(m10) + e10 - ceil_log2pow5(-e10) - (DOUBLE_MANTISSA_BITS + 1);
     int j = e2 - e10 + ceil_log2pow5(-e10) - 1 + DOUBLE_POW5_INV_BITCOUNT;
 #if defined(RYU_OPTIMIZE_SIZE)
-    uint64_t pow5[2];
+    ng_uint64_t pow5[2];
     double_computeInvPow5(-e10, pow5);
     m2 = mulShift64(m10, pow5, j);
 #else
@@ -223,11 +222,11 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
 #endif
 
   // Compute the final IEEE exponent.
-  uint32_t ieee_e2 = (uint32_t) max32(0, e2 + DOUBLE_EXPONENT_BIAS + floor_log2(m2));
+  ng_uint32_t ieee_e2 = (ng_uint32_t) max32(0, e2 + DOUBLE_EXPONENT_BIAS + floor_log2(m2));
 
   if (ieee_e2 > 0x7fe) {
     // Final IEEE exponent is larger than the maximum representable; return +/-Infinity.
-    uint64_t ieee = (((uint64_t) signedM) << (DOUBLE_EXPONENT_BITS + DOUBLE_MANTISSA_BITS)) | (0x7ffull << DOUBLE_MANTISSA_BITS);
+    ng_uint64_t ieee = (((ng_uint64_t) signedM) << (DOUBLE_EXPONENT_BITS + DOUBLE_MANTISSA_BITS)) | (0x7ffull << DOUBLE_MANTISSA_BITS);
     *result = int64Bits2Double(ieee);
     return SUCCESS;
   }
@@ -235,7 +234,7 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   // We need to figure out how much we need to shift m2. The tricky part is that we need to take
   // the final IEEE exponent into account, so we need to reverse the bias and also special-case
   // the value 0.
-  int32_t shift = (ieee_e2 == 0 ? 1 : ieee_e2) - e2 - DOUBLE_EXPONENT_BIAS - DOUBLE_MANTISSA_BITS;
+  ng_int32_t shift = (ieee_e2 == 0 ? 1 : ieee_e2) - e2 - DOUBLE_EXPONENT_BIAS - DOUBLE_MANTISSA_BITS;
   assert(shift >= 0);
 #ifdef RYU_DEBUG
   printf("ieee_e2 = %d\n", ieee_e2);
@@ -248,14 +247,14 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   //
   // We need to update trailingZeros given that we have the exact output exponent ieee_e2 now.
   trailingZeros &= (m2 & ((1ull << (shift - 1)) - 1)) == 0;
-  uint64_t lastRemovedBit = (m2 >> (shift - 1)) & 1;
+  ng_uint64_t lastRemovedBit = (m2 >> (shift - 1)) & 1;
   bool roundUp = (lastRemovedBit != 0) && (!trailingZeros || (((m2 >> shift) & 1) != 0));
 
 #ifdef RYU_DEBUG
   printf("roundUp = %d\n", roundUp);
   printf("ieee_m2 = %" PRIu64 "\n", (m2 >> shift) + roundUp);
 #endif
-  uint64_t ieee_m2 = (m2 >> shift) + roundUp;
+  ng_uint64_t ieee_m2 = (m2 >> shift) + roundUp;
   assert(ieee_m2 <= (1ull << (DOUBLE_MANTISSA_BITS + 1)));
   ieee_m2 &= (1ull << DOUBLE_MANTISSA_BITS) - 1;
   if (ieee_m2 == 0 && roundUp) {
@@ -263,7 +262,7 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
     ieee_e2++;
   }
   
-  uint64_t ieee = (((((uint64_t) signedM) << DOUBLE_EXPONENT_BITS) | (uint64_t)ieee_e2) << DOUBLE_MANTISSA_BITS) | ieee_m2;
+  ng_uint64_t ieee = (((((ng_uint64_t) signedM) << DOUBLE_EXPONENT_BITS) | (ng_uint64_t)ieee_e2) << DOUBLE_MANTISSA_BITS) | ieee_m2;
   *result = int64Bits2Double(ieee);
   return SUCCESS;
 }

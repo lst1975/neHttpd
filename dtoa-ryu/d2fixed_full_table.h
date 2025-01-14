@@ -17,11 +17,9 @@
 #ifndef RYU_D2FIXED_FULL_TABLE_H
 #define RYU_D2FIXED_FULL_TABLE_H
 
-#include <stdint.h>
-
 #define TABLE_SIZE 64
 
-static const uint16_t POW10_OFFSET[TABLE_SIZE] = {
+static const ng_uint16_t POW10_OFFSET[TABLE_SIZE] = {
   0u, 2u, 5u, 8u, 12u, 16u, 21u, 26u, 32u, 39u,
   46u, 54u, 62u, 71u, 80u, 90u, 100u, 111u, 122u, 134u,
   146u, 159u, 173u, 187u, 202u, 217u, 233u, 249u, 266u, 283u,
@@ -31,7 +29,7 @@ static const uint16_t POW10_OFFSET[TABLE_SIZE] = {
   1084u, 1118u, 1153u, 1188u
 };
 
-static const uint64_t POW10_SPLIT[1224][3] = {
+static const ng_uint64_t POW10_SPLIT[1224][3] = {
   {                    1ull,    72057594037927936ull,                    0ull },
   {   699646928636035157ull,             72057594ull,                    0ull },
   {                    1ull,                    0ull,                  256ull },
@@ -1261,7 +1259,7 @@ static const uint64_t POW10_SPLIT[1224][3] = {
 #define TABLE_SIZE_2 69
 #define ADDITIONAL_BITS_2 120
 
-static const uint16_t POW10_OFFSET_2[TABLE_SIZE_2] = {
+static const ng_uint16_t POW10_OFFSET_2[TABLE_SIZE_2] = {
      0,    2,    6,   12,   20,   29,   40,   52,   66,   80,
     95,  112,  130,  150,  170,  192,  215,  240,  265,  292,
    320,  350,  381,  413,  446,  480,  516,  552,  590,  629,
@@ -1271,7 +1269,7 @@ static const uint16_t POW10_OFFSET_2[TABLE_SIZE_2] = {
   2465, 2544, 2625, 2706, 2789, 2873, 2959, 3046, 3133
 };
 
-static const uint8_t MIN_BLOCK_2[TABLE_SIZE_2] = {
+static const ng_uint8_t MIN_BLOCK_2[TABLE_SIZE_2] = {
      0,    0,    0,    0,    0,    0,    1,    1,    2,    3,
      3,    4,    4,    5,    5,    6,    6,    7,    7,    8,
      8,    9,    9,   10,   11,   11,   12,   12,   13,   13,
@@ -1281,7 +1279,7 @@ static const uint8_t MIN_BLOCK_2[TABLE_SIZE_2] = {
     30,   30,   31,   31,   32,   32,   33,   34,    0
 };
 
-static const uint64_t POW10_SPLIT_2[3133][3] = {
+static const ng_uint64_t POW10_SPLIT_2[3133][3] = {
   {                    0ull,                    0ull,              3906250ull },
   {                    0ull,                    0ull,         202000000000ull },
   {                    0ull, 11153727427136454656ull,                   59ull },

@@ -21,9 +21,6 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
-
 #include <nanohttp-defs.h>
 
 #define RYU_TEST 0
@@ -35,17 +32,17 @@ extern "C" {
 
 static __ng_inline__ void D2X_memcpy_Infinity(char *b) 
 {
-  *(uint64_t *)b = *(const uint64_t *)RYU_Infinity;
+  *(ng_uint64_t *)b = *(const ng_uint64_t *)RYU_Infinity;
 }
 
 static __ng_inline__ void D2X_memcpy_snan(char *b) 
 {
-  *(uint32_t *)b = *(const uint32_t *)RYU_snan;
+  *(ng_uint32_t *)b = *(const ng_uint32_t *)RYU_snan;
 }
 
 static __ng_inline__ void D2X_memcpy_3Byte(char *b, const char *s) 
 {
-  *(uint16_t *)b = *(const uint16_t *)s;
+  *(ng_uint16_t *)b = *(const ng_uint16_t *)s;
   b[2] = s[2];
 }
 
@@ -62,8 +59,8 @@ static __ng_inline__ void D2X_memcpy_nan(char *b)
 int __d2s_buffered_n(double f, char* result, int result_len, int *decimal_point);
 int __f2s_buffered_n(float f, char* result, int result_len, int *decimal_point);
 
-int d2fixed_buffered_n(double d, uint32_t precision, char* result);
-int d2exp_buffered_n(double d, uint32_t precision, char* result);
+int d2fixed_buffered_n(double d, ng_uint32_t precision, char* result);
+int d2exp_buffered_n(double d, ng_uint32_t precision, char* result);
 
 static __ng_inline__ int d2s_buffered_n(double f, char* result, int result_len) 
 {
@@ -80,10 +77,10 @@ void d2s_buffered(double f, char* result);
 char* d2s(double f);
 void f2s_buffered(float f, char* result);
 char* f2s(float f);
-void d2fixed_buffered(double d, uint32_t precision, char* result);
-char* d2fixed(double d, uint32_t precision);
-void d2exp_buffered(double d, uint32_t precision, char* result);
-char* d2exp(double d, uint32_t precision);
+void d2fixed_buffered(double d, ng_uint32_t precision, char* result);
+char* d2fixed(double d, ng_uint32_t precision);
+void d2exp_buffered(double d, ng_uint32_t precision, char* result);
+char* d2exp(double d, ng_uint32_t precision);
 #endif
 
 #ifdef __cplusplus

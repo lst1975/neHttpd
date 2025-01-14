@@ -21,15 +21,8 @@
 #include "ryu.h"
 
 #include <assert.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-
-#ifdef RYU_DEBUG
-#include <stdio.h>
-#endif
 
 #include "common.h"
 #include "f2s_intrinsics.h"
@@ -43,48 +36,48 @@
 
 // A floating decimal representing m * 10^e.
 typedef struct floating_decimal_32 {
-  uint32_t mantissa;
+  ng_uint32_t mantissa;
   // Decimal exponent's range is -45 to 38
   // inclusive, and can fit in a short if needed.
-  int32_t exponent;
+  ng_int32_t exponent;
 } floating_decimal_32;
 
-static inline floating_decimal_32 f2d(const uint32_t ieeeMantissa, const uint32_t ieeeExponent) {
-  int32_t e2;
-  uint32_t m2;
+static inline floating_decimal_32 f2d(const ng_uint32_t ieeeMantissa, const ng_uint32_t ieeeExponent) {
+  ng_int32_t e2;
+  ng_uint32_t m2;
   if (ieeeExponent == 0) {
     // We subtract 2 so that the bounds computation has 2 additional bits.
     e2 = 1 - FLOAT_BIAS - FLOAT_MANTISSA_BITS - 2;
     m2 = ieeeMantissa;
   } else {
-    e2 = (int32_t) ieeeExponent - FLOAT_BIAS - FLOAT_MANTISSA_BITS - 2;
+    e2 = (ng_int32_t) ieeeExponent - FLOAT_BIAS - FLOAT_MANTISSA_BITS - 2;
     m2 = (1u << FLOAT_MANTISSA_BITS) | ieeeMantissa;
   }
-  const bool even = (m2 & 1) == 0;
-  const bool acceptBounds = even;
+  const ng_bool_t even = (m2 & 1) == 0;
+  const ng_bool_t acceptBounds = even;
 
 #ifdef RYU_DEBUG
   printf("-> %u * 2^%d\n", m2, e2 + 2);
 #endif
 
   // Step 2: Determine the interval of valid decimal representations.
-  const uint32_t mv = 4 * m2;
-  const uint32_t mp = 4 * m2 + 2;
+  const ng_uint32_t mv = 4 * m2;
+  const ng_uint32_t mp = 4 * m2 + 2;
   // Implicit bool -> int conversion. True is 1, false is 0.
-  const uint32_t mmShift = ieeeMantissa != 0 || ieeeExponent <= 1;
-  const uint32_t mm = 4 * m2 - 1 - mmShift;
+  const ng_uint32_t mmShift = ieeeMantissa != 0 || ieeeExponent <= 1;
+  const ng_uint32_t mm = 4 * m2 - 1 - mmShift;
 
   // Step 3: Convert to a decimal power base using 64-bit arithmetic.
-  uint32_t vr, vp, vm;
-  int32_t e10;
-  bool vmIsTrailingZeros = false;
-  bool vrIsTrailingZeros = false;
-  uint8_t lastRemovedDigit = 0;
+  ng_uint32_t vr, vp, vm;
+  ng_int32_t e10;
+  ng_bool_t vmIsTrailingZeros = ng_FALSE;
+  ng_bool_t vrIsTrailingZeros = ng_FALSE;
+  ng_uint8_t lastRemovedDigit = 0;
   if (e2 >= 0) {
-    const uint32_t q = log10Pow2(e2);
-    e10 = (int32_t) q;
-    const int32_t k = FLOAT_POW5_INV_BITCOUNT + pow5bits((int32_t) q) - 1;
-    const int32_t i = -e2 + (int32_t) q + k;
+    const ng_uint32_t q = log10Pow2(e2);
+    e10 = (ng_int32_t) q;
+    const ng_int32_t k = FLOAT_POW5_INV_BITCOUNT + pow5bits((ng_int32_t) q) - 1;
+    const ng_int32_t i = -e2 + (ng_int32_t) q + k;
     vr = mulPow5InvDivPow2(mv, q, i);
     vp = mulPow5InvDivPow2(mp, q, i);
     vm = mulPow5InvDivPow2(mm, q, i);
@@ -96,8 +89,8 @@ static inline floating_decimal_32 f2d(const uint32_t ieeeMantissa, const uint32_
       // We need to know one removed digit even if we are not going to loop below. We could use
       // q = X - 1 above, except that would require 33 bits for the result, and we've found that
       // 32-bit arithmetic is faster even on 64-bit machines.
-      const int32_t l = FLOAT_POW5_INV_BITCOUNT + pow5bits((int32_t) (q - 1)) - 1;
-      lastRemovedDigit = (uint8_t) (mulPow5InvDivPow2(mv, q - 1, -e2 + (int32_t) q - 1 + l) % 10);
+      const ng_int32_t l = FLOAT_POW5_INV_BITCOUNT + pow5bits((ng_int32_t) (q - 1)) - 1;
+      lastRemovedDigit = (ng_uint8_t) (mulPow5InvDivPow2(mv, q - 1, -e2 + (ng_int32_t) q - 1 + l) % 10);
     }
     if (q <= 9) {
       // The largest power of 5 that fits in 24 bits is 5^10, but q <= 9 seems to be safe as well.
@@ -111,27 +104,27 @@ static inline floating_decimal_32 f2d(const uint32_t ieeeMantissa, const uint32_
       }
     }
   } else {
-    const uint32_t q = log10Pow5(-e2);
-    e10 = (int32_t) q + e2;
-    const int32_t i = -e2 - (int32_t) q;
-    const int32_t k = pow5bits(i) - FLOAT_POW5_BITCOUNT;
-    int32_t j = (int32_t) q - k;
-    vr = mulPow5divPow2(mv, (uint32_t) i, j);
-    vp = mulPow5divPow2(mp, (uint32_t) i, j);
-    vm = mulPow5divPow2(mm, (uint32_t) i, j);
+    const ng_uint32_t q = log10Pow5(-e2);
+    e10 = (ng_int32_t) q + e2;
+    const ng_int32_t i = -e2 - (ng_int32_t) q;
+    const ng_int32_t k = pow5bits(i) - FLOAT_POW5_BITCOUNT;
+    ng_int32_t j = (ng_int32_t) q - k;
+    vr = mulPow5divPow2(mv, (ng_uint32_t) i, j);
+    vp = mulPow5divPow2(mp, (ng_uint32_t) i, j);
+    vm = mulPow5divPow2(mm, (ng_uint32_t) i, j);
 #ifdef RYU_DEBUG
     printf("%u * 5^%d / 10^%u\n", mv, -e2, q);
     printf("%u %d %d %d\n", q, i, k, j);
     printf("V+=%u\nV =%u\nV-=%u\n", vp, vr, vm);
 #endif
     if (q != 0 && (vp - 1) / 10 <= vm / 10) {
-      j = (int32_t) q - 1 - (pow5bits(i + 1) - FLOAT_POW5_BITCOUNT);
-      lastRemovedDigit = (uint8_t) (mulPow5divPow2(mv, (uint32_t) (i + 1), j) % 10);
+      j = (ng_int32_t) q - 1 - (pow5bits(i + 1) - FLOAT_POW5_BITCOUNT);
+      lastRemovedDigit = (ng_uint8_t) (mulPow5divPow2(mv, (ng_uint32_t) (i + 1), j) % 10);
     }
     if (q <= 1) {
       // {vr,vp,vm} is trailing zeros if {mv,mp,mm} has at least q trailing 0 bits.
       // mv = 4 * m2, so it always has at least two trailing 0 bits.
-      vrIsTrailingZeros = true;
+      vrIsTrailingZeros = ng_TRUE;
       if (acceptBounds) {
         // mm = mv - 1 - mmShift, so it has 1 trailing 0 bit iff mmShift == 1.
         vmIsTrailingZeros = mmShift == 1;
@@ -154,8 +147,8 @@ static inline floating_decimal_32 f2d(const uint32_t ieeeMantissa, const uint32_
 #endif
 
   // Step 4: Find the shortest decimal representation in the interval of valid representations.
-  int32_t removed = 0;
-  uint32_t output;
+  ng_int32_t removed = 0;
+  ng_uint32_t output;
   if (vmIsTrailingZeros || vrIsTrailingZeros) {
     // General case, which happens rarely (~4.0%).
     while (vp / 10 > vm / 10) {
@@ -167,7 +160,7 @@ static inline floating_decimal_32 f2d(const uint32_t ieeeMantissa, const uint32_
       vmIsTrailingZeros &= vm % 10 == 0;
 #endif
       vrIsTrailingZeros &= lastRemovedDigit == 0;
-      lastRemovedDigit = (uint8_t) (vr % 10);
+      lastRemovedDigit = (ng_uint8_t) (vr % 10);
       vr /= 10;
       vp /= 10;
       vm /= 10;
@@ -180,7 +173,7 @@ static inline floating_decimal_32 f2d(const uint32_t ieeeMantissa, const uint32_
     if (vmIsTrailingZeros) {
       while (vm % 10 == 0) {
         vrIsTrailingZeros &= lastRemovedDigit == 0;
-        lastRemovedDigit = (uint8_t) (vr % 10);
+        lastRemovedDigit = (ng_uint8_t) (vr % 10);
         vr /= 10;
         vp /= 10;
         vm /= 10;
@@ -202,7 +195,7 @@ static inline floating_decimal_32 f2d(const uint32_t ieeeMantissa, const uint32_
     // Loop iterations below (approximately):
     // 0: 13.6%, 1: 70.7%, 2: 14.1%, 3: 1.39%, 4: 0.14%, 5+: 0.01%
     while (vp / 10 > vm / 10) {
-      lastRemovedDigit = (uint8_t) (vr % 10);
+      lastRemovedDigit = (ng_uint8_t) (vr % 10);
       vr /= 10;
       vp /= 10;
       vm /= 10;
@@ -215,7 +208,7 @@ static inline floating_decimal_32 f2d(const uint32_t ieeeMantissa, const uint32_
     // We need to take vr + 1 if vr is outside bounds or we need to round up.
     output = vr + (vr == vm || lastRemovedDigit >= 5);
   }
-  const int32_t exp = e10 + removed;
+  const ng_int32_t exp = e10 + removed;
 
 #ifdef RYU_DEBUG
   printf("V+=%u\nV =%u\nV-=%u\n", vp, vr, vm);
@@ -230,7 +223,7 @@ static inline floating_decimal_32 f2d(const uint32_t ieeeMantissa, const uint32_
 }
 
 static inline int 
-f2s_to_chars(const floating_decimal_32 v, const bool sign, 
+f2s_to_chars(const floating_decimal_32 v, const ng_bool_t sign, 
   char* const result, int result_len, int *decimal_point) {
   // Step 5: Print the decimal representation.
   int index = 0;
@@ -239,8 +232,8 @@ f2s_to_chars(const floating_decimal_32 v, const bool sign,
   }
 
 #if 0
-  uint32_t output = v.mantissa;
-  const uint32_t olength = decimalLength9(output);
+  ng_uint32_t output = v.mantissa;
+  const ng_uint32_t olength = decimalLength9(output);
 
 #ifdef RYU_DEBUG
   printf("DIGITS=%u\n", v.mantissa);
@@ -250,33 +243,33 @@ f2s_to_chars(const floating_decimal_32 v, const bool sign,
 
   // Print the decimal digits.
   // The following code is equivalent to:
-  // for (uint32_t i = 0; i < olength - 1; ++i) {
-  //   const uint32_t c = output % 10; output /= 10;
+  // for (ng_uint32_t i = 0; i < olength - 1; ++i) {
+  //   const ng_uint32_t c = output % 10; output /= 10;
   //   result[index + olength - i] = (char) ('0' + c);
   // }
   // result[index] = '0' + output % 10;
-  uint32_t i = 0;
+  ng_uint32_t i = 0;
   while (output >= 10000) {
 #ifdef __clang__ // https://bugs.llvm.org/show_bug.cgi?id=38217
-    const uint32_t c = output - 10000 * (output / 10000);
+    const ng_uint32_t c = output - 10000 * (output / 10000);
 #else
-    const uint32_t c = output % 10000;
+    const ng_uint32_t c = output % 10000;
 #endif
     output /= 10000;
-    const uint32_t c0 = (c % 100) << 1;
-    const uint32_t c1 = (c / 100) << 1;
+    const ng_uint32_t c0 = (c % 100) << 1;
+    const ng_uint32_t c1 = (c / 100) << 1;
     memcpy(result + index + olength - i - 1, DIGIT_TABLE + c0, 2);
     memcpy(result + index + olength - i - 3, DIGIT_TABLE + c1, 2);
     i += 4;
   }
   if (output >= 100) {
-    const uint32_t c = (output % 100) << 1;
+    const ng_uint32_t c = (output % 100) << 1;
     output /= 100;
     memcpy(result + index + olength - i - 1, DIGIT_TABLE + c, 2);
     i += 2;
   }
   if (output >= 10) {
-    const uint32_t c = output << 1;
+    const ng_uint32_t c = output << 1;
     // We can't use memcpy here: the decimal dot goes between these two digits.
     result[index + olength - i] = DIGIT_TABLE[c + 1];
     result[index] = DIGIT_TABLE[c];
@@ -295,7 +288,7 @@ f2s_to_chars(const floating_decimal_32 v, const bool sign,
 #else
   int has_decimal = (v.mantissa > 9);
   int consumed_len = index + has_decimal;
-  const uint32_t olength = u32toa_jeaiii(v.mantissa, 
+  const ng_uint32_t olength = u32toa_jeaiii(v.mantissa, 
     result + consumed_len, result_len - consumed_len);
 
   // Print decimal point if needed.
@@ -318,7 +311,7 @@ f2s_to_chars(const floating_decimal_32 v, const bool sign,
 
   // Print the exponent.
   result[index++] = 'E';
-  int32_t exp = v.exponent + (int32_t) olength - 1;
+  ng_int32_t exp = v.exponent + (ng_int32_t) olength - 1;
   if (exp < 0) {
     result[index++] = '-';
     exp = -exp;
@@ -335,27 +328,27 @@ f2s_to_chars(const floating_decimal_32 v, const bool sign,
   return index;
 #else
   NG_ASSERT(exp  <= __float_power_of_ten_MAX);
-  *(uint16_t *)(result + index) = *(const uint16_t *)EXPONENT_TABLE[exp];
+  *(ng_uint16_t *)(result + index) = *(const ng_uint16_t *)EXPONENT_TABLE[exp];
   return index + (exp >= 10 ? 2 : 2);
 #endif
 }
 
 int __f2s_buffered_n(float f, char* result, int result_len, int *decimal_point) {
   // Step 1: Decode the floating-point number, and unify normalized and subnormal cases.
-  const uint32_t bits = float_to_bits(f);
+  const ng_uint32_t bits = float_to_bits(f);
 
 #ifdef RYU_DEBUG
   printf("IN=");
-  for (int32_t bit = 31; bit >= 0; --bit) {
+  for (ng_int32_t bit = 31; bit >= 0; --bit) {
     printf("%u", (bits >> bit) & 1);
   }
   printf("\n");
 #endif
 
   // Decode bits into sign, mantissa, and exponent.
-  const bool ieeeSign = ((bits >> (FLOAT_MANTISSA_BITS + FLOAT_EXPONENT_BITS)) & 1) != 0;
-  const uint32_t ieeeMantissa = bits & ((1u << FLOAT_MANTISSA_BITS) - 1);
-  const uint32_t ieeeExponent = (bits >> FLOAT_MANTISSA_BITS) & ((1u << FLOAT_EXPONENT_BITS) - 1);
+  const ng_bool_t ieeeSign = ((bits >> (FLOAT_MANTISSA_BITS + FLOAT_EXPONENT_BITS)) & 1) != 0;
+  const ng_uint32_t ieeeMantissa = bits & ((1u << FLOAT_MANTISSA_BITS) - 1);
+  const ng_uint32_t ieeeExponent = (bits >> FLOAT_MANTISSA_BITS) & ((1u << FLOAT_EXPONENT_BITS) - 1);
 
   // Case distinction; exit early for the easy cases.
   if (ieeeExponent == ((1u << FLOAT_EXPONENT_BITS) - 1u) || (ieeeExponent == 0 && ieeeMantissa == 0)) {

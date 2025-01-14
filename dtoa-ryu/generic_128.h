@@ -18,7 +18,6 @@
 #define RYU_GENERIC128_H
 
 #include <assert.h>
-#include <stdint.h>
 
 typedef __uint128_t uint128_t;
 
@@ -30,7 +29,7 @@ typedef __uint128_t uint128_t;
 
 // There's no way to define 128-bit constants in C, so we use little-endian
 // pairs of 64-bit constants.
-static const uint64_t GENERIC_POW5_TABLE[POW5_TABLE_SIZE][2] = {
+static const ng_uint64_t GENERIC_POW5_TABLE[POW5_TABLE_SIZE][2] = {
  {                    1ull,                    0ull },
  {                    5ull,                    0ull },
  {                   25ull,                    0ull },
@@ -89,7 +88,7 @@ static const uint64_t GENERIC_POW5_TABLE[POW5_TABLE_SIZE][2] = {
  { 18443565265187884909ull, 15046327690525280101ull }
 };
 
-static const uint64_t GENERIC_POW5_SPLIT[89][4] = {
+static const ng_uint64_t GENERIC_POW5_SPLIT[89][4] = {
  {                    0ull,                    0ull,                    0ull,    72057594037927936ull },
  {                    0ull,  5206161169240293376ull,  4575641699882439235ull,    73468396926392969ull },
  {  3360510775605221349ull,  6983200512169538081ull,  4325643253124434363ull,    74906821675075173ull },
@@ -183,7 +182,7 @@ static const uint64_t GENERIC_POW5_SPLIT[89][4] = {
 
 // Unfortunately, the results are sometimes off by one or two. We use an additional
 // lookup table to store those cases and adjust the result.
-static const uint64_t POW5_ERRORS[156] = {
+static const ng_uint64_t POW5_ERRORS[156] = {
  0x0000000000000000ull, 0x0000000000000000ull, 0x0000000000000000ull, 0x9555596400000000ull,
  0x65a6569525565555ull, 0x4415551445449655ull, 0x5105015504144541ull, 0x65a69969a6965964ull,
  0x5054955969959656ull, 0x5105154515554145ull, 0x4055511051591555ull, 0x5500514455550115ull,
@@ -225,7 +224,7 @@ static const uint64_t POW5_ERRORS[156] = {
  0x5044044040000000ull, 0x1045040440010500ull, 0x0000400000040000ull, 0x0000000000000000u
 };
 
-static const uint64_t GENERIC_POW5_INV_SPLIT[89][4] = {
+static const ng_uint64_t GENERIC_POW5_INV_SPLIT[89][4] = {
  {                    0ull,                    0ull,                    0ull,   144115188075855872ull },
  {  1573859546583440065ull,  2691002611772552616ull,  6763753280790178510ull,   141347765182270746ull },
  { 12960290449513840412ull, 12345512957918226762ull, 18057899791198622765ull,   138633484706040742ull },
@@ -317,7 +316,7 @@ static const uint64_t GENERIC_POW5_INV_SPLIT[89][4] = {
  {  7184427196661305643ull, 14332510582433188173ull, 14230167953789677901ull,   104649889046128358ull }
 };
 
-static const uint64_t POW5_INV_ERRORS[154] = {
+static const ng_uint64_t POW5_INV_ERRORS[154] = {
  0x1144155514145504ull, 0x0000541555401141ull, 0x0000000000000000ull, 0x0154454000000000ull,
  0x4114105515544440ull, 0x0001001111500415ull, 0x4041411410011000ull, 0x5550114515155014ull,
  0x1404100041554551ull, 0x0515000450404410ull, 0x5054544401140004ull, 0x5155501005555105ull,
@@ -360,14 +359,14 @@ static const uint64_t POW5_INV_ERRORS[154] = {
 };
 
 // Returns e == 0 ? 1 : ceil(log_2(5^e)); requires 0 <= e <= 32768.
-static inline uint32_t pow5bits(const int32_t e) {
+static inline ng_uint32_t pow5bits(const ng_int32_t e) {
   assert(e >= 0);
   assert(e <= 1 << 15);
-  return (uint32_t) (((e * 163391164108059ull) >> 46) + 1);
+  return (ng_uint32_t) (((e * 163391164108059ull) >> 46) + 1);
 }
 
 static inline void mul_128_256_shift(
-    const uint64_t* const a, const uint64_t* const b, const uint32_t shift, const uint32_t corr, uint64_t* const result) {
+    const ng_uint64_t* const a, const ng_uint64_t* const b, const ng_uint32_t shift, const ng_uint32_t corr, ng_uint64_t* const result) {
   assert(shift > 0);
   assert(shift < 256);
   const uint128_t b00 = ((uint128_t) a[0]) * b[0]; // 0
@@ -398,67 +397,67 @@ static inline void mul_128_256_shift(
   if (shift < 128) {
     const uint128_t r0 = corr + ((p0 >> shift) | (p1 << (128 - shift)));
     const uint128_t r1 = ((p1 >> shift) | (p2 << (128 - shift))) + (r0 < corr);
-    result[0] = (uint64_t) r0;
-    result[1] = (uint64_t) (r0 >> 64);
-    result[2] = (uint64_t) r1;
-    result[3] = (uint64_t) (r1 >> 64);
+    result[0] = (ng_uint64_t) r0;
+    result[1] = (ng_uint64_t) (r0 >> 64);
+    result[2] = (ng_uint64_t) r1;
+    result[3] = (ng_uint64_t) (r1 >> 64);
   } else if (shift == 128) {
     const uint128_t r0 = corr + p1;
     const uint128_t r1 = p2 + (r0 < corr);
-    result[0] = (uint64_t) r0;
-    result[1] = (uint64_t) (r0 >> 64);
-    result[2] = (uint64_t) r1;
-    result[3] = (uint64_t) (r1 >> 64);
+    result[0] = (ng_uint64_t) r0;
+    result[1] = (ng_uint64_t) (r0 >> 64);
+    result[2] = (ng_uint64_t) r1;
+    result[3] = (ng_uint64_t) (r1 >> 64);
   } else {
     const uint128_t r0 = corr + ((p1 >> (shift - 128)) | (p2 << (256 - shift)));
     const uint128_t r1 = (p2 >> (shift - 128)) + (r0 < corr);
-    result[0] = (uint64_t) r0;
-    result[1] = (uint64_t) (r0 >> 64);
-    result[2] = (uint64_t) r1;
-    result[3] = (uint64_t) (r1 >> 64);
+    result[0] = (ng_uint64_t) r0;
+    result[1] = (ng_uint64_t) (r0 >> 64);
+    result[2] = (ng_uint64_t) r1;
+    result[3] = (ng_uint64_t) (r1 >> 64);
   }
 }
 
 // Computes 5^i in the form required by Ryu, and stores it in the given pointer.
-static inline void generic_computePow5(const uint32_t i, uint64_t* const result) {
-  const uint32_t base = i / POW5_TABLE_SIZE;
-  const uint32_t base2 = base * POW5_TABLE_SIZE;
-  const uint64_t* const mul = GENERIC_POW5_SPLIT[base];
+static inline void generic_computePow5(const ng_uint32_t i, ng_uint64_t* const result) {
+  const ng_uint32_t base = i / POW5_TABLE_SIZE;
+  const ng_uint32_t base2 = base * POW5_TABLE_SIZE;
+  const ng_uint64_t* const mul = GENERIC_POW5_SPLIT[base];
   if (i == base2) {
     result[0] = mul[0];
     result[1] = mul[1];
     result[2] = mul[2];
     result[3] = mul[3];
   } else {
-    const uint32_t offset = i - base2;
-    const uint64_t* const m = GENERIC_POW5_TABLE[offset];
-    const uint32_t delta = pow5bits(i) - pow5bits(base2);
-    const uint32_t corr = (uint32_t) ((POW5_ERRORS[i / 32] >> (2 * (i % 32))) & 3);
+    const ng_uint32_t offset = i - base2;
+    const ng_uint64_t* const m = GENERIC_POW5_TABLE[offset];
+    const ng_uint32_t delta = pow5bits(i) - pow5bits(base2);
+    const ng_uint32_t corr = (ng_uint32_t) ((POW5_ERRORS[i / 32] >> (2 * (i % 32))) & 3);
     mul_128_256_shift(m, mul, delta, corr, result);
   }
 }
 
 // Computes 5^-i in the form required by Ryu, and stores it in the given pointer.
-static inline void generic_computeInvPow5(const uint32_t i, uint64_t* const result) {
-  const uint32_t base = (i + POW5_TABLE_SIZE - 1) / POW5_TABLE_SIZE;
-  const uint32_t base2 = base * POW5_TABLE_SIZE;
-  const uint64_t* const mul = GENERIC_POW5_INV_SPLIT[base]; // 1/5^base2
+static inline void generic_computeInvPow5(const ng_uint32_t i, ng_uint64_t* const result) {
+  const ng_uint32_t base = (i + POW5_TABLE_SIZE - 1) / POW5_TABLE_SIZE;
+  const ng_uint32_t base2 = base * POW5_TABLE_SIZE;
+  const ng_uint64_t* const mul = GENERIC_POW5_INV_SPLIT[base]; // 1/5^base2
   if (i == base2) {
     result[0] = mul[0] + 1;
     result[1] = mul[1];
     result[2] = mul[2];
     result[3] = mul[3];
   } else {
-    const uint32_t offset = base2 - i;
-    const uint64_t* const m = GENERIC_POW5_TABLE[offset]; // 5^offset
-    const uint32_t delta = pow5bits(base2) - pow5bits(i);
-    const uint32_t corr = (uint32_t) ((POW5_INV_ERRORS[i / 32] >> (2 * (i % 32))) & 3) + 1;
+    const ng_uint32_t offset = base2 - i;
+    const ng_uint64_t* const m = GENERIC_POW5_TABLE[offset]; // 5^offset
+    const ng_uint32_t delta = pow5bits(base2) - pow5bits(i);
+    const ng_uint32_t corr = (ng_uint32_t) ((POW5_INV_ERRORS[i / 32] >> (2 * (i % 32))) & 3) + 1;
     mul_128_256_shift(m, mul, delta, corr, result);
   }
 }
 
-static inline uint32_t pow5Factor(uint128_t value) {
-  for (uint32_t count = 0; value > 0; ++count) {
+static inline ng_uint32_t pow5Factor(uint128_t value) {
+  for (ng_uint32_t count = 0; value > 0; ++count) {
     if (value % 5 != 0) {
       return count;
     }
@@ -468,30 +467,30 @@ static inline uint32_t pow5Factor(uint128_t value) {
 }
 
 // Returns true if value is divisible by 5^p.
-static inline bool multipleOfPowerOf5(const uint128_t value, const uint32_t p) {
+static inline bool multipleOfPowerOf5(const uint128_t value, const ng_uint32_t p) {
   // I tried a case distinction on p, but there was no performance difference.
   return pow5Factor(value) >= p;
 }
 
 // Returns true if value is divisible by 2^p.
-static inline bool multipleOfPowerOf2(const uint128_t value, const uint32_t p) {
+static inline bool multipleOfPowerOf2(const uint128_t value, const ng_uint32_t p) {
   return (value & ((((uint128_t) 1) << p) - 1)) == 0;
 }
 
-static inline uint128_t mulShift(const uint128_t m, const uint64_t* const mul, const int32_t j) {
+static inline uint128_t mulShift(const uint128_t m, const ng_uint64_t* const mul, const ng_int32_t j) {
   assert(j > 128);
-  uint64_t a[2];
-  a[0] = (uint64_t) m;
-  a[1] = (uint64_t) (m >> 64);
-  uint64_t result[4];
+  ng_uint64_t a[2];
+  a[0] = (ng_uint64_t) m;
+  a[1] = (ng_uint64_t) (m >> 64);
+  ng_uint64_t result[4];
   mul_128_256_shift(a, mul, j, 0, result);
   return (((uint128_t) result[1]) << 64) | result[0];
 }
 
-static inline uint32_t decimalLength(const uint128_t v) {
+static inline ng_uint32_t decimalLength(const uint128_t v) {
   static uint128_t LARGEST_POW10 = (((uint128_t) 5421010862427522170ull) << 64) | 687399551400673280ull;
   uint128_t p10 = LARGEST_POW10;
-  for (uint32_t i = 39; i > 0; i--) {
+  for (ng_uint32_t i = 39; i > 0; i--) {
     if (v >= p10) {
       return i;
     }
@@ -501,19 +500,19 @@ static inline uint32_t decimalLength(const uint128_t v) {
 }
 
 // Returns floor(log_10(2^e)).
-static inline uint32_t log10Pow2(const int32_t e) {
+static inline ng_uint32_t log10Pow2(const ng_int32_t e) {
   // The first value this approximation fails for is 2^1651 which is just greater than 10^297.
   assert(e >= 0);
   assert(e <= 1 << 15);
-  return (uint32_t) ((((uint64_t) e) * 169464822037455ull) >> 49);
+  return (ng_uint32_t) ((((ng_uint64_t) e) * 169464822037455ull) >> 49);
 }
 
 // Returns floor(log_10(5^e)).
-static inline uint32_t log10Pow5(const int32_t e) {
+static inline ng_uint32_t log10Pow5(const ng_int32_t e) {
   // The first value this approximation fails for is 5^2621 which is just greater than 10^1832.
   assert(e >= 0);
   assert(e <= 1 << 15);
-  return (uint32_t) ((((uint64_t) e) * 196742565691928ull) >> 48);
+  return (ng_uint32_t) ((((ng_uint64_t) e) * 196742565691928ull) >> 48);
 }
 
 #endif // RYU_GENERIC128_H
