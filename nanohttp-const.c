@@ -64,20 +64,21 @@
 #include "nanohttp-config.h"
 #include "nanohttp-buffer.h"
 
-const ng_block_s cstr_mime_form_data = DECL_CONST_STR("multipart/form-data");
-const ng_block_s cstr_mime_related = DECL_CONST_STR("multipart/related");
-const ng_block_s cstr_mime_filename = DECL_CONST_STR("filename");
-const ng_block_s cstr_mime_boundary = DECL_CONST_STR("boundary");
-const ng_block_s cstr_chunked = DECL_CONST_STR("boundary");
-const ng_block_s cstr_text_plain = DECL_CONST_STR("text/plain");
-const ng_block_s cstr_binary = DECL_CONST_STR("binary");
-const ng_block_s cstr_close = DECL_CONST_STR("close");
-const ng_block_s cstr_data = DECL_CONST_STR("data");
-const ng_block_s cstr_start = DECL_CONST_STR("start");
-const ng_block_s cstr_name = DECL_CONST_STR("name");
-const ng_block_s cstr_image_png = DECL_CONST_STR("image/png");
-const ng_block_s cstr_form_data = DECL_CONST_STR("form-data");
+const ng_block_s cstr_mime_form_data  = DECL_CONST_STR("multipart/form-data");
+const ng_block_s cstr_mime_related    = DECL_CONST_STR("multipart/related");
+const ng_block_s cstr_text_plain      = DECL_CONST_STR("text/plain");
+const ng_block_s cstr_image_png       = DECL_CONST_STR("image/png");
+const ng_block_s cstr_form_data       = DECL_CONST_STR("form-data");
+const ng_block_s cstr_mime_filename   = DECL_CONST_STR("filename");
+const ng_block_s cstr_mime_boundary   = DECL_CONST_STR("boundary");
+const ng_block_s cstr_chunked         = DECL_CONST_STR("chunked");
+const ng_block_s cstr_binary          = DECL_CONST_STR("binary");
+const ng_block_s cstr_close           = DECL_CONST_STR("close");
+const ng_block_s cstr_data            = DECL_CONST_STR("data");
+const ng_block_s cstr_start           = DECL_CONST_STR("start");
+const ng_block_s cstr_name            = DECL_CONST_STR("name");
+const ng_block_s cstr_icon            = DECL_CONST_STR(".ico");
 
-const ng_block_s cstr_dir_uploads   = DECL_CONST_STR("uploads/");
-const ng_block_s cstr_dir_downloads = DECL_CONST_STR("downloads/");
+const ng_block_s cstr_dir_uploads     = DECL_CONST_STR("uploads/");
+const ng_block_s cstr_dir_downloads   = DECL_CONST_STR("downloads/");
 

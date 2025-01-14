@@ -95,22 +95,23 @@
     extern "C" {
 #endif
 
-extern const ng_block_s cstr_mime_related;
 extern const ng_block_s cstr_mime_form_data;
 extern const ng_block_s cstr_mime_filename;
 extern const ng_block_s cstr_mime_boundary;
-extern const ng_block_s cstr_chunked;
+extern const ng_block_s cstr_mime_related;
 extern const ng_block_s cstr_text_plain;
+extern const ng_block_s cstr_form_data;
+extern const ng_block_s cstr_image_png;
+extern const ng_block_s cstr_chunked;
 extern const ng_block_s cstr_binary;
 extern const ng_block_s cstr_close;
-extern const ng_block_s cstr_image_png;
 extern const ng_block_s cstr_data;
 extern const ng_block_s cstr_start;
 extern const ng_block_s cstr_name;
-extern const ng_block_s cstr_form_data;
+extern const ng_block_s cstr_icon;
 
-extern const ng_block_s cstr_dir_uploads;
 extern const ng_block_s cstr_dir_downloads;
+extern const ng_block_s cstr_dir_uploads;
 
 #ifdef __cplusplus
 }

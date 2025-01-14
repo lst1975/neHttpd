@@ -406,7 +406,8 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
         len = base64_decode_string((const unsigned char *)favorICON, bf);
 #endif
         if (hpairnode_set_header(&conn->header, 
-          &__HDR_BUF__(HEADER_CONTENT_TYPE), &cstr_image_png)) 
+          &__HDR_BUF__(HEADER_CONTENT_TYPE), 
+          ng_http_get_mime_type(&cstr_icon))) 
         {
           log_error("httpd_set_header failed");
           break;
