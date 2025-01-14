@@ -24,8 +24,16 @@
 
 # Run
    ```
-   ./httpd
-   http://localhost:8080
+   LINUX
+     terminal# ./httpd
+
+   WINDOWS
+     power-shell# .\httpd.exe
+
+   BROWSER:
+     http://localhost:8080
+     http://[::1]:8080
+     http://127.0.0.1:8080
    ```
    ![index](https://github.com/user-attachments/assets/f0f44f4e-dd66-4afe-befa-99ee6f6a71e1)
 
