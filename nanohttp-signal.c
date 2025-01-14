@@ -73,7 +73,6 @@
 
 #include "nanohttp-logging.h"
 #include "nanohttp-system.h"
-#include "nanohttp-server.h"
 
 extern void signal_handler_segfault(int sig);
 extern void nanohttpd_stop_running(void);
