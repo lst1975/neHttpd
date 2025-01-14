@@ -93,7 +93,6 @@
 #include "nanohttp-request.h"
 #include "nanohttp-server.h"
 #include "nanohttp-code.h"
-
 #include "nanohttp-admin.h"
 
 static void
