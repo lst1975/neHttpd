@@ -121,7 +121,7 @@
  * {
  *   herror_t status;
  *   size_t len;
- *   httpc_conn_t conn;
+ *   httpc_conn_s conn;
  *
  *   if (argc < 2)
  *   {
@@ -265,18 +265,19 @@
  */
 /**@{*/
 
-typedef struct httpc_conn
+struct httpc_conn
 {
-  struct hsocket_t *sock;
+  hsocket_s *sock;
   ng_list_head_s header;
   ng_url_s url;
-  http_version_t version;
+  http_version_e version;
 
   int errcode;
   char errmsg[150];
   http_output_stream_s *out;
   int id;                       /* uniq id */
-} httpc_conn_t;
+};
+typedef struct httpc_conn httpc_conn_s;
 
 #ifdef __cplusplus
 extern "C" {
@@ -311,12 +312,12 @@ extern void httpc_destroy(void);
  * Creates a new HTTP client connection object. You need to create at least one
  * HTTP client connection to communicate via HTTP.
  *
- * @return A pointer to a httpc_conn_t structure on success, NULL on error.
+ * @return A pointer to a httpc_conn_s structure on success, NULL on error.
  *
- * @see httpc_conn_t
+ * @see httpc_conn_s
  *
  */
-extern httpc_conn_t *httpc_new(void);
+extern httpc_conn_s *httpc_new(void);
 
 /**
  *
@@ -326,7 +327,7 @@ extern httpc_conn_t *httpc_new(void);
  * @see httpc_close_free
  *
  */
-extern void httpc_free(httpc_conn_t * conn);
+extern void httpc_free(httpc_conn_s * conn);
 
 /**
  *
@@ -336,7 +337,7 @@ extern void httpc_free(httpc_conn_t * conn);
  * @see httpc_free
  *
  */
-extern void httpc_close_free(httpc_conn_t * conn);
+extern void httpc_close_free(httpc_conn_s * conn);
 
 /**
  *
@@ -350,7 +351,7 @@ extern void httpc_close_free(httpc_conn_t * conn);
  * @see HEADER_AUTHORIZATION
  *
  */
-extern int httpc_set_basic_authorization(httpc_conn_t *conn, 
+extern int httpc_set_basic_authorization(httpc_conn_s *conn, 
     const ng_block_s *user, const ng_block_s *password);
 
 /**
@@ -365,7 +366,7 @@ extern int httpc_set_basic_authorization(httpc_conn_t *conn,
  * @see HEADER_PROXY_AUTHORIZATION
  *
  */
-extern int httpc_set_basic_proxy_authorization(httpc_conn_t *conn, 
+extern int httpc_set_basic_proxy_authorization(httpc_conn_s *conn, 
     const ng_block_s *user, const ng_block_s *password);
 
 /**
@@ -377,7 +378,7 @@ extern int httpc_set_basic_proxy_authorization(httpc_conn_t *conn,
  * @see HTTP_REQUEST_GET
  *
  */
-extern herror_t httpc_get(httpc_conn_t *conn, hresponse_t **out, 
+extern herror_t httpc_get(httpc_conn_s *conn, hresponse_t **out, 
                   const ng_block_s *urlstr);
 
 /**
@@ -390,7 +391,7 @@ extern herror_t httpc_get(httpc_conn_t *conn, hresponse_t **out,
  * @see httpc_post_end
  *
  */
-extern herror_t httpc_post_begin(httpc_conn_t *conn, const ng_block_s *url);
+extern herror_t httpc_post_begin(httpc_conn_s *conn, const ng_block_s *url);
 
 /**
  *
@@ -403,7 +404,7 @@ extern herror_t httpc_post_begin(httpc_conn_t *conn, const ng_block_s *url);
  * @see HTTP_REQUEST_POST
  *
  */
-extern herror_t httpc_post_end(httpc_conn_t *conn, hresponse_t **out);
+extern herror_t httpc_post_end(httpc_conn_s *conn, hresponse_t **out);
 
 #ifdef __cplusplus
 }

@@ -670,7 +670,7 @@ static multipartparser_callbacks __multipart_settings = {
 
 herror_t 
 multipartparser_init(multipartparser *parser, 
-  void *arg, content_type_t *ct)
+  void *arg, content_type_s *ct)
 {
   hpair_t *pair;
   herror_t status;
@@ -788,7 +788,7 @@ __multipart_cb_headers_complete(multipartparser *p)
 {
   int n;
   hpair_t *pair;
-  content_type_t *ct;
+  content_type_s *ct;
   multipartpart *part = &p->part;
 
   if (__build_header_field_value(p) < 0)
@@ -1126,7 +1126,7 @@ mime_add_content_type_header(ng_list_head_s *header,
 {
   int n;
   size_t tsize;
-  httpd_buf_t b;
+  ng_buffer_s b;
   char *buffer;
   herror_t status = H_OK;
   const ng_block_s *type; 
@@ -1218,7 +1218,7 @@ mime_part_new(ng_list_head_s *part_list, const ng_block_s *params)
   multipartpart  *part;
   char    *buffer;
   hpair_t *pair;
-  httpd_buf_t disposition;
+  ng_buffer_s disposition;
 
   const ng_block_s *id;
   const ng_block_s *filename; 

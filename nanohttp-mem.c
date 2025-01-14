@@ -99,7 +99,7 @@ typedef struct _mentry http_mentry_s;
 static uint8_t *msg_array_ptr;
 static uint8_t *msg_array_end;
 static uint8_t msg_cache_array[(TSN_MEM_Cache_Max-1)*TSN_MEM_ENTRY_SIZE]={0};
-struct rte_ring *__http_mem_ring = NULL;
+ng_ring_s *__http_mem_ring = NULL;
 
 #if __NHTTP_MEM_DEBUG  
 #ifdef WIN32

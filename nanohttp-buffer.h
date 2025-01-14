@@ -82,7 +82,7 @@ typedef struct {
   __STRUCT_BLOCK_DEF;
 } ng_block_s;
 
-typedef struct {
+struct _httpd_buf {
   union{
     struct{
       __STRUCT_BLOCK_DEF; // MUST start from the first byte
@@ -92,48 +92,47 @@ typedef struct {
   char *p;
   size_t size;
   size_t nbytes;
-} httpd_buf_t;
+};
 
-typedef httpd_buf_t ng_str_s;
-typedef httpd_buf_t ng_buffer_s;
+typedef struct _httpd_buf ng_buffer_s;
 
 #define DECL_CONST_STR_N(a,v) { .n=a, .cptr=v, .len=sizeof(v)-1 }
 #define DECL_CONST_STR_NULL() { .cptr=NULL, .len=0 }
 #define DECL_CONST_STR(v) { .cptr=v, .len=sizeof(v)-1 }
 
-static inline void BUF_GO(httpd_buf_t *b, size_t len)
+static inline void BUF_GO(ng_buffer_s *b, size_t len)
 {
   b->p   += len;
   b->len += len;
 }
 
-static inline void BUF_SET_CHR(httpd_buf_t *b, char c)
+static inline void BUF_SET_CHR(ng_buffer_s *b, char c)
 {
   b->p[0] = (char)c;
 }
 
-static inline size_t BUF_LEN(httpd_buf_t *b)
+static inline size_t BUF_LEN(ng_buffer_s *b)
 {
   return b->len;
 }
 
-static inline char *BUF_CUR_PTR(httpd_buf_t *b)
+static inline char *BUF_CUR_PTR(ng_buffer_s *b)
 {
   return b->p;
 }
 
-static inline size_t BUF_REMAIN(httpd_buf_t *b)
+static inline size_t BUF_REMAIN(ng_buffer_s *b)
 {
   return b->size - b->len;
 }
 
-static inline void BUF_SET(httpd_buf_t *b, char *ptr, size_t len)
+static inline void BUF_SET(ng_buffer_s *b, char *ptr, size_t len)
 {
   b->buf = ptr;
   b->len = len;
 }
 
-static inline void BUF_SIZE_INIT(httpd_buf_t *b, char *buf, size_t size)
+static inline void BUF_SIZE_INIT(ng_buffer_s *b, char *buf, size_t size)
 {
   b->p      = buf;
   b->data   = buf;
@@ -142,7 +141,7 @@ static inline void BUF_SIZE_INIT(httpd_buf_t *b, char *buf, size_t size)
   b->nbytes = 0;
 }
 
-static inline void BUF_CLEAR(httpd_buf_t *b)
+static inline void BUF_CLEAR(ng_buffer_s *b)
 {
   b->p      = b->buf;
   b->len    = 0;
@@ -195,7 +194,7 @@ static inline const char *ng_block_end(const void *blka)
   return a->cptr + a->len;
 }
 
-extern void ng_free_data_buffer(httpd_buf_t *data);
+extern void ng_free_data_buffer(ng_buffer_s *data);
 extern void ng_free_data_block(ng_block_s *block);
 extern int ng_dup_data_block(ng_block_s *block, const ng_block_s *n, int free_old);
 extern int ng_dup_data_block_str(ng_block_s *block, const ng_block_s *n, int free_old);

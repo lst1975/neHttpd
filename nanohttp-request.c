@@ -96,27 +96,31 @@
 #include "nanohttp-header.h"
 #include "nanohttp-system.h"
 
-static struct hrequest_t *hrequest_new(void)
+static hrequest_s *hrequest_new(void)
 {
-  struct hrequest_t *req;
- 
-  if (!(req = (struct hrequest_t *)http_malloc(sizeof(*req))))
+  hrequest_s *req;
+
+  req = (hrequest_s *)http_malloc(sizeof(*req));
+  if (req == NULL)
   {
     log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     goto clean0;
   }
 
-  req->statistics.time = ng_get_time();
-  req->method       = HTTP_REQUEST_METHOD_UNKOWN;
-  req->version      = HTTP_VERSION_1_1;
-  req->in           = NULL;
-  req->attachments  = NULL;
-  req->content_type = NULL;
+  req->method                       = HTTP_REQUEST_METHOD_UNKOWN;
+  req->version                      = HTTP_VERSION_1_1;
+  req->in                           = NULL;
+  req->attachments                  = NULL;
+  req->content_type                 = NULL;
+  req->content_length               = -1;
+
+#ifdef __NHTTP_INTERNAL
+  req->statistics.time              = ng_get_time();
   req->statistics.bytes_transmitted = 0;
   req->statistics.bytes_received    = 0;
-  req->content_length = -1;
+#endif
+
   ng_block_init(&req->path);
-  
   ng_INIT_LIST_HEAD(&req->header);
   ng_INIT_LIST_HEAD(&req->query);
   
@@ -124,11 +128,11 @@ clean0:
   return req;
 }
 
-static struct hrequest_t *
+static hrequest_s *
 _hrequest_parse_header(char *data, size_t len)
 {
   hpair_t *tmppair;
-  struct hrequest_t *req;
+  hrequest_s *req;
 
   char *tmp;
   char *result;
@@ -351,7 +355,7 @@ clean0:
 }
 
 void
-hrequest_free(struct hrequest_t * req)
+hrequest_free(hrequest_s * req)
 {
   if (req == NULL)
     return;
@@ -375,15 +379,14 @@ hrequest_free(struct hrequest_t * req)
 }
 
 herror_t
-hrequest_new_from_socket(struct hsocket_t *sock, 
-  struct hrequest_t **out)
+hrequest_new_from_socket(hsocket_s *sock, hrequest_s **out)
 {
   size_t hdrlen;
   size_t rcvbytes;
   herror_t status;
   char *buffer;
-  struct hrequest_t *req;
-  httpd_buf_t data;
+  hrequest_s *req;
+  ng_buffer_s data;
 
   buffer = http_malloc(MAX_HEADER_SIZE + 1);
   if (buffer == NULL)

@@ -124,7 +124,7 @@ rte_ring_get_memsize_elem(unsigned int esize, unsigned int count)
     return -EINVAL;
   }
 
-  sz = sizeof(struct rte_ring) + (ssize_t)count * esize;
+  sz = sizeof(ng_ring_s) + (ssize_t)count * esize;
   sz = RTE_ALIGN(sz, RTE_CACHE_LINE_SIZE);
   return sz;
 }
@@ -159,7 +159,7 @@ reset_headtail(void *p)
 }
 
 void
-rte_ring_reset(struct rte_ring *r)
+rte_ring_reset(ng_ring_s *r)
 {
   reset_headtail(&r->prod);
   reset_headtail(&r->cons);
@@ -244,17 +244,17 @@ rte_align32pow2(uint32_t x)
 }
 
 int
-rte_ring_init(struct rte_ring *r, const char *name, unsigned int count,
+rte_ring_init(ng_ring_s *r, const char *name, unsigned int count,
   unsigned int flags)
 {
   int ret;
 
   /* compilation-time checks */
-  RTE_BUILD_BUG_ON((sizeof(struct rte_ring) &
+  RTE_BUILD_BUG_ON((sizeof(ng_ring_s) &
         RTE_CACHE_LINE_MASK) != 0);
-  RTE_BUILD_BUG_ON((offsetof(struct rte_ring, cons) &
+  RTE_BUILD_BUG_ON((offsetof(ng_ring_s, cons) &
         RTE_CACHE_LINE_MASK) != 0);
-  RTE_BUILD_BUG_ON((offsetof(struct rte_ring, prod) &
+  RTE_BUILD_BUG_ON((offsetof(ng_ring_s, prod) &
         RTE_CACHE_LINE_MASK) != 0);
 
   /* future proof flags, only allow supported values */
@@ -294,11 +294,11 @@ rte_ring_init(struct rte_ring *r, const char *name, unsigned int count,
 }
 
 /* create the ring for a given element size */
-struct rte_ring *
+ng_ring_s *
 rte_ring_create_elem(const char *name, unsigned int esize, unsigned int count,
     unsigned int flags)
 {
-  struct rte_ring *r;
+  ng_ring_s *r;
   ssize_t ring_size;
   const unsigned int requested_count = count;
 
@@ -316,7 +316,7 @@ rte_ring_create_elem(const char *name, unsigned int esize, unsigned int count,
    * we are secondary process, the memzone_reserve function will set
    * rte_errno for us appropriately - hence no check in this function
    */
-  r = (struct rte_ring *)os_malloc(ring_size);
+  r = (ng_ring_s *)os_malloc(ring_size);
   if (r != NULL) {
     /* no need to check return value here, we already checked the
      * arguments above */
@@ -331,7 +331,7 @@ rte_ring_create_elem(const char *name, unsigned int esize, unsigned int count,
 }
 
 /* create the ring */
-struct rte_ring *
+ng_ring_s *
 rte_ring_create(const char *name, unsigned int count, unsigned int flags)
 {
   return rte_ring_create_elem(name, sizeof(void *), count, flags);
@@ -339,7 +339,7 @@ rte_ring_create(const char *name, unsigned int count, unsigned int flags)
 
 /* os_free the ring */
 void
-rte_ring_free(struct rte_ring *r)
+rte_ring_free(ng_ring_s *r)
 {
   if (r == NULL)
     return;
@@ -348,7 +348,7 @@ rte_ring_free(struct rte_ring *r)
 
 /* dump the status of the ring on the console */
 void
-rte_ring_dump(const struct rte_ring *r)
+rte_ring_dump(const ng_ring_s *r)
 {
   NG_RING_DEBUG("RTE-RING: n consumers/n producers <%s>@%p"__LN, r->name, r);
   NG_RING_DEBUG("  flags=%x" __LN, r->flags);
@@ -370,7 +370,7 @@ static NG_ATOMIC_T(NG_U32) malloc_count;
 static NG_ATOMIC_T(NG_U32) __running;
 static ng_singlerw_ring_s __ring;
 static int __stopped = 0;
-struct rte_ring *__test_rte_ring = NULL;
+ng_ring_s *__test_rte_ring = NULL;
 
 struct ng_thread_pool{
   uint32_t count;

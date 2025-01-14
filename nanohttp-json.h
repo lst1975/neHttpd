@@ -322,12 +322,12 @@ typedef struct json_pair
   };
 } JSONPair_t;
 
-typedef int (*JSON_PRINTER_f)(httpd_buf_t *b, const char *fmt, ...);
+typedef int (*JSON_PRINTER_f)(ng_buffer_s *b, const char *fmt, ...);
 
 const char *json_type2str(JSONTypes_t type);
 void json_pairs_free(JSONPair_t *pair);
 JSONStatus_t json_print(JSONPair_t *pair, int depth, const char *pad);
-int json_to_printer(JSON_PRINTER_f printer, httpd_buf_t *b, JSONPair_t *pair, int depth, const char *pad);
+int json_to_printer(JSON_PRINTER_f printer, ng_buffer_s *b, JSONPair_t *pair, int depth, const char *pad);
 int json_tostr(JSONPair_t *pair, char *buf, 
   size_t length, int depth, const char *pad);
 int json_cal_length(JSONPair_t *pair, int depth, const char *pad);
@@ -417,7 +417,7 @@ JSONStatus_t JSON_Iterate( const char * buf,
                            JSONPair_t * outPair );
 /* @[declare_json_iterate] */
 
-extern int json_printer_default(httpd_buf_t *b, const char *fmt, ...);
+extern int json_printer_default(ng_buffer_s *b, const char *fmt, ...);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

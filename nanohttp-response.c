@@ -241,14 +241,14 @@ clean0:
 }
 
 herror_t
-hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t **out)
+hresponse_new_from_socket(hsocket_s *sock, hresponse_t **out)
 {
   size_t hdrlen;
   size_t rcvbytes;
   herror_t status;
   hresponse_t *res;
   char *buffer;
-  httpd_buf_t data;
+  ng_buffer_s data;
 
   buffer = http_malloc(MAX_HEADER_SIZE + 1);
   if (buffer == NULL)

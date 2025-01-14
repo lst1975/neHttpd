@@ -210,7 +210,7 @@ typedef size_t (*multipart_data_cb) (multipartparser*, const char* data, size_t 
 struct _multipartpart {
   ng_list_head_s header;
   ng_list_head_s link;
-  content_type_t *content_disposition;
+  content_type_s *content_disposition;
   int id;
   void *file_ch;
   
@@ -271,7 +271,7 @@ struct _attachments_t
 typedef struct _attachments_t attachments_t;
 
 herror_t multipartparser_init(multipartparser *parser, 
-        void *arg, content_type_t *ct);
+        void *arg, content_type_s *ct);
 void multipartparser_free(multipartparser *parser);
 
 multipartpart *multipartpart_new(void);

@@ -123,7 +123,7 @@ int _hsocket_should_again(int err)
 }
 
 static herror_t
-_hsocket_sys_accept(struct hsocket_t *sock, struct hsocket_t *dest)
+_hsocket_sys_accept(hsocket_s *sock, hsocket_s *dest)
 {
   int asize = sock->salen;
   
@@ -145,7 +145,7 @@ _hsocket_sys_accept(struct hsocket_t *sock, struct hsocket_t *dest)
 }
 
 static void
-_hsocket_sys_close(struct hsocket_t * sock)
+_hsocket_sys_close(hsocket_s * sock)
 {
 
   if (sock->sock != HSOCKET_FREE)
@@ -199,7 +199,7 @@ _hsocket_module_sys_destroy(void)
 }
 
 static herror_t
-_hsocket_sys_accept(struct hsocket_t *sock, struct hsocket_t *dest)
+_hsocket_sys_accept(hsocket_s *sock, hsocket_s *dest)
 {
   socklen_t len = sock->salen;
 
@@ -222,7 +222,7 @@ _hsocket_sys_accept(struct hsocket_t *sock, struct hsocket_t *dest)
 }
 
 static inline void
-_hsocket_sys_close(struct hsocket_t * sock)
+_hsocket_sys_close(hsocket_s *sock)
 {
   if (sock->sock != HSOCKET_FREE)
   {
@@ -276,7 +276,7 @@ hsocket_module_destroy(void)
 }
 
 herror_t
-hsocket_init(struct hsocket_t *sock)
+hsocket_init(hsocket_s *sock)
 {
   sock->bytes_transmitted = 0;
   sock->bytes_received    = 0;
@@ -295,14 +295,14 @@ hsocket_init(struct hsocket_t *sock)
 }
 
 void
-hsocket_free(struct hsocket_t * sock)
+hsocket_free(hsocket_s *sock)
 {
   /* nop */
   return;
 }
 
 herror_t
-hsocket_open(struct hsocket_t *dsock, const char *hostname, int port, int ssl)
+hsocket_open(hsocket_s *dsock, const char *hostname, int port, int ssl)
 {
   int s;
   herror_t status;
@@ -357,9 +357,9 @@ hsocket_open(struct hsocket_t *dsock, const char *hostname, int port, int ssl)
 }
 
 herror_t
-hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
+hsocket_bind(uint8_t fam, hsocket_s *dsock, unsigned short port)
 {
-  struct hsocket_t sock;
+  hsocket_s sock;
   herror_t status;
   struct sockaddr *addr;
   int opt = 1;
@@ -448,7 +448,7 @@ hsocket_bind(uint8_t fam, struct hsocket_t *dsock, unsigned short port)
 
 #if __NHTTP_USE_EPOLL
 herror_t
-hsocket_epoll_create(struct hsocket_t *dest)
+hsocket_epoll_create(hsocket_s *dest)
 {
   dest->ep = epoll_create1(0);
   if (dest->ep == HSOCKET_FREE) 
@@ -481,7 +481,7 @@ hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
 #endif
 
 herror_t
-hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
+hsocket_accept(hsocket_s *sock, hsocket_s *dest)
 {
   herror_t status;
 
@@ -530,7 +530,7 @@ hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest)
 }
 
 herror_t
-hsocket_listen(struct hsocket_t *sock, int pend_max)
+hsocket_listen(hsocket_s *sock, int pend_max)
 {
   if (sock->sock < 0)
     return herror_new("hsocket_listen", HSOCKET_ERROR_NOT_INITIALIZED,
@@ -548,7 +548,7 @@ hsocket_listen(struct hsocket_t *sock, int pend_max)
 }
 
 void
-hsocket_close(struct hsocket_t *sock)
+hsocket_close(hsocket_s *sock)
 {
   if (sock->sock != HSOCKET_FREE)
   {
@@ -570,7 +570,7 @@ hsocket_close(struct hsocket_t *sock)
 }
 
 herror_t
-hsocket_send(struct hsocket_t *sock, const unsigned char *bytes, size_t n)
+hsocket_send(hsocket_s *sock, const unsigned char *bytes, size_t n)
 {
   herror_t status = H_OK;
   size_t total = 0;
@@ -618,7 +618,7 @@ hsocket_send(struct hsocket_t *sock, const unsigned char *bytes, size_t n)
 static int
 __send_snprintf_out(void *arg, const char *string, size_t length)
 {
-  struct hsocket_t *sock = (struct hsocket_t *)arg;
+  hsocket_s *sock = (hsocket_s *)arg;
   herror_t status;
   status = hsocket_send(sock, (const unsigned char *)string, length);
   if (status != H_OK)
@@ -635,8 +635,7 @@ __send_snprintf_out(void *arg, const char *string, size_t length)
   Returns socket error flags or H_OK.
 */
 herror_t
-hsocket_send_string(struct hsocket_t *sock, 
-  const char *format, ...)
+hsocket_send_string(hsocket_s *sock, const char *format, ...)
 {
   int n;
   va_list ap;
@@ -667,8 +666,7 @@ hsocket_send_string(struct hsocket_t *sock,
 
 #if __NHTTP_USE_EPOLL
 int
-hsocket_select_recv(struct hsocket_t *sock, 
-  char *buf, size_t len)
+hsocket_select_recv(hsocket_s *sock, char *buf, size_t len)
 {
   // Example: Adding stdin (file descriptor 0) to epoll
   int n;
@@ -720,7 +718,7 @@ hsocket_select_recv(struct hsocket_t *sock,
 }
 #elif __NHTTP_USE_WSAPOLL
 int
-hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
+hsocket_select_recv(hsocket_s *sock, char *buf, size_t len)
 {
   WSAPOLLFD pfd = { 0 };
   INT ret = 0;
@@ -777,7 +775,7 @@ hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
 }
 #else
 int
-hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
+hsocket_select_recv(hsocket_s *sock, char *buf, size_t len)
 {
   int n;
   fd_set fds;
@@ -839,7 +837,7 @@ hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len)
 #endif
 
 herror_t
-hsocket_recv(struct hsocket_t *sock, unsigned char *buffer, 
+hsocket_recv(hsocket_s *sock, unsigned char *buffer, 
   size_t total, int force, size_t *received)
 {
   herror_t status = H_OK;
@@ -935,12 +933,12 @@ hsocket_set_timeout(int secs)
   return;
 }
 
-herror_t http_header_recv(struct hsocket_t *sock, char *buffer, 
+herror_t http_header_recv(hsocket_s *sock, char *buffer, 
   size_t size, size_t *hdrlen, size_t *rcvbytes)
 {
   size_t readed=0;
   herror_t status;
-  httpd_buf_t p;
+  ng_buffer_s p;
   const char *ptr, *pln;
 
 #define __HTTP_header_state_0      0

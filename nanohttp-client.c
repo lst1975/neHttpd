@@ -113,20 +113,19 @@ httpc_destroy(void)
   return;
 }
 
-httpc_conn_t *
-httpc_new(void)
+httpc_conn_s *httpc_new(void)
 {
   static int counter = 10000;
   herror_t status;
-  httpc_conn_t *res;
+  httpc_conn_s *res;
  
-  if (!(res = (httpc_conn_t *) http_malloc(sizeof(httpc_conn_t))))
+  if (!(res = (httpc_conn_s *) http_malloc(sizeof(httpc_conn_s))))
   {
     log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     goto clean0;
   }
 
-  if (!(res->sock = (struct hsocket_t *)http_malloc(sizeof(struct hsocket_t))))
+  if (!(res->sock = (hsocket_s *)http_malloc(sizeof(hsocket_s))))
   {
     log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     goto clean1;
@@ -163,7 +162,7 @@ clean0:
 }
 
 void
-httpc_free(httpc_conn_t * conn)
+httpc_free(httpc_conn_s * conn)
 {
   if (conn == NULL)
     return;
@@ -187,7 +186,7 @@ httpc_free(httpc_conn_t * conn)
 }
 
 void
-httpc_close_free(httpc_conn_t * conn)
+httpc_close_free(httpc_conn_s * conn)
 {
   if (conn == NULL)
     return;
@@ -199,7 +198,7 @@ httpc_close_free(httpc_conn_t * conn)
 }
 
 static int
-_httpc_set_basic_authorization_header(httpc_conn_t *conn, 
+_httpc_set_basic_authorization_header(httpc_conn_s *conn, 
   const ng_block_s *key, const ng_block_s *user, const ng_block_s *password)
 {
   int inlen, outlen, len;
@@ -241,7 +240,7 @@ _httpc_set_basic_authorization_header(httpc_conn_t *conn,
 }
 
 int
-httpc_set_basic_authorization(httpc_conn_t *conn, 
+httpc_set_basic_authorization(httpc_conn_s *conn, 
   const ng_block_s *user, const ng_block_s *password)
 {
   return _httpc_set_basic_authorization_header(conn, 
@@ -249,7 +248,7 @@ httpc_set_basic_authorization(httpc_conn_t *conn,
 }
 
 int
-httpc_set_basic_proxy_authorization(httpc_conn_t *conn, 
+httpc_set_basic_proxy_authorization(httpc_conn_s *conn, 
   const ng_block_s *user, const ng_block_s *password)
 {
   return _httpc_set_basic_authorization_header(conn, 
@@ -257,7 +256,7 @@ httpc_set_basic_proxy_authorization(httpc_conn_t *conn,
 }
 
 static int
-httpc_header_set_date(httpc_conn_t *conn)
+httpc_header_set_date(httpc_conn_s *conn)
 {
   char buffer[32];
   ng_block_s date;
@@ -272,7 +271,7 @@ DESC: Sends the current header information stored
 in conn through conn->sock.
 ----------------------------------------------------*/
 herror_t
-httpc_send_header(httpc_conn_t *conn)
+httpc_send_header(httpc_conn_s *conn)
 {
   hpair_t *walker;
   ng_list_for_each_entry(walker,hpair_t,&conn->header,link)
@@ -336,7 +335,7 @@ If success, this function will return 0.
 >0 otherwise.
 ----------------------------------------------------*/
 static herror_t
-_httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn, 
+_httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn, 
   const ng_block_s *urlstr)
 {
   char *buffer;
@@ -359,7 +358,7 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn,
   if (conn == NULL)
   {
     status = herror_new("httpc_talk_to_server", GENERAL_INVALID_PARAM, 
-      "httpc_conn_t param is NULL");
+      "httpc_conn_s param is NULL");
     goto clean1;
   }
 
@@ -417,7 +416,7 @@ _httpc_talk_to_server(hreq_method_t method, httpc_conn_t *conn,
       log_error("Unknown method type!");
       status = herror_new("httpc_talk_to_server",
         GENERAL_INVALID_PARAM,
-        "hreq_method_t must be  HTTP_REQUEST_GET or HTTP_REQUEST_POST");
+        "hreq_method_e must be  HTTP_REQUEST_GET or HTTP_REQUEST_POST");
       goto clean2;
   }
 
@@ -453,7 +452,7 @@ clean0:
 }
 
 herror_t
-httpc_get(httpc_conn_t *conn, hresponse_t **out, const ng_block_s *urlstr)
+httpc_get(httpc_conn_s *conn, hresponse_t **out, const ng_block_s *urlstr)
 {
   herror_t status;
 
@@ -475,7 +474,7 @@ httpc_get(httpc_conn_t *conn, hresponse_t **out, const ng_block_s *urlstr)
 }
 
 herror_t
-httpc_post_begin(httpc_conn_t *conn, const ng_block_s *url)
+httpc_post_begin(httpc_conn_s *conn, const ng_block_s *url)
 {
   herror_t status;
 
@@ -504,7 +503,7 @@ DESC: End a "POST" method and receive the response.
   You MUST call httpc_post_end() before!
 ----------------------------------------------------*/
 herror_t
-httpc_post_end(httpc_conn_t * conn, hresponse_t ** out)
+httpc_post_end(httpc_conn_s *conn, hresponse_t **out)
 {
   herror_t status;
 

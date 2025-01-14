@@ -134,7 +134,7 @@
 
 /** Socket definition
  */
-struct hsocket_t
+struct _hsocket_t
 {
 #ifdef WIN32
   SOCKET sock;
@@ -157,15 +157,18 @@ struct hsocket_t
   int salen;
   void *ssl;
   herror_t status;
-  httpd_buf_t data;
+  ng_buffer_s data;
 };
+
+typedef struct _hsocket_t hsocket_s;
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-extern int _hsocket_should_again(int err);
+extern int 
+_hsocket_should_again(int err);
 
 /** This function iitializes the socket modul. This should be called
  * only once for an application.
@@ -174,14 +177,16 @@ extern int _hsocket_should_again(int err);
  *
  * @see hssl_module_destroy()
  */
-extern herror_t hsocket_module_init(int argc, char **argv);
+extern herror_t 
+hsocket_module_init(int argc, char **argv);
 
 /** This function destroys the socket modul. This should be called
  * after finishing an application.
  *
  * @see hssl_module_init()
  */
-extern void hsocket_module_destroy(void);
+extern void 
+hsocket_module_destroy(void);
 
 /** This function initializes a given socket object. This function
  * (or hsokcet_init_ssl) should be called for every socket before
@@ -193,13 +198,15 @@ extern void hsocket_module_destroy(void);
  *
  * @see hssl_module_init()
  */
-extern herror_t hsocket_init(struct hsocket_t * sock);
+extern herror_t 
+hsocket_init(hsocket_s *sock);
 
 /** This function destroys and releases a given socket.
  *
  * @param sock the socket to destroy
  */
-extern void hsocket_free(struct hsocket_t * sock);
+extern void 
+hsocket_free(hsocket_s *sock);
 
 /** This function connects to a given host. The hostname can be an IP
  * number or a humen readable hostname.
@@ -215,13 +222,15 @@ extern void hsocket_free(struct hsocket_t * sock);
  *         - HSOCKET_ERROR_CONNECT
  *
  */
-extern herror_t hsocket_open(struct hsocket_t *sock, const char *host, int port, int ssl);
+extern herror_t 
+hsocket_open(hsocket_s *sock, const char *host, int port, int ssl);
 
 /** This function closes a socket connection.
  *
  * @param sock the socket to close
  */
-extern void hsocket_close(struct hsocket_t *sock);
+extern void 
+hsocket_close(hsocket_s *sock);
 
 /** This function binds a socket to a given port number. After bind you
  * can call hsocket_listen() to listen to the port.
@@ -235,7 +244,8 @@ extern void hsocket_close(struct hsocket_t *sock);
  *
  * @see hsocket_listen()
  */
-extern herror_t hsocket_bind(uint8_t fam, struct hsocket_t *sock, unsigned short port);
+extern herror_t 
+hsocket_bind(uint8_t fam, hsocket_s *sock, unsigned short port);
 
 /** This function sets the socket to the listen mode. You must bind the
  * socket to a port with hsocket_bind() before you can listen to the
@@ -247,7 +257,8 @@ extern herror_t hsocket_bind(uint8_t fam, struct hsocket_t *sock, unsigned short
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_LISTEN
  */
-extern herror_t hsocket_listen(struct hsocket_t *sock, int pend_max);
+extern herror_t 
+hsocket_listen(hsocket_s *sock, int pend_max);
 
 /** This function accepts an incoming socket request. Note that this
  * function will not return until a socket connection is ready.
@@ -259,7 +270,8 @@ extern herror_t hsocket_listen(struct hsocket_t *sock, int pend_max);
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_ACCEPT
  */
-extern herror_t hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest);
+extern herror_t 
+hsocket_accept(hsocket_s *sock, hsocket_s *dest);
 
 /** This function sends data throught the socket.
  *
@@ -271,7 +283,8 @@ extern herror_t hsocket_accept(struct hsocket_t *sock, struct hsocket_t *dest);
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_SEND
  */
-extern herror_t hsocket_send(struct hsocket_t *sock, const unsigned char *bytes, size_t size);
+extern herror_t 
+hsocket_send(hsocket_s *sock, const unsigned char *bytes, size_t size);
 
 /** This function sends a string throught the socket
  *
@@ -282,12 +295,16 @@ extern herror_t hsocket_send(struct hsocket_t *sock, const unsigned char *bytes,
  *         - HSOCKET_ERROR_NOT_INITIALIZED
  *         - HSOCKET_ERROR_SEND
  */
-extern herror_t hsocket_send_string(struct hsocket_t *sock, const char *fmt, ...);
+extern herror_t 
+hsocket_send_string(hsocket_s *sock, const char *fmt, ...);
 
-extern int hsocket_select_recv(struct hsocket_t *sock, char *buf, size_t len);
+extern int 
+hsocket_select_recv(hsocket_s *sock, char *buf, size_t len);
 #if __NHTTP_USE_EPOLL
-herror_t hsocket_epoll_create(struct hsocket_t *dest);
-herror_t hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
+herror_t 
+hsocket_epoll_create(hsocket_s *dest);
+herror_t 
+hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
   int op, int flags);
 #endif
 
@@ -303,7 +320,9 @@ herror_t hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
  * @return This function will return -1 if an read error was occured. Otherwise
  *         the return value is the size of bytes readed from the socket.
  */
-extern herror_t hsocket_recv(struct hsocket_t * sock, unsigned char *buffer, size_t size, int force, size_t *len);
+extern herror_t 
+hsocket_recv(hsocket_s *sock, unsigned char *buffer, 
+  size_t size, int force, size_t *len);
 
 /** This function gets the socket read/write timeout.
  *
@@ -322,7 +341,9 @@ extern int hsocket_get_timeout(void);
 extern void hsocket_set_timeout(int secs);
 
 
-extern herror_t http_header_recv(struct hsocket_t *sock, char *buffer, size_t size, size_t *hdrlen, size_t *rcvbytes);
+extern herror_t 
+http_header_recv(hsocket_s *sock, char *buffer, 
+  size_t size, size_t *hdrlen, size_t *rcvbytes);
 
 #ifdef __cplusplus
 }

@@ -499,7 +499,7 @@ hssl_enabled(void)
 }
 
 herror_t
-hssl_client_ssl(struct hsocket_t * sock)
+hssl_client_ssl(hsocket_s *sock)
 {
   SSL_CTX *ctx;
   SSL *ssl;
@@ -558,7 +558,7 @@ _hssl_bio_read(BIO * b, char *out, int outl)
 }
 
 herror_t
-hssl_server_ssl(struct hsocket_t *sock)
+hssl_server_ssl(hsocket_s *sock)
 {
   SSL *ssl;
   int ret;
@@ -607,7 +607,7 @@ hssl_server_ssl(struct hsocket_t *sock)
 }
 
 void
-hssl_cleanup(struct hsocket_t * sock)
+hssl_cleanup(hsocket_s *sock)
 {
   if (sock->ssl)
   {
@@ -620,7 +620,7 @@ hssl_cleanup(struct hsocket_t * sock)
 }
 
 herror_t
-hssl_read(struct hsocket_t * sock, char *buf, size_t len, size_t * received)
+hssl_read(hsocket_s *sock, char *buf, size_t len, size_t * received)
 {
   int count;
 
@@ -645,7 +645,7 @@ hssl_read(struct hsocket_t * sock, char *buf, size_t len, size_t * received)
 
 
 herror_t
-hssl_write(struct hsocket_t * sock, const char *buf, size_t len, size_t * sent)
+hssl_write(hsocket_s *sock, const char *buf, size_t len, size_t *sent)
 {
   int count;
 

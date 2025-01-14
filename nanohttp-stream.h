@@ -86,6 +86,8 @@
 #ifndef __nanohttp_stream_h
 #define __nanohttp_stream_h
 
+#include "nanohttp-socket.h"
+
 /** @file nanohttp-stream.h Stream handling
  *
  * @section HTTP Stream modul
@@ -143,7 +145,7 @@ typedef struct http_output_stream_t http_output_stream_s;
  * about the transfer style. */
 struct http_input_stream_t
 {
-  struct hsocket_t *sock;
+  hsocket_s *sock;
   herror_t err;
   size_t received;
   size_t content_length;
@@ -164,7 +166,7 @@ struct http_input_stream_t
  * transfer style. */
 struct http_output_stream_t
 {
-  struct hsocket_t *sock;
+  hsocket_s *sock;
   http_transfer_type_e type;
   size_t content_length;
   size_t sent;
@@ -189,8 +191,8 @@ extern "C" {
  * @see http_input_stream_free()
  */
 extern http_input_stream_s *
-http_input_stream_new(struct hsocket_t *sock, ng_list_head_s *header, 
-  httpd_buf_t *data);
+http_input_stream_new(hsocket_s *sock, ng_list_head_s *header, 
+  ng_buffer_s *data);
 
 /** This function creates a new input stream from file. It was added
  * for MIME messages and for debugging purposes. The transfer style
@@ -259,7 +261,7 @@ http_input_stream_read(http_input_stream_s *stream,
  * @see http_output_stream_free()
  */
 extern http_output_stream_s *
-http_output_stream_new(struct hsocket_t *sock, ng_list_head_s *header);
+http_output_stream_new(hsocket_s *sock, ng_list_head_s *header);
 
 
 /** This function frees the given output stream. Note that this

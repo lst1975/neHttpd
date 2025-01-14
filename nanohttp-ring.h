@@ -372,7 +372,7 @@ struct rte_ring_headtail {
  * values in a modulo-32bit base: that's why the overflow of the indexes is not
  * a problem.
  */
-struct rte_ring {
+struct _rte_ring {
   alignas(RTE_CACHE_LINE_SIZE) char name[RTE_RING_NAMESIZE];
   /**< Name of the ring. */
   int flags;               /**< Flags supplied at creation. */
@@ -394,6 +394,8 @@ struct rte_ring {
 
   RTE_CACHE_GUARD;
 };
+
+typedef struct _rte_ring ng_ring_s;
 
 #define RING_F_SP_ENQ 0x0001 /**< The default enqueue is "single-producer". */
 #define RING_F_SC_DEQ 0x0002 /**< The default dequeue is "single-consumer". */
@@ -429,7 +431,7 @@ typedef struct __rte_aligned(16) {
 } rte_int128_t;
 
 static __rte_always_inline void
-__rte_ring_enqueue_elems_32(struct rte_ring *r, const uint32_t size,
+__rte_ring_enqueue_elems_32(ng_ring_s *r, const uint32_t size,
     uint32_t idx, const void *obj_table, uint32_t n)
 {
   unsigned int i;
@@ -472,7 +474,7 @@ __rte_ring_enqueue_elems_32(struct rte_ring *r, const uint32_t size,
 }
 
 static __rte_always_inline void
-__rte_ring_enqueue_elems_64(struct rte_ring *r, uint32_t prod_head,
+__rte_ring_enqueue_elems_64(ng_ring_s *r, uint32_t prod_head,
     const void *obj_table, uint32_t n)
 {
   unsigned int i;
@@ -505,7 +507,7 @@ __rte_ring_enqueue_elems_64(struct rte_ring *r, uint32_t prod_head,
 }
 
 static __rte_always_inline void
-__rte_ring_enqueue_elems_128(struct rte_ring *r, uint32_t prod_head,
+__rte_ring_enqueue_elems_128(ng_ring_s *r, uint32_t prod_head,
     const void *obj_table, uint32_t n)
 {
   unsigned int i;
@@ -541,7 +543,7 @@ __rte_ring_enqueue_elems_128(struct rte_ring *r, uint32_t prod_head,
  * single and multi producer enqueue functions.
  */
 static __rte_always_inline void
-__rte_ring_enqueue_elems(struct rte_ring *r, uint32_t prod_head,
+__rte_ring_enqueue_elems(ng_ring_s *r, uint32_t prod_head,
     const void *obj_table, uint32_t esize, uint32_t num)
 {
   /* 8B and 16B copies implemented individually to retain
@@ -567,7 +569,7 @@ __rte_ring_enqueue_elems(struct rte_ring *r, uint32_t prod_head,
 }
 
 static __rte_always_inline void
-__rte_ring_dequeue_elems_32(struct rte_ring *r, const uint32_t size,
+__rte_ring_dequeue_elems_32(ng_ring_s *r, const uint32_t size,
     uint32_t idx, void *obj_table, uint32_t n)
 {
   unsigned int i;
@@ -615,7 +617,7 @@ __rte_ring_dequeue_elems_32(struct rte_ring *r, const uint32_t size,
 }
 
 static __rte_always_inline void
-__rte_ring_dequeue_elems_64(struct rte_ring *r, uint32_t cons_head,
+__rte_ring_dequeue_elems_64(ng_ring_s *r, uint32_t cons_head,
     void *obj_table, uint32_t n)
 {
   unsigned int i;
@@ -648,7 +650,7 @@ __rte_ring_dequeue_elems_64(struct rte_ring *r, uint32_t cons_head,
 }
 
 static __rte_always_inline void
-__rte_ring_dequeue_elems_128(struct rte_ring *r, uint32_t cons_head,
+__rte_ring_dequeue_elems_128(ng_ring_s *r, uint32_t cons_head,
     void *obj_table, uint32_t n)
 {
   unsigned int i;
@@ -677,7 +679,7 @@ __rte_ring_dequeue_elems_128(struct rte_ring *r, uint32_t cons_head,
  * single and multi producer enqueue functions.
  */
 static __rte_always_inline void
-__rte_ring_dequeue_elems(struct rte_ring *r, uint32_t cons_head,
+__rte_ring_dequeue_elems(ng_ring_s *r, uint32_t cons_head,
     void *obj_table, uint32_t esize, uint32_t num)
 {
   /* 8B and 16B copies implemented individually to retain
@@ -751,7 +753,7 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
  *   If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
  */
 static __rte_always_inline unsigned int
-__rte_ring_move_prod_head(struct rte_ring *r, unsigned int is_sp,
+__rte_ring_move_prod_head(ng_ring_s *r, unsigned int is_sp,
     unsigned int n, enum rte_ring_queue_behavior behavior,
     uint32_t *old_head, uint32_t *new_head,
     uint32_t *free_entries)
@@ -828,7 +830,7 @@ __rte_ring_move_prod_head(struct rte_ring *r, unsigned int is_sp,
  *     If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
  */
 static __rte_always_inline unsigned int
-__rte_ring_move_cons_head(struct rte_ring *r, int is_sc,
+__rte_ring_move_cons_head(ng_ring_s *r, int is_sc,
     unsigned int n, enum rte_ring_queue_behavior behavior,
     uint32_t *old_head, uint32_t *new_head,
     uint32_t *entries)
@@ -1056,7 +1058,7 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
  *   If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
  */
 static __rte_always_inline unsigned int
-__rte_ring_move_prod_head(struct rte_ring *r, unsigned int is_sp,
+__rte_ring_move_prod_head(ng_ring_s *r, unsigned int is_sp,
     unsigned int n, enum rte_ring_queue_behavior behavior,
     uint32_t *old_head, uint32_t *new_head,
     uint32_t *free_entries)
@@ -1127,7 +1129,7 @@ __rte_ring_move_prod_head(struct rte_ring *r, unsigned int is_sp,
  *     If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
  */
 static __rte_always_inline unsigned int
-__rte_ring_move_cons_head(struct rte_ring *r, unsigned int is_sc,
+__rte_ring_move_cons_head(ng_ring_s *r, unsigned int is_sc,
     unsigned int n, enum rte_ring_queue_behavior behavior,
     uint32_t *old_head, uint32_t *new_head,
     uint32_t *entries)
@@ -1200,7 +1202,7 @@ __rte_ring_move_cons_head(struct rte_ring *r, unsigned int is_sc,
  *   If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
  */
 static __rte_always_inline unsigned int
-__rte_ring_do_enqueue_elem(struct rte_ring *r, const void *obj_table,
+__rte_ring_do_enqueue_elem(ng_ring_s *r, const void *obj_table,
     unsigned int esize, unsigned int n,
     enum rte_ring_queue_behavior behavior, unsigned int is_sp,
     unsigned int *free_space)
@@ -1247,7 +1249,7 @@ end:
  *     If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
  */
 static __rte_always_inline unsigned int
-__rte_ring_do_dequeue_elem(struct rte_ring *r, void *obj_table,
+__rte_ring_do_dequeue_elem(ng_ring_s *r, void *obj_table,
     unsigned int esize, unsigned int n,
     enum rte_ring_queue_behavior behavior, unsigned int is_sc,
     unsigned int *available)
@@ -1355,7 +1357,7 @@ ssize_t rte_ring_get_memsize_elem(unsigned int esize, unsigned int count);
  *    - EEXIST - a memzone with the same name already exists
  *    - ENOMEM - no appropriate memory area found in which to create memzone
  */
-struct rte_ring *rte_ring_create_elem(const char *name, unsigned int esize,
+ng_ring_s *rte_ring_create_elem(const char *name, unsigned int esize,
       unsigned int count, unsigned int flags);
 
 /**
@@ -1381,7 +1383,7 @@ struct rte_ring *rte_ring_create_elem(const char *name, unsigned int esize,
  *   The number of objects enqueued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_mp_enqueue_bulk_elem(struct rte_ring *r, const void *obj_table,
+rte_ring_mp_enqueue_bulk_elem(ng_ring_s *r, const void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *free_space)
 {
   return __rte_ring_do_enqueue_elem(r, obj_table, esize, n,
@@ -1410,7 +1412,7 @@ rte_ring_mp_enqueue_bulk_elem(struct rte_ring *r, const void *obj_table,
  *   The number of objects enqueued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_sp_enqueue_bulk_elem(struct rte_ring *r, const void *obj_table,
+rte_ring_sp_enqueue_bulk_elem(ng_ring_s *r, const void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *free_space)
 {
   return __rte_ring_do_enqueue_elem(r, obj_table, esize, n,
@@ -1441,7 +1443,7 @@ rte_ring_sp_enqueue_bulk_elem(struct rte_ring *r, const void *obj_table,
  *   The number of objects enqueued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_enqueue_bulk_elem(struct rte_ring *r, const void *obj_table,
+rte_ring_enqueue_bulk_elem(ng_ring_s *r, const void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *free_space)
 {
   switch (r->prod.sync_type) {
@@ -1479,7 +1481,7 @@ rte_ring_enqueue_bulk_elem(struct rte_ring *r, const void *obj_table,
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
  */
 static __rte_always_inline int
-rte_ring_mp_enqueue_elem(struct rte_ring *r, void *obj, unsigned int esize)
+rte_ring_mp_enqueue_elem(ng_ring_s *r, void *obj, unsigned int esize)
 {
   return rte_ring_mp_enqueue_bulk_elem(r, obj, esize, 1, NULL) ? 0 :
                 -ENOBUFS;
@@ -1503,7 +1505,7 @@ rte_ring_mp_enqueue_elem(struct rte_ring *r, void *obj, unsigned int esize)
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
  */
 static __rte_always_inline int
-rte_ring_sp_enqueue_elem(struct rte_ring *r, void *obj, unsigned int esize)
+rte_ring_sp_enqueue_elem(ng_ring_s *r, void *obj, unsigned int esize)
 {
   return rte_ring_sp_enqueue_bulk_elem(r, obj, esize, 1, NULL) ? 0 :
                 -ENOBUFS;
@@ -1529,7 +1531,7 @@ rte_ring_sp_enqueue_elem(struct rte_ring *r, void *obj, unsigned int esize)
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
  */
 static __rte_always_inline int
-rte_ring_enqueue_elem(struct rte_ring *r, void *obj, unsigned int esize)
+rte_ring_enqueue_elem(ng_ring_s *r, void *obj, unsigned int esize)
 {
   return rte_ring_enqueue_bulk_elem(r, obj, esize, 1, NULL) ? 0 :
                 -ENOBUFS;
@@ -1558,7 +1560,7 @@ rte_ring_enqueue_elem(struct rte_ring *r, void *obj, unsigned int esize)
  *   The number of objects dequeued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_mc_dequeue_bulk_elem(struct rte_ring *r, void *obj_table,
+rte_ring_mc_dequeue_bulk_elem(ng_ring_s *r, void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *available)
 {
   return __rte_ring_do_dequeue_elem(r, obj_table, esize, n,
@@ -1586,7 +1588,7 @@ rte_ring_mc_dequeue_bulk_elem(struct rte_ring *r, void *obj_table,
  *   The number of objects dequeued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_sc_dequeue_bulk_elem(struct rte_ring *r, void *obj_table,
+rte_ring_sc_dequeue_bulk_elem(ng_ring_s *r, void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *available)
 {
   return __rte_ring_do_dequeue_elem(r, obj_table, esize, n,
@@ -1617,7 +1619,7 @@ rte_ring_sc_dequeue_bulk_elem(struct rte_ring *r, void *obj_table,
  *   The number of objects dequeued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_dequeue_bulk_elem(struct rte_ring *r, void *obj_table,
+rte_ring_dequeue_bulk_elem(ng_ring_s *r, void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *available)
 {
   switch (r->cons.sync_type) {
@@ -1656,7 +1658,7 @@ rte_ring_dequeue_bulk_elem(struct rte_ring *r, void *obj_table,
  *     dequeued.
  */
 static __rte_always_inline int
-rte_ring_mc_dequeue_elem(struct rte_ring *r, void *obj_p,
+rte_ring_mc_dequeue_elem(ng_ring_s *r, void *obj_p,
         unsigned int esize)
 {
   return rte_ring_mc_dequeue_bulk_elem(r, obj_p, esize, 1, NULL)  ? 0 :
@@ -1680,7 +1682,7 @@ rte_ring_mc_dequeue_elem(struct rte_ring *r, void *obj_p,
  *     dequeued.
  */
 static __rte_always_inline int
-rte_ring_sc_dequeue_elem(struct rte_ring *r, void *obj_p,
+rte_ring_sc_dequeue_elem(ng_ring_s *r, void *obj_p,
         unsigned int esize)
 {
   return rte_ring_sc_dequeue_bulk_elem(r, obj_p, esize, 1, NULL) ? 0 :
@@ -1708,7 +1710,7 @@ rte_ring_sc_dequeue_elem(struct rte_ring *r, void *obj_p,
  *     dequeued.
  */
 static __rte_always_inline int
-rte_ring_dequeue_elem(struct rte_ring *r, void *obj_p, unsigned int esize)
+rte_ring_dequeue_elem(ng_ring_s *r, void *obj_p, unsigned int esize)
 {
   return rte_ring_dequeue_bulk_elem(r, obj_p, esize, 1, NULL) ? 0 :
                 -ENOENT;
@@ -1737,7 +1739,7 @@ rte_ring_dequeue_elem(struct rte_ring *r, void *obj_p, unsigned int esize)
  *   - n: Actual number of objects enqueued.
  */
 static __rte_always_inline unsigned int
-rte_ring_mp_enqueue_burst_elem(struct rte_ring *r, const void *obj_table,
+rte_ring_mp_enqueue_burst_elem(ng_ring_s *r, const void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *free_space)
 {
   return __rte_ring_do_enqueue_elem(r, obj_table, esize, n,
@@ -1766,7 +1768,7 @@ rte_ring_mp_enqueue_burst_elem(struct rte_ring *r, const void *obj_table,
  *   - n: Actual number of objects enqueued.
  */
 static __rte_always_inline unsigned int
-rte_ring_sp_enqueue_burst_elem(struct rte_ring *r, const void *obj_table,
+rte_ring_sp_enqueue_burst_elem(ng_ring_s *r, const void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *free_space)
 {
   return __rte_ring_do_enqueue_elem(r, obj_table, esize, n,
@@ -1797,7 +1799,7 @@ rte_ring_sp_enqueue_burst_elem(struct rte_ring *r, const void *obj_table,
  *   - n: Actual number of objects enqueued.
  */
 static __rte_always_inline unsigned int
-rte_ring_enqueue_burst_elem(struct rte_ring *r, const void *obj_table,
+rte_ring_enqueue_burst_elem(ng_ring_s *r, const void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *free_space)
 {
   switch (r->prod.sync_type) {
@@ -1841,7 +1843,7 @@ rte_ring_enqueue_burst_elem(struct rte_ring *r, const void *obj_table,
  *   - n: Actual number of objects dequeued, 0 if ring is empty
  */
 static __rte_always_inline unsigned int
-rte_ring_mc_dequeue_burst_elem(struct rte_ring *r, void *obj_table,
+rte_ring_mc_dequeue_burst_elem(ng_ring_s *r, void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *available)
 {
   return __rte_ring_do_dequeue_elem(r, obj_table, esize, n,
@@ -1870,7 +1872,7 @@ rte_ring_mc_dequeue_burst_elem(struct rte_ring *r, void *obj_table,
  *   - n: Actual number of objects dequeued, 0 if ring is empty
  */
 static __rte_always_inline unsigned int
-rte_ring_sc_dequeue_burst_elem(struct rte_ring *r, void *obj_table,
+rte_ring_sc_dequeue_burst_elem(ng_ring_s *r, void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *available)
 {
   return __rte_ring_do_dequeue_elem(r, obj_table, esize, n,
@@ -1901,7 +1903,7 @@ rte_ring_sc_dequeue_burst_elem(struct rte_ring *r, void *obj_table,
  *   - Number of objects dequeued
  */
 static __rte_always_inline unsigned int
-rte_ring_dequeue_burst_elem(struct rte_ring *r, void *obj_table,
+rte_ring_dequeue_burst_elem(ng_ring_s *r, void *obj_table,
     unsigned int esize, unsigned int n, unsigned int *available)
 {
   switch (r->cons.sync_type) {
@@ -1996,7 +1998,7 @@ ssize_t rte_ring_get_memsize(unsigned int count);
  * @return
  *   0 on success, or a negative value on error.
  */
-int rte_ring_init(struct rte_ring *r, const char *name, unsigned int count,
+int rte_ring_init(ng_ring_s *r, const char *name, unsigned int count,
   unsigned int flags);
 
 /**
@@ -2062,7 +2064,7 @@ int rte_ring_init(struct rte_ring *r, const char *name, unsigned int count,
  *    - EEXIST - a memzone with the same name already exists
  *    - ENOMEM - no appropriate memory area found in which to create memzone
  */
-struct rte_ring *rte_ring_create(const char *name, unsigned int count,
+ng_ring_s *rte_ring_create(const char *name, unsigned int count,
          unsigned int flags);
 
 /**
@@ -2072,7 +2074,7 @@ struct rte_ring *rte_ring_create(const char *name, unsigned int count,
  *   Ring to http_free.
  *   If NULL then, the function does nothing.
  */
-void rte_ring_free(struct rte_ring *r);
+void rte_ring_free(ng_ring_s *r);
 
 /**
  * Dump the status of the ring to a file.
@@ -2082,7 +2084,7 @@ void rte_ring_free(struct rte_ring *r);
  * @param r
  *   A pointer to the ring structure.
  */
-void rte_ring_dump(const struct rte_ring *r);
+void rte_ring_dump(const ng_ring_s *r);
 
 /**
  * Enqueue several objects on the ring (multi-producers safe).
@@ -2103,7 +2105,7 @@ void rte_ring_dump(const struct rte_ring *r);
  *   The number of objects enqueued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_mp_enqueue_bulk(struct rte_ring *r, void * const *obj_table,
+rte_ring_mp_enqueue_bulk(ng_ring_s *r, void * const *obj_table,
        unsigned int n, unsigned int *free_space)
 {
   return rte_ring_mp_enqueue_bulk_elem(r, obj_table, sizeof(void *),
@@ -2126,7 +2128,7 @@ rte_ring_mp_enqueue_bulk(struct rte_ring *r, void * const *obj_table,
  *   The number of objects enqueued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_sp_enqueue_bulk(struct rte_ring *r, void * const *obj_table,
+rte_ring_sp_enqueue_bulk(ng_ring_s *r, void * const *obj_table,
        unsigned int n, unsigned int *free_space)
 {
   return rte_ring_sp_enqueue_bulk_elem(r, obj_table, sizeof(void *),
@@ -2153,7 +2155,7 @@ rte_ring_sp_enqueue_bulk(struct rte_ring *r, void * const *obj_table,
  *   The number of objects enqueued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_enqueue_bulk(struct rte_ring *r, void * const *obj_table,
+rte_ring_enqueue_bulk(ng_ring_s *r, void * const *obj_table,
           unsigned int n, unsigned int *free_space)
 {
   return rte_ring_enqueue_bulk_elem(r, obj_table, sizeof(void *),
@@ -2175,7 +2177,7 @@ rte_ring_enqueue_bulk(struct rte_ring *r, void * const *obj_table,
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
  */
 static __rte_always_inline int
-rte_ring_mp_enqueue(struct rte_ring *r, void *obj)
+rte_ring_mp_enqueue(ng_ring_s *r, void *obj)
 {
   return rte_ring_mp_enqueue_elem(r, &obj, sizeof(void *));
 }
@@ -2192,7 +2194,7 @@ rte_ring_mp_enqueue(struct rte_ring *r, void *obj)
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
  */
 static __rte_always_inline int
-rte_ring_sp_enqueue(struct rte_ring *r, void *obj)
+rte_ring_sp_enqueue(ng_ring_s *r, void *obj)
 {
   return rte_ring_sp_enqueue_elem(r, &obj, sizeof(void *));
 }
@@ -2213,7 +2215,7 @@ rte_ring_sp_enqueue(struct rte_ring *r, void *obj)
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
  */
 static __rte_always_inline int
-rte_ring_enqueue(struct rte_ring *r, void *obj)
+rte_ring_enqueue(ng_ring_s *r, void *obj)
 {
   return rte_ring_enqueue_elem(r, &obj, sizeof(void *));
 }
@@ -2237,7 +2239,7 @@ rte_ring_enqueue(struct rte_ring *r, void *obj)
  *   The number of objects dequeued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_mc_dequeue_bulk(struct rte_ring *r, void **obj_table,
+rte_ring_mc_dequeue_bulk(ng_ring_s *r, void **obj_table,
     unsigned int n, unsigned int *available)
 {
   return rte_ring_mc_dequeue_bulk_elem(r, obj_table, sizeof(void *),
@@ -2261,7 +2263,7 @@ rte_ring_mc_dequeue_bulk(struct rte_ring *r, void **obj_table,
  *   The number of objects dequeued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_sc_dequeue_bulk(struct rte_ring *r, void **obj_table,
+rte_ring_sc_dequeue_bulk(ng_ring_s *r, void **obj_table,
     unsigned int n, unsigned int *available)
 {
   return rte_ring_sc_dequeue_bulk_elem(r, obj_table, sizeof(void *),
@@ -2288,7 +2290,7 @@ rte_ring_sc_dequeue_bulk(struct rte_ring *r, void **obj_table,
  *   The number of objects dequeued, either 0 or n
  */
 static __rte_always_inline unsigned int
-rte_ring_dequeue_bulk(struct rte_ring *r, void **obj_table, unsigned int n,
+rte_ring_dequeue_bulk(ng_ring_s *r, void **obj_table, unsigned int n,
     unsigned int *available)
 {
   return rte_ring_dequeue_bulk_elem(r, obj_table, sizeof(void *),
@@ -2311,7 +2313,7 @@ rte_ring_dequeue_bulk(struct rte_ring *r, void **obj_table, unsigned int n,
  *     dequeued.
  */
 static __rte_always_inline int
-rte_ring_mc_dequeue(struct rte_ring *r, void **obj_p)
+rte_ring_mc_dequeue(ng_ring_s *r, void **obj_p)
 {
   return rte_ring_mc_dequeue_elem(r, obj_p, sizeof(void *));
 }
@@ -2329,7 +2331,7 @@ rte_ring_mc_dequeue(struct rte_ring *r, void **obj_p)
  *     dequeued.
  */
 static __rte_always_inline int
-rte_ring_sc_dequeue(struct rte_ring *r, void **obj_p)
+rte_ring_sc_dequeue(ng_ring_s *r, void **obj_p)
 {
   return rte_ring_sc_dequeue_elem(r, obj_p, sizeof(void *));
 }
@@ -2351,7 +2353,7 @@ rte_ring_sc_dequeue(struct rte_ring *r, void **obj_p)
  *     dequeued.
  */
 static __rte_always_inline int
-rte_ring_dequeue(struct rte_ring *r, void **obj_p)
+rte_ring_dequeue(ng_ring_s *r, void **obj_p)
 {
   return rte_ring_dequeue_elem(r, obj_p, sizeof(void *));
 }
@@ -2368,7 +2370,7 @@ rte_ring_dequeue(struct rte_ring *r, void **obj_p)
  *   A pointer to the ring structure.
  */
 void
-rte_ring_reset(struct rte_ring *r);
+rte_ring_reset(ng_ring_s *r);
 
 /**
  * Return the number of entries in a ring.
@@ -2379,7 +2381,7 @@ rte_ring_reset(struct rte_ring *r);
  *   The number of entries in the ring.
  */
 static inline unsigned int
-rte_ring_count(const struct rte_ring *r)
+rte_ring_count(const ng_ring_s *r)
 {
   uint32_t prod_tail = r->prod.tail;
   uint32_t cons_tail = r->cons.tail;
@@ -2396,7 +2398,7 @@ rte_ring_count(const struct rte_ring *r)
  *   The number of http_free entries in the ring.
  */
 static inline unsigned int
-rte_ring_free_count(const struct rte_ring *r)
+rte_ring_free_count(const ng_ring_s *r)
 {
   return r->capacity - rte_ring_count(r);
 }
@@ -2411,7 +2413,7 @@ rte_ring_free_count(const struct rte_ring *r)
  *   - 0: The ring is not full.
  */
 static inline int
-rte_ring_full(const struct rte_ring *r)
+rte_ring_full(const ng_ring_s *r)
 {
   return rte_ring_free_count(r) == 0;
 }
@@ -2426,7 +2428,7 @@ rte_ring_full(const struct rte_ring *r)
  *   - 0: The ring is not empty.
  */
 static inline int
-rte_ring_empty(const struct rte_ring *r)
+rte_ring_empty(const ng_ring_s *r)
 {
   uint32_t prod_tail = r->prod.tail;
   uint32_t cons_tail = r->cons.tail;
@@ -2444,7 +2446,7 @@ rte_ring_empty(const struct rte_ring *r)
  *   use ``rte_ring_get_capacity()``.
  */
 static inline unsigned int
-rte_ring_get_size(const struct rte_ring *r)
+rte_ring_get_size(const ng_ring_s *r)
 {
   return r->size;
 }
@@ -2458,7 +2460,7 @@ rte_ring_get_size(const struct rte_ring *r)
  *   The usable size of the ring.
  */
 static inline unsigned int
-rte_ring_get_capacity(const struct rte_ring *r)
+rte_ring_get_capacity(const ng_ring_s *r)
 {
   return r->capacity;
 }
@@ -2472,7 +2474,7 @@ rte_ring_get_capacity(const struct rte_ring *r)
  *   Producer sync type value.
  */
 static inline enum rte_ring_sync_type
-rte_ring_get_prod_sync_type(const struct rte_ring *r)
+rte_ring_get_prod_sync_type(const ng_ring_s *r)
 {
   return r->prod.sync_type;
 }
@@ -2486,7 +2488,7 @@ rte_ring_get_prod_sync_type(const struct rte_ring *r)
  *   true if ring is SP, zero otherwise.
  */
 static inline int
-rte_ring_is_prod_single(const struct rte_ring *r)
+rte_ring_is_prod_single(const ng_ring_s *r)
 {
   return (rte_ring_get_prod_sync_type(r) == RTE_RING_SYNC_ST);
 }
@@ -2500,7 +2502,7 @@ rte_ring_is_prod_single(const struct rte_ring *r)
  *   Consumer sync type value.
  */
 static inline enum rte_ring_sync_type
-rte_ring_get_cons_sync_type(const struct rte_ring *r)
+rte_ring_get_cons_sync_type(const ng_ring_s *r)
 {
   return r->cons.sync_type;
 }
@@ -2514,7 +2516,7 @@ rte_ring_get_cons_sync_type(const struct rte_ring *r)
  *   true if ring is SC, zero otherwise.
  */
 static inline int
-rte_ring_is_cons_single(const struct rte_ring *r)
+rte_ring_is_cons_single(const ng_ring_s *r)
 {
   return (rte_ring_get_cons_sync_type(r) == RTE_RING_SYNC_ST);
 }
@@ -2538,8 +2540,9 @@ rte_ring_is_cons_single(const struct rte_ring *r)
  *   - n: Actual number of objects enqueued.
  */
 static __rte_always_inline unsigned int
-rte_ring_mp_enqueue_burst(struct rte_ring *r, void * const *obj_table,
-       unsigned int n, unsigned int *free_space)
+rte_ring_mp_enqueue_burst(ng_ring_s *r, 
+  void * const *obj_table, unsigned int n, 
+  unsigned int *free_space)
 {
   return rte_ring_mp_enqueue_burst_elem(r, obj_table, sizeof(void *),
       n, free_space);
@@ -2561,7 +2564,7 @@ rte_ring_mp_enqueue_burst(struct rte_ring *r, void * const *obj_table,
  *   - n: Actual number of objects enqueued.
  */
 static __rte_always_inline unsigned int
-rte_ring_sp_enqueue_burst(struct rte_ring *r, void * const *obj_table,
+rte_ring_sp_enqueue_burst(ng_ring_s *r, void * const *obj_table,
        unsigned int n, unsigned int *free_space)
 {
   return rte_ring_sp_enqueue_burst_elem(r, obj_table, sizeof(void *),
@@ -2588,7 +2591,7 @@ rte_ring_sp_enqueue_burst(struct rte_ring *r, void * const *obj_table,
  *   - n: Actual number of objects enqueued.
  */
 static __rte_always_inline unsigned int
-rte_ring_enqueue_burst(struct rte_ring *r, void * const *obj_table,
+rte_ring_enqueue_burst(ng_ring_s *r, void * const *obj_table,
           unsigned int n, unsigned int *free_space)
 {
   return rte_ring_enqueue_burst_elem(r, obj_table, sizeof(void *),
@@ -2616,7 +2619,7 @@ rte_ring_enqueue_burst(struct rte_ring *r, void * const *obj_table,
  *   - n: Actual number of objects dequeued, 0 if ring is empty
  */
 static __rte_always_inline unsigned int
-rte_ring_mc_dequeue_burst(struct rte_ring *r, void **obj_table,
+rte_ring_mc_dequeue_burst(ng_ring_s *r, void **obj_table,
     unsigned int n, unsigned int *available)
 {
   return rte_ring_mc_dequeue_burst_elem(r, obj_table, sizeof(void *),
@@ -2641,7 +2644,7 @@ rte_ring_mc_dequeue_burst(struct rte_ring *r, void **obj_table,
  *   - n: Actual number of objects dequeued, 0 if ring is empty
  */
 static __rte_always_inline unsigned int
-rte_ring_sc_dequeue_burst(struct rte_ring *r, void **obj_table,
+rte_ring_sc_dequeue_burst(ng_ring_s *r, void **obj_table,
     unsigned int n, unsigned int *available)
 {
   return rte_ring_sc_dequeue_burst_elem(r, obj_table, sizeof(void *),
@@ -2668,7 +2671,7 @@ rte_ring_sc_dequeue_burst(struct rte_ring *r, void **obj_table,
  *   - Number of objects dequeued
  */
 static __rte_always_inline unsigned int
-rte_ring_dequeue_burst(struct rte_ring *r, void **obj_table,
+rte_ring_dequeue_burst(ng_ring_s *r, void **obj_table,
     unsigned int n, unsigned int *available)
 {
   return rte_ring_dequeue_burst_elem(r, obj_table, sizeof(void *),

@@ -425,7 +425,7 @@ __rm_ctsp(const char *content_type_str, int i, int len)
 }
 
 void
-content_type_print(content_type_t *ct)
+content_type_print(content_type_s *ct)
 {
   if (ct != NULL)
   {
@@ -449,11 +449,11 @@ content_type_print(content_type_t *ct)
    
    Content-Type: multipart/related; boundary=\"the_boundary\"; type=\"application/json\"; start=\"json\"\r\n"
 */
-content_type_t *
+content_type_s *
 content_type_new(const char *content_type_str, int len)
 {
   hpair_t *pair = NULL;
-  content_type_t *ct = NULL;
+  content_type_s *ct = NULL;
   char ch;
   ng_block_s key;
   ng_block_s val;
@@ -462,10 +462,10 @@ content_type_new(const char *content_type_str, int len)
   /* 0: searching ';' 1: process key 2: process value */
 
   /* Create object */
-  ct = (content_type_t *)http_malloc(sizeof(*ct));
+  ct = (content_type_s *)http_malloc(sizeof(*ct));
   if (ct == NULL)
   {
-    log_fatal("Failed to malloc content_type_t.");
+    log_fatal("Failed to malloc content_type_s.");
     goto clean0;
   }
 
@@ -494,7 +494,7 @@ content_type_new(const char *content_type_str, int len)
         ct->type.data = http_strdup_size(content_type_str, c);
         if (ct->type.data == NULL)
         {
-          log_fatal("Failed to malloc content_type_t->type.");
+          log_fatal("Failed to malloc content_type_s->type.");
           goto clean1;
         }
         
@@ -526,7 +526,7 @@ content_type_new(const char *content_type_str, int len)
       }
       else if (c)
       {
-        log_warn("Bad char in content_type_t->Key %02X.", ch);
+        log_warn("Bad char in content_type_s->Key %02X.", ch);
         goto clean1;
       }
       break;
@@ -605,7 +605,7 @@ void test_content_type(void)
 {
 #define __T1  "multipart/form-data; boundary=---011000010111000001101001"
 #define __T2  "multipart/related; boundary=\"the_boundary\"; type=\"application/json\"; start=\"json\""
-  content_type_t *ct;
+  content_type_s *ct;
   ct = content_type_new(__T1, sizeof(__T1)-1);
   if (ct != NULL)
   {
@@ -621,7 +621,7 @@ void test_content_type(void)
 }
 
 void
-content_type_free(content_type_t * ct)
+content_type_free(content_type_s * ct)
 {
   if (!ct)
     return;

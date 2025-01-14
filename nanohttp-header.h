@@ -2604,7 +2604,7 @@ extern const uint8_t __isValidFieldName[256];
 
 struct _http_header_parser {
   char buffer[MAX_HEADER_SIZE];
-  httpd_buf_t data;
+  ng_buffer_s data;
   ng_list_head_s header;
   uint16_t state;
   uint16_t type;

@@ -369,7 +369,7 @@ ng_open(const char *fmt, ...)
   ng_channel_s   *ch;
   const char     *p;
   ng_instance_s  *t;
-  httpd_buf_t     s;
+  ng_buffer_s     s;
   char           *buffer;
   ng_block_s      _name;
   ng_block_s     *name;

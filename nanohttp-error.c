@@ -181,7 +181,7 @@ herror_release(herror_t err)
 
 #define ENTRY(n, s) [-ng_ERR_ ## n] = DECL_CONST_STR_N(-ng_ERR_ ## n, "("#n")" s)
 
-static const ng_str_s error_table[] =
+static const ng_block_s error_table[] =
 {
   ENTRY(EPERM,             "Not owner"),
   ENTRY(ENOENT,            "No such file or directory"),
@@ -314,7 +314,7 @@ static const ng_str_s error_table[] =
   ENTRY(HTTP_MIME_ERROR_NOT_MIME_MESSAGE,      "Not a MIME message"),
 };
 
-const ng_str_s *ng_strerror(ng_errno_e err)
+const ng_block_s *ng_strerror(ng_errno_e err)
 {
   return &error_table[-err];
 }

@@ -1401,7 +1401,7 @@ int __ng_http_date(char *buf, int len, int isHttp,
   return raw_ng_http_date(0, buf, len, isHttp, tz);
 }
 
-int ng_http_date(httpd_buf_t *b)
+int ng_http_date(ng_buffer_s *b)
 {
   return __ng_http_date(b->buf, b->len, 1, " GMT");
 }
@@ -1414,7 +1414,7 @@ int ng_http_date_s(char *buf, int len)
 void ng_date_print(void)
 {
   char date[HTTPD_DATE_STRLEN_MIN];
-  httpd_buf_t b;
+  ng_buffer_s b;
   BUF_SET(&b, date, sizeof(date));
   __ng_http_date(b.buf, b.len, 0, NULL);
   log_print("\nSystem is already running %"PRIu64" seconds\n", 

@@ -96,7 +96,7 @@
 #include "nanohttp-admin.h"
 
 static void
-_httpd_admin_send_title(httpd_conn_t *conn, const char *title)
+_httpd_admin_send_title(httpd_conn_s *conn, const char *title)
 {
   httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
 
@@ -121,7 +121,7 @@ _httpd_admin_send_title(httpd_conn_t *conn, const char *title)
 }
 
 static inline void
-_httpd_admin_send_footer(httpd_conn_t *conn)
+_httpd_admin_send_footer(httpd_conn_s *conn)
 {
   http_output_stream_write_string(conn->out,
         "<hr />"
@@ -132,7 +132,7 @@ _httpd_admin_send_footer(httpd_conn_t *conn)
 }
 
 static void
-_httpd_admin_list_services(httpd_conn_t *conn)
+_httpd_admin_list_services(httpd_conn_s *conn)
 {
   char buffer[1024];
   hservice_t *node;
@@ -171,8 +171,9 @@ _httpd_admin_list_services(httpd_conn_t *conn)
   _httpd_admin_send_footer(conn);
 }
 
+#ifdef __NHTTP_INTERNAL
 static void
-_httpd_admin_list_statistics(httpd_conn_t *conn, 
+_httpd_admin_list_statistics(httpd_conn_s *conn, 
   const char *service_name, int service_name_len)
 {
   char buffer[1024];
@@ -213,9 +214,10 @@ _httpd_admin_list_statistics(httpd_conn_t *conn,
   http_output_stream_write(conn->out, (unsigned char *)buffer, n);
   _httpd_admin_send_footer(conn);
 }
+#endif
 
 static void
-_httpd_admin_enable_service(httpd_conn_t *conn, 
+_httpd_admin_enable_service(httpd_conn_s *conn, 
   const char *service_name, int service_name_len)
 {
   hservice_t *service;
@@ -246,7 +248,7 @@ _httpd_admin_enable_service(httpd_conn_t *conn,
 }
 
 static void
-_httpd_admin_disable_service(httpd_conn_t *conn, 
+_httpd_admin_disable_service(httpd_conn_s *conn, 
   const char *service_name, int service_name_len)
 {
   hservice_t *service;
@@ -275,7 +277,7 @@ _httpd_admin_disable_service(httpd_conn_t *conn,
 }
 
 static void
-_httpd_admin_set_loglevel(httpd_conn_t *conn, const char *loglevel)
+_httpd_admin_set_loglevel(httpd_conn_s *conn, const char *loglevel)
 {
   nanohttp_loglevel_t old;
   char buffer[256];
@@ -353,7 +355,7 @@ _httpd_admin_set_loglevel(httpd_conn_t *conn, const char *loglevel)
 }
 
 static void
-_httpd_admin_handle_get(httpd_conn_t * conn, struct hrequest_t *req)
+_httpd_admin_handle_get(httpd_conn_s * conn, hrequest_s *req)
 {
   hpair_t *param;
 #define ___(X) (X), sizeof(X)-1
@@ -362,11 +364,13 @@ _httpd_admin_handle_get(httpd_conn_t * conn, struct hrequest_t *req)
   {
     _httpd_admin_list_services(conn);
   }
+#ifdef __NHTTP_INTERNAL
   else if ((param = hpairnode_get_ignore_case(&req->query, 
         ___(NHTTPD_ADMIN_QUERY_STATISTICS))))
   {
     _httpd_admin_list_statistics(conn, param->val.cptr, param->val.len);
   }
+#endif
   else if ((param = hpairnode_get_ignore_case(&req->query, 
         ___(NHTTPD_ADMIN_QUERY_ACTIVATE_SERVICE))))
   {
@@ -411,7 +415,7 @@ _httpd_admin_handle_get(httpd_conn_t * conn, struct hrequest_t *req)
 }
 
 static void
-_httpd_admin_entry(httpd_conn_t * conn, struct hrequest_t *req)
+_httpd_admin_entry(httpd_conn_s *conn, hrequest_s *req)
 {
   if (req->method == HTTP_REQUEST_METHOD_GET)
   {

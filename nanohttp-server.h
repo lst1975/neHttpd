@@ -186,7 +186,7 @@
  * @section nanohttp_server_function_sec Sample service function
  *
  * @code
- * static void headers_service(httpd_conn_t *conn, struct hrequest_t *req)
+ * static void headers_service(httpd_conn_s *conn, struct hrequest_t *req)
  * {
  *   hpair_t *walker;
  *
@@ -258,20 +258,21 @@
 /** @defgroup NANOHTTP_SERVER Server */
 /**@{*/
 
-typedef struct httpd_conn
+struct _httpd_conn
 {
-  struct hsocket_t *sock;
+  hsocket_s *sock;
   char content_type[25];
   http_output_stream_s *out;
   ng_list_head_s header;
 }
-httpd_conn_t;
+;
+typedef struct _httpd_conn httpd_conn_s;
 
 /** Service callback function for a nanoHTTP service. */
-typedef void (*httpd_service) (httpd_conn_t *conn, struct hrequest_t *req);
+typedef void (*httpd_service_f) (httpd_conn_s *conn, hrequest_s *req);
 
 /** Authentication callback function for a nanoHTTP service. */
-typedef int (*httpd_auth) (struct hrequest_t *req, 
+typedef int (*httpd_auth_f) (hrequest_s *req, 
                     const ng_block_s *user, const ng_block_s *pass);
 
 #define __NHTTP_USE_STAT_RWLOCK 0
@@ -293,6 +294,7 @@ struct service_statistics
   char lock[0];
 #endif
 };
+typedef struct service_statistics service_statistics_s;
 #endif
 
 #if __NHTTP_USE_STAT_RWLOCK
@@ -339,10 +341,12 @@ typedef struct tag_hservice
   const char *name;                      /**< Path where service is connected */
   char *context;                         /**< Path where service is connected */
   int status;                            /**< Current status of this service */
-  httpd_service func;                    /**< Service function */
-  httpd_auth auth;                       /**< Authentication function */
+  httpd_service_f func;                    /**< Service function */
+  httpd_auth_f auth;                       /**< Authentication function */
   struct tag_hservice *next;             /**< Next service in service list */
-  struct service_statistics statistics; /**< Service statistics */
+#ifdef __NHTTP_INTERNAL
+  service_statistics_s statistics; /**< Service statistics */
+#endif
   int name_len;
   int context_len;
 }
@@ -376,7 +380,7 @@ extern herror_t httpd_run(void);
  * @return H_OK on success.
  */
 extern herror_t httpd_register(const char *context, 
-  int context_len, httpd_service service, const char *service_name, 
+  int context_len, httpd_service_f service, const char *service_name, 
   int service_name_len);
 
 /** This function registers a service routing which is secured by
@@ -385,7 +389,7 @@ extern herror_t httpd_register(const char *context,
  * @return H_OK on success.
  */
 extern herror_t httpd_register_secure(const char *context, 
-  int context_len, httpd_service service, httpd_auth auth, 
+  int context_len, httpd_service_f service, httpd_auth_f auth, 
   const char *service_name, int service_name_len);
 
 /** This function registers a service routing which is executed if
@@ -394,7 +398,7 @@ extern herror_t httpd_register_secure(const char *context,
  * @return H_OK on success.
  */
 extern herror_t httpd_register_default(const char *context, 
-  int context_len, httpd_service service);
+  int context_len, httpd_service_f service);
 
 /** This function registers a serivce routing which is executed if
  * no matching service is found, it is protected by a password.
@@ -402,7 +406,7 @@ extern herror_t httpd_register_default(const char *context,
  * @return H_OK on success.
  */
 extern herror_t httpd_register_default_secure(const char *context, 
-  int context_len, httpd_service service, httpd_auth auth);
+  int context_len, httpd_service_f service, httpd_auth_f auth);
 
 /** This function returns the port the service is listening on.
  *
@@ -443,7 +447,7 @@ extern int httpd_enable_service(hservice_t *service);
 extern int httpd_disable_service(hservice_t *service);
 
 static inline void
-httpd_response_set_content_type(httpd_conn_t *res, const char *content_type, int len)
+httpd_response_set_content_type(httpd_conn_s *res, const char *content_type, int len)
 {
   len = RTE_MIN(sizeof(res->content_type)-1, len);
   ng_memcpy(res->content_type, content_type, len);
@@ -451,7 +455,7 @@ httpd_response_set_content_type(httpd_conn_t *res, const char *content_type, int
   return;
 }
 
-extern herror_t httpd_send_header(httpd_conn_t *res, int code);
+extern herror_t httpd_send_header(httpd_conn_s *res, int code);
 
 /** This function sends a minimalistic HTML error document with HTTP
  * status 400.
@@ -461,7 +465,7 @@ extern herror_t httpd_send_header(httpd_conn_t *res, int code);
  * @return H_OK on success.
  */
 extern herror_t 
-httpd_send_bad_request(httpd_conn_t *conn, const char *msg);
+httpd_send_bad_request(httpd_conn_s *conn, const char *msg);
 
 /** This function sends a minimalistc HTML error document with HTTP
  * status 401.
@@ -471,7 +475,7 @@ httpd_send_bad_request(httpd_conn_t *conn, const char *msg);
  * @return H_OK on success.
  */
 extern herror_t 
-httpd_send_unauthorized(httpd_conn_t *conn, const char *realm);
+httpd_send_unauthorized(httpd_conn_s *conn, const char *realm);
 
 /** This function sends a minimalistic HTML error document with HTTP
  * status 404.
@@ -481,7 +485,7 @@ httpd_send_unauthorized(httpd_conn_t *conn, const char *realm);
  * @return H_OK on success.
  */
 extern herror_t 
-httpd_send_not_found(httpd_conn_t *conn, const char *msg);
+httpd_send_not_found(httpd_conn_s *conn, const char *msg);
 
 /** This function sends a minimalistic HTML error document with HTTP
  * status 500.
@@ -491,7 +495,7 @@ httpd_send_not_found(httpd_conn_t *conn, const char *msg);
  * @return H_OK on success.
  */
 extern herror_t 
-httpd_send_internal_error(httpd_conn_t * conn, const char *msg);
+httpd_send_internal_error(httpd_conn_s * conn, const char *msg);
 
 /** This functions sends a minimalistic HTML error document with HTTP
  * status 501.
@@ -500,7 +504,7 @@ httpd_send_internal_error(httpd_conn_t * conn, const char *msg);
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_send_not_implemented(httpd_conn_t *conn, const char *msg);
+extern herror_t httpd_send_not_implemented(httpd_conn_s *conn, const char *msg);
 
 extern int httpd_parse_arguments(int argc, char **argv);
 

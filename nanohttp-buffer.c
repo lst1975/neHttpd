@@ -67,12 +67,13 @@
 #include "nanohttp-logging.h"
 
 void
-ng_free_data_buffer(httpd_buf_t *data)
+ng_free_data_buffer(ng_buffer_s *data)
 {
   if (data->buf != NULL)
   {
     http_free(data->buf);
     data->buf = NULL;
+    data->len = 0;
   }
 }
 

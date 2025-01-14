@@ -104,8 +104,8 @@ int nanohttp_users_del(const char *name, int nameLen);
 const ng_block_s *__nanohttp_level2string(int level);
 
 #if 0
-int nanohttp_pswd_enc(httpd_buf_t *b, const char *pswd, int len);
-int nanohttp_pswd_dec(httpd_buf_t *b, const char *pswd, int len);
+int nanohttp_pswd_enc(ng_buffer_s *b, const char *pswd, int len);
+int nanohttp_pswd_dec(ng_buffer_s *b, const char *pswd, int len);
 #endif
 
 #endif

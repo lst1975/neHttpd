@@ -95,7 +95,7 @@
  * @see HTTP_HEADER_HOST
  *
  */
-typedef enum _hreq_method
+enum _hreq_method
 {
   /**
    * The POST method is used to request that the origin server accept the entity
@@ -181,7 +181,9 @@ typedef enum _hreq_method
    */
   HTTP_REQUEST_METHOD_CONNECT,
   HTTP_REQUEST_METHOD_UNKOWN
-} hreq_method_t;
+};
+
+typedef enum _hreq_method hreq_method_e;
 
 /** @file nanohttp-request.h HTTP request handling
  *
@@ -214,6 +216,7 @@ struct request_statistics
   unsigned long bytes_received;
   uint64_t time;
 };
+typedef struct request_statistics request_statistics_s;
 #endif
 
 /**
@@ -228,23 +231,26 @@ struct hrequest_t
   ng_list_head_s header;
   void    *conn;
   size_t   content_length;
-  struct request_statistics statistics;
+#ifdef __NHTTP_INTERNAL
+  request_statistics_s statistics;
+#endif
 
   http_input_stream_s *in;
-  content_type_t *content_type;
+  content_type_s *content_type;
   void *attachments;
-  hreq_method_t  method;
-  http_version_t version;
+  hreq_method_e  method;
+  http_version_e version;
   int   userLevel;
 };
+typedef struct hrequest_t hrequest_s;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifdef __NHTTP_INTERNAL
-extern herror_t hrequest_new_from_socket(struct hsocket_t *sock, struct hrequest_t **out);
-extern void hrequest_free(struct hrequest_t *req);
+extern herror_t hrequest_new_from_socket(hsocket_s *sock, hrequest_s **out);
+extern void hrequest_free(hrequest_s *req);
 #endif
 
 #ifdef __cplusplus

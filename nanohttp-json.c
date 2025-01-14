@@ -2109,7 +2109,7 @@ static char const *character_escape[] = {
 };
 
 static int __json_pad_print(JSON_PRINTER_f printer, 
-  httpd_buf_t *b, int depth, const char *pad)
+  ng_buffer_s *b, int depth, const char *pad)
 {
   int k=0;
   
@@ -2126,7 +2126,7 @@ static int __json_pad_print(JSON_PRINTER_f printer,
   return k;
 }
 
-int json_printer_default(httpd_buf_t *b, const char *fmt, ...)
+int json_printer_default(ng_buffer_s *b, const char *fmt, ...)
 {
   va_list args;
 
@@ -2139,7 +2139,7 @@ int json_printer_default(httpd_buf_t *b, const char *fmt, ...)
 }
 
 static int 
-__json_print(JSON_PRINTER_f printer, httpd_buf_t *b, 
+__json_print(JSON_PRINTER_f printer, ng_buffer_s *b, 
   JSONPair_t *pair, int depth, const char *pad)
 {
   size_t n, k=0;
@@ -2297,7 +2297,7 @@ __json_print(JSON_PRINTER_f printer, httpd_buf_t *b,
 JSONStatus_t json_print(JSONPair_t *pair, int depth, const char *pad)
 {
   int n;
-  httpd_buf_t b;
+  ng_buffer_s b;
   
   n = json_printer_default(&b, "%s", "{");
   if (n < 0) return JSONPartial;
@@ -2317,7 +2317,7 @@ JSONStatus_t json_print(JSONPair_t *pair, int depth, const char *pad)
 }
 
 static inline int 
-json_printer_buffer(httpd_buf_t *b, const char *fmt, ...)
+json_printer_buffer(ng_buffer_s *b, const char *fmt, ...)
 {
   size_t n;
   va_list args;
@@ -2333,7 +2333,7 @@ int json_tostr(JSONPair_t *pair, char *buf,
   size_t length, int depth, const char *pad)
 {
   int k=0;
-  httpd_buf_t b = {.buf = buf, .len = length, .p = buf};
+  ng_buffer_s b = {.buf = buf, .len = length, .p = buf};
   int n;
 
   n = json_printer_buffer(&b, "%s", "{");
@@ -2359,7 +2359,7 @@ int json_tostr(JSONPair_t *pair, char *buf,
   return k;
 }
 
-int json_to_printer(JSON_PRINTER_f printer, httpd_buf_t *b, 
+int json_to_printer(JSON_PRINTER_f printer, ng_buffer_s *b, 
   JSONPair_t *pair, int depth, const char *pad)
 {
   int n, k=0;

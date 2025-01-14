@@ -125,6 +125,7 @@
  */
 #define NHTTPD_ADMIN_QUERY_SERVICES		"services"
 
+#ifdef __NHTTP_INTERNAL
 /** Parameter to query service statistics.
  *
  * Example query:
@@ -133,7 +134,7 @@
  @endverbatim
  */
 #define NHTTPD_ADMIN_QUERY_STATISTICS		"statistics"
-
+#endif
 
 /** Parameter to enable a server.
  *

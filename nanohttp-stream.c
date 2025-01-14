@@ -270,7 +270,8 @@ _http_input_stream_chunked_read(http_input_stream_s *stream,
       counter = 100;            /* maximum for stop infinity */
       while (1)
       {
-        if ((err = hsocket_recv(stream->sock, (unsigned char *)&ch, 1, 1, &status)) != H_OK)
+        err = hsocket_recv(stream->sock, (unsigned char *)&ch, 1, 1, &status);
+        if (err != H_OK)
         {
           stream->err = err;
           return -1;
@@ -355,14 +356,15 @@ _http_input_stream_chunked_read(http_input_stream_s *stream,
 
 
 static size_t
-_http_input_stream_connection_closed_read(http_input_stream_s *stream, 
-  unsigned char *dest, size_t size)
+_http_input_stream_connection_closed_read(
+  http_input_stream_s *stream, unsigned char *dest, size_t size)
 {
   size_t status;
   herror_t err;
 
   /* read from socket */
-  if ((err = hsocket_recv(stream->sock, dest, size, 0, &status)) != H_OK)
+  err = hsocket_recv(stream->sock, dest, size, 0, &status);
+  if (err != H_OK)
   {
     stream->err = err;
     return -1;
@@ -395,8 +397,8 @@ _http_input_stream_file_read(http_input_stream_s *stream,
   Creates a new input stream. 
 */
 http_input_stream_s *
-http_input_stream_new(struct hsocket_t *sock, ng_list_head_s *header, 
-  httpd_buf_t *data)
+http_input_stream_new(hsocket_s *sock, ng_list_head_s *header, 
+  ng_buffer_s *data)
 {
   http_input_stream_s *result;
 
@@ -544,8 +546,7 @@ http_input_stream_read(http_input_stream_s *stream,
   Creates a new output stream. Transfer code will be found from header.
 */
 http_output_stream_s *
-http_output_stream_new(struct hsocket_t *sock, 
-  ng_list_head_s *header)
+http_output_stream_new(hsocket_s *sock, ng_list_head_s *header)
 {
   http_output_stream_s *result;
 

@@ -487,7 +487,7 @@ int utf8_char_lenth(const unsigned char *data, int len)
   return bytes;
 }
 
-int encode_url(httpd_buf_t *b, const uint8_t *input, int len) 
+int encode_url(ng_buffer_s *b, const uint8_t *input, int len) 
 {
   int in_cursor;
   int out_cursor;
@@ -591,7 +591,7 @@ static const uint8_t url_str_dec_len[256] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
 
-int decode_url(httpd_buf_t *b, const uint8_t* input, int len) 
+int decode_url(ng_buffer_s *b, const uint8_t* input, int len) 
 {
   uint8_t *decoded;
   int in_cursor = 0;
@@ -894,7 +894,7 @@ static inline void __char_to_escape(char *buf_ptr, uint8_t c)
 
 // Function to convert UTF-8 to Unicode escape sequence and store in buffer
 void convert_utf8_to_unicode_escape(const char *utf8, 
-  size_t len, httpd_buf_t *buffer) 
+  size_t len, ng_buffer_s *buffer) 
 {
   const uint8_t *ptr = (const uint8_t *)utf8;
   const uint8_t *end = ptr + len;
@@ -961,7 +961,7 @@ void convert_utf8_to_unicode_escape(const char *utf8,
 static void __test_encode_url(const char *output, int outlen, 
   const char *input, int inlen)
 {
-  httpd_buf_t b;
+  ng_buffer_s b;
   if (0 > encode_url(&b, (const uint8_t *)output, outlen))
   {
     log_verbose("test encode_url FAILED.");
@@ -1007,7 +1007,7 @@ static void
 __test_decode_url(const char *output, int outlen, 
   const char *input, int inlen)
 {
-  httpd_buf_t b;
+  ng_buffer_s b;
   if (0 > decode_url(&b, (const uint8_t *)output, outlen))
   {
     log_verbose("test decode_url FAILED.");

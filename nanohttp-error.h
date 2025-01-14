@@ -159,7 +159,7 @@
  * Dummy deklaration to hide the implementation.
  *
  */
-typedef void *herror_t;
+typedef void * herror_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -365,7 +365,7 @@ enum __ng_errno{
 #define os_strerror               __os_strerror
 #endif
 
-const ng_str_s *ng_strerror(ng_errno_e err);
+const ng_block_s *ng_strerror(ng_errno_e err);
 
 #ifdef __cplusplus
 }

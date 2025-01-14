@@ -76,7 +76,7 @@ static int __nanohttp_users2file(void);
 static herror_t 
 __file_user(void *arg, const char *buf, size_t length) 
 {
-  httpd_buf_t *t = (httpd_buf_t *)arg;
+  ng_buffer_s *t = (ng_buffer_s *)arg;
   memcpy((char *)t->data + t->len, buf, length);
   t->len += length;
   return NULL;
@@ -159,7 +159,7 @@ int nanohttp_users_init(void)
   herror_t r;
   JSONPair_t *pair, *p, *s;
   JSONStatus_t result;
-  httpd_buf_t tmp, _b, *b = &_b;
+  ng_buffer_s tmp, _b, *b = &_b;
   
   b->len = nanohttp_file_size(__USER_FILE, sizeof(__USER_FILE)-1);
   if (b->len == 0)
@@ -267,10 +267,10 @@ __nanohttp_string2level(const char *level, int levelLen)
 }
 
 #if 0
-static const httpd_buf_t __http_user_crypt={.cptr="neHttpd2025",.len=11};
+static const ng_buffer_s __http_user_crypt={.cptr="neHttpd2025",.len=11};
 
 int
-nanohttp_pswd_enc(httpd_buf_t *b, const char *pswd, int len)
+nanohttp_pswd_enc(ng_buffer_s *b, const char *pswd, int len)
 {
   unsigned char *p;
 
@@ -289,7 +289,7 @@ nanohttp_pswd_enc(httpd_buf_t *b, const char *pswd, int len)
 }
 
 int
-nanohttp_pswd_dec(httpd_buf_t *b, const char *pswd, int len)
+nanohttp_pswd_dec(ng_buffer_s *b, const char *pswd, int len)
 {
   unsigned char *p;
 
@@ -431,7 +431,7 @@ __nanohttp_user2json(httpd_user_t *entry, char *b, int len, int count)
 }
 
 static inline int 
-json_printer_file(httpd_buf_t *b, const char *fmt, ...)
+json_printer_file(ng_buffer_s *b, const char *fmt, ...)
 {
   size_t n;
   va_list args;
@@ -453,7 +453,7 @@ __nanohttp_users2file(void)
   JSONStatus_t result;
   JSONPair_t *json;
   void *fp;
-  httpd_buf_t b;
+  ng_buffer_s b;
 
   n = ng_snprintf(p, len, "%s", "{\"AccountConfiguration\":{");
   p += n, len -= n;

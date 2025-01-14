@@ -153,7 +153,7 @@ typedef struct _conndata
   char name[32];
   volatile int flag;
   int index;
-  struct hsocket_t sock;
+  hsocket_s sock;
 #ifdef WIN32
   HANDLE tid;
 #else
@@ -173,8 +173,8 @@ conndata_t;
  */
 static volatile int _httpd_run = 1;
 
-static struct hsocket_t _httpd_socket4 = {.sock = HSOCKET_FREE, .ssl = NULL};
-static struct hsocket_t _httpd_socket6 = {.sock = HSOCKET_FREE, .ssl = NULL};
+static hsocket_s _httpd_socket4 = {.sock = HSOCKET_FREE, .ssl = NULL};
+static hsocket_s _httpd_socket6 = {.sock = HSOCKET_FREE, .ssl = NULL};
 static int _httpd_port = _nanoConfig_HTTPD_PORT;
 static int _httpd_max_connections = _nanoConfig_HTTPD_MAX_CONNECTIONS;
 static int _httpd_max_pending_connections = _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS;
@@ -190,7 +190,7 @@ static conndata_t *_httpd_connection = NULL;
 static void _httpd_release_finished_conn(conndata_t *conn);
 
 #if __HTTP_USE_CONN_RING
-static struct rte_ring *_httpd_connection_ring = NULL;
+static ng_ring_s *_httpd_connection_ring = NULL;
 #endif
 
 int nanohttpd_is_running(void)
@@ -508,7 +508,7 @@ _httpd_connection_slots_init(void)
   }
   
 #if __HTTP_USE_CONN_RING
-  struct rte_ring *ring;
+  ng_ring_s *ring;
   ring = rte_ring_create("http_conn", _httpd_max_connections, RING_F_EXACT_SZ);
   if (ring == NULL)
   {
@@ -717,7 +717,7 @@ httpd_init(int argc, char **argv)
 
 herror_t
 httpd_register_secure(const char *context, int context_len,
-  httpd_service func, httpd_auth auth, const char *service_name,
+  httpd_service_f func, httpd_auth_f auth, const char *service_name,
   int service_name_len)
 {
   hservice_t *service;
@@ -729,11 +729,13 @@ httpd_register_secure(const char *context, int context_len,
       "http_malloc failed (%s)", os_strerror(ng_errno));
   }
 
+#ifdef __NHTTP_INTERNAL
   STAT_u64_set(service->statistics.bytes_received, 0);
   STAT_u64_set(service->statistics.bytes_transmitted, 0);
   STAT_u64_set(service->statistics.requests, 0);
   STAT_u64_set(service->statistics.time, 0);
   stat_pthread_rwlock_init(&(service->statistics.lock), NULL);
+#endif
 
   service->name = service_name;
   service->name_len = service_name_len;
@@ -743,7 +745,7 @@ httpd_register_secure(const char *context, int context_len,
   service->status = NHTTPD_SERVICE_UP;
   
   service->context = (char *)(service+1);
-  memcpy(service->context, context, context_len+1);
+  ng_memcpy(service->context, context, context_len+1);
   service->context_len = context_len;
 
   log_verbose("register service (%p) for \"%s\"", service, context);
@@ -761,7 +763,7 @@ httpd_register_secure(const char *context, int context_len,
 }
 
 herror_t
-httpd_register(const char *context, int context_len, httpd_service service, 
+httpd_register(const char *context, int context_len, httpd_service_f service, 
   const char *service_name, int service_name_len)
 {
   return httpd_register_secure(context, context_len, service, 
@@ -770,7 +772,7 @@ httpd_register(const char *context, int context_len, httpd_service service,
 
 herror_t
 httpd_register_default_secure(const char *context, int context_len, 
-  httpd_service service, httpd_auth auth)
+  httpd_service_f service, httpd_auth_f auth)
 {
   herror_t ret;
 
@@ -783,7 +785,7 @@ httpd_register_default_secure(const char *context, int context_len,
 }
 
 herror_t
-httpd_register_default(const char *context, int context_len, httpd_service service)
+httpd_register_default(const char *context, int context_len, httpd_service_f service)
 {
   return httpd_register_default_secure(context, context_len, service, NULL);
 }
@@ -890,12 +892,12 @@ httpd_find_service(const char *context, int context_len)
 }
 
 herror_t
-httpd_send_header(httpd_conn_t *res, int code)
+httpd_send_header(httpd_conn_s *res, int code)
 {
   char *header;
   hpair_t *cur;
   herror_t status = H_OK;
-  httpd_buf_t b;
+  ng_buffer_s b;
   int n;
   
 #define __BUF_SZ 1024
@@ -1002,7 +1004,7 @@ clean0:
 }
 
 static herror_t
-_httpd_send_html_message(httpd_conn_t *conn, int reason, 
+_httpd_send_html_message(httpd_conn_s *conn, int reason, 
   const char *msg)
 {
   herror_t r;
@@ -1058,7 +1060,7 @@ clean0:
 }
 
 herror_t
-httpd_send_bad_request(httpd_conn_t *conn, const char *msg)
+httpd_send_bad_request(httpd_conn_s *conn, const char *msg)
 {
   return _httpd_send_html_message(conn, HTTP_RESPONSE_CODE_400_Bad_Request, msg);
 }
@@ -1075,7 +1077,7 @@ ng_block_s __nanohttp_html[]={
 #undef _
 
 herror_t
-httpd_send_unauthorized(httpd_conn_t *conn, const char *realm)
+httpd_send_unauthorized(httpd_conn_s *conn, const char *realm)
 {
   herror_t r;
 
@@ -1110,28 +1112,28 @@ httpd_send_unauthorized(httpd_conn_t *conn, const char *realm)
 }
 
 herror_t
-httpd_send_not_found(httpd_conn_t *conn, const char *msg)
+httpd_send_not_found(httpd_conn_s *conn, const char *msg)
 {
   return _httpd_send_html_message(conn, 
     HTTP_RESPONSE_CODE_404_Not_Found, msg);
 }
 
 herror_t
-httpd_send_internal_error(httpd_conn_t *conn, const char *msg)
+httpd_send_internal_error(httpd_conn_s *conn, const char *msg)
 {
   return _httpd_send_html_message(conn, 
     HTTP_RESPONSE_CODE_500_Internal_Server_Error, msg);
 }
 
 herror_t
-httpd_send_not_implemented(httpd_conn_t *conn, const char *msg)
+httpd_send_not_implemented(httpd_conn_s *conn, const char *msg)
 {
   return _httpd_send_html_message(conn, 
     HTTP_RESPONSE_CODE_501_Not_Implemented, msg);
 }
 
 static void
-_httpd_request_print(struct hrequest_t * req)
+_httpd_request_print(hrequest_s *req)
 {
   hpair_t *pair;
   const ng_block_s *level;
@@ -1162,12 +1164,12 @@ _httpd_request_print(struct hrequest_t * req)
   return;
 }
 
-httpd_conn_t *
-httpd_new(struct hsocket_t *sock)
+httpd_conn_s *
+httpd_new(hsocket_s *sock)
 {
-  httpd_conn_t *conn;
+  httpd_conn_s *conn;
 
-  if (!(conn = (httpd_conn_t *) http_malloc(sizeof(httpd_conn_t))))
+  if (!(conn = (httpd_conn_s *) http_malloc(sizeof(httpd_conn_s))))
   {
     log_error("http_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
@@ -1181,7 +1183,7 @@ httpd_new(struct hsocket_t *sock)
 }
 
 void
-httpd_free(httpd_conn_t *conn)
+httpd_free(httpd_conn_s *conn)
 {
   if (!conn)
     return;
@@ -1258,7 +1260,7 @@ _httpd_decode_authorization(int *tmplen,
 }
 
 static int
-_httpd_authenticate_request(struct hrequest_t *req, httpd_auth auth)
+_httpd_authenticate_request(hrequest_s *req, httpd_auth_f auth)
 {
   ng_block_s user, pass;
   hpair_t *authorization_pair;
@@ -1302,15 +1304,19 @@ httpd_session_main(void *data)
 #endif
 {
   conndata_t *conn;
-  httpd_conn_t *rconn;
+  httpd_conn_s *rconn;
   hservice_t *service;
   herror_t status;
+#ifdef __NHTTP_INTERNAL
   uint64_t start, duration;
+#endif			
   int done;
 
   rconn = NULL;
   conn = (conndata_t *)data;
+#ifdef __NHTTP_INTERNAL
   start = ng_get_time();
+#endif			
   
   log_debug("starting new httpd session on socket %d.", conn->sock.sock);
 
@@ -1325,7 +1331,7 @@ httpd_session_main(void *data)
 
   while (!done)
   {
-    struct hrequest_t *req;
+    hrequest_s *req;
 
     log_verbose("starting HTTP request on socket %d (%p).", 
       conn->sock.sock, conn);
@@ -1380,22 +1386,25 @@ httpd_session_main(void *data)
 
       	if (service->status == NHTTPD_SERVICE_UP)
       	{
+#ifdef __NHTTP_INTERNAL
           stat_pthread_rwlock_wrlock(&(service->statistics.lock));
           STAT_u64_inc(service->statistics.requests);
           stat_pthread_rwlock_unlock(&(service->statistics.lock));
-
+#endif
           if (service->auth == NULL || _httpd_authenticate_request(req, service->auth))
           {
             if (service->func != NULL)
             {
               service->func(rconn, req);
 
+#ifdef __NHTTP_INTERNAL
               duration = ng_get_time() - start;
               stat_pthread_rwlock_wrlock(&(service->statistics.lock));
               STAT_u64_add(service->statistics.bytes_received, rconn->sock->bytes_received);
               STAT_u64_add(service->statistics.bytes_transmitted, rconn->sock->bytes_transmitted);
               STAT_u64_add(service->statistics.time, duration);
               stat_pthread_rwlock_unlock(&(service->statistics.lock));
+#endif
 
               if (rconn->out && rconn->out->type == HTTP_TRANSFER_CONNECTION_CLOSE)
               {
@@ -1594,7 +1603,7 @@ static void __httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep, uint64_t rt)
 
 #if __NHTTP_USE_EPOLL
 static inline int
-__httpd_run(struct hsocket_t *sock, const char *name)
+__httpd_run(hsocket_s *sock, const char *name)
 {
   herror_t err;
   struct epoll_event event;
@@ -1725,7 +1734,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
 }
 #elif __NHTTP_USE_WSAPOLL
 static inline int
-__httpd_run(struct hsocket_t *sock, const char *name)
+__httpd_run(hsocket_s *sock, const char *name)
 {
   herror_t err;
   WSAPOLLFD event = { 0 };
@@ -1843,7 +1852,7 @@ __httpd_run(struct hsocket_t *sock, const char *name)
 }
 #else
 static inline int
-__httpd_run(struct hsocket_t *sock, const char *name)
+__httpd_run(hsocket_s *sock, const char *name)
 {
 #ifdef WIN32
  TIMEVAL timeout = {
@@ -2277,7 +2286,7 @@ httpd_destroy(void)
 }
 
 unsigned char *
-httpd_get_postdata(httpd_conn_t *conn, struct hrequest_t *req, 
+httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req, 
   long *received, long max)
 {
   size_t content_length = 0, rcved, total_len;

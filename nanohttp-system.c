@@ -1460,7 +1460,7 @@ void ng_os_deinit(void)
   __ng_os_deinit(NULL);
 }
 
-void ng_os_dump(httpd_buf_t *b, void *printer)
+void ng_os_dump(ng_buffer_s *b, void *printer)
 {
   mg_mem_info_s m;
   JSON_PRINTER_f pr = (JSON_PRINTER_f)printer;

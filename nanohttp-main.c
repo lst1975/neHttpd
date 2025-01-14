@@ -62,8 +62,6 @@
  */
 #include "nanohttp-config.h"
 #include "nanohttp-logging.h"
-#include "nanohttp-mime.h"
-#include "nanohttp-server.h"
 #include "nanohttp-json.h"
 #include "nanohttp-file.h"
 #include "nanohttp-urlencode.h"
@@ -71,6 +69,7 @@
 #include "nanohttp-user.h"
 #include "nanohttp-ring.h"
 #include "nanohttp-data.h"
+#include "nanohttp-socket.h"
 #include "nanohttp-system.h"
 #include "nanohttp-signal.h"
 #include "nanohttp-header.h"
@@ -78,9 +77,11 @@
 #include "nanohttp-url.h"
 #include "nanohttp-const.h"
 #include "nanohttp-code.h"
+#include "nanohttp-mime.h"
+#include "nanohttp-server.h"
 
 static int
-simple_authenticator(struct hrequest_t *req, const ng_block_s *user, 
+simple_authenticator(hrequest_s *req, const ng_block_s *user, 
   const ng_block_s *password)
 {
   httpd_user_t *auth_user;
@@ -101,10 +102,10 @@ simple_authenticator(struct hrequest_t *req, const ng_block_s *user,
 *  ADD JSON FILE HERE
 **********************************************************************************/
 #define ___(x) { .cptr=x, .len=sizeof(x)-1 }
-static const httpd_buf_t __TEST_DEV_FILE  =___("/device.json");
+static const ng_buffer_s __TEST_DEV_FILE  =___("/device.json");
 #undef ___
 static void
-default_service(httpd_conn_t *conn, struct hrequest_t *req)
+default_service(httpd_conn_s *conn, hrequest_s *req)
 {
   char buf[REQUEST_MAX_PATH_SIZE+256+1];
 
@@ -126,7 +127,7 @@ default_service(httpd_conn_t *conn, struct hrequest_t *req)
 }
 
 static void
-headers_service(httpd_conn_t *conn, struct hrequest_t *req)
+headers_service(httpd_conn_s *conn, hrequest_s *req)
 {
   hpair_t *walker;
   herror_t status;
@@ -162,13 +163,13 @@ clean0:
 }
 
 static void
-mime_service(httpd_conn_t *conn, struct hrequest_t *req)
+mime_service(httpd_conn_s *conn, hrequest_s *req)
 {
   httpd_send_not_implemented(conn, "mime_service");
 }
 
 static herror_t
-__post_internal_error(httpd_conn_t *conn, herror_t r)
+__post_internal_error(httpd_conn_s *conn, herror_t r)
 {
   herror_t sr;
 
@@ -185,7 +186,7 @@ __post_internal_error(httpd_conn_t *conn, herror_t r)
 }
 
 static herror_t
-__post_service(httpd_conn_t *conn, struct hrequest_t *req, 
+__post_service(httpd_conn_s *conn, hrequest_s *req, 
   const char *file)
 {
   herror_t r;
@@ -217,7 +218,7 @@ __post_service(httpd_conn_t *conn, struct hrequest_t *req,
 }
 
 static void
-post_service(httpd_conn_t *conn, struct hrequest_t *req)
+post_service(httpd_conn_s *conn, hrequest_s *req)
 {
   herror_t r = __post_service(conn, req, "config/gw.bin");
   if (r != H_OK)
@@ -230,7 +231,7 @@ post_service(httpd_conn_t *conn, struct hrequest_t *req)
 static herror_t
 __root_service_read(void *arg, const char *buf, size_t length)
 {
-  httpd_conn_t *conn=(httpd_conn_t *)arg;
+  httpd_conn_s *conn=(httpd_conn_s *)arg;
   return http_output_stream_write(conn->out, (const unsigned char *)buf, length);
 }
 
@@ -264,7 +265,7 @@ __root_service_read(void *arg, const char *buf, size_t length)
 */
 
 static herror_t
-__send_menu_js(httpd_conn_t *conn, struct hrequest_t *req)
+__send_menu_js(httpd_conn_s *conn, hrequest_s *req)
 {
   herror_t r = H_OK;
   do
@@ -282,7 +283,7 @@ __send_menu_js(httpd_conn_t *conn, struct hrequest_t *req)
   return r;
 }
 static herror_t
-__send_root_html(httpd_conn_t *conn, struct hrequest_t *req)
+__send_root_html(httpd_conn_s *conn, hrequest_s *req)
 {
   herror_t r = H_OK;
 
@@ -318,7 +319,7 @@ __send_root_html(httpd_conn_t *conn, struct hrequest_t *req)
 }
 
 static void
-secure_service(httpd_conn_t *conn, struct hrequest_t *req)
+secure_service(httpd_conn_s *conn, hrequest_s *req)
 {
   herror_t r;
 
@@ -369,7 +370,7 @@ static const ng_block_s __ROOT_FILE  =___("/");
 #undef _
 
 static void
-root_service(httpd_conn_t *conn, struct hrequest_t *req)
+root_service(httpd_conn_s *conn, hrequest_s *req)
 {
   herror_t r = NULL;
 
@@ -481,7 +482,7 @@ root_service(httpd_conn_t *conn, struct hrequest_t *req)
 #define CFG_RET1(msg) CFG_ret1 msg CFG_ret3
 
 static void
-data_service(httpd_conn_t *conn, struct hrequest_t *req)
+data_service(httpd_conn_s *conn, hrequest_s *req)
 {
   herror_t r;
 
@@ -502,7 +503,7 @@ data_service(httpd_conn_t *conn, struct hrequest_t *req)
     hpair_t *data;
     JSONPair_t *pair,*p;
     JSONStatus_t result;
-    httpd_buf_t in;
+    ng_buffer_s in;
 
     data = hpairnode_get(&req->query, &cstr_data);
     if (data == NULL)
@@ -980,7 +981,7 @@ finished:
 }
 
 static void
-file_service(httpd_conn_t *conn, struct hrequest_t *req)
+file_service(httpd_conn_s *conn, hrequest_s *req)
 {
   return root_service(conn, req);
 }

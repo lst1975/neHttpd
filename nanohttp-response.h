@@ -117,15 +117,14 @@
  */
 typedef struct hresponse
 {
-  http_version_t version;
-  int errcode;
+  http_version_e version;
+  int16_t errcode;
+  int16_t desc_len;
   char *desc;
-  int desc_len;
-
   ng_list_head_s header;
 
   http_input_stream_s *in;
-  content_type_t *content_type;
+  content_type_s *content_type;
   void *attachments;
   char root_part_id[150];
 } hresponse_t;
@@ -135,7 +134,7 @@ extern "C" {
 #endif
 
 #ifdef __NHTTP_INTERNAL
-extern herror_t hresponse_new_from_socket(struct hsocket_t *sock, hresponse_t **out);
+extern herror_t hresponse_new_from_socket(hsocket_s *sock, hresponse_t **out);
 #endif
 
 extern void hresponse_free(hresponse_t * res);

@@ -139,12 +139,13 @@ typedef struct hpair hpair_t;
  * Indicates the version of the used HTTP protocol.
  *
  */
-typedef enum _http_version
+enum _http_version
 {
   HTTP_VERSION_UNKOWN,
   HTTP_VERSION_1_0,
   HTTP_VERSION_1_1                      /* default */
-} http_version_t;
+};
+typedef enum _http_version http_version_e;
 
 
 /** Object representation of the content-type field in a HTTP header: 
@@ -157,11 +158,12 @@ typedef enum _http_version
  *
  * @see HEADER_CONTENT_TYPE
  */
-typedef struct _content_type
+struct _content_type
 {
   ng_block_s type;
   ng_list_head_s params;
-} content_type_t;
+} ;
+typedef struct _content_type content_type_s;
 
 /*@}*/
 
@@ -319,21 +321,21 @@ extern void hpairnode_dump(const hpair_t *pair);
  * @param content_type_str the string representation of the content-type field in
  *        a HTTP header.
  *
- * @return A newly created content_type_t object. Free this object with
+ * @return A newly created content_type_s object. Free this object with
  *         content_type_free();
  *
  * @see content_type_free
  *
  */
-extern content_type_t *content_type_new(const char *content_type_str, int size);
+extern content_type_s *content_type_new(const char *content_type_str, int size);
 
 /**
  *
- * Frees the given content_type_t object
+ * Frees the given content_type_s object
  *
  */
-extern void content_type_free(content_type_t * ct);
-extern void content_type_print(content_type_t *ct);
+extern void content_type_free(content_type_s * ct);
+extern void content_type_print(content_type_s *ct);
 extern void test_content_type(void);
 
 static inline int SAFE_STRLEN(const char *x)
