@@ -177,7 +177,7 @@
  * size of the buffer for the integral part
  * and the fraction part
  */
-#define MAX_INT  24 + 1 /* 1 for the null */
+#define MAX_INT   24 + 1 /* 1 for the null */
 #define MAX_FRACT 24 + 1
 
 /*
