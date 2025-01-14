@@ -111,6 +111,25 @@
 
 */
 
+/* 
+ * SPDX-License-Identifier: GPL-2.0-only
+ *
+ *  linux/lib/vsprintf.c
+ *
+ *  Copyright (C) 1991, 1992  Linus Torvalds
+ *
+ *
+ * vsprintf.c -- Lars Wirzenius & Linus Torvalds.
+ *
+ * Wirzenius wrote this portably, Torvalds fucked it up :-)
+ *
+ *
+ * Fri Jul 13 2001 Crutcher Dunnavant <crutcher+kernel@datastacks.com>
+ * - changed to provide snprintf and vsnprintf functions
+ * So Feb  1 16:51:32 CET 2004 Juergen Quade <quade@hsnr.de>
+ * - scnprintf and vscnprintf
+ */
+
 #include "nanohttp-defs.h"
 #include "nanohttp-ctype.h"
 #include "nanohttp-itoa.h"
@@ -188,7 +207,8 @@ struct DATA {
   int counter;
   char fmtchr;
   char const *pf;
-/* FLAGS */
+  
+  /* FLAGS */
   int width, precision;
   int justify; char pad;
   int square, space, star_w, star_p, a_long, a_longlong;

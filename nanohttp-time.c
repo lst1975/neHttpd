@@ -953,15 +953,15 @@ ng_tm2unix_time(ng_rtc_time_s *tm, ng_tmv_s *tv)
   return ng_ERR_NONE;              
 }
 
-#define SECSPERYEAR  31536000  /* 3600*24*365 */
-#define SECSPERMONTH  2419200  /* 3600*24*28 */
-#define SECSPERDAY   86400     /* 3600*24 */
-#define JAN11900DOW  (4U)      /* Jan 1, 1970 was a Wensday */
-#define ZONE_OFFSET  28800
+#define SECSPERYEAR   UINT32_C(31536000)  /* 3600*24*365 */
+#define SECSPERMONTH  UINT32_C(2419200)   /* 3600*24*28 */
+#define SECSPERDAY    UINT32_C(86400)     /* 3600*24 */
+#define JAN11900DOW   UINT32_C(4)         /* Jan 1, 1970 was a Wensday */
+#define ZONE_OFFSET   UINT32_C(28800)
 
 #define __ng_div_find(t, m, i) do { \
   while (m[i+1] < t) \
-    i++;\
+    i++; \
 }while(0)
 
 ng_result_t
@@ -1033,77 +1033,74 @@ ng_unix2tm_time(ng_rtc_time_s *tm, ng_tmv_s *tv, int tz_offset)
 }
   
 /*
-Syntax
-  Date: <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
+  Syntax
+    Date: <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
 
-Directives
-  <day-name>
-    One of Mon, Tue, Wed, Thu, Fri, Sat, or Sun (case-sensitive).
+  Directives
+    <day-name>
+      One of Mon, Tue, Wed, Thu, Fri, Sat, or Sun (case-sensitive).
 
-  <day>
-    2 digit day number, e.g., "04" or "23".
+    <day>
+      2 digit day number, e.g., "04" or "23".
 
-  <month>
-    One of Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec (case sensitive).
+    <month>
+      One of Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec (case sensitive).
 
-  <year>
-    4 digit year number, e.g., "1990" or "2016".
+    <year>
+      4 digit year number, e.g., "1990" or "2016".
 
-  <hour>
-    2 digit hour number, e.g., "09" or "23".
+    <hour>
+      2 digit hour number, e.g., "09" or "23".
 
-  <minute>
-    2 digit minute number, e.g., "04" or "59".
+    <minute>
+      2 digit minute number, e.g., "04" or "59".
 
-  <second>
-    2 digit second number, e.g., "04" or "59".
+    <second>
+      2 digit second number, e.g., "04" or "59".
 
-GMT
-  Greenwich Mean Time. HTTP dates are always expressed in GMT, never in local time.
+  GMT
+    Greenwich Mean Time. HTTP dates are always expressed in GMT, never in local time.
 
-Examples
-  Response with a Date header
-  The following HTTP message is a successful 200 status, with a Date header showing 
-  the time the message originated. Other headers are omitted for brevity:
+  Examples
+    Response with a Date header
+    The following HTTP message is a successful 200 status, with a Date header showing 
+    the time the message originated. Other headers are omitted for brevity:
 
-http
-Copy to Clipboard
-HTTP/1.1 200
-Content-Type: text/html
-Date: Tue, 29 Oct 2024 16:56:32 GMT
+    HTTP/1.1 200
+    Content-Type: text/html
+    Date: Tue, 29 Oct 2024 16:56:32 GMT
 
-<html lang="en-US" ��
-
+  <html lang="en-US" ��
 */
 
 static const char *year_name[] = {
-	"1970","1971","1972","1973","1974","1975","1976","1977","1978","1979",
-	"1980","1981","1982","1983","1984","1985","1986","1987","1988","1989",
-	"1990","1991","1992","1993","1994","1995","1996","1997","1998","1999",
-	"2000","2001","2002","2003","2004","2005","2006","2007","2008","2009",
-	"2010","2011","2012","2013","2014","2015","2016","2017","2018","2019",
-	"2020","2021","2022","2023","2024","2025","2026","2027","2028","2029",
-	"2030","2031","2032","2033","2034","2035","2036","2037","2038","2039",
-	"2040","2041","2042","2043","2044","2045","2046","2047","2048","2049",
-	"2050","2051","2052","2053","2054","2055","2056","2057","2058","2059",
-	"2060","2061","2062","2063","2064","2065","2066","2067","2068","2069",
-	"2070","2071","2072","2073","2074","2075","2076","2077","2078","2079",
-	"2080","2081","2082","2083","2084","2085","2086","2087","2088","2089",
-	"2090","2091","2092","2093","2094","2095","2096","2097","2098","2099",
-	"2100","2101","2102","2103","2104","2105","2106","2107","2108","2109",
-	"2110","2111","2112","2113","2114","2115","2116","2117","2118","2119",
-	"2120","2121","2122","2123","2124","2125","2126","2127","2128","2129",
-	"2130","2131","2132","2133","2134","2135","2136","2137","2138","2139",
-	"2140","2141","2142","2143","2144","2145","2146","2147","2148","2149",
-	"2150","2151","2152","2153","2154","2155","2156","2157","2158","2159",
-	"2160","2161","2162","2163","2164","2165","2166","2167","2168","2169",
-	"2170","2171","2172","2173","2174","2175","2176","2177","2178","2179",
-	"2180","2181","2182","2183","2184","2185","2186","2187","2188","2189",
-	"2190","2191","2192","2193","2194","2195","2196","2197","2198","2199",
-	"2200","2201","2202","2203","2204","2205","2206","2207","2208","2209",
-	"2210","2211","2212","2213","2214","2215","2216","2217","2218","2219",
-	"2220","2221","2222","2223","2224","2225"
-};
+  	"1970","1971","1972","1973","1974","1975","1976","1977","1978","1979",
+  	"1980","1981","1982","1983","1984","1985","1986","1987","1988","1989",
+  	"1990","1991","1992","1993","1994","1995","1996","1997","1998","1999",
+  	"2000","2001","2002","2003","2004","2005","2006","2007","2008","2009",
+  	"2010","2011","2012","2013","2014","2015","2016","2017","2018","2019",
+  	"2020","2021","2022","2023","2024","2025","2026","2027","2028","2029",
+  	"2030","2031","2032","2033","2034","2035","2036","2037","2038","2039",
+  	"2040","2041","2042","2043","2044","2045","2046","2047","2048","2049",
+  	"2050","2051","2052","2053","2054","2055","2056","2057","2058","2059",
+  	"2060","2061","2062","2063","2064","2065","2066","2067","2068","2069",
+  	"2070","2071","2072","2073","2074","2075","2076","2077","2078","2079",
+  	"2080","2081","2082","2083","2084","2085","2086","2087","2088","2089",
+  	"2090","2091","2092","2093","2094","2095","2096","2097","2098","2099",
+  	"2100","2101","2102","2103","2104","2105","2106","2107","2108","2109",
+  	"2110","2111","2112","2113","2114","2115","2116","2117","2118","2119",
+  	"2120","2121","2122","2123","2124","2125","2126","2127","2128","2129",
+  	"2130","2131","2132","2133","2134","2135","2136","2137","2138","2139",
+  	"2140","2141","2142","2143","2144","2145","2146","2147","2148","2149",
+  	"2150","2151","2152","2153","2154","2155","2156","2157","2158","2159",
+  	"2160","2161","2162","2163","2164","2165","2166","2167","2168","2169",
+  	"2170","2171","2172","2173","2174","2175","2176","2177","2178","2179",
+  	"2180","2181","2182","2183","2184","2185","2186","2187","2188","2189",
+  	"2190","2191","2192","2193","2194","2195","2196","2197","2198","2199",
+  	"2200","2201","2202","2203","2204","2205","2206","2207","2208","2209",
+  	"2210","2211","2212","2213","2214","2215","2216","2217","2218","2219",
+  	"2220","2221","2222","2223","2224","2225"
+  };
 
 static const char *month_name[] = 
   {
@@ -1128,16 +1125,22 @@ static const char *min_sec_hour_day_name[] =
 /* "Date: %a, %d %b %Y %H:%M:%S GMT\r\n" 
  *  Date: Wed, 08 Jan 2025 05:42:00 GMT
  */
-int ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
+int 
+ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
 {
   const char *p = buf;
   
   if (len != 29)
+  {
     return -1;
+  }
   
-  if (p[3] != ',' || p[4] != ' ' || *(uint32_t *)&p[25] != *(const uint32_t *)" GMT")
+  if (p[3] != ',' || p[4] != ' ' 
+    || *(uint32_t *)&p[25] != *(const uint32_t *)" GMT")
+  {
     return -1;
-
+  }
+  
   switch (p[0])
   {
     case 'S':
@@ -1148,6 +1151,7 @@ int ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
       else
         return -1;
       break;
+      
     case 'T':
       if (*(uint16_t*)&p[1] == *(const uint16_t*)"ue")
         tm->tm_wday = 2;
@@ -1156,6 +1160,7 @@ int ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
       else
         return -1;
       break;
+      
     case 'M':
       if (*(uint16_t*)&p[1] == *(const uint16_t*)"on")
         tm->tm_wday = 1;
@@ -1164,30 +1169,37 @@ int ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
       else
         return -1;
       break;
+      
     case 'W':
       if (*(uint16_t*)&p[1] == *(const uint16_t*)"ed")
         tm->tm_wday = 3;
       else
         return -1;
       break;
+      
     case 'F':
       if (*(uint16_t*)&p[1] == *(const uint16_t*)"ed")
         tm->tm_wday = 5;
       else
         return -1;
       break;
+      
     default:
       return -1;
   }
   
   p += 5;
   if (p[2] != ' ' || !__ng_isdigit(p[0]) || !__ng_isdigit(p[1]))
+  {
     return -1;
-
+  }
+  
   tm->tm_mday = __ng_hex2int(p[0])*10 +  __ng_hex2int(p[1]);
   if (tm->tm_mday > 31)
+  {
     return -1;
-
+  }
+  
   p += 3;
   if (__ng_islower(p[0]) || p[3] != ' ')
     return -1;
@@ -1269,7 +1281,7 @@ int ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
   tm->tm_year -= 1900;
 
   p += 5;
-  if (!__ng_isdigit(p[0]) || !__ng_isdigit(p[1]) || p[2] != ':' 
+  if ( !__ng_isdigit(p[0]) || !__ng_isdigit(p[1]) || p[2] != ':' 
     || !__ng_isdigit(p[3]) || !__ng_isdigit(p[4]) || p[5] != ':'
     || !__ng_isdigit(p[6]) || !__ng_isdigit(p[7]))
     return -1;
