@@ -27,7 +27,7 @@
    LINUX
      terminal# ./httpd
 
-   WINDOWS
+   WINDOWS/CYGWIN
      power-shell# .\httpd.exe
 
    BROWSER:
