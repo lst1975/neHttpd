@@ -67,20 +67,20 @@
 extern "C" {
 #endif
 
-uint64_t ng_atou64_s(const char *s, const char **end);
-uint32_t ng_atou32_s(const char *s, const char **end);
-uint64_t ng_atou64(const char *str, uint8_t len, const char **end);
-uint32_t ng_atou32(const char *str, uint8_t len, const char **end);
+ng_uint64_t ng_atou64_s(const char *s, const char **end);
+ng_uint32_t ng_atou32_s(const char *s, const char **end);
+ng_uint64_t ng_atou64(const char *str, ng_uint8_t len, const char **end);
+ng_uint32_t ng_atou32(const char *str, ng_uint8_t len, const char **end);
 
-uint32_t ng_htou32(const char *str, uint8_t len, const char **end);
-uint64_t ng_htou64(const char *str, uint8_t len, const char **end);
-int ng_u64toh(uint64_t v, char *str, uint8_t len, int is_upper, char seporator);
-int ng_u32toh(uint32_t v, char *str, uint8_t len, int is_upper, char seporator);
+ng_uint32_t ng_htou32(const char *str, ng_uint8_t len, const char **end);
+ng_uint64_t ng_htou64(const char *str, ng_uint8_t len, const char **end);
+int ng_u64toh(ng_uint64_t v, char *str, ng_uint8_t len, int is_upper, char seporator);
+int ng_u32toh(ng_uint32_t v, char *str, ng_uint8_t len, int is_upper, char seporator);
 
 void test_perf_atoi(void);
 
-static __ng_inline__ int64_t 
-ng_atoi64(const char *str, uint8_t len, const char **end)
+static __ng_inline__ ng_int64_t 
+ng_atoi64(const char *str, ng_uint8_t len, const char **end)
 {
   if (len > NG_INT64_STR_LEN_MAX)
   {
@@ -102,8 +102,8 @@ ng_atoi64(const char *str, uint8_t len, const char **end)
   }
 }
 
-static __ng_inline__ int32_t 
-ng_atoi32(const char *str, uint8_t len, const char **end)
+static __ng_inline__ ng_int32_t 
+ng_atoi32(const char *str, ng_uint8_t len, const char **end)
 {
   if (len > NG_INT32_STR_LEN_MAX)
   {
@@ -125,7 +125,7 @@ ng_atoi32(const char *str, uint8_t len, const char **end)
   }
 }
 
-static __ng_inline__ int64_t 
+static __ng_inline__ ng_int64_t 
 ng_atoi64_s(const char *s, const char **end)
 {
   if (*s == '-')
@@ -142,7 +142,7 @@ ng_atoi64_s(const char *s, const char **end)
   }
 }
 
-static __ng_inline__ int32_t 
+static __ng_inline__ ng_int32_t 
 ng_atoi32_s(const char *s, const char **end)
 {
   if (*s == '-')
@@ -159,8 +159,8 @@ ng_atoi32_s(const char *s, const char **end)
   }
 }
 
-static __ng_inline__ int64_t 
-ng_atoi(const char *str, uint8_t len)
+static __ng_inline__ ng_int64_t 
+ng_atoi(const char *str, ng_uint8_t len)
 {
   const char *end;
   if (len == 0)
@@ -168,8 +168,8 @@ ng_atoi(const char *str, uint8_t len)
   return ng_atoi64(str, len, &end);
 }
 
-static __ng_inline__ uint64_t 
-ng_atoui(const char *str, uint8_t len)
+static __ng_inline__ ng_uint64_t 
+ng_atoui(const char *str, ng_uint8_t len)
 {
   const char *end;
   return ng_atou64(str, len, &end);

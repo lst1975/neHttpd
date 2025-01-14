@@ -71,8 +71,8 @@
 #include "nanohttp-code.h"
 
 struct _nu{
-  int8_t  i;
-  uint8_t n;
+  ng_int8_t  i;
+  ng_uint8_t n;
 };
 
 /* Note: must be sorted by length */
@@ -251,7 +251,7 @@ const ng_block_s *http_header_find(const char *key, int keyLength)
      'x',    'y',    'z',    0,      '|',     0,     '~',    0,
  */
 #if __HTTP_SMALL_SIZE
-const uint8_t __rte_aligned(1) __isValidToken[256] ={
+const ng_uint8_t __rte_aligned(1) __isValidToken[256] ={
   /*   0 nul    1 soh    2 stx    3 etx    4 eot    5 enq    6 ack    7 bel  */
        0,       0,       0,       0,       0,       0,       0,       0,
   /*   8 bs     9 ht    10 nl    11 vt    12 np    13 cr    14 so    15 si   */
@@ -294,7 +294,7 @@ const uint8_t __rte_aligned(1) __isValidToken[256] ={
   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
 };
 #else
-const uint8_t __rte_aligned(1) __isValidFieldName[256] ={
+const ng_uint8_t __rte_aligned(1) __isValidFieldName[256] ={
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
   0,
@@ -375,7 +375,7 @@ const uint8_t __rte_aligned(1) __isValidFieldName[256] ={
  
  >>>>>>>>>>>>>>https://httpwg.org/specs/rfc9110.html#fields.values
  **/
-const uint8_t __rte_aligned(1) __isValidFieldValue[256] ={
+const ng_uint8_t __rte_aligned(1) __isValidFieldValue[256] ={
   0,0,0,0,
   0,0,0,0,
   0,

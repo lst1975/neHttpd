@@ -80,15 +80,15 @@
             goto error;                                 \
     }
 
-static size_t __multipart_cb_header_begin(mime_parser_s *p);
-static size_t __multipart_cb_header_value(mime_parser_s *p, const char *data, size_t size);
-static size_t __multipart_cb_header_field(mime_parser_s *p, const char *data, size_t size);
-static size_t __multipart_cb_data(mime_parser_s *p, const char *data, size_t size);
-static size_t __multipart_cb_part_end(mime_parser_s *p);
-static size_t __multipart_cb_part_begin(mime_parser_s *p);
-static size_t __multipart_cb_body_end(mime_parser_s *p);
-static size_t __multipart_cb_body_begin(mime_parser_s *p);
-static size_t __multipart_cb_headers_complete(mime_parser_s *p);
+static ng_size_t __multipart_cb_header_begin(mime_parser_s *p);
+static ng_size_t __multipart_cb_header_value(mime_parser_s *p, const char *data, ng_size_t size);
+static ng_size_t __multipart_cb_header_field(mime_parser_s *p, const char *data, ng_size_t size);
+static ng_size_t __multipart_cb_data(mime_parser_s *p, const char *data, ng_size_t size);
+static ng_size_t __multipart_cb_part_end(mime_parser_s *p);
+static ng_size_t __multipart_cb_part_begin(mime_parser_s *p);
+static ng_size_t __multipart_cb_body_end(mime_parser_s *p);
+static ng_size_t __multipart_cb_body_begin(mime_parser_s *p);
+static ng_size_t __multipart_cb_headers_complete(mime_parser_s *p);
 
 #define CR '\r'
 #define LF '\n'
@@ -330,10 +330,10 @@ enum state {
 /* SP or HTAB : ((x) == 9 || (x) == 32) : 0x101 || 0x10 */
 #define __is_OWS(x) ((x) == 9 || (x) == 32)
 
-size_t multipartparser_execute(mime_parser_s *parser,
+ng_size_t multipartparser_execute(mime_parser_s *parser,
                  mime_callbacks_s *callbacks,
                  const char *data,
-                 size_t size)
+                 ng_size_t size)
 {
   const char   *mark;
   const char   *end;
@@ -753,7 +753,7 @@ multipartparser_free(mime_parser_s *parser)
   multipartpart_free(&parser->part);
 }
 
-static size_t
+static ng_size_t
 __build_header_field_value(mime_parser_s *p)
 {
   if (BUF_LEN(&p->field))
@@ -772,7 +772,7 @@ __build_header_field_value(mime_parser_s *p)
   return 0;
 }
 
-static size_t 
+static ng_size_t 
 __multipart_cb_header_begin(mime_parser_s *p)
 {
   return __build_header_field_value(p);
@@ -783,7 +783,7 @@ __multipart_cb_header_begin(mime_parser_s *p)
                        filename=\"nanoHttpd-2.10.tar.xz\"\r\n
   Content-Type: application/x-xz\r\n\r\n
  */
-static size_t 
+static ng_size_t 
 __multipart_cb_headers_complete(mime_parser_s *p)
 {
   int n;
@@ -895,13 +895,13 @@ __multipart_cb_headers_complete(mime_parser_s *p)
   return 0;
 }
 
-static size_t 
+static ng_size_t 
 __multipart_cb_body_begin(mime_parser_s *p)
 {
   return 0;
 }
 
-static size_t 
+static ng_size_t 
 __multipart_cb_body_end(mime_parser_s *p)
 {
   switch (p->mime_type)
@@ -927,25 +927,25 @@ __multipart_cb_body_end(mime_parser_s *p)
   return 0;
 }
 
-static size_t 
+static ng_size_t 
 __multipart_cb_part_begin(mime_parser_s *p)
 {
   p->part.id++;
   return 0;
 }
 
-static size_t 
+static ng_size_t 
 __multipart_cb_part_end(mime_parser_s *p)
 {
   multipartpart_free(&p->part);
   return 0;
 }
 
-static size_t
+static ng_size_t
 __multipart_cb_data(mime_parser_s *p, const char *data, 
-  size_t size)
+  ng_size_t size)
 {
-  size_t nbytes;
+  ng_size_t nbytes;
 
   if (p->skipdata)
     return 0;
@@ -960,9 +960,9 @@ __multipart_cb_data(mime_parser_s *p, const char *data,
   return 0;
 }
 
-static size_t
+static ng_size_t
 __multipart_cb_header_field(mime_parser_s *p, 
-  const char *data, size_t size)
+  const char *data, ng_size_t size)
 {
   if (BUF_REMAIN(&p->field) < size)
   {
@@ -975,9 +975,9 @@ __multipart_cb_header_field(mime_parser_s *p,
   return 0;
 }
 
-static size_t
+static ng_size_t
 __multipart_cb_header_value(mime_parser_s *p, 
-  const char *data, size_t size)
+  const char *data, ng_size_t size)
 {
   if (BUF_REMAIN(&p->value) < size)
   {
@@ -998,7 +998,7 @@ multipart_get_attachment(mime_parser_s *p,
   
   while (http_input_stream_is_ready(in))
   {
-    size_t len;
+    ng_size_t len;
     unsigned char buffer[4096];
     
     len = http_input_stream_read(in, buffer, sizeof(buffer));
@@ -1098,7 +1098,7 @@ attachments_free(mime_attachment_s *message)
 
 #define _HTTPC_MIME_BOUNDARY_SIZE_MAX 75
 
-static herror_t _mime_toolarge(const char *func, size_t size)
+static herror_t _mime_toolarge(const char *func, ng_size_t size)
 {
   return herror_new(func, 
                     MIME_ERROR,
@@ -1107,8 +1107,8 @@ static herror_t _mime_toolarge(const char *func, size_t size)
 }
 
 static inline herror_t
-_mime_copy3(char *buffer, size_t blen, const char *d1, size_t d1len, 
-  const char *d2, size_t d2len, const char *d3, size_t d3len)
+_mime_copy3(char *buffer, ng_size_t blen, const char *d1, ng_size_t d1len, 
+  const char *d2, ng_size_t d2len, const char *d3, ng_size_t d3len)
 {
   if (blen < d1len+d2len+d3len)
   {
@@ -1125,7 +1125,7 @@ mime_add_content_type_header(ng_list_head_s *header,
   void *conn_ptr, int conn_id, const ng_block_s *params)
 {
   int n;
-  size_t tsize;
+  ng_size_t tsize;
   ng_buffer_s b;
   char *buffer;
   herror_t status = H_OK;
@@ -1146,7 +1146,7 @@ mime_add_content_type_header(ng_list_head_s *header,
   {
     log_fatal("Failed to malloc temp buffer.");
     status = herror_new("httpc_mime_begin", 
-                      HSERVER_ERROR_MALLOC,
+                      GENERAL_ERROR_MALLOC,
                       "Can malloc \"%d\" (%s)", 
                       tsize, 
                       os_strerror(ng_errno));
@@ -1377,7 +1377,7 @@ struct _mime_send_param{
 };
 
 static herror_t 
-__file_send(void *arg, const char *buf, size_t length) 
+__file_send(void *arg, const char *buf, ng_size_t length) 
 {
   struct _mime_send_param *param = (struct _mime_send_param *)arg;
   

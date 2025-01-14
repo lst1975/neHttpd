@@ -142,8 +142,6 @@ extern int base64_decode_string(const unsigned char *instr, unsigned char *outst
 
 #else
 
-#include <stdint.h>
-#include <stddef.h>
 #include "nanohttp-config.h"
 #include "nanohttp-common.h"
 
@@ -153,11 +151,11 @@ extern int base64_decode_string(const unsigned char *instr, unsigned char *outst
 #define BASE64_DECODE_OUT_SIZE(s) ((unsigned int)(((s) / 4) * 3))
 
 struct b64_state{
-  int16_t s;
-  int16_t j;
+  ng_int16_t s;
+  ng_int16_t j;
   unsigned char c;
   unsigned char l;
-  uint16_t pad;
+  ng_uint16_t pad;
 };
 typedef struct b64_state b64_state_s;
 
@@ -170,7 +168,7 @@ void b64Encode_Start(b64_state_s *s);
 void b64Encode_Finish(b64_state_s *state, ng_block_s *out);
 void b64Encode_Process(b64_state_s *state, const ng_block_s *in, ng_block_s *out);
 
-static inline int b64Encode_with_len(const char *in, size_t inlen, char *out, size_t outlen)
+static inline int b64Encode_with_len(const char *in, ng_size_t inlen, char *out, ng_size_t outlen)
 {
   const ng_block_s   _in = { .cptr =  in, .len = inlen};
         ng_block_s  _out = { .buf  = out, .len = outlen};
@@ -186,7 +184,7 @@ static inline void b64Decode_Start(b64_state_s *s) { return b64Encode_Start(s); 
 static inline void b64Decode_Finish(b64_state_s *state, ng_block_s *out) { HTTPD_UNUSED(state); HTTPD_UNUSED(out);}
 int b64Decode_Process(b64_state_s *state, const ng_block_s *in, ng_block_s *out);
 
-static inline int b64Decode_with_len(const char *in, size_t inlen, char *out, size_t outlen)
+static inline int b64Decode_with_len(const char *in, ng_size_t inlen, char *out, ng_size_t outlen)
 {
   const ng_block_s   _in = { .cptr =  in, .len = inlen};
         ng_block_s  _out = { .buf  = out, .len = outlen};

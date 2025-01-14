@@ -162,12 +162,12 @@ _http_input_stream_is_file_ready(http_input_stream_s *stream)
   return !nanohttp_file_iseof(stream->fd);
 }
 
-static size_t
+static ng_size_t
 _http_input_stream_content_length_read(
-  http_input_stream_s *stream, unsigned char *dest, size_t size)
+  http_input_stream_s *stream, unsigned char *dest, ng_size_t size)
 {
   herror_t status;
-  size_t read;
+  ng_size_t read;
 
   /* check limit */
   if (stream->content_length - stream->received < size)
@@ -188,7 +188,7 @@ static int
 _http_input_stream_chunked_read_chunk_size(http_input_stream_s *stream)
 {
   char chunk[25];
-  size_t status, i = 0;
+  ng_size_t status, i = 0;
   int chunk_size;
   herror_t err;
 
@@ -250,12 +250,12 @@ _http_input_stream_chunked_read_chunk_size(http_input_stream_s *stream)
   return -1;
 }
 
-static size_t
+static ng_size_t
 _http_input_stream_chunked_read(http_input_stream_s *stream, 
-  unsigned char *dest, size_t size)
+  unsigned char *dest, ng_size_t size)
 {
-  size_t status, counter;
-  size_t remain, read = 0;
+  ng_size_t status, counter;
+  ng_size_t remain, read = 0;
   char ch;
   herror_t err;
 
@@ -355,11 +355,11 @@ _http_input_stream_chunked_read(http_input_stream_s *stream,
 }
 
 
-static size_t
+static ng_size_t
 _http_input_stream_connection_closed_read(
-  http_input_stream_s *stream, unsigned char *dest, size_t size)
+  http_input_stream_s *stream, unsigned char *dest, ng_size_t size)
 {
-  size_t status;
+  ng_size_t status;
   herror_t err;
 
   /* read from socket */
@@ -377,11 +377,11 @@ _http_input_stream_connection_closed_read(
   return status;
 }
 
-static size_t
+static ng_size_t
 _http_input_stream_file_read(http_input_stream_s *stream, 
-  unsigned char *dest, size_t size)
+  unsigned char *dest, ng_size_t size)
 {
-  size_t len = nanohttp_file_read_tobuffer(stream->fd, dest, size);
+  ng_size_t len = nanohttp_file_read_tobuffer(stream->fd, dest, size);
 
   if (len< 0)
   {
@@ -527,9 +527,9 @@ http_input_stream_is_ready(http_input_stream_s *stream)
   Returns the actual read bytes
   <0 on error
 */
-size_t
+ng_size_t
 http_input_stream_read(http_input_stream_s *stream, 
-  unsigned char *dest, size_t size)
+  unsigned char *dest, ng_size_t size)
 {
   /* paranoia check */
   if (stream == NULL)
@@ -608,7 +608,7 @@ http_output_stream_free(http_output_stream_s *stream)
 */
 herror_t
 http_output_stream_write(http_output_stream_s *stream,
-                         const unsigned char *bytes, size_t size)
+                         const unsigned char *bytes, ng_size_t size)
 {
   herror_t status;
 
@@ -647,7 +647,7 @@ http_output_stream_write_string(http_output_stream_s *stream,
 }
 
 static int
-__http_snprintf_out(void *arg, const char *string, size_t length)
+__http_snprintf_out(void *arg, const char *string, ng_size_t length)
 {
   http_output_stream_s *stream = (http_output_stream_s *)arg;
   herror_t status;

@@ -199,8 +199,8 @@ typedef struct _mime_part mime_part_s;
 typedef struct _mime_parser mime_parser_s;
 typedef struct _mime_callbacks mime_callbacks_s;
 
-typedef size_t (*mime_note_cb_f) (mime_parser_s*);
-typedef size_t (*mime_data_cb_f) (mime_parser_s*, const char* data, size_t size);
+typedef ng_size_t (*mime_note_cb_f) (mime_parser_s*);
+typedef ng_size_t (*mime_data_cb_f) (mime_parser_s*, const char* data, ng_size_t size);
 
 /**
  *
@@ -229,12 +229,12 @@ struct _mime_parser {
   ng_buffer_s field;
   ng_buffer_s value;
   ng_block_s  boundary;
-  uint16_t    index;
-  uint16_t    err;
-  uint16_t    state:14;
-  uint16_t    skipdata:1;
-  uint16_t    rootpart:1;
-  uint16_t    mime_type;
+  ng_uint16_t    index;
+  ng_uint16_t    err;
+  ng_uint16_t    state:14;
+  ng_uint16_t    skipdata:1;
+  ng_uint16_t    rootpart:1;
+  ng_uint16_t    mime_type;
   
   /** PUBLIC **/
   void *data;
@@ -281,11 +281,11 @@ void multipartpart_init(mime_part_s *part);
 herror_t multipart_get_attachment(mime_parser_s *p, 
   http_input_stream_s *in);
 
-size_t multipartparser_execute(
+ng_size_t multipartparser_execute(
     mime_parser_s *parser, 
     mime_callbacks_s* callbacks,
     const char* data,
-    size_t size);
+    ng_size_t size);
 
 /** "multipart/related"  MIME Message Builder
  *

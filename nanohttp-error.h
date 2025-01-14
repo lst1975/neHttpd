@@ -129,9 +129,12 @@
 /**@{*/
 #define H_OK				0 /**< Success flag */
 
-#define GENERAL_ERROR			1400
-#define GENERAL_INVALID_PARAM		(GENERAL_ERROR + 1)
-#define GENERAL_HEADER_PARSE_ERROR	(GENERAL_ERROR + 2)
+#define GENERAL_ERROR                1400
+#define GENERAL_INVALID_PARAM       (GENERAL_ERROR + 1)
+#define GENERAL_HEADER_PARSE_ERROR  (GENERAL_ERROR + 2)
+#define GENERAL_ERROR_MALLOC        (GENERAL_ERROR + 3)
+#define GENERAL_ERROR_INVAL         (GENERAL_ERROR + 4)
+#define GENERAL_ERROR_SYSTEM        (GENERAL_ERROR + 5)
 /**@}*/
 
 /** @defgroup NANOHTTP_THREAD_ERRORS Thread errors

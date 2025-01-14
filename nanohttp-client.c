@@ -348,7 +348,7 @@ _httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn,
   {
     log_fatal("Failed to malloc temp buffer.");
     status = herror_new("httpc_mime_begin", 
-                      HSERVER_ERROR_MALLOC,
+                      GENERAL_ERROR_MALLOC,
                       "Can malloc \"%d\" (%s)", 
                       ___BUFSZ, 
                       os_strerror(ng_errno));

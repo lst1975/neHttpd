@@ -74,17 +74,17 @@ extern "C" {
 
 #ifndef NG_LIST_POISON1
 #if defined(__LP64__) || defined(__LP64) || defined(__amd64) 
-#define NG_LIST_POISON1 ((ng_list_head_s *)(uintptr_t)0xabababababababab)
+#define NG_LIST_POISON1 ((ng_list_head_s *)(ng_uintptr_t)0xabababababababab)
 #else
-#define NG_LIST_POISON1 ((ng_list_head_s *)(uintptr_t)0xabababab)
+#define NG_LIST_POISON1 ((ng_list_head_s *)(ng_uintptr_t)0xabababab)
 #endif
 #endif
 
 #ifndef NG_LIST_POISON2
 #if defined(__LP64__) || defined(__LP64) || defined(__amd64)
-#define NG_LIST_POISON2 ((ng_list_head_s *)(uintptr_t)0xcdcdcdcdcdcdcdcd)
+#define NG_LIST_POISON2 ((ng_list_head_s *)(ng_uintptr_t)0xcdcdcdcdcdcdcdcd)
 #else
-#define NG_LIST_POISON2 ((ng_list_head_s *)(uintptr_t)0xcdcdcdcd)
+#define NG_LIST_POISON2 ((ng_list_head_s *)(ng_uintptr_t)0xcdcdcdcd)
 #endif
 #endif
 

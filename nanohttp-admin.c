@@ -197,7 +197,7 @@ _httpd_admin_list_statistics(httpd_conn_s *conn,
   }
 
   stat_pthread_rwlock_rdlock(&(service->statistics.lock));
-  uint64_t secs = STAT_u64_read(service->statistics.time);
+  ng_uint64_t secs = STAT_u64_read(service->statistics.time);
   n = ng_snprintf(buffer, sizeof(buffer), 
                   "<ul>"
                     "<li>Requests served: %"PRIu64"</li>"

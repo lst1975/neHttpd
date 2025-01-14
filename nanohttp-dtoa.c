@@ -81,9 +81,9 @@ enum  parser_state { S0, S1, S2, S3, S4, S5, S6, S7 };
 // Covers entire range of IEEE 754 double, including denormals, plus small spare.
 struct  power_of_ten
 {
-  int32_t   decimal_exponent;
-  int32_t   binary_exponent;
-  uint64_t  binary_mantissa;
+  ng_int32_t   decimal_exponent;
+  ng_int32_t   binary_exponent;
+  ng_uint64_t  binary_mantissa;
 };
 static const struct power_of_ten  powers_of_ten_[] = {
   { -344, -1206,  UINT64_C(11019826852086880396) }, { -343, -1203,  UINT64_C(13774783565108600494) },
@@ -413,9 +413,9 @@ static const struct power_of_ten  powers_of_ten_[] = {
 // Covers entire range of IEEE 754 double, including denormals, plus small spare.
 struct  power_of_two
 {
-  int32_t   binary_exponent;
-  int32_t   decimal_exponent;
-  uint64_t  decimal_mantissa;
+  ng_int32_t   binary_exponent;
+  ng_int32_t   decimal_exponent;
+  ng_uint64_t  decimal_mantissa;
 };
 static const struct power_of_two  powers_of_two_[] = {
   { -1140, -343,  UINT64_C(12351641146031163604) }, { -1139, -342,  UINT64_C( 2470328229206232721) },
@@ -1488,31 +1488,31 @@ static const struct power_of_two  powers_of_two_[] = {
 *
 */
 static inline void  multiply_128(
-   uint64_t   u,
-   uint64_t   v,
-   uint64_t*  w
+   ng_uint64_t   u,
+   ng_uint64_t   v,
+   ng_uint64_t*  w
 )
 {
    // Make use of 64x64->128 unsigned multiplication instruction
    // (if processor has this instruction and compiler allows for using it).
 #if (defined(__GNUC__) || defined(__clang__)) && defined(__SIZEOF_INT128__) && (__SIZEOF_INT128__ == 16)
    unsigned __int128  value_w = ((unsigned __int128)u) * v;
-   w[0] = ((uint64_t)( value_w       ));
-   w[1] = ((uint64_t)( value_w >> 64 ));
+   w[0] = ((ng_uint64_t)( value_w       ));
+   w[1] = ((ng_uint64_t)( value_w >> 64 ));
 #elif defined(_MSC_VER) && defined(_M_X64)
    w[0] = _umul128( u, v, w + 1 );
 #else
    // On other processors and compilers, do column multiplication.
-   uint64_t  u1 = u >> 32;   uint64_t  u0 = u & UINT64_C(0xFFFFFFFF);
-   uint64_t  v1 = v >> 32;   uint64_t  v0 = v & UINT64_C(0xFFFFFFFF);
+   ng_uint64_t  u1 = u >> 32;   ng_uint64_t  u0 = u & UINT64_C(0xFFFFFFFF);
+   ng_uint64_t  v1 = v >> 32;   ng_uint64_t  v0 = v & UINT64_C(0xFFFFFFFF);
 
-   uint64_t  t  = u0 * v0;
-   uint64_t  w0 = t & UINT64_C(0xFFFFFFFF);
-   uint64_t  k  = t >> 32;
+   ng_uint64_t  t  = u0 * v0;
+   ng_uint64_t  w0 = t & UINT64_C(0xFFFFFFFF);
+   ng_uint64_t  k  = t >> 32;
    t            = u1 * v0 + k;
 
-   uint64_t  w1 = t & UINT64_C(0xFFFFFFFF);
-   uint64_t  w2 = t >> 32;
+   ng_uint64_t  w1 = t & UINT64_C(0xFFFFFFFF);
+   ng_uint64_t  w2 = t >> 32;
    t            = u0 * v1 + w1;
    k            = t >> 32;
 
@@ -1528,7 +1528,7 @@ static inline void  multiply_128(
 *  Behavior of this function is undefined if a == 0.
 *
 */
-static inline unsigned int  count_leading_zeros( uint64_t  a )
+static inline unsigned int  count_leading_zeros( ng_uint64_t  a )
 {
   // Make use of 64-bit leading zero count instruction
   // (if processor has this instruction and compiler allows for using it).
@@ -1542,13 +1542,13 @@ static inline unsigned int  count_leading_zeros( uint64_t  a )
   if( a <= UINT64_C(0xFFFFFFFF) )
   {
     unsigned long  most_significant_bit_number = 0;
-    _BitScanReverse( &most_significant_bit_number, (uint32_t)a );
+    _BitScanReverse( &most_significant_bit_number, (ng_uint32_t)a );
     return  63 - most_significant_bit_number;
   }
   else
   {
     unsigned long  most_significant_bit_number = 0;
-    _BitScanReverse( &most_significant_bit_number, (uint32_t)(a >> 32) );
+    _BitScanReverse( &most_significant_bit_number, (ng_uint32_t)(a >> 32) );
     return  31 - most_significant_bit_number;
   }
 #else
@@ -1584,10 +1584,10 @@ static inline unsigned int  count_leading_zeros( uint64_t  a )
 *
 */
 static int  convert_extended_decimal_to_binary_and_round(
-  uint64_t   a,
-  int32_t    b,
-  uint64_t*  c,
-  int32_t*   d
+  ng_uint64_t   a,
+  ng_int32_t    b,
+  ng_uint64_t*  c,
+  ng_int32_t*   d
 )
 {
   // 1. Check input arguments
@@ -1597,9 +1597,9 @@ static int  convert_extended_decimal_to_binary_and_round(
    return  0;
 
   // 2. Convert (a * 10^b) -> (mantissa * 2^exponent)
-  uint64_t  mantissa = powers_of_ten_[ b - powers_of_ten_[0].decimal_exponent ].binary_mantissa;
-  int32_t   exponent = powers_of_ten_[ b - powers_of_ten_[0].decimal_exponent ].binary_exponent;
-  uint64_t  long_mantissa[2];
+  ng_uint64_t  mantissa = powers_of_ten_[ b - powers_of_ten_[0].decimal_exponent ].binary_mantissa;
+  ng_int32_t   exponent = powers_of_ten_[ b - powers_of_ten_[0].decimal_exponent ].binary_exponent;
+  ng_uint64_t  long_mantissa[2];
   multiply_128( a, mantissa, long_mantissa );
   if( long_mantissa[1] != 0 )   // high half
   {
@@ -1620,7 +1620,7 @@ static int  convert_extended_decimal_to_binary_and_round(
     return  0;   // product is unexpectedly zero
 
   // 3. Round mantissa
-  uint64_t  remainder = mantissa & UINT64_C(0x07FF);  // 0x07FF: 11 least significant bits set, where 11 = 64-53
+  ng_uint64_t  remainder = mantissa & UINT64_C(0x07FF);  // 0x07FF: 11 least significant bits set, where 11 = 64-53
   if( remainder < UINT64_C(0x0400) )
     mantissa -= remainder;
   else
@@ -1654,10 +1654,10 @@ static int  convert_extended_decimal_to_binary_and_round(
 *
 */
 static int  does_extended_decimal_round_to_given_binary(
-  uint64_t   a,
-  int32_t    b,
-  uint64_t   expected_c,
-  int32_t    expected_d
+  ng_uint64_t   a,
+  ng_int32_t    b,
+  ng_uint64_t   expected_c,
+  ng_int32_t    expected_d
 )
 {
   // 1. Check/normalize binary (expected_c * 2^expected_d)
@@ -1668,8 +1668,8 @@ static int  does_extended_decimal_round_to_given_binary(
   expected_d  -= lz;
 
   // 2. Convert (a * 10^b) to binary with rounding to 53 bits (in round-to-nearest mode)
-  uint64_t  actual_c = 0;
-  int32_t   actual_d = 0;
+  ng_uint64_t  actual_c = 0;
+  ng_int32_t   actual_d = 0;
   if(! convert_extended_decimal_to_binary_and_round( a, b, &actual_c, &actual_d ) )
     return  0;
 
@@ -1693,10 +1693,10 @@ static int  does_extended_decimal_round_to_given_binary(
 *
 */
 static int  convert_binary_to_decimal_1st_approx(
-  uint64_t   a,
-  int32_t    b,
-  uint64_t*  c,
-  int32_t*   d
+  ng_uint64_t   a,
+  ng_int32_t    b,
+  ng_uint64_t*  c,
+  ng_int32_t*   d
 )
 {
   // 1. Check/normalize input mantissa.
@@ -1714,9 +1714,9 @@ static int  convert_binary_to_decimal_1st_approx(
     return  0;
  
   // 3. Convert (a * 2^b) -> (long_mantissa * 10^exponent)
-  uint64_t  mantissa = powers_of_two_[ b - powers_of_two_[0].binary_exponent ].decimal_mantissa;
-  int32_t   exponent = powers_of_two_[ b - powers_of_two_[0].binary_exponent ].decimal_exponent;
-  uint64_t  long_mantissa[2];
+  ng_uint64_t  mantissa = powers_of_two_[ b - powers_of_two_[0].binary_exponent ].decimal_mantissa;
+  ng_int32_t   exponent = powers_of_two_[ b - powers_of_two_[0].binary_exponent ].decimal_exponent;
+  ng_uint64_t  long_mantissa[2];
   multiply_128( a, mantissa, long_mantissa );
       // invariant: 2^63*(0.1*2^64) < long_mantissa < 2^64*(1*2^64)
   mantissa = long_mantissa[1];
@@ -1764,10 +1764,10 @@ static int  convert_binary_to_decimal_1st_approx(
 *
 */
 static int  convert_binary_to_extended_decimal(
-  uint64_t   a,
-  int32_t    b,
-  uint64_t*  c,
-  int32_t*   d
+  ng_uint64_t   a,
+  ng_int32_t    b,
+  ng_uint64_t*  c,
+  ng_int32_t*   d
 )
 {
   // 1. Check input parameters and convert binary mantissa in such way that
@@ -1783,9 +1783,9 @@ static int  convert_binary_to_extended_decimal(
 
   // 2. Compute first approximation for (a * 2^b), also for ((a-1) * 2^b) and ((a+1) * 2^b).
   //    Reduce all of them to the common exponent (base_d).
-  uint64_t  prev_c = 0;  int32_t  prev_d = 0;
-  uint64_t  base_c = 0;  int32_t  base_d = 0;
-  uint64_t  next_c = 0;  int32_t  next_d = 0;
+  ng_uint64_t  prev_c = 0;  ng_int32_t  prev_d = 0;
+  ng_uint64_t  base_c = 0;  ng_int32_t  base_d = 0;
+  ng_uint64_t  next_c = 0;  ng_int32_t  next_d = 0;
   if((! convert_binary_to_decimal_1st_approx( a - UINT64_C(0x0400), b, &prev_c, &prev_d ) )||
      (! convert_binary_to_decimal_1st_approx( a                   , b, &base_c, &base_d ) )||
      (! convert_binary_to_decimal_1st_approx( a + UINT64_C(0x0400), b, &next_c, &next_d ) ))
@@ -1814,9 +1814,9 @@ static int  convert_binary_to_extended_decimal(
   //    (prev_c * 10^base_d) and (next_c * 10^base_d) are known to be outside 
   //    this range of attraction, so lower bound is somewhere between prev_c and base_c
   //    and upper bound is somewhere between base_c and next_c.
-  uint64_t  negative_extent = 0, negative_search_space = base_c - prev_c;
-  uint64_t  positive_extent = 0, positive_search_space = next_c - base_c;
-  for( uint64_t  bit = UINT64_C(1) << (63 - count_leading_zeros( negative_search_space )); bit != 0; bit >>= 1 )
+  ng_uint64_t  negative_extent = 0, negative_search_space = base_c - prev_c;
+  ng_uint64_t  positive_extent = 0, positive_search_space = next_c - base_c;
+  for( ng_uint64_t  bit = UINT64_C(1) << (63 - count_leading_zeros( negative_search_space )); bit != 0; bit >>= 1 )
   {
    if(( bit <= negative_search_space )&&
       ( does_extended_decimal_round_to_given_binary( base_c - negative_extent - bit,
@@ -1826,7 +1826,7 @@ static int  convert_binary_to_extended_decimal(
      negative_search_space -= bit;
    }
   }
-  for( uint64_t  bit = UINT64_C(1) << (63 - count_leading_zeros( positive_search_space )); bit != 0; bit >>= 1 )
+  for( ng_uint64_t  bit = UINT64_C(1) << (63 - count_leading_zeros( positive_search_space )); bit != 0; bit >>= 1 )
   {
     if(( bit <= positive_search_space )&&
        ( does_extended_decimal_round_to_given_binary( base_c + positive_extent + bit,
@@ -1838,10 +1838,10 @@ static int  convert_binary_to_extended_decimal(
   }
 
   // 5. Compute new decimal mantissa within range of attraction: digit after digit, most significant first
-  uint64_t  new_mantissa = 0;
-  for( uint64_t  current_scale = POW10_18; current_scale != 0; current_scale /= UINT64_C(10) )
+  ng_uint64_t  new_mantissa = 0;
+  for( ng_uint64_t  current_scale = POW10_18; current_scale != 0; current_scale /= UINT64_C(10) )
   {
-   uint64_t  next_digit = ((base_c + positive_extent) / current_scale) % UINT64_C(10);
+   ng_uint64_t  next_digit = ((base_c + positive_extent) / current_scale) % UINT64_C(10);
    new_mantissa += (current_scale * next_digit);
    if(( base_c - negative_extent <= new_mantissa )&&( new_mantissa <= base_c + positive_extent ))
      break;
@@ -1869,16 +1869,16 @@ static void  unpack_ieee754_double(
    const double*  input,
    int*           out_is_nan,
    int*           out_sign,
-   uint64_t*      out_binary_mantissa,
-   int32_t*       out_binary_exponent,
+   ng_uint64_t*      out_binary_mantissa,
+   ng_int32_t*       out_binary_exponent,
    int*           out_is_infinity
 )
 {
   // 1. Unpack bits
-  uint64_t  input_bits     = *( (const uint64_t*)input );
-  uint64_t  input_sign     = (input_bits >> 63);
-  uint64_t  input_exponent = (input_bits >> 52) & UINT64_C(0x7FF);
-  uint64_t  input_mantissa = (input_bits & ((UINT64_C(1) << 52) - UINT64_C(1)));
+  ng_uint64_t  input_bits     = *( (const ng_uint64_t*)input );
+  ng_uint64_t  input_sign     = (input_bits >> 63);
+  ng_uint64_t  input_exponent = (input_bits >> 52) & UINT64_C(0x7FF);
+  ng_uint64_t  input_mantissa = (input_bits & ((UINT64_C(1) << 52) - UINT64_C(1)));
  
   // 2. Handle special case: NaN
   if(( input_exponent == UINT64_C(0x7FF) )&&( input_mantissa != 0 ))
@@ -1920,7 +1920,7 @@ static void  unpack_ieee754_double(
   }
  
   // 6. Handle normalized numbers
-  *out_binary_exponent = ((int32_t)input_exponent) - 1023;
+  *out_binary_exponent = ((ng_int32_t)input_exponent) - 1023;
   *out_binary_mantissa = (UINT64_C(1) << 63) | (input_mantissa << 11);   // 53rd bit of mantissa is always 1
 }
 
@@ -1935,16 +1935,16 @@ static void  unpack_ieee754_double(
 static int  pack_ieee754_double(
   int       input_is_nan,
   int       input_sign,
-  uint64_t  input_binary_mantissa,
-  int32_t   input_binary_exponent,
+  ng_uint64_t  input_binary_mantissa,
+  ng_int32_t   input_binary_exponent,
   int       input_is_infinity,
   double*   output
 )
 {
   // 1. Initialize values to pack
-  uint64_t  output_sign     = 0;
-  uint64_t  output_exponent = 0;
-  uint64_t  output_mantissa = 0;
+  ng_uint64_t  output_sign     = 0;
+  ng_uint64_t  output_exponent = 0;
+  ng_uint64_t  output_mantissa = 0;
 
   // 2. Handle special case: NaN
   int  had_overflow_or_underflow_in_exponent = 0;
@@ -1985,7 +1985,7 @@ static int  pack_ieee754_double(
       else if( input_binary_exponent >= -1022 )
       {
         // 6. Handle normalized numbers
-        output_exponent = ((uint64_t)( input_binary_exponent + 1023 ));
+        output_exponent = ((ng_uint64_t)( input_binary_exponent + 1023 ));
         output_mantissa = (input_binary_mantissa >> 11) & ((UINT64_C(1) << 52) - UINT64_C(1));
       }
       else
@@ -2006,10 +2006,10 @@ static int  pack_ieee754_double(
   }
 
   // 8. Pack bits up
-  uint64_t  output_bits = (output_sign << 63) |
+  ng_uint64_t  output_bits = (output_sign << 63) |
                          ((output_exponent & UINT64_C(0x7FF)) << 52) |
                           (output_mantissa & ((UINT64_C(1) << 52) - UINT64_C(1)));
-  *( (uint64_t*)output ) = output_bits;
+  *( (ng_uint64_t*)output ) = output_bits;
   return(! had_overflow_or_underflow_in_exponent );
 }
 
@@ -2019,17 +2019,17 @@ static int  pack_ieee754_double(
 *
 */
 static inline void  bcd_decompress_small(
-  uint32_t  compressed_bcd,
-  uint8_t*  decompressed_bcd
+  ng_uint32_t  compressed_bcd,
+  ng_uint8_t*  decompressed_bcd
 )
 {
-  uint32_t  high_pair = compressed_bcd / 100;
-  uint32_t  low_pair  = compressed_bcd % 100;
+  ng_uint32_t  high_pair = compressed_bcd / 100;
+  ng_uint32_t  low_pair  = compressed_bcd % 100;
  
-  decompressed_bcd[0] = ((uint8_t)( high_pair / 10 ));
-  decompressed_bcd[1] = ((uint8_t)( high_pair % 10 ));
-  decompressed_bcd[2] = ((uint8_t)( low_pair  / 10 ));
-  decompressed_bcd[3] = ((uint8_t)( low_pair  % 10 ));
+  decompressed_bcd[0] = ((ng_uint8_t)( high_pair / 10 ));
+  decompressed_bcd[1] = ((ng_uint8_t)( high_pair % 10 ));
+  decompressed_bcd[2] = ((ng_uint8_t)( low_pair  / 10 ));
+  decompressed_bcd[3] = ((ng_uint8_t)( low_pair  % 10 ));
 }
 
 /**
@@ -2041,17 +2041,17 @@ static inline void  bcd_decompress_small(
 *
 */
 static void  bcd_decompress(
-   uint64_t  compressed_bcd,
-   uint8_t*  decompressed_bcd
+   ng_uint64_t  compressed_bcd,
+   ng_uint8_t*  decompressed_bcd
 )
 {
-  uint32_t  d0 = (compressed_bcd >>  0) & 0xFFFF;
-  uint32_t  d1 = (compressed_bcd >> 16) & 0xFFFF;
-  uint32_t  d2 = (compressed_bcd >> 32) & 0xFFFF;
-  uint32_t  d3 = (compressed_bcd >> 48) & 0xFFFF;
+  ng_uint32_t  d0 = (compressed_bcd >>  0) & 0xFFFF;
+  ng_uint32_t  d1 = (compressed_bcd >> 16) & 0xFFFF;
+  ng_uint32_t  d2 = (compressed_bcd >> 32) & 0xFFFF;
+  ng_uint32_t  d3 = (compressed_bcd >> 48) & 0xFFFF;
  
             d0 = 656 * d3 + 7296 * d2 + 5536 * d1 + d0;
-  uint32_t  q  = d0 / 10000;
+  ng_uint32_t  q  = d0 / 10000;
             d0 = d0 % 10000;
  
             d1 = q + 7671 * d3 + 9496 * d2 + 6 * d1;
@@ -2078,10 +2078,10 @@ static void  bcd_decompress(
 *  Compress four-digit BCD representation to small integer in range 0..9999
 *
 */
-static inline uint32_t  bcd_compress_small( const uint8_t*  decompressed_bcd )
+static inline ng_uint32_t  bcd_compress_small( const ng_uint8_t*  decompressed_bcd )
 {
-  uint32_t  high_pair = 10 * decompressed_bcd[0] + decompressed_bcd[1];
-  uint32_t  low_pair  = 10 * decompressed_bcd[2] + decompressed_bcd[3];
+  ng_uint32_t  high_pair = 10 * decompressed_bcd[0] + decompressed_bcd[1];
+  ng_uint32_t  low_pair  = 10 * decompressed_bcd[2] + decompressed_bcd[3];
   return  100 * high_pair + low_pair;
 }
 
@@ -2090,12 +2090,12 @@ static inline uint32_t  bcd_compress_small( const uint8_t*  decompressed_bcd )
 *  Compress twenty-digit BCD representation to full range unsigned 64-bit integer
 *
 */
-static uint64_t  bcd_compress( const uint8_t*  decompressed_bcd )
+static ng_uint64_t  bcd_compress( const ng_uint8_t*  decompressed_bcd )
 {
-  uint64_t  d2 =         bcd_compress_small( decompressed_bcd +  0 );
-  uint64_t  d1 = 10000 * bcd_compress_small( decompressed_bcd +  4 )
+  ng_uint64_t  d2 =         bcd_compress_small( decompressed_bcd +  0 );
+  ng_uint64_t  d1 = 10000 * bcd_compress_small( decompressed_bcd +  4 )
                        + bcd_compress_small( decompressed_bcd +  8 );
-  uint64_t  d0 = 10000 * bcd_compress_small( decompressed_bcd + 12 )
+  ng_uint64_t  d0 = 10000 * bcd_compress_small( decompressed_bcd + 12 )
                        + bcd_compress_small( decompressed_bcd + 16 );
   return  ((d2 * (UINT64_C(10000) * UINT64_C(10000))  + d1) 
                * (UINT64_C(10000) * UINT64_C(10000))) + d0;
@@ -2111,7 +2111,7 @@ static uint64_t  bcd_compress( const uint8_t*  decompressed_bcd )
 *  @returns  Adjusted number of significant decimal digits
 *
 */
-static int  bcd_round( int  new_ndigits, uint8_t*  decimal_mantissa, int32_t*  exponent )
+static int  bcd_round( int  new_ndigits, ng_uint8_t*  decimal_mantissa, ng_int32_t*  exponent )
 {
   // 1. Bounds check and adjustment
   if( new_ndigits < 1 )
@@ -2135,7 +2135,7 @@ static int  bcd_round( int  new_ndigits, uint8_t*  decimal_mantissa, int32_t*  e
           break;
       for( int  i = new_ndigits; i >= 0; --i )
       {
-        uint8_t  new_value = decimal_mantissa[i] + 1;
+        ng_uint8_t  new_value = decimal_mantissa[i] + 1;
         if( new_value < 10 )
         {
           decimal_mantissa[i] = new_value;
@@ -2264,7 +2264,7 @@ static const char *_EXPONENT_TABLE[400] = {
 *  There must be at least 16 bytes in the output buffer.
 *
 */
-static void format_exponent(char *buffer, int32_t exponent, int is_uppercase)
+static void format_exponent(char *buffer, ng_int32_t exponent, int is_uppercase)
 {
   rte_prefetch0(_EXPONENT_TABLE);
 
@@ -2293,7 +2293,7 @@ static void format_exponent(char *buffer, int32_t exponent, int is_uppercase)
    *buffer++ = tmp_buffer[--i];
   *buffer = 0;
 #else
-  *(uint32_t *)buffer = *(const uint32_t *)_EXPONENT_TABLE[exponent];
+  *(ng_uint32_t *)buffer = *(const ng_uint32_t *)_EXPONENT_TABLE[exponent];
   if (buffer[2] == ' ') 
     buffer[2] = '\0';
   else if (buffer[3] == ' ') 
@@ -2345,8 +2345,8 @@ int  dconvstr_ieee754_print(
   int       is_nan      = 0;
   int       is_negative = 0;
   int       is_infinity = 0;
-  uint64_t  mantissa    = 0;
-  int32_t   exponent    = 0;
+  ng_uint64_t  mantissa    = 0;
+  ng_int32_t   exponent    = 0;
   unpack_ieee754_double( &value, &is_nan, &is_negative, &mantissa, &exponent, &is_infinity );
 
   // 2. Handle special cases
@@ -2374,7 +2374,7 @@ int  dconvstr_ieee754_print(
 
   // 3. Get exact decimal representation.
   //    Decimal point is located on the right side of decimal mantissa
-  uint8_t  decimal_mantissa[20];
+  ng_uint8_t  decimal_mantissa[20];
   if( mantissa == 0 )
   {
      ng_memset( decimal_mantissa, 0, sizeof(decimal_mantissa) );
@@ -2684,10 +2684,10 @@ int  dconvstr_ieee754_scan(
 
   // 2. Parse input string
   //    (Code from this section was adopted from http://golang.org/src/lib9/fmt/fltfmt.c)
-  uint8_t  parsed_digits[20];
+  ng_uint8_t  parsed_digits[20];
   int      n_parsed_digits        = 0;      // number of digits in parsed_digits[]
-  int32_t  exponent               = 0;
-  int32_t  exponent_offset        = 0;
+  ng_int32_t  exponent               = 0;
+  ng_int32_t  exponent_offset        = 0;
   int      flag_negative_mantissa = 0;
   int      flag_negative_exponent = 0;
   int      flag_syntax_error      = 0;
@@ -2870,7 +2870,7 @@ int  dconvstr_ieee754_scan(
   memmove( parsed_digits + 1, parsed_digits, sizeof(parsed_digits) - 1 ); 
   parsed_digits[0] = 0;
   ++exponent_offset;
-  uint64_t  mantissa = bcd_compress( parsed_digits );
+  ng_uint64_t  mantissa = bcd_compress( parsed_digits );
 
   // 4. Compute exponent
   if( mantissa == 0 )

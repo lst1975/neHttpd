@@ -129,7 +129,7 @@ clean0:
 }
 
 static hrequest_s *
-_hrequest_parse_header(char *data, size_t len)
+_hrequest_parse_header(char *data, ng_size_t len)
 {
   hpair_s *tmppair;
   hrequest_s *req;
@@ -227,9 +227,9 @@ _hrequest_parse_header(char *data, size_t len)
         strcpy(req->spec, tmp2); */
       if (t - key - 1 == 8)
       {
-        if (*(uint64_t *)(key + 1) == *(const uint64_t *)"HTTP/1.0")
+        if (*(ng_uint64_t *)(key + 1) == *(const ng_uint64_t *)"HTTP/1.0")
           req->version = HTTP_VERSION_1_0;
-        else if (*(uint64_t *)(key + 1) == *(const uint64_t *)"HTTP/1.1")
+        else if (*(ng_uint64_t *)(key + 1) == *(const ng_uint64_t *)"HTTP/1.1")
           req->version = HTTP_VERSION_1_1;
       }
       if (req->version == -1)
@@ -381,8 +381,8 @@ hrequest_free(hrequest_s * req)
 herror_t
 hrequest_new_from_socket(hsocket_s *sock, hrequest_s **out)
 {
-  size_t hdrlen;
-  size_t rcvbytes;
+  ng_size_t hdrlen;
+  ng_size_t rcvbytes;
   herror_t status;
   char *buffer;
   hrequest_s *req;

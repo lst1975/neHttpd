@@ -147,13 +147,13 @@ struct http_input_stream_t
 {
   hsocket_s *sock;
   herror_t err;
-  size_t received;
-  size_t content_length;
-  size_t chunk_size;
+  ng_size_t received;
+  ng_size_t content_length;
+  ng_size_t chunk_size;
   char connection_closed;
 
   int (*stream_ready)(http_input_stream_s *stream);
-  size_t (*stream_read)(http_input_stream_s *stream, unsigned char *dest, size_t size);
+  ng_size_t (*stream_read)(http_input_stream_s *stream, unsigned char *dest, ng_size_t size);
   
   /* file handling */
   void *fd;
@@ -168,8 +168,8 @@ struct http_output_stream_t
 {
   hsocket_s *sock;
   http_transfer_type_e type;
-  size_t content_length;
-  size_t sent;
+  ng_size_t content_length;
+  ng_size_t sent;
   herror_t status;
 };
 
@@ -244,9 +244,9 @@ http_input_stream_is_ready(http_input_stream_s *stream);
  *
  * @return the actual read bytes or -1 on error.
  */
-extern size_t 
+extern ng_size_t 
 http_input_stream_read(http_input_stream_s *stream, 
-                  unsigned char *dest, size_t size);
+                  unsigned char *dest, ng_size_t size);
 
 /** Creates a new output stream. Transfer style will be found from the
  * given header.
@@ -284,7 +284,7 @@ http_output_stream_free(http_output_stream_s *stream);
  */
 extern herror_t 
 http_output_stream_write(http_output_stream_s *stream, 
-                  const unsigned char *bytes, size_t size);
+                  const unsigned char *bytes, ng_size_t size);
 
 extern herror_t
 http_output_stream_write_printf(http_output_stream_s *stream, 

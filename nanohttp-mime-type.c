@@ -102,7 +102,7 @@ typedef struct _mime_types mime_types_s;
 
 static const ng_block_s _mime_type_default = DECL_CONST_STR("application/octet-stream");
 static ng_list_head_s _mime_types_htbl[_MIME_HASH_TBLSZ];
-static size_t NUM_MIME_TYPES;		
+static ng_size_t NUM_MIME_TYPES;		
 
 #define __E(x) .extension = DECL_CONST_STR(x)
 #define __T(x) .mime_type = DECL_CONST_STR(x)
@@ -614,7 +614,7 @@ static mime_types_s _mime_types_names[] = {
 
 ng_result_t ng_http_mime_type_init(void) 
 {
-  size_t i;
+  ng_size_t i;
   NUM_MIME_TYPES = NG_ITEMS(_mime_types_names);
   for (i = 0; i < _MIME_HASH_TBLSZ; i++)
   {
@@ -623,7 +623,7 @@ ng_result_t ng_http_mime_type_init(void)
   for (i = 0; i < NUM_MIME_TYPES; i++)
   {
     mime_types_s *m = &_mime_types_names[i];
-    uint32_t hash = ng_hash_string(m->extension.cptr, m->extension.len);
+    ng_uint32_t hash = ng_hash_string(m->extension.cptr, m->extension.len);
     ng_list_head_s *h = &_mime_types_htbl[hash&_MIME_HASH_MASK];
     ng_list_add_tail(&m->link, h);
   }
@@ -651,7 +651,7 @@ void ng_http_mime_type_free(void)
 const ng_block_s *
 ng_http_get_mime_type(const ng_block_s *ext) 
 {
-  uint32_t hash;
+  ng_uint32_t hash;
   mime_types_s *m;
   ng_list_head_s *h;
 

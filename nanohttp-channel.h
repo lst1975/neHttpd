@@ -92,8 +92,8 @@ typedef struct __ng_instance_cfg ng_instance_cfg_s;
 #define NG_DEV_NAME_LEN_MAX 64
 
 struct __ng_instance_cfg{
-  uint32_t connections;
-  uint32_t files;
+  ng_uint32_t connections;
+  ng_uint32_t files;
 };
 
 struct __ng_cache_aligned __ng_instance{
@@ -101,14 +101,14 @@ struct __ng_cache_aligned __ng_instance{
   void *log;
   ng_list_head_s link;
   ng_list_head_s dev_list[NG_DEV_PRIORITY_MAX];
-  uint32_t inst;
+  ng_uint32_t inst;
 };
 
 #define NG_INSTACE2ID(t) ((ng_instance_s*)t)->inst
 
 struct ng_mchain{
-  size_t size;
-  size_t count;
+  ng_size_t size;
+  ng_size_t count;
   void **m;
   ng_list_head_s link;
 };
@@ -117,10 +117,10 @@ struct ng_channel {
   ng_list_head_s  link;
   ng_devtab_s	   *dp;
   ng_mchain_s    *cur;
-  uint32_t        type:8;
-  uint32_t        pad1:8;
-  uint32_t        pad2:16;
-  uint32_t        pad3;
+  ng_uint32_t        type:8;
+  ng_uint32_t        pad1:8;
+  ng_uint32_t        pad2:16;
+  ng_uint32_t        pad3;
   void	         *priv;
 };
 
@@ -145,12 +145,12 @@ struct __ng_cache_aligned ng_devtab {
   int	          (*read )(ng_channel_s *ch, ng_mchain_s *mc);
   int	          (*write)(ng_channel_s *ch, ng_mchain_s *mc);
   ng_result_t   (*ioctl)(ng_channel_s *ch, int cmd, void *arg);
-  uint32_t        alloc:1;
-  uint32_t        started:1;
-  uint32_t        size:16;
-  uint32_t        priority:14;
-  uint16_t        flag;
-  uint16_t        pad;
+  ng_uint32_t        alloc:1;
+  ng_uint32_t        started:1;
+  ng_uint32_t        size:16;
+  ng_uint32_t        priority:14;
+  ng_uint16_t        flag;
+  ng_uint16_t        pad;
   void           *log;
   const char     *ver;
   void           *cmd;

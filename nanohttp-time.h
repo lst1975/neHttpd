@@ -75,7 +75,7 @@
 extern "C" {
 #endif
 
-extern uint64_t os__rte_rdtsc_syscall(void);
+extern ng_uint64_t os__rte_rdtsc_syscall(void);
 
 #define HTTPD_DATE_STRLEN_MIN 29
 
@@ -85,30 +85,30 @@ extern uint64_t os__rte_rdtsc_syscall(void);
 #else
 #include <x86intrin.h>
 #endif
-static inline uint64_t rte_rdtsc(void){return __rdtsc();}
-static inline uint64_t rte_rdtsc_precise(void){ ng_smp_mb(); return rte_rdtsc(); }
-static inline uint64_t rte_get_tsc_cycles(void) { return rte_rdtsc(); }
+static inline ng_uint64_t rte_rdtsc(void){return __rdtsc();}
+static inline ng_uint64_t rte_rdtsc_precise(void){ ng_smp_mb(); return rte_rdtsc(); }
+static inline ng_uint64_t rte_get_tsc_cycles(void) { return rte_rdtsc(); }
 
 #elif defined(__aarch64__)
 /** Read generic counter frequency */
-static __rte_always_inline uint64_t __rte_arm64_cntfrq(void){
-	uint64_t freq;
+static __rte_always_inline ng_uint64_t __rte_arm64_cntfrq(void){
+	ng_uint64_t freq;
 
 	asm volatile("mrs %0, cntfrq_el0" : "=r" (freq));
 	return freq;
 }
 
 /** Read generic counter */
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 __rte_arm64_cntvct(void)
 {
-	uint64_t tsc;
+	ng_uint64_t tsc;
 
 	asm volatile("mrs %0, cntvct_el0" : "=r" (tsc));
 	return tsc;
 }
 
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 __rte_arm64_cntvct_precise(void)
 {
 	asm volatile("isb" : : : "memory");
@@ -126,7 +126,7 @@ __rte_arm64_cntvct_precise(void)
  * This call is portable to any ARMv8 architecture, however, typically
  * cntvct_el0 runs at <= 100MHz and it may be imprecise for some tasks.
  */
-static __rte_always_inline uint64_t rte_rdtsc(void){	return __rte_arm64_cntvct();}
+static __rte_always_inline ng_uint64_t rte_rdtsc(void){	return __rte_arm64_cntvct();}
 #else
 /**
  * This is an alternative method to enable rte_rdtsc() with high resolution
@@ -147,29 +147,29 @@ static __rte_always_inline uint64_t rte_rdtsc(void){	return __rte_arm64_cntvct()
  */
 
 /** Read PMU cycle counter */
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 __rte_arm64_pmccntr(void)
 {
-	uint64_t tsc;
+	ng_uint64_t tsc;
 
 	asm volatile("mrs %0, pmccntr_el0" : "=r"(tsc));
 	return tsc;
 }
 
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 rte_rdtsc(void)
 {
 	return __rte_arm64_pmccntr();
 }
 #endif
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 rte_rdtsc_precise(void)
 {
 	asm volatile("isb" : : : "memory");
 	return rte_rdtsc();
 }
 
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 rte_get_tsc_cycles(void)
 {
 	return rte_rdtsc();
@@ -187,7 +187,7 @@ rte_get_tsc_cycles(void)
  * This call is easily portable to any architecture, however,
  * it may require a system call and imprecise for some tasks.
  */
-static inline uint64_t
+static inline ng_uint64_t
 __rte_rdtsc_syscall(void)
 {
 	return os__rte_rdtsc_syscall();
@@ -204,46 +204,46 @@ __rte_rdtsc_syscall(void)
  *
  * which is possible only from the privileged mode (kernel space).
  */
-static inline uint64_t
+static inline ng_uint64_t
 __rte_rdtsc_pmccntr(void)
 {
 	unsigned tsc;
-	uint64_t final_tsc;
+	ng_uint64_t final_tsc;
 
 	/* Read PMCCNTR */
 	asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(tsc));
 	/* 1 tick = 64 clocks */
-	final_tsc = ((uint64_t)tsc) << 6;
+	final_tsc = ((ng_uint64_t)tsc) << 6;
 
-	return (uint64_t)final_tsc;
+	return (ng_uint64_t)final_tsc;
 }
 #define rte_rdtsc __rte_rdtsc_pmccntr
 
 #endif /* RTE_ARM_EAL_RDTSC_USE_PMU */
-static inline uint64_t
+static inline ng_uint64_t
 rte_rdtsc_precise(void)
 {
 	rte_mb();
 	return rte_rdtsc();
 }
 
-static inline uint64_t
+static inline ng_uint64_t
 rte_get_tsc_cycles(void) { return rte_rdtsc(); }
 #elif defined(__riscv)
 #ifndef RTE_RISCV_RDTSC_USE_HPM
 #define RTE_RISCV_RDTSC_USE_HPM 0
 #endif
 /** Read wall time counter */
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 __rte_riscv_rdtime(void)
 {
-	uint64_t tsc;
+	ng_uint64_t tsc;
 	asm volatile("csrr %0, time" : "=r" (tsc) : : "memory");
 	return tsc;
 }
 
 /** Read wall time counter ensuring no re-ordering */
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 __rte_riscv_rdtime_precise(void)
 {
 	asm volatile("fence" : : : "memory");
@@ -251,16 +251,16 @@ __rte_riscv_rdtime_precise(void)
 }
 
 /** Read hart cycle counter */
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 __rte_riscv_rdcycle(void)
 {
-	uint64_t tsc;
+	ng_uint64_t tsc;
 	asm volatile("csrr %0, cycle" : "=r" (tsc) : : "memory");
 	return tsc;
 }
 
 /** Read hart cycle counter ensuring no re-ordering */
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 __rte_riscv_rdcycle_precise(void)
 {
 	asm volatile("fence" : : : "memory");
@@ -273,7 +273,7 @@ __rte_riscv_rdcycle_precise(void)
  * @return
  *   The time base for this lcore.
  */
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 rte_rdtsc(void)
 {
 	/**
@@ -295,7 +295,7 @@ rte_rdtsc(void)
 	return __rte_riscv_rdcycle();
 }
 
-static inline uint64_t
+static inline ng_uint64_t
 rte_rdtsc_precise(void)
 {
 	if (!RTE_RISCV_RDTSC_USE_HPM)
@@ -303,7 +303,7 @@ rte_rdtsc_precise(void)
 	return __rte_riscv_rdcycle_precise();
 }
 
-static __rte_always_inline uint64_t
+static __rte_always_inline ng_uint64_t
 rte_get_tsc_cycles(void)
 {
 	return rte_rdtsc();
@@ -315,7 +315,7 @@ rte_get_tsc_cycles(void)
  * @return
  *   The time base for this lcore.
  */
-static inline uint64_t
+static inline ng_uint64_t
 rte_rdtsc(void)
 {
 #ifdef __GLIBC__
@@ -325,8 +325,8 @@ rte_rdtsc(void)
 #endif
 }
 
-static inline uint64_t rte_rdtsc_precise(void){	rte_mb();	return rte_rdtsc();}
-static inline uint64_t rte_get_tsc_cycles(void) { return rte_rdtsc(); }
+static inline ng_uint64_t rte_rdtsc_precise(void){	rte_mb();	return rte_rdtsc();}
+static inline ng_uint64_t rte_get_tsc_cycles(void) { return rte_rdtsc(); }
 #elif defined(__loongarch__)
 /**
  * Read the time base register.
@@ -334,10 +334,10 @@ static inline uint64_t rte_get_tsc_cycles(void) { return rte_rdtsc(); }
  * @return
  *   The time base for this lcore.
  */
-static inline uint64_t
+static inline ng_uint64_t
 rte_rdtsc(void)
 {
-	uint64_t count;
+	ng_uint64_t count;
 
 	__asm__ __volatile__ (
 		"rdtime.d %[cycles], $zero\n"
@@ -347,12 +347,12 @@ rte_rdtsc(void)
 	return count;
 }
 
-static inline uint64_t rte_rdtsc_precise(void) { rte_mb(); return rte_rdtsc(); }
-static inline uint64_t rte_get_tsc_cycles(void) { return rte_rdtsc(); }
+static inline ng_uint64_t rte_rdtsc_precise(void) { rte_mb(); return rte_rdtsc(); }
+static inline ng_uint64_t rte_get_tsc_cycles(void) { return rte_rdtsc(); }
 #else
-static inline uint64_t rte_rdtsc(void) { return os__rte_rdtsc_syscall(); }
-static inline uint64_t rte_rdtsc_precise(void) { rte_mb(); return rte_rdtsc(); }
-static inline uint64_t rte_get_tsc_cycles(void) { return rte_rdtsc(); }
+static inline ng_uint64_t rte_rdtsc(void) { return os__rte_rdtsc_syscall(); }
+static inline ng_uint64_t rte_rdtsc_precise(void) { rte_mb(); return rte_rdtsc(); }
+static inline ng_uint64_t rte_get_tsc_cycles(void) { return rte_rdtsc(); }
 #endif
 
 /**
@@ -361,18 +361,18 @@ static inline uint64_t rte_get_tsc_cycles(void) { return rte_rdtsc(); }
  * @return
  *   The number of cycles
  */
-static inline uint64_t
+static inline ng_uint64_t
 rte_get_timer_cycles(void)
 {
 	return rte_get_tsc_cycles();
 }
 
 void ng_update_time(void);
-uint64_t ng_get_time(void);
-uint64_t rte_get_tsc_hz(void);
-uint64_t rte_get_timer_hz(void);
+ng_uint64_t ng_get_time(void);
+ng_uint64_t rte_get_tsc_hz(void);
+ng_uint64_t rte_get_timer_hz(void);
 void rte_delay_us_sleep(unsigned int us);
-uint64_t get_tsc_freq(void);
+ng_uint64_t get_tsc_freq(void);
     
 /*
 Cycles To Ms Formula
@@ -389,7 +389,7 @@ Variables:
   the time from seconds to milliseconds. The result is the time taken for 
   a specific number of cycles in a processor, measured in milliseconds.
 */
-static inline uint64_t ng_cycles2sec(uint64_t cycles, uint64_t freq)
+static inline ng_uint64_t ng_cycles2sec(ng_uint64_t cycles, ng_uint64_t freq)
 {
   if (!freq) freq = rte_get_timer_hz();
   return cycles / freq;
@@ -397,8 +397,8 @@ static inline uint64_t ng_cycles2sec(uint64_t cycles, uint64_t freq)
 
 typedef struct __ng_tv ng_tmv_s;
 struct __ng_tv {
-  uint64_t tv_sec;
-  uint64_t tv_usec;
+  ng_uint64_t tv_sec;
+  ng_uint64_t tv_usec;
   int_t    gmtoff;
 };
 /*
@@ -410,18 +410,18 @@ struct ng_rtc_time {
    * the number of seconds after the minute, normally in the range
    * 
    */
-  uint32_t tm_ms:10;        /* Millisecond in second (0-999) */
-  uint32_t tm_sec:6;        /* Seconds          [0, 60]                0 to 59, but can be up to 60 to allow for leap seconds */
-  uint32_t tm_min:6;        /* Minutes          [0, 59]                the number of minutes after the hour, in the range [0, 60] */
-  uint32_t tm_hour:5;       /* Hour             [0, 23]                the number of hours past midnight, in the range 0 to 23 */
-  uint32_t tm_mday:5;       /* Day of the month [1, 31]                the day of the month, in the range 1 to 31 */
-  uint32_t tm_mon:4;        /* Month            [0, 11]  (January = 0) the number of months since January, in the range 0 to 11 */
-  uint32_t tm_year:15;      /* the number of years since 1900 */
-  uint32_t tm_wday:3;       /* Day of the week  [0, 6]   (Sunday = 0)  the number of days since Sunday, in the range 0 to 6 */
-  uint32_t tm_yday:9;       /* Day of the year  [0, 365] (Jan/01 = 0)  the number of days since January 1, in the range 0 to 365 */
-  uint32_t tm_isdst:1;      /* Daylight savings flag */
+  ng_uint32_t tm_ms:10;        /* Millisecond in second (0-999) */
+  ng_uint32_t tm_sec:6;        /* Seconds          [0, 60]                0 to 59, but can be up to 60 to allow for leap seconds */
+  ng_uint32_t tm_min:6;        /* Minutes          [0, 59]                the number of minutes after the hour, in the range [0, 60] */
+  ng_uint32_t tm_hour:5;       /* Hour             [0, 23]                the number of hours past midnight, in the range 0 to 23 */
+  ng_uint32_t tm_mday:5;       /* Day of the month [1, 31]                the day of the month, in the range 1 to 31 */
+  ng_uint32_t tm_mon:4;        /* Month            [0, 11]  (January = 0) the number of months since January, in the range 0 to 11 */
+  ng_uint32_t tm_year:15;      /* the number of years since 1900 */
+  ng_uint32_t tm_wday:3;       /* Day of the week  [0, 6]   (Sunday = 0)  the number of days since Sunday, in the range 0 to 6 */
+  ng_uint32_t tm_yday:9;       /* Day of the year  [0, 365] (Jan/01 = 0)  the number of days since January 1, in the range 0 to 365 */
+  ng_uint32_t tm_isdst:1;      /* Daylight savings flag */
 
-  int32_t tm_gmtoff;        /* Seconds East of UTC */
+  ng_int32_t tm_gmtoff;        /* Seconds East of UTC */
   const char *tm_zone;      /* Timezone abbreviation */
 };
 typedef struct ng_rtc_time ng_rtc_time_s;
@@ -511,8 +511,8 @@ __ng_difftime(ng_time_t time1, ng_time_t time0)
     return time0 <= time1 ? time1 - time0 : dminus(time0 - time1);
 
   /* Use uintmax_t if wide enough.  */
-  if (sizeof(ng_time_t) <= sizeof(uintmax_t)) {
-    uintmax_t t1 = time1, t0 = time0;
+  if (sizeof(ng_time_t) <= sizeof(ng_uintmax_t)) {
+    ng_uintmax_t t1 = time1, t0 = time0;
     return time0 <= time1 ? t1 - t0 : dminus(t0 - t1);
   }
 

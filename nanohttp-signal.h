@@ -69,7 +69,7 @@ int httpd_get_terminate_signal(void);
 void httpd_pthread_sigmask(void);
 void signal_handler_segfault(int sig);
 void http_daemonize(int nochdir, int noclose);
-uint64_t os__rte_rdtsc_syscall(void);
+ng_uint64_t os__rte_rdtsc_syscall(void);
 
 #endif
 

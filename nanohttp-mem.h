@@ -65,7 +65,7 @@
 
 #include "nanohttp-defs.h"
 
-void *__http_malloc(size_t size
+void *__http_malloc(ng_size_t size
 #if __NHTTP_MEM_DEBUG  
   , const char *file, int line
 #endif
@@ -102,7 +102,7 @@ static inline char *__http_strdup(const char *p
   if (p == NULL)
     return NULL;
 
-  size_t len = strlen(p)+1;
+  ng_size_t len = strlen(p)+1;
   void *np = __http_malloc(len
 #if __NHTTP_MEM_DEBUG  
       , file, line
@@ -144,7 +144,7 @@ static inline char *__http_strdup_len(const char *p, int *_len
   if (p == NULL)
     return NULL;
 
-  size_t len = strlen(p)+1;
+  ng_size_t len = strlen(p)+1;
   void *np = __http_malloc(len
 #if __NHTTP_MEM_DEBUG  
       , file, line
@@ -157,7 +157,7 @@ static inline char *__http_strdup_len(const char *p, int *_len
   return np;
 }
 
-static inline char *__http_calloc(size_t n, size_t size
+static inline char *__http_calloc(ng_size_t n, ng_size_t size
 #if __NHTTP_MEM_DEBUG  
     , const char *file, int line
 #endif

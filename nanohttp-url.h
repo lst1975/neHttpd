@@ -86,7 +86,6 @@
 #ifndef __nanohttp_url_h
 #define __nanohttp_url_h
 
-#include <stdint.h>
 #include "nanohttp-defs.h"
 #include "nanohttp-inet.h"
 
@@ -134,23 +133,23 @@ extern "C" {
  */
 struct __ng_url
 {
-  uint16_t port;              /**< The port number. If no port number was given
+  ng_uint16_t port;              /**< The port number. If no port number was given
                                  in the URL, one of the default port numbers
                                  will be selected: 
                                  - HTTP_DEFAULT_PORT    
                                  - HTTPS_DEFAULT_PORT */
-  uint16_t protocol;          /**< The transfer protocol. Note that only
+  ng_uint16_t protocol;          /**< The transfer protocol. Note that only
                                  - PROTOCOL_HTTP and
                                  - PROTOCOL_HTTPS
                                  are supported by nanohttp. */
-  uint32_t is_ipv6;                           
+  ng_uint32_t is_ipv6;                           
   ng_block_s user;              /**< The username */
   ng_block_s pswd;              /**< The password */
   ng_block_s host;              /**< The hostname */
   ng_block_s context;           /** The string after the hostname. */
   union{
-    uint8_t v4[NG_INADDRSZ];
-    uint8_t v6[NG_IN6ADDRSZ];
+    ng_uint8_t v4[NG_INADDRSZ];
+    ng_uint8_t v6[NG_IN6ADDRSZ];
   } u;
 
   char *data;

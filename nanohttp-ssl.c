@@ -620,7 +620,7 @@ hssl_cleanup(hsocket_s *sock)
 }
 
 herror_t
-hssl_read(hsocket_s *sock, char *buf, size_t len, size_t * received)
+hssl_read(hsocket_s *sock, char *buf, ng_size_t len, ng_size_t * received)
 {
   int count;
 
@@ -645,7 +645,7 @@ hssl_read(hsocket_s *sock, char *buf, size_t len, size_t * received)
 
 
 herror_t
-hssl_write(hsocket_s *sock, const char *buf, size_t len, size_t *sent)
+hssl_write(hsocket_s *sock, const char *buf, ng_size_t len, ng_size_t *sent)
 {
   int count;
 

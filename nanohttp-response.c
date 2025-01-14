@@ -117,7 +117,7 @@ _hresponse_new(void)
 }
 
 static hresponse_t *
-_hresponse_parse_header(const char *buffer, size_t len)
+_hresponse_parse_header(const char *buffer, ng_size_t len)
 {
   hpair_s *pair;
   hresponse_t *res;
@@ -147,9 +147,9 @@ _hresponse_parse_header(const char *buffer, size_t len)
   res->version = -1;
   if (str - buffer == 8)
   {
-    if (*(uint64_t *)buffer == *(const uint64_t *)"HTTP/1.0")
+    if (*(ng_uint64_t *)buffer == *(const ng_uint64_t *)"HTTP/1.0")
       res->version = HTTP_VERSION_1_0;
-    else if (*(uint64_t *)buffer == *(const uint64_t *)"HTTP/1.1")
+    else if (*(ng_uint64_t *)buffer == *(const ng_uint64_t *)"HTTP/1.1")
       res->version = HTTP_VERSION_1_1;
   }
   if (res->version == -1)
@@ -243,8 +243,8 @@ clean0:
 herror_t
 hresponse_new_from_socket(hsocket_s *sock, hresponse_t **out)
 {
-  size_t hdrlen;
-  size_t rcvbytes;
+  ng_size_t hdrlen;
+  ng_size_t rcvbytes;
   herror_t status;
   hresponse_t *res;
   char *buffer;

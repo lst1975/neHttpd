@@ -100,18 +100,18 @@
  * WARNING: Don't even consider trying to compile this on a system where
  * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
  */
-int ng_inet_pton4(const char *src, int len, uint8_t *dst);
-int ng_inet_pton6(const char *src, int len, uint8_t *dst);
+int ng_inet_pton4(const char *src, int len, ng_uint8_t *dst);
+int ng_inet_pton6(const char *src, int len, ng_uint8_t *dst);
 int ng_inet_pton(int af, const char *src, int len, void *dst);
 
 /*
  * WARNING: Don't even consider trying to compile this on a system where
  * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
  */
-int ng_inet_ntop(int af, const char *src, char *dst, size_t size);
-int ng_inet_ntop_su(void *sa, char *dst, size_t size);
-int ng_inet_ntop4(const char *src, char *dst, size_t size);
-int ng_inet_ntop6(const char *src, char *dst, size_t size);
+int ng_inet_ntop(int af, const char *src, char *dst, ng_size_t size);
+int ng_inet_ntop_su(void *sa, char *dst, ng_size_t size);
+int ng_inet_ntop4(const char *src, char *dst, ng_size_t size);
+int ng_inet_ntop6(const char *src, char *dst, ng_size_t size);
 
 #ifdef __cplusplus
 }

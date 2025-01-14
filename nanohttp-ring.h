@@ -63,15 +63,6 @@
 #ifndef __nanohttp_ring_h
 #define __nanohttp_ring_h
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdalign.h>
-#include <errno.h>
-
 #include "nanohttp-config.h"
 #include "nanohttp-defs.h"
 #include "nanohttp-logging.h"
@@ -97,14 +88,6 @@
 #include <linux/atomic.h>
 #include <asm/barrier.h>
 //--------------------- wordsize ----------------------------------------------
-#  ifndef PRIu32
-#   define PRIu32 "u"
-#  endif /* PRIu32 */
-#  if __WORDSIZE == 64
-#   define PRIu64 "lu"
-#  else
-#   define PRIu64 "llu"
-#  endif /* __WORDSIZE */
 #define ng_srw_malloc(x) kmalloc(x,GFP_KERNEL)
 #define ng_srw_free(x) kfree(x)
 #define ng_atomic_read(x) atomic_read(x) 
@@ -121,13 +104,12 @@ typedef u32 NG_U32;
 #define __rte_atomic atomic_t
 #else
 #include <assert.h>
-#include <inttypes.h>
 #define __rte_atomic
 #define NG_ATOMIC_T(x) x
 #define ng_assert(x) assert(x)
 #define ng_srw_malloc(x) http_malloc(x)
 #define ng_srw_free(x) http_free(x)
-typedef uint32_t NG_U32;
+typedef ng_uint32_t NG_U32;
 /* We provide internal macro here to allow conditional expansion
  * in the body of the per-arch rte_atomic_thread_fence inline functions.
  */
@@ -224,7 +206,7 @@ ng_singlerw_ring_dump(ng_singlerw_ring_s *ring)
 #define RTE_ATOMIC(t) NG_ATOMIC_T(t)
 #define RTE_TAILQ_RING_NAME "RTE_RING"
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
-typedef uint64_t unaligned_uint64_t __rte_aligned(1);
+typedef ng_uint64_t unaligned_uint64_t __rte_aligned(1);
 #define RTE_CACHE_GUARD_LINES 1
 #ifndef RTE_ASSERT
 #define RTE_ASSERT(x) ng_assert(x)
@@ -317,12 +299,12 @@ static inline void rte_pause(void)
 #endif
 
 static __rte_always_inline void
-rte_wait_until_equal_32(volatile uint32_t *addr, uint32_t expected,
+rte_wait_until_equal_32(volatile ng_uint32_t *addr, ng_uint32_t expected,
     rte_memory_order memorder)
 {
   ng_assert(memorder == rte_memory_order_acquire || memorder == rte_memory_order_relaxed);
 
-  while (rte_atomic_load_explicit((volatile __rte_atomic uint32_t *)addr, memorder)
+  while (rte_atomic_load_explicit((volatile __rte_atomic ng_uint32_t *)addr, memorder)
       != expected)
     rte_pause();
 }
@@ -352,13 +334,13 @@ enum rte_ring_sync_type {
  * but offset for *sync_type* and *tail* values should remain the same.
  */
 struct rte_ring_headtail {
-  volatile RTE_ATOMIC(uint32_t) head;      /**< prod/consumer head. */
-  volatile RTE_ATOMIC(uint32_t) tail;      /**< prod/consumer tail. */
+  volatile RTE_ATOMIC(ng_uint32_t) head;      /**< prod/consumer head. */
+  volatile RTE_ATOMIC(ng_uint32_t) tail;      /**< prod/consumer tail. */
   union {
     /** sync type of prod/cons */
     enum rte_ring_sync_type sync_type;
     /** deprecated -  True if single prod/cons */
-    uint32_t single;
+    ng_uint32_t single;
   };
 };
 
@@ -378,9 +360,9 @@ struct _rte_ring {
   int flags;               /**< Flags supplied at creation. */
   const void *memzone;
       /**< Memzone, if any, containing the rte_ring */
-  uint32_t size;           /**< Size of ring. */
-  uint32_t mask;           /**< Mask (size-1) of ring. */
-  uint32_t capacity;       /**< Usable size of ring */
+  ng_uint32_t size;           /**< Size of ring. */
+  ng_uint32_t mask;           /**< Mask (size-1) of ring. */
+  ng_uint32_t capacity;       /**< Usable size of ring */
 
   RTE_CACHE_GUARD;
 
@@ -423,7 +405,7 @@ typedef struct _rte_ring ng_ring_s;
  */
 typedef struct __rte_aligned(16) {
   union {
-    uint64_t val[2];
+    ng_uint64_t val[2];
 #if defined(__LP64__) || defined(_LP64)
     __extension__ __int128 int128;
 #endif
@@ -431,12 +413,12 @@ typedef struct __rte_aligned(16) {
 } rte_int128_t;
 
 static __rte_always_inline void
-__rte_ring_enqueue_elems_32(ng_ring_s *r, const uint32_t size,
-    uint32_t idx, const void *obj_table, uint32_t n)
+__rte_ring_enqueue_elems_32(ng_ring_s *r, const ng_uint32_t size,
+    ng_uint32_t idx, const void *obj_table, ng_uint32_t n)
 {
   unsigned int i;
-  uint32_t *ring = (uint32_t *)&r[1];
-  const uint32_t *obj = (const uint32_t *)obj_table;
+  ng_uint32_t *ring = (ng_uint32_t *)&r[1];
+  const ng_uint32_t *obj = (const ng_uint32_t *)obj_table;
   if (likely(idx + n <= size)) {
     for (i = 0; i < (n & ~0x7); i += 8, idx += 8) {
       ring[idx] = obj[i];
@@ -474,13 +456,13 @@ __rte_ring_enqueue_elems_32(ng_ring_s *r, const uint32_t size,
 }
 
 static __rte_always_inline void
-__rte_ring_enqueue_elems_64(ng_ring_s *r, uint32_t prod_head,
-    const void *obj_table, uint32_t n)
+__rte_ring_enqueue_elems_64(ng_ring_s *r, ng_uint32_t prod_head,
+    const void *obj_table, ng_uint32_t n)
 {
   unsigned int i;
-  const uint32_t size = r->size;
-  uint32_t idx = prod_head & r->mask;
-  uint64_t *ring = (uint64_t *)&r[1];
+  const ng_uint32_t size = r->size;
+  ng_uint32_t idx = prod_head & r->mask;
+  ng_uint64_t *ring = (ng_uint64_t *)&r[1];
   const unaligned_uint64_t *obj = (const unaligned_uint64_t *)obj_table;
   if (likely(idx + n <= size)) {
     for (i = 0; i < (n & ~0x3); i += 4, idx += 4) {
@@ -507,12 +489,12 @@ __rte_ring_enqueue_elems_64(ng_ring_s *r, uint32_t prod_head,
 }
 
 static __rte_always_inline void
-__rte_ring_enqueue_elems_128(ng_ring_s *r, uint32_t prod_head,
-    const void *obj_table, uint32_t n)
+__rte_ring_enqueue_elems_128(ng_ring_s *r, ng_uint32_t prod_head,
+    const void *obj_table, ng_uint32_t n)
 {
   unsigned int i;
-  const uint32_t size = r->size;
-  uint32_t idx = prod_head & r->mask;
+  const ng_uint32_t size = r->size;
+  ng_uint32_t idx = prod_head & r->mask;
   rte_int128_t *ring = (rte_int128_t *)&r[1];
   const rte_int128_t *obj = (const rte_int128_t *)obj_table;
   if (likely(idx + n <= size)) 
@@ -543,8 +525,8 @@ __rte_ring_enqueue_elems_128(ng_ring_s *r, uint32_t prod_head,
  * single and multi producer enqueue functions.
  */
 static __rte_always_inline void
-__rte_ring_enqueue_elems(ng_ring_s *r, uint32_t prod_head,
-    const void *obj_table, uint32_t esize, uint32_t num)
+__rte_ring_enqueue_elems(ng_ring_s *r, ng_uint32_t prod_head,
+    const void *obj_table, ng_uint32_t esize, ng_uint32_t num)
 {
   /* 8B and 16B copies implemented individually to retain
    * the current performance.
@@ -555,10 +537,10 @@ __rte_ring_enqueue_elems(ng_ring_s *r, uint32_t prod_head,
     __rte_ring_enqueue_elems_128(r, prod_head, obj_table, num);
   else 
   {
-    uint32_t idx, scale, nr_idx, nr_num, nr_size;
+    ng_uint32_t idx, scale, nr_idx, nr_num, nr_size;
 
-    /* Normalize to uint32_t */
-    scale = esize / sizeof(uint32_t);
+    /* Normalize to ng_uint32_t */
+    scale = esize / sizeof(ng_uint32_t);
     nr_num = num * scale;
     idx = prod_head & r->mask;
     nr_idx = idx * scale;
@@ -569,12 +551,12 @@ __rte_ring_enqueue_elems(ng_ring_s *r, uint32_t prod_head,
 }
 
 static __rte_always_inline void
-__rte_ring_dequeue_elems_32(ng_ring_s *r, const uint32_t size,
-    uint32_t idx, void *obj_table, uint32_t n)
+__rte_ring_dequeue_elems_32(ng_ring_s *r, const ng_uint32_t size,
+    ng_uint32_t idx, void *obj_table, ng_uint32_t n)
 {
   unsigned int i;
-  uint32_t *ring = (uint32_t *)&r[1];
-  uint32_t *obj = (uint32_t *)obj_table;
+  ng_uint32_t *ring = (ng_uint32_t *)&r[1];
+  ng_uint32_t *obj = (ng_uint32_t *)obj_table;
   if (likely(idx + n <= size)) 
   {
     for (i = 0; i < (n & ~0x7); i += 8, idx += 8) 
@@ -617,13 +599,13 @@ __rte_ring_dequeue_elems_32(ng_ring_s *r, const uint32_t size,
 }
 
 static __rte_always_inline void
-__rte_ring_dequeue_elems_64(ng_ring_s *r, uint32_t cons_head,
-    void *obj_table, uint32_t n)
+__rte_ring_dequeue_elems_64(ng_ring_s *r, ng_uint32_t cons_head,
+    void *obj_table, ng_uint32_t n)
 {
   unsigned int i;
-  const uint32_t size = r->size;
-  uint32_t idx = cons_head & r->mask;
-  uint64_t *ring = (uint64_t *)&r[1];
+  const ng_uint32_t size = r->size;
+  ng_uint32_t idx = cons_head & r->mask;
+  ng_uint64_t *ring = (ng_uint64_t *)&r[1];
   unaligned_uint64_t *obj = (unaligned_uint64_t *)obj_table;
   if (likely(idx + n <= size)) {
     for (i = 0; i < (n & ~0x3); i += 4, idx += 4) {
@@ -650,12 +632,12 @@ __rte_ring_dequeue_elems_64(ng_ring_s *r, uint32_t cons_head,
 }
 
 static __rte_always_inline void
-__rte_ring_dequeue_elems_128(ng_ring_s *r, uint32_t cons_head,
-    void *obj_table, uint32_t n)
+__rte_ring_dequeue_elems_128(ng_ring_s *r, ng_uint32_t cons_head,
+    void *obj_table, ng_uint32_t n)
 {
   unsigned int i;
-  const uint32_t size = r->size;
-  uint32_t idx = cons_head & r->mask;
+  const ng_uint32_t size = r->size;
+  ng_uint32_t idx = cons_head & r->mask;
   rte_int128_t *ring = (rte_int128_t *)&r[1];
   rte_int128_t *obj = (rte_int128_t *)obj_table;
   if (likely(idx + n <= size)) {
@@ -679,8 +661,8 @@ __rte_ring_dequeue_elems_128(ng_ring_s *r, uint32_t cons_head,
  * single and multi producer enqueue functions.
  */
 static __rte_always_inline void
-__rte_ring_dequeue_elems(ng_ring_s *r, uint32_t cons_head,
-    void *obj_table, uint32_t esize, uint32_t num)
+__rte_ring_dequeue_elems(ng_ring_s *r, ng_uint32_t cons_head,
+    void *obj_table, ng_uint32_t esize, ng_uint32_t num)
 {
   /* 8B and 16B copies implemented individually to retain
    * the current performance.
@@ -690,10 +672,10 @@ __rte_ring_dequeue_elems(ng_ring_s *r, uint32_t cons_head,
   else if (esize == 16)
     __rte_ring_dequeue_elems_128(r, cons_head, obj_table, num);
   else {
-    uint32_t idx, scale, nr_idx, nr_num, nr_size;
+    ng_uint32_t idx, scale, nr_idx, nr_num, nr_size;
 
-    /* Normalize to uint32_t */
-    scale = esize / sizeof(uint32_t);
+    /* Normalize to ng_uint32_t */
+    scale = esize / sizeof(ng_uint32_t);
     nr_num = num * scale;
     idx = cons_head & r->mask;
     nr_idx = idx * scale;
@@ -713,8 +695,8 @@ __rte_ring_dequeue_elems(ng_ring_s *r, uint32_t cons_head,
  */
 
 static __rte_always_inline void
-__rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
-    uint32_t new_val, uint32_t single, uint32_t enqueue)
+__rte_ring_update_tail(struct rte_ring_headtail *ht, ng_uint32_t old_val,
+    ng_uint32_t new_val, ng_uint32_t single, ng_uint32_t enqueue)
 {
   RTE_SET_USED(enqueue);
 
@@ -723,7 +705,7 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
    * we need to wait for them to complete
    */
   if (!single)
-    rte_wait_until_equal_32((uint32_t *)(uintptr_t)&ht->tail, old_val,
+    rte_wait_until_equal_32((ng_uint32_t *)(ng_uintptr_t)&ht->tail, old_val,
       rte_memory_order_relaxed);
 
   rte_atomic_store_explicit(&ht->tail, new_val, rte_memory_order_release);
@@ -755,11 +737,11 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
 static __rte_always_inline unsigned int
 __rte_ring_move_prod_head(ng_ring_s *r, unsigned int is_sp,
     unsigned int n, enum rte_ring_queue_behavior behavior,
-    uint32_t *old_head, uint32_t *new_head,
-    uint32_t *free_entries)
+    ng_uint32_t *old_head, ng_uint32_t *new_head,
+    ng_uint32_t *free_entries)
 {
-  const uint32_t capacity = r->capacity;
-  uint32_t cons_tail;
+  const ng_uint32_t capacity = r->capacity;
+  ng_uint32_t cons_tail;
   unsigned int max = n;
   int success;
 
@@ -832,11 +814,11 @@ __rte_ring_move_prod_head(ng_ring_s *r, unsigned int is_sp,
 static __rte_always_inline unsigned int
 __rte_ring_move_cons_head(ng_ring_s *r, int is_sc,
     unsigned int n, enum rte_ring_queue_behavior behavior,
-    uint32_t *old_head, uint32_t *new_head,
-    uint32_t *entries)
+    ng_uint32_t *old_head, ng_uint32_t *new_head,
+    ng_uint32_t *entries)
 {
   unsigned int max = n;
-  uint32_t prod_tail;
+  ng_uint32_t prod_tail;
   int success;
 
   /* move cons.head atomically */
@@ -887,7 +869,7 @@ __rte_ring_move_cons_head(ng_ring_s *r, int is_sc,
  * The atomic counter structure.
  */
 typedef struct {
-	volatile int32_t cnt; /**< An internal counter value. */
+	volatile ng_int32_t cnt; /**< An internal counter value. */
 } rte_atomic32_t;
 
 /**
@@ -915,7 +897,7 @@ rte_atomic32_init(rte_atomic32_t *v)
  * @return
  *   The value of the counter.
  */
-static inline int32_t
+static inline ng_int32_t
 rte_atomic32_read(const rte_atomic32_t *v)
 {
 	return v->cnt;
@@ -930,7 +912,7 @@ rte_atomic32_read(const rte_atomic32_t *v)
  *   The new value for the counter.
  */
 static inline void
-rte_atomic32_set(rte_atomic32_t *v, int32_t new_value)
+rte_atomic32_set(rte_atomic32_t *v, ng_int32_t new_value)
 {
 	v->cnt = new_value;
 }
@@ -944,9 +926,9 @@ rte_atomic32_set(rte_atomic32_t *v, int32_t new_value)
  *   The value to be added to the counter.
  */
 static inline void
-rte_atomic32_add(rte_atomic32_t *v, int32_t inc)
+rte_atomic32_add(rte_atomic32_t *v, ng_int32_t inc)
 {
-	rte_atomic_fetch_add_explicit((volatile __rte_atomic int32_t *)&v->cnt, inc,
+	rte_atomic_fetch_add_explicit((volatile __rte_atomic ng_int32_t *)&v->cnt, inc,
 		rte_memory_order_seq_cst);
 }
 
@@ -959,9 +941,9 @@ rte_atomic32_add(rte_atomic32_t *v, int32_t inc)
  *   The value to be subtracted from the counter.
  */
 static inline void
-rte_atomic32_sub(rte_atomic32_t *v, int32_t dec)
+rte_atomic32_sub(rte_atomic32_t *v, ng_int32_t dec)
 {
-	rte_atomic_fetch_sub_explicit((volatile __rte_atomic int32_t *)&v->cnt, dec,
+	rte_atomic_fetch_sub_explicit((volatile __rte_atomic ng_int32_t *)&v->cnt, dec,
 		rte_memory_order_seq_cst);
 }
 
@@ -990,7 +972,7 @@ rte_atomic32_dec(rte_atomic32_t *v)
 }
 
 static inline int
-rte_atomic32_cmpset(volatile uint32_t *dst, uint32_t exp, uint32_t src)
+rte_atomic32_cmpset(volatile ng_uint32_t *dst, ng_uint32_t exp, ng_uint32_t src)
 {
   return __sync_bool_compare_and_swap(dst, exp, src);
 }
@@ -1008,16 +990,16 @@ rte_atomic32_cmpset(volatile uint32_t *dst, uint32_t exp, uint32_t src)
  * @return
  *   The value of v after the addition.
  */
-static inline int32_t
-rte_atomic32_add_return(rte_atomic32_t *v, int32_t inc)
+static inline ng_int32_t
+rte_atomic32_add_return(rte_atomic32_t *v, ng_int32_t inc)
 {
-	return rte_atomic_fetch_add_explicit((volatile __rte_atomic int32_t *)&v->cnt, inc,
+	return rte_atomic_fetch_add_explicit((volatile __rte_atomic ng_int32_t *)&v->cnt, inc,
 		rte_memory_order_seq_cst) + inc;
 }
 
 static __rte_always_inline void
-__rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
-    uint32_t new_val, uint32_t single, uint32_t enqueue)
+__rte_ring_update_tail(struct rte_ring_headtail *ht, ng_uint32_t old_val,
+    ng_uint32_t new_val, ng_uint32_t single, ng_uint32_t enqueue)
 {
   if (enqueue)
     rte_smp_wmb();
@@ -1028,7 +1010,7 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
    * we need to wait for them to complete
    */
   if (!single)
-    rte_wait_until_equal_32((volatile uint32_t *)(uintptr_t)&ht->tail, old_val,
+    rte_wait_until_equal_32((volatile ng_uint32_t *)(ng_uintptr_t)&ht->tail, old_val,
       rte_memory_order_relaxed);
 
   ht->tail = new_val;
@@ -1060,10 +1042,10 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
 static __rte_always_inline unsigned int
 __rte_ring_move_prod_head(ng_ring_s *r, unsigned int is_sp,
     unsigned int n, enum rte_ring_queue_behavior behavior,
-    uint32_t *old_head, uint32_t *new_head,
-    uint32_t *free_entries)
+    ng_uint32_t *old_head, ng_uint32_t *new_head,
+    ng_uint32_t *free_entries)
 {
-  const uint32_t capacity = r->capacity;
+  const ng_uint32_t capacity = r->capacity;
   unsigned int max = n;
   int success;
 
@@ -1099,7 +1081,7 @@ __rte_ring_move_prod_head(ng_ring_s *r, unsigned int is_sp,
       r->prod.head = *new_head;
       success = 1;
     } else
-      success = rte_atomic32_cmpset((uint32_t *)(uintptr_t)&r->prod.head,
+      success = rte_atomic32_cmpset((ng_uint32_t *)(ng_uintptr_t)&r->prod.head,
           *old_head, *new_head);
   } while (unlikely(success == 0));
   return n;
@@ -1131,8 +1113,8 @@ __rte_ring_move_prod_head(ng_ring_s *r, unsigned int is_sp,
 static __rte_always_inline unsigned int
 __rte_ring_move_cons_head(ng_ring_s *r, unsigned int is_sc,
     unsigned int n, enum rte_ring_queue_behavior behavior,
-    uint32_t *old_head, uint32_t *new_head,
-    uint32_t *entries)
+    ng_uint32_t *old_head, ng_uint32_t *new_head,
+    ng_uint32_t *entries)
 {
   unsigned int max = n;
   int success;
@@ -1169,7 +1151,7 @@ __rte_ring_move_cons_head(ng_ring_s *r, unsigned int is_sc,
       rte_smp_rmb();
       success = 1;
     } else {
-      success = rte_atomic32_cmpset((uint32_t *)(uintptr_t)&r->cons.head,
+      success = rte_atomic32_cmpset((ng_uint32_t *)(ng_uintptr_t)&r->cons.head,
           *old_head, *new_head);
     }
   } while (unlikely(success == 0));
@@ -1207,8 +1189,8 @@ __rte_ring_do_enqueue_elem(ng_ring_s *r, const void *obj_table,
     enum rte_ring_queue_behavior behavior, unsigned int is_sp,
     unsigned int *free_space)
 {
-  uint32_t prod_head, prod_next;
-  uint32_t free_entries;
+  ng_uint32_t prod_head, prod_next;
+  ng_uint32_t free_entries;
 
   n = __rte_ring_move_prod_head(r, is_sp, n, behavior,
       &prod_head, &prod_next, &free_entries);
@@ -1254,8 +1236,8 @@ __rte_ring_do_dequeue_elem(ng_ring_s *r, void *obj_table,
     enum rte_ring_queue_behavior behavior, unsigned int is_sc,
     unsigned int *available)
 {
-  uint32_t cons_head, cons_next=0;
-  uint32_t entries;
+  ng_uint32_t cons_head, cons_next=0;
+  ng_uint32_t entries;
 
   n = __rte_ring_move_cons_head(r, (int)is_sc, n, behavior,
       &cons_head, &cons_next, &entries);
@@ -2383,9 +2365,9 @@ rte_ring_reset(ng_ring_s *r);
 static inline unsigned int
 rte_ring_count(const ng_ring_s *r)
 {
-  uint32_t prod_tail = r->prod.tail;
-  uint32_t cons_tail = r->cons.tail;
-  uint32_t count = (prod_tail - cons_tail) & r->mask;
+  ng_uint32_t prod_tail = r->prod.tail;
+  ng_uint32_t cons_tail = r->cons.tail;
+  ng_uint32_t count = (prod_tail - cons_tail) & r->mask;
   return (count > r->capacity) ? r->capacity : count;
 }
 
@@ -2430,8 +2412,8 @@ rte_ring_full(const ng_ring_s *r)
 static inline int
 rte_ring_empty(const ng_ring_s *r)
 {
-  uint32_t prod_tail = r->prod.tail;
-  uint32_t cons_tail = r->cons.tail;
+  ng_uint32_t prod_tail = r->prod.tail;
+  ng_uint32_t cons_tail = r->cons.tail;
   return cons_tail == prod_tail;
 }
 

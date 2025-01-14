@@ -123,7 +123,7 @@ Unsafe characters: Other ASCII characters like space < > { } | ` ^ \ are conside
 unsafe and are not allowed in URLs.
 Non-ASCII characters: Any character outside the US-ASCII charset are not allowed in URLs.
 */
-const uint8_t __isValidUrlToken[256] ={
+const ng_uint8_t __isValidUrlToken[256] ={
   /*   0 nul    1 soh    2 stx    3 etx    4 eot    5 enq    6 ack    7 bel  */
        0,       0,       0,       0,       0,       0,       0,       0,
   /*   8 bs     9 ht    10 nl    11 vt    12 np    13 cr    14 so    15 si   */
@@ -208,8 +208,8 @@ ng_urlorpath_dlim_convert(char *str, int len,
 #define __TOP_MAX_E __TOP_MAX - 1
 
 struct _topp{
-  uint16_t i;
-  uint16_t l;
+  ng_uint16_t i;
+  ng_uint16_t l;
 };
 
 int ng_urlorPath_normalize(ng_block_s *url)
@@ -334,7 +334,7 @@ __ng_url_parse(ng_url_s *url, const char *urlstr, int urllen)
   
   for (int i = 0; i < urllen; i++)
   {
-    if (!__isValidUrlToken[(int)(uint8_t)urlstr[i]])
+    if (!__isValidUrlToken[(int)(ng_uint8_t)urlstr[i]])
     {
       log_error("bad url character");
       return URL_ERROR_CHARACTER;
@@ -439,7 +439,7 @@ __ng_url_parse(ng_url_s *url, const char *urlstr, int urllen)
       const char *endp;
       s = cp + 1;
       url->port = ng_atou32(s,p-s,&endp);
-      if (endp != p || url->port > UINT16_MAX)
+      if (endp != p || url->port > NG_UINT16_MAX)
         return URL_ERROR_BAD_PORT;
     }
     else

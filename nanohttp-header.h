@@ -2581,12 +2581,12 @@ extern const ng_block_s ng_http_headers_byid[];
 #define __HDR_BUF_DEF(x) (x), sizeof(x)-1
 
 #if __HTTP_SMALL_SIZE
-extern const uint8_t __isValidToken[256];
+extern const ng_uint8_t __isValidToken[256];
 #define ng_isValidFieldName(c) (__isValidToken[c]&0x1)
 #define ng_isValidFieldValue(c) (__isValidToken[c]&0x2)
 #else
-extern const uint8_t __isValidFieldValue[256];
-extern const uint8_t __isValidFieldName[256];
+extern const ng_uint8_t __isValidFieldValue[256];
+extern const ng_uint8_t __isValidFieldName[256];
 #define ng_isValidFieldName(c) (__isValidFieldName[c])
 #define ng_isValidFieldValue(c) (__isValidFieldValue[c])
 #endif
@@ -2606,16 +2606,16 @@ struct _http_header_parser {
   char buffer[MAX_HEADER_SIZE];
   ng_buffer_s data;
   ng_list_head_s header;
-  uint16_t state;
-  uint16_t type;
-  uint16_t version;
+  ng_uint16_t state;
+  ng_uint16_t type;
+  ng_uint16_t version;
   union{
     struct{
-      uint16_t method;
+      ng_uint16_t method;
       ng_block_s path;
     };
     struct{
-      uint16_t code;
+      ng_uint16_t code;
       ng_block_s desc;
     };
   };

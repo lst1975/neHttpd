@@ -118,8 +118,8 @@
 typedef struct hresponse
 {
   http_version_e version;
-  int16_t errcode;
-  int16_t desc_len;
+  ng_int16_t errcode;
+  ng_int16_t desc_len;
   char *desc;
   ng_list_head_s header;
 

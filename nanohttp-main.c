@@ -229,7 +229,7 @@ post_service(httpd_conn_s *conn, hrequest_s *req)
 }
 
 static herror_t
-__root_service_read(void *arg, const char *buf, size_t length)
+__root_service_read(void *arg, const char *buf, ng_size_t length)
 {
   httpd_conn_s *conn=(httpd_conn_s *)arg;
   return http_output_stream_write(conn->out, (const unsigned char *)buf, length);
@@ -987,9 +987,9 @@ file_service(httpd_conn_s *conn, hrequest_s *req)
 }
 
 void json_show( const char * json,
-           size_t length )
+           ng_size_t length )
 {
-  size_t start = 0, next = 0;
+  ng_size_t start = 0, next = 0;
   JSONPair_s pair = { 0 };
   JSONStatus_e result;
 
@@ -1020,11 +1020,11 @@ static int json_test(void)
   JSONStatus_e result;
   char buffer[] = "{\"foo\":\"abc\",\"bar\":{\"foo\":\"xyz\"},"
     "\"ar\":[{\"a1\":0,\"a2\":true},{\"a1\":1,\"a2\":false}]}";
-  size_t bufferLength = sizeof( buffer ) - 1;
+  ng_size_t bufferLength = sizeof( buffer ) - 1;
   char queryKey[] = "bar.foo";
-  size_t queryKeyLength = sizeof( queryKey ) - 1;
+  ng_size_t queryKeyLength = sizeof( queryKey ) - 1;
   char * value;
-  size_t valueLength;
+  ng_size_t valueLength;
 
   // Calling JSON_Validate() is not necessary if the document is 
   // guaranteed to be valid.
@@ -1106,6 +1106,15 @@ void main_print_license(int daemonize)
 int
 main(int argc, char **argv)
 {
+  RTE_BUILD_BUG_ON(sizeof(ng_uint64_t) != 8);
+  RTE_BUILD_BUG_ON(sizeof(ng_uint32_t) != 4);
+  RTE_BUILD_BUG_ON(sizeof(ng_uint16_t) != 2);
+  RTE_BUILD_BUG_ON(sizeof(ng_uint8_t)  != 1);
+  RTE_BUILD_BUG_ON(sizeof(ng_int64_t) != 8);
+  RTE_BUILD_BUG_ON(sizeof(ng_int32_t) != 4);
+  RTE_BUILD_BUG_ON(sizeof(ng_int16_t) != 2);
+  RTE_BUILD_BUG_ON(sizeof(ng_int8_t)  != 1);
+  
   int daemonize = 0, result; 
   herror_t status;
 

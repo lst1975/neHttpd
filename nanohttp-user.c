@@ -74,7 +74,7 @@ static int __nanohttp_users2file(void);
 #define __USER_FILE "data/users.json"
 
 static herror_t 
-__file_user(void *arg, const char *buf, size_t length) 
+__file_user(void *arg, const char *buf, ng_size_t length) 
 {
   ng_buffer_s *t = (ng_buffer_s *)arg;
   memcpy((char *)t->data + t->len, buf, length);
@@ -433,7 +433,7 @@ __nanohttp_user2json(httpd_user_t *entry, char *b, int len, int count)
 static inline int 
 json_printer_file(ng_buffer_s *b, const char *fmt, ...)
 {
-  size_t n;
+  ng_size_t n;
   va_list args;
 
   va_start(args, fmt);

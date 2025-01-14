@@ -111,7 +111,7 @@ static void ng_print_version(void *log)
 #pragma comment(lib, "pdh.lib")
 #endif
 
-char *ng_get_pwd(char *path, size_t len) 
+char *ng_get_pwd(char *path, ng_size_t len) 
 {
   // Get the current executable path
   if (!GetModuleFileName(NULL, path, len))
@@ -134,10 +134,10 @@ static ng_result_t __ng_get_freq(void *log, double *freq)
 
 const char *__os_strerror(int err)
 {
-  size_t         len;
-  static size_t  lang = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
+  ng_size_t         len;
+  static ng_size_t  lang = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
   char *errstr = RTE_PER_LCORE(ng_strerror_buffer);
-  size_t size = sizeof(RTE_PER_LCORE(ng_strerror_buffer));
+  ng_size_t size = sizeof(RTE_PER_LCORE(ng_strerror_buffer));
 
   len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
                       NULL, err, lang, (char *)errstr, size, NULL);
@@ -203,7 +203,7 @@ int ng_os_usleep(int usec)
 void
 ng_gettimeofday(ng_tmv_s *tp)
 {
-  uint64_t  intervals;
+  ng_uint64_t  intervals;
   FILETIME  ft;
 
   GetSystemTimeAsFileTime(&ft);
@@ -221,7 +221,7 @@ ng_gettimeofday(ng_tmv_s *tp)
    * See also MSKB Q167296.
    */
 
-  intervals = ((uint64_t) ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+  intervals = ((ng_uint64_t) ft.dwHighDateTime << 32) | ft.dwLowDateTime;
   intervals -= 116444736000000000;
 
   tp->tv_sec = (long) (intervals / 10000000);
@@ -846,7 +846,7 @@ __os_get_tzoffset(void)
 const char *__os_strerror(int err)
 {
   char *errstr = RTE_PER_LCORE(ng_strerror_buffer);
-  size_t size = sizeof(RTE_PER_LCORE(ng_strerror_buffer));
+  ng_size_t size = sizeof(RTE_PER_LCORE(ng_strerror_buffer));
   int len = snprintf(errstr, size, "%s", strerror(err));
   
   /* remove ".\r\n\0" */
@@ -859,7 +859,7 @@ const char *__os_strerror(int err)
   return errstr;
 }
 
-char *ng_get_pwd(char *path, size_t len) 
+char *ng_get_pwd(char *path, ng_size_t len) 
 {
   // Get the current executable path
   return getcwd(path, len);
@@ -1125,9 +1125,9 @@ static void __ng_os_deinit(void *log)
 #if defined(__APPLE__)
 
 #include <sys/sysctl.h>
-static size_t CacheLineSize(void) {
-	size_t lineSize = 0;
-	size_t sizeOfLineSize = sizeof(lineSize);
+static ng_size_t CacheLineSize(void) {
+	ng_size_t lineSize = 0;
+	ng_size_t sizeOfLineSize = sizeof(lineSize);
 	sysctlbyname("hw.cachelinesize", &lineSize, &sizeOfLineSize, 0, 0);
 	return lineSize;
 }
@@ -1136,8 +1136,8 @@ static size_t CacheLineSize(void) {
 
 #include <stdlib.h>
 #include <windows.h>
-static size_t CacheLineSize(void) {
-	size_t lineSize = 0;
+static ng_size_t CacheLineSize(void) {
+	ng_size_t lineSize = 0;
 	DWORD bufferSize = 0;
 	DWORD i = 0;
 	SYSTEM_LOGICAL_PROCESSOR_INFORMATION * buffer = 0;
@@ -1160,7 +1160,7 @@ static size_t CacheLineSize(void) {
 #elif defined(__linux__)
 
 #include <stdio.h>
-static size_t CacheLineSize(void) {
+static ng_size_t CacheLineSize(void) {
 	FILE * p = 0;
 	p = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
 	int lineSize = 0;
@@ -1173,7 +1173,7 @@ static size_t CacheLineSize(void) {
 }
 
 #else
-static size_t CacheLineSize(void) {
+static ng_size_t CacheLineSize(void) {
   return ng_ALIGN_SIZE;
 }
 #endif
@@ -1181,7 +1181,7 @@ static size_t CacheLineSize(void) {
 #if (( __i386__ || __amd64__ ) && ( __GNUC__ || __INTEL_COMPILER ))
 #if ( __i386__ )
 static __ng_inline__ void
-__os_cpuid(uint32_t i, uint32_t *buf)
+__os_cpuid(ng_uint32_t i, ng_uint32_t *buf)
 {
   /*
    * we could not use %ebx as output parameter if gcc builds PIC,
@@ -1208,9 +1208,9 @@ __os_cpuid(uint32_t i, uint32_t *buf)
 #else /* __amd64__ */
 
 static __ng_inline__ void
-__os_cpuid(uint32_t i, uint32_t *buf)
+__os_cpuid(ng_uint32_t i, ng_uint32_t *buf)
 {
-    uint32_t  eax, ebx, ecx, edx;
+    ng_uint32_t  eax, ebx, ecx, edx;
 
     __asm__ (
 
@@ -1238,7 +1238,7 @@ __ng_cpuinfo_cacheline(void)
     return ngx_cacheline_size;
   }
   char      *vendor;
-  uint32_t   vbuf[5], cpu[4], model;
+  ng_uint32_t   vbuf[5], cpu[4], model;
 
   vbuf[0] = 0;
   vbuf[1] = 0;
@@ -1317,12 +1317,12 @@ ng_cpuinfo_cacheline(void)
   return ngx_cacheline_size;
 }
 
-uint64_t ng_get_freq(void)
+ng_uint64_t ng_get_freq(void)
 {
   double freq;
   if (ng_ERR_NONE != __ng_get_freq(NULL, &freq))
     return 0;
-  return (uint64_t)freq;
+  return (ng_uint64_t)freq;
 }
 
 #ifdef WIN32

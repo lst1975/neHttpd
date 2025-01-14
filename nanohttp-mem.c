@@ -74,11 +74,11 @@ struct _mentry {
   ng_list_head_s link;
 #if __NHTTP_MEM_DEBUG  
   const char *file;
-  uint64_t line:16;
+  ng_uint64_t line:16;
 #endif  
-  uint64_t iscache:1;
-  uint64_t isinq:1;
-  uint64_t size:46;
+  ng_uint64_t iscache:1;
+  ng_uint64_t isinq:1;
+  ng_uint64_t size:46;
 }__rte_cache_aligned;
 
 typedef struct _mentry http_mentry_s;
@@ -96,9 +96,9 @@ typedef struct _mentry http_mentry_s;
 #define TSN_RESERVED_HEADROOM 128
 
 #if !__NHTTP_USE_NATIVE_MEM
-static uint8_t *msg_array_ptr;
-static uint8_t *msg_array_end;
-static uint8_t msg_cache_array[(TSN_MEM_Cache_Max-1)*TSN_MEM_ENTRY_SIZE]={0};
+static ng_uint8_t *msg_array_ptr;
+static ng_uint8_t *msg_array_end;
+static ng_uint8_t msg_cache_array[(TSN_MEM_Cache_Max-1)*TSN_MEM_ENTRY_SIZE]={0};
 ng_ring_s *__http_mem_ring = NULL;
 
 #if __NHTTP_MEM_DEBUG  
@@ -140,8 +140,8 @@ static void __http_malloced_list_deq(http_mentry_s *e)
 #endif
 
 #if __NHTTP_MEM_DEBUG  
-#define __P2M(p) ((uint8_t *)(p)+sizeof(http_mentry_s))
-#define __M2P(p) ((uint8_t *)(p)-sizeof(http_mentry_s))
+#define __P2M(p) ((ng_uint8_t *)(p)+sizeof(http_mentry_s))
+#define __M2P(p) ((ng_uint8_t *)(p)-sizeof(http_mentry_s))
 #else
 #define __P2M(p) (p)
 #define __M2P(p) (p)
@@ -153,7 +153,7 @@ int http_memcache_init(void)
   log_info("[OK]: http_memcache_init.");
   return 0;
 #else
-  uint8_t *p;
+  ng_uint8_t *p;
 
   RTE_BUILD_BUG_ON(!POWEROF2(RTE_CACHE_LINE_SIZE));
   RTE_BUILD_BUG_ON(RTE_CACHE_LINE_SIZE < 32);
@@ -232,7 +232,7 @@ void http_memcache_free(void)
   
   while (!rte_ring_mc_dequeue(__http_mem_ring, &p))
   {
-    if ((uint8_t *)p >= msg_array_ptr && (uint8_t *)p < msg_array_end)
+    if ((ng_uint8_t *)p >= msg_array_ptr && (ng_uint8_t *)p < msg_array_end)
       continue;
     os_free(p);
   }
@@ -261,7 +261,7 @@ void http_memcache_free(void)
 #endif
 }
 
-void *__http_malloc(size_t size
+void *__http_malloc(ng_size_t size
 #if __NHTTP_MEM_DEBUG  
   , const char *file, int line
 #endif
@@ -324,7 +324,7 @@ void __http_free(void *ptr)
   __http_malloced_list_deq(e);
   ng_smp_mb();
 
-  if ((uint8_t *)e >= msg_array_ptr && (uint8_t *)e < msg_array_end)
+  if ((ng_uint8_t *)e >= msg_array_ptr && (ng_uint8_t *)e < msg_array_end)
   {
     rte_ring_mp_enqueue(__http_mem_ring, e);
     return;

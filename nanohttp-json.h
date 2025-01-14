@@ -140,7 +140,7 @@ typedef enum
  *     // Variables used in this example.
  *     JSONStatus_e result;
  *     char buffer[] = "{\"foo\":\"abc\",\"bar\":{\"foo\":\"xyz\"}}";
- *     size_t bufferLength = sizeof( buffer ) - 1;
+ *     ng_size_t bufferLength = sizeof( buffer ) - 1;
  *
  *     result = JSON_Validate( buffer, bufferLength );
  *
@@ -152,7 +152,7 @@ typedef enum
 JSONStatus_e 
 JSON_Validate(
   const char *buf,
-  size_t max 
+  ng_size_t max 
 );
 
 /* @[declare_json_validate] */
@@ -203,11 +203,11 @@ JSON_Validate(
  *     // Variables used in this example.
  *     JSONStatus_e result;
  *     char buffer[] = "{\"foo\":\"abc\",\"bar\":{\"foo\":\"xyz\"}}";
- *     size_t bufferLength = sizeof( buffer ) - 1;
+ *     ng_size_t bufferLength = sizeof( buffer ) - 1;
  *     char query[] = "bar.foo";
- *     size_t queryLength = sizeof( query ) - 1;
+ *     ng_size_t queryLength = sizeof( query ) - 1;
  *     char * value;
- *     size_t valueLength;
+ *     ng_size_t valueLength;
  *
  *     // Calling JSON_Validate() is not necessary if the document is guaranteed to be valid.
  *     result = JSON_Validate( buffer, bufferLength );
@@ -278,11 +278,11 @@ typedef enum
 JSONStatus_e 
 JSON_SearchT(
   char        *buf,
-  size_t       max,
+  ng_size_t       max,
   const char  *query,
-  size_t       queryLength,
+  ng_size_t       queryLength,
   char       **outValue,
-  size_t      *outValueLength,
+  ng_size_t      *outValueLength,
   JSONTypes_e *outType
 );
 /* @[declare_json_searcht] */
@@ -304,11 +304,11 @@ JSON_SearchT(
 JSONStatus_e 
 JSON_SearchConst(
   const char   *buf,
-  size_t        max,
+  ng_size_t        max,
   const char   *query,
-  size_t        queryLength,
+  ng_size_t        queryLength,
   const char  **outValue,
-  size_t       *outValueLength,
+  ng_size_t       *outValueLength,
   JSONTypes_e  *outType 
 );
 
@@ -323,7 +323,7 @@ struct _json_pair
 {
   ng_block_s key;       /**< @brief Pointer to the code point sequence for key. */
   ng_block_s val;       /**< @brief Pointer to the code point sequence for value. */
-  uint64_t isDouble:1;   
+  ng_uint64_t isDouble:1;   
   JSONTypes_e jsonType; /**< @brief JSON-specific type of the value. */
   JSONPair_s *siblings;
   JSONPair_s *children;
@@ -366,7 +366,7 @@ int
 json_tostr(
   JSONPair_s *pair, 
   char *buf, 
-  size_t length, 
+  ng_size_t length, 
   int depth, 
   const char *pad
 );
@@ -382,40 +382,40 @@ JSONStatus_e
 json_parse(
   JSONPair_s **pair, 
   const char *json, 
-  size_t length
+  ng_size_t length
 );
 
 JSONPair_s *
 json_find_bykey(
   JSONPair_s *pair, 
   const char *key, 
-  size_t length
+  ng_size_t length
 );
 
 JSONPair_s *
 json_find_bykey_head(
   JSONPair_s *pair, 
   const char *key, 
-  size_t length
+  ng_size_t length
 );
 
 JSONPair_s *
 json_find_bykey_head_tail(
   JSONPair_s *pair, 
   const char *key, 
-  size_t headLen, 
+  ng_size_t headLen, 
   const char *tailKey, 
-  size_t tailKeyLen
+  ng_size_t tailKeyLen
 );
 
 JSONPair_s *
 json_find_bykey_head_offset(
   JSONPair_s *pair, 
   const char *key, 
-  size_t headLen, 
-  size_t startOffset, 
+  ng_size_t headLen, 
+  ng_size_t startOffset, 
   const char *startKey, 
-  size_t startKeyLen
+  ng_size_t startKeyLen
 );
 
 /**
@@ -459,9 +459,9 @@ json_find_bykey_head_offset(
  *     };
  *
  *     void show( const char * json,
- *                size_t length )
+ *                ng_size_t length )
  *     {
- *         size_t start = 0, next = 0;
+ *         ng_size_t start = 0, next = 0;
  *         JSONPair_s pair = { 0 };
  *         JSONStatus_e result;
  *
@@ -490,9 +490,9 @@ json_find_bykey_head_offset(
 JSONStatus_e 
 JSON_Iterate(
   const char *buf,
-  size_t       max,
-  size_t      *start,
-  size_t      *next,
+  ng_size_t       max,
+  ng_size_t      *start,
+  ng_size_t      *next,
   JSONPair_s  *outPair 
 );
 

@@ -120,7 +120,7 @@
  * int main(int argc, char **argv)
  * {
  *   herror_t status;
- *   size_t len;
+ *   ng_size_t len;
  *   httpc_conn_s conn;
  *
  *   if (argc < 2)

@@ -185,7 +185,7 @@
  */
 #ifndef LONG_LONG
 # define LONG_LONG long long
-/*# define LONG_LONG int64_t*/
+/*# define LONG_LONG ng_int64_t*/
 #endif
 
 /*
@@ -224,16 +224,16 @@ struct DATA {
  */
 PRIVATE inline int ng_itoa(double n, char *buf, int len) 
 {
-  return i64toa_jeaiii((int64_t)n, buf, len);
+  return i64toa_jeaiii((ng_int64_t)n, buf, len);
 }
 
 /* for the format */
 PRIVATE void conv_flag(char *, struct DATA *);
 PRIVATE void fdtoa(struct DATA *p, double d);
-PRIVATE void decimal_i(struct DATA *, int64_t);
-PRIVATE void decimal_u(struct DATA *, uint64_t);
-PRIVATE void octal(struct DATA *, uint64_t);
-PRIVATE void hexa(struct DATA *, uint64_t);
+PRIVATE void decimal_i(struct DATA *, ng_int64_t);
+PRIVATE void decimal_u(struct DATA *, ng_uint64_t);
+PRIVATE void octal(struct DATA *, ng_uint64_t);
+PRIVATE void hexa(struct DATA *, ng_uint64_t);
 PRIVATE void strings(struct DATA *, const char *);
 
 /* those are defines specific to ng_snprintf to hopefully
@@ -272,7 +272,7 @@ PRIVATE void strings(struct DATA *, const char *);
           break; \
         } \
         if ((p)->counter < (p)->length) { \
-          *(p)->holder++ = (uint8_t)(c); \
+          *(p)->holder++ = (ng_uint8_t)(c); \
           (p)->counter++; \
         } \
       } while(0)
@@ -328,7 +328,7 @@ PRIVATE void strings(struct DATA *, const char *);
  * the representation with the right padding
  */
 PRIVATE void
-decimal_i(struct DATA *p, int64_t d)
+decimal_i(struct DATA *p, ng_int64_t d)
 {
   char buf[MAX_INT];
   char *tmp=buf;
@@ -347,7 +347,7 @@ decimal_i(struct DATA *p, int64_t d)
  * the representation with the right padding
  */
 PRIVATE void
-decimal_u(struct DATA *p, uint64_t d)
+decimal_u(struct DATA *p, ng_uint64_t d)
 {
   char buf[MAX_INT];
   char *tmp=buf;
@@ -363,7 +363,7 @@ decimal_u(struct DATA *p, uint64_t d)
 }
 
 static int 
-intToOctalString(uint64_t number, char *octalString) {
+intToOctalString(ng_uint64_t number, char *octalString) {
   int i = 0;
   int temp = number;
 
@@ -400,7 +400,7 @@ intToOctalString(uint64_t number, char *octalString) {
 
 /* for %o octal representation */
 PRIVATE void
-octal(struct DATA *p, uint64_t d)
+octal(struct DATA *p, ng_uint64_t d)
 {
   /* The octal representation of UINT64_MAX is 1777777777777777777777 
    * UINT64_MAX is 2^64 - 1, 18446744073709551615
@@ -494,7 +494,7 @@ fdtoa(struct DATA *p, double d)
 
 /* for %o octal representation */
 PRIVATE void
-times(struct DATA *p, uint64_t d)
+times(struct DATA *p, ng_uint64_t d)
 {
   char buf[32];
   int len;
@@ -503,12 +503,12 @@ times(struct DATA *p, uint64_t d)
   switch (p->pf[1]) {
   case 'r':
     p->pf++;
-    tm = (ng_rtc_time_s *)(uintptr_t)d;
+    tm = (ng_rtc_time_s *)(ng_uintptr_t)d;
     len = raw_ng_tm(tm, buf, sizeof(buf));
 		break;
 	case 'R':
     p->pf++;
-    tm = (ng_rtc_time_s *)(uintptr_t)d;
+    tm = (ng_rtc_time_s *)(ng_uintptr_t)d;
     len = raw_ng_http_tm(tm, buf, sizeof(buf), p->square);
 		break;
   case 'T':
@@ -533,7 +533,7 @@ times(struct DATA *p, uint64_t d)
 
 /* for %x %X hexadecimal representation */
 PRIVATE void
-hexa(struct DATA *d, const uint64_t n)
+hexa(struct DATA *d, const ng_uint64_t n)
 {
   char buf[MAX_INT];
   int len;
@@ -659,7 +659,7 @@ conv_flag(char * s, struct DATA * p)
   }
 }
 
-static inline char *hex_byte_pack_upper(char *buf, uint8_t byte)
+static inline char *hex_byte_pack_upper(char *buf, ng_uint8_t byte)
 {
   const char hex_asc_upper[] = "0123456789ABCDEF";
 #define hex_asc_upper_lo(x)  hex_asc_upper[((x) & 0x0f)]
@@ -669,7 +669,7 @@ static inline char *hex_byte_pack_upper(char *buf, uint8_t byte)
   return buf;
 }
 
-static inline char *hex_byte_pack(char *buf, uint8_t byte)
+static inline char *hex_byte_pack(char *buf, ng_uint8_t byte)
 {
   const char hex_asc[]       = "0123456789abcdef";
 #define hex_asc_lo(x)  hex_asc[((x) & 0x0f)]
@@ -678,7 +678,7 @@ static inline char *hex_byte_pack(char *buf, uint8_t byte)
   *buf++ = hex_asc_lo(byte);
   return buf;
 }
-static void uuid_string(struct DATA *d, const uint8_t *addr)
+static void uuid_string(struct DATA *d, const ng_uint8_t *addr)
 {
 /* UUID constants */
 
@@ -696,18 +696,18 @@ static const int uuid_index[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
   char uuid[UUID_STRING_LENGTH + 1];
   char *p = uuid;
   int i;
-  const uint8_t *index = (const uint8_t *)uuid_index;
-  int8_t uc = ngrtos_FALSE;
+  const ng_uint8_t *index = (const ng_uint8_t *)uuid_index;
+  ng_int8_t uc = ngrtos_FALSE;
 
   switch (d->pf[1]) {
   case 'L':
     uc = ngrtos_TRUE;
-    index = (const uint8_t *)guid_index;
+    index = (const ng_uint8_t *)guid_index;
     d->pf++;
     break;
 
   case 'l':
-    index = (const uint8_t *)guid_index;
+    index = (const ng_uint8_t *)guid_index;
     d->pf++;
     break;
     
@@ -738,13 +738,13 @@ static const int uuid_index[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
 }
 
 static void 
-mac_address_string(struct DATA *d, const uint8_t *addr)
+mac_address_string(struct DATA *d, const ng_uint8_t *addr)
 {
   char mac_addr[sizeof("xx:xx:xx:xx:xx:xx")];
   char *p = mac_addr;
   int i;
   char separator;
-  int8_t reversed = ngrtos_FALSE;
+  ng_int8_t reversed = ngrtos_FALSE;
   char pf = d->fmtchr;
   
   switch (d->pf[1]) {
@@ -793,7 +793,7 @@ mac_address_string(struct DATA *d, const uint8_t *addr)
  * from the author, Douglas W. Jones).
  *
  * It turns out there is precisely one 26 bit fixed-point
- * approximation a of 64/100 for which x/100 == (x * (uint64_t)a) >> 32
+ * approximation a of 64/100 for which x/100 == (x * (ng_uint64_t)a) >> 32
  * holds for all x in [0, 10^8-1], namely a = 0x28f5c29. The actual
  * range happens to be somewhat larger (x <= 1073741898), but that's
  * irrelevant for our purpose.
@@ -806,8 +806,8 @@ mac_address_string(struct DATA *d, const uint8_t *addr)
  * for all x <= 43698.
  */
 
-static const uint16_t decpair[100] = {
-#define _(x) (uint16_t) RTE_LE16(((x % 10) | ((x / 10) << 8)) + 0x3030)
+static const ng_uint16_t decpair[100] = {
+#define _(x) (ng_uint16_t) RTE_LE16(((x % 10) | ((x / 10) << 8)) + 0x3030)
 	_( 0), _( 1), _( 2), _( 3), _( 4), _( 5), _( 6), _( 7), _( 8), _( 9),
 	_(10), _(11), _(12), _(13), _(14), _(15), _(16), _(17), _(18), _(19),
 	_(20), _(21), _(22), _(23), _(24), _(25), _(26), _(27), _(28), _(29),
@@ -837,8 +837,8 @@ put_dec_trunc8(char *buf, unsigned r)
     goto out_r;
 
   /* 100 <= r < 10^8 */
-  q = (r * (uint64_t)0x28f5c29) >> 32;
-  *((uint16_t *)buf) = decpair[r - 100*q];
+  q = (r * (ng_uint64_t)0x28f5c29) >> 32;
+  *((ng_uint16_t *)buf) = decpair[r - 100*q];
   buf += 2;
 
   /* 1 <= q < 10^6 */
@@ -846,8 +846,8 @@ put_dec_trunc8(char *buf, unsigned r)
     goto out_q;
 
   /*  100 <= q < 10^6 */
-  r = (q * (uint64_t)0x28f5c29) >> 32;
-  *((uint16_t *)buf) = decpair[q - 100*r];
+  r = (q * (ng_uint64_t)0x28f5c29) >> 32;
+  *((ng_uint16_t *)buf) = decpair[q - 100*r];
   buf += 2;
 
   /* 1 <= r < 10^4 */
@@ -856,24 +856,24 @@ put_dec_trunc8(char *buf, unsigned r)
 
   /* 100 <= r < 10^4 */
   q = (r * 0x147b) >> 19;
-  *((uint16_t *)buf) = decpair[r - 100*q];
+  *((ng_uint16_t *)buf) = decpair[r - 100*q];
   buf += 2;
 out_q:
   /* 1 <= q < 100 */
   r = q;
 out_r:
   /* 1 <= r < 100 */
-  *((uint16_t *)buf) = decpair[r];
+  *((ng_uint16_t *)buf) = decpair[r];
   buf += r < 10 ? 1 : 2;
   return buf;
 }
 #endif
 
 static char *
-__ip4_string(char *p, const uint8_t *addr, const char *fmt)
+__ip4_string(char *p, const ng_uint8_t *addr, const char *fmt)
 {
   int i;
-  int8_t leading_zeros = (fmt[0] == 'i');
+  ng_int8_t leading_zeros = (fmt[0] == 'i');
   int index;
   int step;
 
@@ -941,9 +941,9 @@ __ip4_string(char *p, const uint8_t *addr, const char *fmt)
 }
 
 #ifdef WIN32
-  #define ng_s6_addr32(a, i) ((uint32_t *)(a))[i]
-  #define ng_s6_addr16(a, i) ((uint16_t *)(a))[i]
-  #define ng_s6_addr8(a, i)  ((uint8_t  *)(a))[i]
+  #define ng_s6_addr32(a, i) ((ng_uint32_t *)(a))[i]
+  #define ng_s6_addr16(a, i) ((ng_uint16_t *)(a))[i]
+  #define ng_s6_addr8(a, i)  ((ng_uint8_t  *)(a))[i]
 #else
   #define ng_s6_addr32(a, i) (a)->s6_addr32[i]
   #define ng_s6_addr16(a, i) (a)->s6_addr16[i]
@@ -974,7 +974,7 @@ ipv6_addr_is_isatap(const struct in6_addr *a)
 }
 
 static char *
-ip6_compressed_string(char *p, const uint8_t *addr)
+ip6_compressed_string(char *p, const ng_uint8_t *addr)
 {
   const char hex_asc[] = "0123456789abcdef";
 #define hex_asc_lo(x)	hex_asc[((x) & 0x0f)]
@@ -982,16 +982,16 @@ ip6_compressed_string(char *p, const uint8_t *addr)
   unsigned char zerolength[8];
   int longest = 1;
   int colonpos = -1;
-  uint16_t word;
-  uint8_t hi, lo;
-  int8_t needcolon = ngrtos_FALSE;
-  int8_t useIPv4;
+  ng_uint16_t word;
+  ng_uint8_t hi, lo;
+  ng_int8_t needcolon = ngrtos_FALSE;
+  ng_int8_t useIPv4;
   struct in6_addr in6;
 
   ng_memcpy(&in6, addr, sizeof(struct in6_addr));
 
   useIPv4 = ipv6_addr_v4mapped(&in6) || ipv6_addr_is_isatap(&in6);
-  *(uint64_t *)zerolength = 0;
+  *(ng_uint64_t *)zerolength = 0;
 
   if (useIPv4)
     range = 6;
@@ -1036,7 +1036,7 @@ ip6_compressed_string(char *p, const uint8_t *addr)
       *p++ = ':';
       needcolon = ngrtos_FALSE;
     }
-    /* hex uint16_t without leading 0s */
+    /* hex ng_uint16_t without leading 0s */
     word = ng_ntohs(ng_s6_addr8(&in6, i));
     hi = word >> 8;
     lo = word & 0xff;
@@ -1059,7 +1059,7 @@ ip6_compressed_string(char *p, const uint8_t *addr)
   {
     if (needcolon)
       *p++ = ':';
-    p = __ip4_string(p, (const uint8_t *)&ng_s6_addr8(&in6, 12), "I4");
+    p = __ip4_string(p, (const ng_uint8_t *)&ng_s6_addr8(&in6, 12), "I4");
   }
   *p = '\0';
 
@@ -1071,7 +1071,7 @@ ip6_compressed_string(char *p, const uint8_t *addr)
 #endif
 
 static char *
-ip6_string(char *p, const uint8_t *addr, const char *fmt)
+ip6_string(char *p, const ng_uint8_t *addr, const char *fmt)
 {
   int i;
 
@@ -1088,7 +1088,7 @@ ip6_string(char *p, const uint8_t *addr, const char *fmt)
 }
 
 static void
-__ng_inet_ntop6(char *ip6_addr, const uint8_t *addr, struct DATA *d)
+__ng_inet_ntop6(char *ip6_addr, const ng_uint8_t *addr, struct DATA *d)
 {
   if (d->fmtchr == 'I' && d->pf[1] == 'c')
   {
@@ -1102,7 +1102,7 @@ __ng_inet_ntop6(char *ip6_addr, const uint8_t *addr, struct DATA *d)
 }
 
 static void
-__ip6_addr_string(struct DATA *d, const uint8_t *addr)
+__ip6_addr_string(struct DATA *d, const ng_uint8_t *addr)
 {
   char ip6_addr[sizeof("xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:255.255.255.255")];
   __ng_inet_ntop6(ip6_addr, addr, d);
@@ -1110,7 +1110,7 @@ __ip6_addr_string(struct DATA *d, const uint8_t *addr)
 }
 
 static void
-__ip4_addr_string(struct DATA *d, const uint8_t *addr)
+__ip4_addr_string(struct DATA *d, const ng_uint8_t *addr)
 {
   char ip4_addr[sizeof("255.255.255.255")];
   char fmt[]={d->fmtchr, '4', d->pf[1]};
@@ -1125,17 +1125,17 @@ __ip4_addr_string(struct DATA *d, const uint8_t *addr)
 static void
 ip6_addr_string_sa(struct DATA *d, const struct sockaddr_in6 *sa)
 {
-  int8_t have_p = ngrtos_FALSE;
-  int8_t have_s = ngrtos_FALSE;
-  int8_t have_f = ngrtos_FALSE;
-  int8_t have_c = ngrtos_FALSE;
+  ng_int8_t have_p = ngrtos_FALSE;
+  ng_int8_t have_s = ngrtos_FALSE;
+  ng_int8_t have_f = ngrtos_FALSE;
+  ng_int8_t have_c = ngrtos_FALSE;
   char ip6_addr[sizeof("[xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:255.255.255.255]") +
           sizeof(":12345") + sizeof("/123456789") +
           sizeof("%1234567890")];
   char *p = ip6_addr, *pend = ip6_addr + sizeof(ip6_addr);
-  const uint8_t *addr = (const uint8_t *) &sa->sin6_addr;
+  const ng_uint8_t *addr = (const ng_uint8_t *) &sa->sin6_addr;
   char fmt6[3] = { d->fmtchr, '6', 0 };
-  uint8_t off = 0;
+  ng_uint8_t off = 0;
   int meet = 1;
   
   while (meet) 
@@ -1201,10 +1201,10 @@ ip6_addr_string_sa(struct DATA *d, const struct sockaddr_in6 *sa)
 static void
 ip4_addr_string_sa(struct DATA *d, const struct sockaddr_in *sa)
 {
-  int8_t have_p = ngrtos_FALSE;
+  ng_int8_t have_p = ngrtos_FALSE;
   char *p, ip4_addr[sizeof("255.255.255.255") + sizeof(":12345")];
   char *pend = ip4_addr + sizeof(ip4_addr);
-  const uint8_t *addr = (const uint8_t *) &sa->sin_addr;
+  const ng_uint8_t *addr = (const ng_uint8_t *) &sa->sin_addr;
   char fmt4[3] = { d->fmtchr, '4', 0 };
   int meet = 1;
   
@@ -1250,11 +1250,11 @@ ip_addr_string(struct DATA *d, const void *ptr)
   switch (d->pf[1]) {
   case '6':
     d->pf++;
-    __ip6_addr_string(d, (const uint8_t *)ptr);
+    __ip6_addr_string(d, (const ng_uint8_t *)ptr);
     return;
   case '4':
     d->pf++;
-    __ip4_addr_string(d, (const uint8_t *)ptr);
+    __ip4_addr_string(d, (const ng_uint8_t *)ptr);
     return;
   case 'S': {
     d->pf++;
@@ -1376,7 +1376,7 @@ pointer(struct DATA *d, const void *ptr)
     /* [mM]R (Reverse order; Bluetooth) */
     d->pf++;
     d->fmtchr = d->pf[1];
-    mac_address_string(d, (const uint8_t *)ptr);
+    mac_address_string(d, (const ng_uint8_t *)ptr);
     break;
   case 'I':      
     /* Formatted IP supported
@@ -1395,7 +1395,7 @@ pointer(struct DATA *d, const void *ptr)
     return;
   case 'U':
     d->pf++;
-    uuid_string(d, (const uint8_t *)ptr);
+    uuid_string(d, (const ng_uint8_t *)ptr);
     return;
   case 'S':
     d->pf++;
@@ -1415,7 +1415,7 @@ pointer(struct DATA *d, const void *ptr)
     }
   default:
     d->fmtchr = 'X';
-    hexa(d, (uintptr_t)ptr);
+    hexa(d, (ng_uintptr_t)ptr);
     return;
   }
 }
@@ -1500,8 +1500,8 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
 {
   char conv_field[MAX_FIELD];
   double d; /* temporary holder */
-  uint64_t nu;
-  int64_t ni;
+  ng_uint64_t nu;
+  ng_int64_t ni;
   int state;
   int i;
   int ch;
@@ -1672,13 +1672,13 @@ PRIVATE int __ng_fine_std(struct DATA *d)
 }
 
 PRIVATE PUBLIC int
-__ng_std_out(void *arg, const char *string, size_t length)
+__ng_std_out(void *arg, const char *string, ng_size_t length)
 {
   struct DATA *data = (struct DATA *)arg;
 
   if (data->nbytes + length > data->length)
   {
-    size_t n = nanohttp_file_write(data->arg, data->holder, data->nbytes);
+    ng_size_t n = nanohttp_file_write(data->arg, data->holder, data->nbytes);
     if (n < 0)
     {
       data->err = n;
@@ -1718,7 +1718,7 @@ __ng_vfprintf(void *fp, char const *format, va_list args)
   counter = __ng_vsnprintf_internal(&data, args);
   if (data.nbytes)
   {
-    size_t n = nanohttp_file_write(fp, data.holder, data.nbytes);
+    ng_size_t n = nanohttp_file_write(fp, data.holder, data.nbytes);
     if (n < 0)
     {
       data.err = n;
@@ -1744,7 +1744,7 @@ __ng_fprintf(void *fp, char const * format, ...)
 }
 
 PUBLIC int
-__ng_vsnprintf(char *string, size_t length, 
+__ng_vsnprintf(char *string, ng_size_t length, 
   char const *format, va_list args)
 {
   struct DATA data;
@@ -1759,7 +1759,7 @@ __ng_vsnprintf(char *string, size_t length,
 }
 
 PUBLIC int
-__ng_snprintf(char *string, size_t length, char const * format, ...)
+__ng_snprintf(char *string, ng_size_t length, char const * format, ...)
 {
   int rval;
   va_list args;
@@ -1772,7 +1772,7 @@ __ng_snprintf(char *string, size_t length, char const * format, ...)
 }
 
 PRIVATE int
-__ng_cb_out(void *arg, const char *string, size_t length)
+__ng_cb_out(void *arg, const char *string, ng_size_t length)
 {
   struct DATA *data = (struct DATA *)arg;
 

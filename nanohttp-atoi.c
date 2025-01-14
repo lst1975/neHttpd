@@ -65,7 +65,7 @@
 
 #define NG_ATOI_USE_WHILE 1
 
-static const uint64_t __ng_cache_aligned __offsets[32] = {
+static const ng_uint64_t __ng_cache_aligned __offsets[32] = {
   '0'*UINT64_C(0),
   '0'*UINT64_C(1),
   '0'*UINT64_C(11),
@@ -88,9 +88,9 @@ static const uint64_t __ng_cache_aligned __offsets[32] = {
   '0'*UINT64_C(1111111111111111111),
   '0'*UINT64_C(11111111111111111111)};
 
-#define _(i,j) (j##u)*((uint32_t)(1e##i))
+#define _(i,j) (j##u)*((ng_uint32_t)(1e##i))
 #define __(i) { _(i,0),_(i,1),_(i,2),_(i,3),_(i,4),_(i,5),_(i,6),_(i,7),_(i,8),_(i,9) }
-static uint32_t __ng_cache_aligned uint32_offsets[11][10] = {
+static ng_uint32_t __ng_cache_aligned uint32_offsets[11][10] = {
   {0,0,0,0,0,0,0,0,0,0},
   __(0),__(1),__(2),__(3),__(4),__(5),__(6),__(7),__(8),__(9)
 };
@@ -98,9 +98,9 @@ static uint32_t __ng_cache_aligned uint32_offsets[11][10] = {
 #undef __
 
 
-#define _(i,j) (j##ull)*((uint64_t)(1e##i))
+#define _(i,j) (j##ull)*((ng_uint64_t)(1e##i))
 #define __(i) { _(i,0),_(i,1),_(i,2),_(i,3),_(i,4),_(i,5),_(i,6),_(i,7),_(i,8),_(i,9) }
-static uint64_t uint64_offsets[21][10] = {
+static ng_uint64_t uint64_offsets[21][10] = {
   {0,0,0,0,0,0,0,0,0,0},
   __( 0),__( 1),__( 2),__( 3),__( 4),__( 5),__( 6),__( 7),__( 8),__( 9),
   __(10),__(11),__(12),__(13),__(14),__(15),__(16),__(17),__(18),__(19)
@@ -112,10 +112,10 @@ static uint64_t uint64_offsets[21][10] = {
 //convert char *s to an unsigned 64bit integer
 //len is the number of numeric characters
 //s does not require the trailing '\0'
-uint64_t ng_atou64(const char *str, uint8_t len, const char **end)
+ng_uint64_t ng_atou64(const char *str, ng_uint8_t len, const char **end)
 {
-  uint64_t value = 0;
-  uint8_t c;
+  ng_uint64_t value = 0;
+  ng_uint8_t c;
 
   if (len > NG_UINT64_STR_LEN_MAX)
   {
@@ -124,7 +124,7 @@ uint64_t ng_atou64(const char *str, uint8_t len, const char **end)
     return value;
   } 
 
-  for (uint8_t n = len; n > 0; n--)
+  for (ng_uint8_t n = len; n > 0; n--)
   {
     c = str[len-n];
     if (!__ng_isdigit(c))
@@ -144,12 +144,12 @@ uint64_t ng_atou64(const char *str, uint8_t len, const char **end)
 //convert char *s to an unsigned 32bit integer
 //len is the number of numeric characters
 //s does not require the trailing '\0'
-uint32_t ng_atou32(const char *str, uint8_t len, const char **end)
+ng_uint32_t ng_atou32(const char *str, ng_uint8_t len, const char **end)
 {
-  uint32_t value = 0;
-  uint8_t c;
+  ng_uint32_t value = 0;
+  ng_uint8_t c;
 
-  for (uint8_t n = len; n > 0; n--)
+  for (ng_uint8_t n = len; n > 0; n--)
   {
     c = str[len-n];
     if (!__ng_isdigit(c))
@@ -171,10 +171,10 @@ uint32_t ng_atou32(const char *str, uint8_t len, const char **end)
 //convert char *s to an unsigned 64bit integer
 //len is the number of numeric characters
 //s does not require the trailing '\0'
-uint64_t ng_atou64(const char *str, uint8_t len, const char **end)
+ng_uint64_t ng_atou64(const char *str, ng_uint8_t len, const char **end)
 {
-  size_t value = 0;
-  uint8_t c;
+  ng_size_t value = 0;
+  ng_uint8_t c;
 
   if (len > NG_UINT64_STR_LEN_MAX)
   {
@@ -227,10 +227,10 @@ uint64_t ng_atou64(const char *str, uint8_t len, const char **end)
 //convert char *s to an unsigned 32bit integer
 //len is the number of numeric characters
 //s does not require the trailing '\0'
-uint32_t ng_atou32(const char *str, uint8_t len, const char **end)
+ng_uint32_t ng_atou32(const char *str, ng_uint8_t len, const char **end)
 {
-  uint32_t value = 0;
-  uint8_t c;
+  ng_uint32_t value = 0;
+  ng_uint8_t c;
 
   if (len > NG_UINT32_STR_LEN_MAX)
   {
@@ -264,16 +264,16 @@ uint32_t ng_atou32(const char *str, uint8_t len, const char **end)
   }
   if (end)
     *end = str + len;
-  return value - (uint32_t)(__offsets[len]);
+  return value - (ng_uint32_t)(__offsets[len]);
 #undef _VA
 }
 #endif
 
 //convert char *s to an unsigned 64bit integer
-uint64_t ng_atou64_s(const char *s, const char **end)
+ng_uint64_t ng_atou64_s(const char *s, const char **end)
 {
-  uint64_t ret = s[0];
-  uint8_t pos = 1;
+  ng_uint64_t ret = s[0];
+  ng_uint8_t pos = 1;
   while(s[pos])
   {
     if (!__ng_isdigit(s[pos]) || pos > NG_UINT64_STR_LEN_MAX)
@@ -291,10 +291,10 @@ uint64_t ng_atou64_s(const char *s, const char **end)
 }
 
 //convert char *s to an unsigned 32bit integer
-uint32_t ng_atou32_s(const char *s, const char **end)
+ng_uint32_t ng_atou32_s(const char *s, const char **end)
 {
-  uint32_t ret = s[0];
-  uint8_t pos = 1;
+  ng_uint32_t ret = s[0];
+  ng_uint8_t pos = 1;
   
   while(s[pos])
   {
@@ -309,14 +309,14 @@ uint32_t ng_atou32_s(const char *s, const char **end)
 
   if (end)
     *end = s + pos;
-  return ret-(uint32_t)(__offsets[pos]);
+  return ret-(ng_uint32_t)(__offsets[pos]);
 }
 
 #define _(i,j) (j*(1ull<<(4*i)))
 #define __(i) \
   { _(i, 0),_(i, 1),_(i, 2),_(i, 3),_(i, 4),_(i, 5),_(i, 6),_(i, 7), \
     _(i, 8),_(i, 9),_(i,10),_(i,11),_(i,12),_(i,13),_(i,14),_(i,15) }
-static uint64_t __ng_cache_aligned uint64_offsets_hex[17][16] =
+static ng_uint64_t __ng_cache_aligned uint64_offsets_hex[17][16] =
 {
   {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
   __( 0),__( 1),__( 2),__( 3),__( 4),__( 5),__( 6),__( 7),
@@ -325,9 +325,9 @@ static uint64_t __ng_cache_aligned uint64_offsets_hex[17][16] =
 #undef __
 #undef _
 
-uint64_t ng_htou64(const char *str, uint8_t len, const char **end)
+ng_uint64_t ng_htou64(const char *str, ng_uint8_t len, const char **end)
 {
-  uint64_t value = 0;
+  ng_uint64_t value = 0;
   
   if (len > 16)
   {
@@ -336,7 +336,7 @@ uint64_t ng_htou64(const char *str, uint8_t len, const char **end)
     return 0;
   }
   
-  for (uint8_t n = len; n > 0; n--)
+  for (ng_uint8_t n = len; n > 0; n--)
   {
     int c = __ng_hex2int(str[len-n]);
     if (c == 0xFF)
@@ -426,60 +426,60 @@ static const char *int_to_hex_lower[256] = {
 };
 #undef _
 
-int ng_u64toh(uint64_t v, char *str, uint8_t len, int is_upper, char seporator)
+int ng_u64toh(ng_uint64_t v, char *str, ng_uint8_t len, int is_upper, char seporator)
 {
   NG_ASSERT((!seporator && len >= 16) || (seporator && len >= 23));
 
   int start = 0;
-  uint8_t  *p, *e;
-  uint16_t *o;
+  ng_uint8_t  *p, *e;
+  ng_uint16_t *o;
   const char **int_to_hex = is_upper ? int_to_hex_upper : int_to_hex_lower;
   
   v = ng_htonll(v);
-  p = (uint8_t  *)&v;
+  p = (ng_uint8_t  *)&v;
   e = p + 8;
-  o = (uint16_t *)str;
+  o = (ng_uint16_t *)str;
   while (p < e)
   {
-    uint8_t c = *p++;
+    ng_uint8_t c = *p++;
     if (!c && !start)
       continue;
     start = 1;
-    *o++ = *(const uint16_t *)int_to_hex[c];
+    *o++ = *(const ng_uint16_t *)int_to_hex[c];
     if (seporator)
     {
       *(char *)o = seporator;
-      o = (uint16_t *)((char *)o+1);
+      o = (ng_uint16_t *)((char *)o+1);
     }
   }
 
   return ((char *)o) - str;
 }
 
-int ng_u32toh(uint32_t v, char *str, uint8_t len, int is_upper, char seporator)
+int ng_u32toh(ng_uint32_t v, char *str, ng_uint8_t len, int is_upper, char seporator)
 {
   NG_ASSERT((!seporator && len >= 8) || (seporator && len >= 11));
 
   int start = 0;
-  uint8_t  *p, *e;
-  uint16_t *o;
+  ng_uint8_t  *p, *e;
+  ng_uint16_t *o;
   const char **int_to_hex = is_upper ? int_to_hex_upper : int_to_hex_lower;
   
   v = ng_htonl(v);
-  p = (uint8_t  *)&v;
+  p = (ng_uint8_t  *)&v;
   e = p + 4;
-  o = (uint16_t *)str;
+  o = (ng_uint16_t *)str;
   while (p < e)
   {
-    uint8_t c = *p++;
+    ng_uint8_t c = *p++;
     if (!c && !start)
       continue;
     start = 1;
-    *o++ = *(const uint16_t *)int_to_hex[c];
+    *o++ = *(const ng_uint16_t *)int_to_hex[c];
     if (seporator)
     {
       *(char *)o = seporator;
-      o = (uint16_t *)((char *)o+1);
+      o = (ng_uint16_t *)((char *)o+1);
     }
   }
 

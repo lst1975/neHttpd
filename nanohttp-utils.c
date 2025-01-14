@@ -153,7 +153,7 @@ void ng_print_cpufreq(const char *n, double hz)
     log_info("%s: %.2f MHz", n, hz); 
 }
 
-int ng_local_strncasecmp(const char *s1, const char *s2, size_t n) 
+int ng_local_strncasecmp(const char *s1, const char *s2, ng_size_t n) 
 {
   return strncasecmp(s1,s2,n);
 }

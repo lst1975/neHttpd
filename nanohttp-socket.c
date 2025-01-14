@@ -357,7 +357,7 @@ hsocket_open(hsocket_s *dsock, const char *hostname, int port, int ssl)
 }
 
 herror_t
-hsocket_bind(uint8_t fam, hsocket_s *dsock, unsigned short port)
+hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
 {
   hsocket_s sock;
   herror_t status;
@@ -570,11 +570,11 @@ hsocket_close(hsocket_s *sock)
 }
 
 herror_t
-hsocket_send(hsocket_s *sock, const unsigned char *bytes, size_t n)
+hsocket_send(hsocket_s *sock, const unsigned char *bytes, ng_size_t n)
 {
   herror_t status = H_OK;
-  size_t total = 0;
-  size_t size;
+  ng_size_t total = 0;
+  ng_size_t size;
 
   if (sock->sock < 0)
     return herror_new("hsocket_send", HSOCKET_ERROR_NOT_INITIALIZED,
@@ -616,7 +616,7 @@ hsocket_send(hsocket_s *sock, const unsigned char *bytes, size_t n)
 }
 
 static int
-__send_snprintf_out(void *arg, const char *string, size_t length)
+__send_snprintf_out(void *arg, const char *string, ng_size_t length)
 {
   hsocket_s *sock = (hsocket_s *)arg;
   herror_t status;
@@ -666,7 +666,7 @@ hsocket_send_string(hsocket_s *sock, const char *format, ...)
 
 #if __NHTTP_USE_EPOLL
 int
-hsocket_select_recv(hsocket_s *sock, char *buf, size_t len)
+hsocket_select_recv(hsocket_s *sock, char *buf, ng_size_t len)
 {
   // Example: Adding stdin (file descriptor 0) to epoll
   int n;
@@ -718,7 +718,7 @@ hsocket_select_recv(hsocket_s *sock, char *buf, size_t len)
 }
 #elif __NHTTP_USE_WSAPOLL
 int
-hsocket_select_recv(hsocket_s *sock, char *buf, size_t len)
+hsocket_select_recv(hsocket_s *sock, char *buf, ng_size_t len)
 {
   WSAPOLLFD pfd = { 0 };
   INT ret = 0;
@@ -775,7 +775,7 @@ hsocket_select_recv(hsocket_s *sock, char *buf, size_t len)
 }
 #else
 int
-hsocket_select_recv(hsocket_s *sock, char *buf, size_t len)
+hsocket_select_recv(hsocket_s *sock, char *buf, ng_size_t len)
 {
   int n;
   fd_set fds;
@@ -838,15 +838,15 @@ hsocket_select_recv(hsocket_s *sock, char *buf, size_t len)
 
 herror_t
 hsocket_recv(hsocket_s *sock, unsigned char *buffer, 
-  size_t total, int force, size_t *received)
+  ng_size_t total, int force, ng_size_t *received)
 {
   herror_t status = H_OK;
-  size_t totalRead;
-  size_t count;
+  ng_size_t totalRead;
+  ng_size_t count;
 
   if (BUF_LEN(&sock->data))
   {
-    size_t len = RTE_MIN(BUF_LEN(&sock->data), total);
+    ng_size_t len = RTE_MIN(BUF_LEN(&sock->data), total);
     ng_memcpy(buffer, BUF_CUR_PTR(&sock->data), len);
     sock->data.len -= len;
     sock->data.p   += len;
@@ -876,14 +876,14 @@ hsocket_recv(hsocket_s *sock, unsigned char *buffer,
 
 #ifdef HAVE_SSL
     if ((status = hssl_read(sock, (char *)buffer + totalRead, 
-      (size_t) total - totalRead, &count)) != H_OK)
+      (ng_size_t) total - totalRead, &count)) != H_OK)
     {
       herror_log(status);
       log_warn("hssl_read failed.");
     }
 #else
     if ((count = hsocket_select_recv(sock, (char *)buffer + totalRead, 
-      (size_t) total - totalRead)) == -1)
+      (ng_size_t) total - totalRead)) == -1)
     {
       status = herror_new("hsocket_recv", HSOCKET_ERROR_RECEIVE, "recv failed.");
       log_warn("hsocket_select_recv failed.");
@@ -934,9 +934,9 @@ hsocket_set_timeout(int secs)
 }
 
 herror_t http_header_recv(hsocket_s *sock, char *buffer, 
-  size_t size, size_t *hdrlen, size_t *rcvbytes)
+  ng_size_t size, ng_size_t *hdrlen, ng_size_t *rcvbytes)
 {
-  size_t readed=0;
+  ng_size_t readed=0;
   herror_t status;
   ng_buffer_s p;
   const char *ptr, *pln;

@@ -171,12 +171,12 @@ rte_ring_reset(ng_ring_s *r)
  * errno value otherwise.
  */
 static int
-get_sync_type(uint32_t flags, enum rte_ring_sync_type *prod_st,
+get_sync_type(ng_uint32_t flags, enum rte_ring_sync_type *prod_st,
   enum rte_ring_sync_type *cons_st)
 {
-  static const uint32_t prod_st_flags =
+  static const ng_uint32_t prod_st_flags =
     (RING_F_SP_ENQ);
-  static const uint32_t cons_st_flags =
+  static const ng_uint32_t cons_st_flags =
     (RING_F_SC_DEQ);
 
   switch (flags & prod_st_flags) {
@@ -213,8 +213,8 @@ get_sync_type(uint32_t flags, enum rte_ring_sync_type *prod_st,
  * @return
  *    The combined value.
  */
-static inline uint32_t
-rte_combine32ms1b(uint32_t x)
+static inline ng_uint32_t
+rte_combine32ms1b(ng_uint32_t x)
 {
   x |= x >> 1;
   x |= x >> 2;
@@ -234,8 +234,8 @@ rte_combine32ms1b(uint32_t x)
  * @return
  *   Input parameter aligned to the next power of 2
  */
-static inline uint32_t
-rte_align32pow2(uint32_t x)
+static inline ng_uint32_t
+rte_align32pow2(ng_uint32_t x)
 {
   x--;
   x = rte_combine32ms1b(x);
@@ -373,9 +373,9 @@ static int __stopped = 0;
 ng_ring_s *__test_rte_ring = NULL;
 
 struct ng_thread_pool{
-  uint32_t count;
-  uint32_t alive:31;
-  uint32_t not_stopped:1;
+  ng_uint32_t count;
+  ng_uint32_t alive:31;
+  ng_uint32_t not_stopped:1;
   pthread_t *pool;
 };
 typedef struct ng_thread_pool ng_thread_pool_s;

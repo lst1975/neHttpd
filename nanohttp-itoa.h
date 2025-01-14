@@ -67,33 +67,33 @@
     extern "C" {
 #endif
 
-size_t u32toa_jeaiii(uint32_t u, char* b, size_t len);
-size_t i32toa_jeaiii(int32_t i, char* b, size_t len);
-size_t u64toa_jeaiii(uint64_t n, char* b, size_t len);
-size_t i64toa_jeaiii(int64_t i, char* b, size_t len);
+ng_size_t u32toa_jeaiii(ng_uint32_t u, char* b, ng_size_t len);
+ng_size_t i32toa_jeaiii(ng_int32_t i, char* b, ng_size_t len);
+ng_size_t u64toa_jeaiii(ng_uint64_t n, char* b, ng_size_t len);
+ng_size_t i64toa_jeaiii(ng_int64_t i, char* b, ng_size_t len);
 
-static __ng_inline__ size_t __u32toa_jeaiii(uint32_t u, char* b)
+static __ng_inline__ ng_size_t __u32toa_jeaiii(ng_uint32_t u, char* b)
 {
-  return u32toa_jeaiii(u, b, UINT_MAX);
+  return u32toa_jeaiii(u, b, NG_UINT_MAX);
 }
 
-static __ng_inline__ size_t __i32toa_jeaiii(int32_t i, char* b)
+static __ng_inline__ ng_size_t __i32toa_jeaiii(ng_int32_t i, char* b)
 {
-  return i32toa_jeaiii(i, b, UINT_MAX);
+  return i32toa_jeaiii(i, b, NG_UINT_MAX);
 }
 
-static __ng_inline__ size_t __u64toa_jeaiii(uint64_t n, char* b)
+static __ng_inline__ ng_size_t __u64toa_jeaiii(ng_uint64_t n, char* b)
 {
-  return u64toa_jeaiii(n, b, UINT_MAX);
+  return u64toa_jeaiii(n, b, NG_UINT_MAX);
 }
 
-static __ng_inline__ size_t __i64toa_jeaiii(int64_t i, char* b)
+static __ng_inline__ ng_size_t __i64toa_jeaiii(ng_int64_t i, char* b)
 {
-  return i64toa_jeaiii(i, b, UINT_MAX);
+  return i64toa_jeaiii(i, b, NG_UINT_MAX);
 }
 
-int u32toh_jeaiii(uint32_t num, char *s, int len, int lowerAlpha);
-int u64toh_jeaiii(uint64_t num, char *s, int len, int lowerAlpha);
+int u32toh_jeaiii(ng_uint32_t num, char *s, int len, int lowerAlpha);
+int u64toh_jeaiii(ng_uint64_t num, char *s, int len, int lowerAlpha);
 
 #define ng_u32toa(u,b,l) u32toa_jeaiii(u,b,l)
 #define ng_i32toa(i,b,l) i32toa_jeaiii(i,b,l)

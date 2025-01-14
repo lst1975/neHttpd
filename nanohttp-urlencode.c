@@ -63,14 +63,14 @@
 #include "nanohttp-urlencode.h"
 #include "nanohttp-logging.h"
 
-static uint8_t utf8_len(const uint8_t* str, int inlen);
+static ng_uint8_t utf8_len(const ng_uint8_t* str, int inlen);
 
 /*
  Alphanumeric characters: A-Z, a-z, 0-9
  Special characters: -, _, ., ~
  Reserved characters: !, ', (, ), *, ;, :, @, &, =, +, $, ,, /, ?, #
  */
-static const uint8_t url_unreserved[256] = {
+static const ng_uint8_t url_unreserved[256] = {
   /* 0*/  /* 1*/  /* 2*/  /* 3*/  /* 4*/  /* 5*/  /* 6*/  /* 7*/  /* 0x00-0x0F */
      0,      0,      0,      0,      0,      0,      0,      0,
   /* 8*/  /*\t*/  /*\n*/  /* b*/  /* c*/  /*\r*/  /* e*/  /* f*/ 
@@ -137,7 +137,7 @@ static const uint8_t url_unreserved[256] = {
      0,      0,      0,      0,      0,      0,      0,      0,
 };
 
-int is_url_char_unreserved(uint8_t c)
+int is_url_char_unreserved(ng_uint8_t c)
 {
   return !url_unreserved[c];
 }
@@ -150,12 +150,12 @@ struct _str_enc{
         char buf1[1];
         char buf4[4];
         char buf8[6];
-        uint8_t  v1;
-        uint32_t v4;
+        ng_uint8_t  v1;
+        ng_uint32_t v4;
       };
-      uint16_t len;
+      ng_uint16_t len;
     };
-    uint64_t v8;
+    ng_uint64_t v8;
   };
 };
 
@@ -487,16 +487,16 @@ int utf8_char_lenth(const unsigned char *data, int len)
   return bytes;
 }
 
-int encode_url(ng_buffer_s *b, const uint8_t *input, int len) 
+int encode_url(ng_buffer_s *b, const ng_uint8_t *input, int len) 
 {
   int in_cursor;
   int out_cursor;
-  uint8_t *encoded;
+  ng_uint8_t *encoded;
 
   if (!len) 
     len = strlen((const char *)input);
   
-  encoded = (uint8_t*)http_malloc(sizeof(uint8_t) * len * 6);
+  encoded = (ng_uint8_t*)http_malloc(sizeof(ng_uint8_t) * len * 6);
   if (encoded == NULL)
   {
     log_fatal("Failed to http_malloc.");
@@ -508,26 +508,26 @@ int encode_url(ng_buffer_s *b, const uint8_t *input, int len)
   out_cursor = 0;
   while (in_cursor < len) 
   {
-    uint8_t charlen;
+    ng_uint8_t charlen;
     charlen = utf8_char_lenth(&input[in_cursor], len - in_cursor);
     if (charlen == 1)
     {
-      const uint8_t c = input[in_cursor++];
+      const ng_uint8_t c = input[in_cursor++];
       const struct _str_enc *enc=&url_str_enc[c];
       switch (enc->len)
       {
         case 1:
-          *(uint8_t  *)&encoded[out_cursor]  = enc->v1;
+          *(ng_uint8_t  *)&encoded[out_cursor]  = enc->v1;
           out_cursor += 1;
           break;
           
         case 3:
-          *(uint32_t *)&encoded[out_cursor]  = enc->v4;
+          *(ng_uint32_t *)&encoded[out_cursor]  = enc->v4;
           out_cursor += 3;
           break;
           
         case 6:
-          *(uint64_t *)&encoded[out_cursor]  = enc->v8;
+          *(ng_uint64_t *)&encoded[out_cursor]  = enc->v8;
           out_cursor += 6;
           break;
           
@@ -541,7 +541,7 @@ int encode_url(ng_buffer_s *b, const uint8_t *input, int len)
       int in_end = in_cursor + charlen;
       while (in_cursor < in_end)
       {
-        *(uint32_t *)&encoded[out_cursor] = url_hex_char[input[in_cursor++]].v4;
+        *(ng_uint32_t *)&encoded[out_cursor] = url_hex_char[input[in_cursor++]].v4;
         out_cursor += 3;
       }
     }
@@ -572,7 +572,7 @@ static const int hexval[256] = {
 };
 #undef __
 
-static const uint8_t url_str_dec_len[256] = {
+static const ng_uint8_t url_str_dec_len[256] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -591,14 +591,14 @@ static const uint8_t url_str_dec_len[256] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
 
-int decode_url(ng_buffer_s *b, const uint8_t* input, int len) 
+int decode_url(ng_buffer_s *b, const ng_uint8_t* input, int len) 
 {
-  uint8_t *decoded;
+  ng_uint8_t *decoded;
   int in_cursor = 0;
   int out_cursor = 0;
 
   if (!len) len = strlen((const char *)input);
-  b->ptr = decoded = (uint8_t*)http_malloc(sizeof(uint8_t) * len);
+  b->ptr = decoded = (ng_uint8_t*)http_malloc(sizeof(ng_uint8_t) * len);
   if (decoded == NULL)
   {
     log_fatal("Failed to http_malloc.");
@@ -607,10 +607,10 @@ int decode_url(ng_buffer_s *b, const uint8_t* input, int len)
   
   while (in_cursor < len) 
   {
-    uint8_t charlen;
-    uint8_t c;
-    uint8_t v1,v1raw;
-    uint8_t v2,v2raw;
+    ng_uint8_t charlen;
+    ng_uint8_t c;
+    ng_uint8_t v1,v1raw;
+    ng_uint8_t v2,v2raw;
 
 
     c = input[in_cursor++];
@@ -707,10 +707,10 @@ int decode_url(ng_buffer_s *b, const uint8_t* input, int len)
         if (v1 != 0xFF && v2 != 0xFF) 
         {
           in_cursor++;
-          uint8_t _v1raw = input[in_cursor++];
-          uint8_t _v2raw = input[in_cursor++];
-          uint8_t v3 = hexval[_v1raw];
-          uint8_t v4 = hexval[_v2raw];
+          ng_uint8_t _v1raw = input[in_cursor++];
+          ng_uint8_t _v2raw = input[in_cursor++];
+          ng_uint8_t v3 = hexval[_v1raw];
+          ng_uint8_t v4 = hexval[_v2raw];
           if (v3 != 0xFF && v4 != 0xFF)
           {
             decoded[out_cursor++] = (((v2 << 2) | v3) << 4) | v4;
@@ -744,8 +744,8 @@ int decode_url(ng_buffer_s *b, const uint8_t* input, int len)
   return b->len;
 }
 
-#define UTF8_LEAD(c) ((uint8_t)(c) < 0x80 || ((uint8_t)(c) > 0xC1 && (uint8_t)(c) < 0xF5))
-#define UTF8_TRAIL(c) (((uint8_t)(c) & 0xC0) == 0x80)
+#define UTF8_LEAD(c) ((ng_uint8_t)(c) < 0x80 || ((ng_uint8_t)(c) > 0xC1 && (ng_uint8_t)(c) < 0xF5))
+#define UTF8_TRAIL(c) (((ng_uint8_t)(c) & 0xC0) == 0x80)
 
 #define __ 0xFF
 /*
@@ -753,7 +753,7 @@ int decode_url(ng_buffer_s *b, const uint8_t* input, int len)
  * 0x01-0xC1: 1
  * 0xF5-: 1
  */
-static const uint8_t utf8_immediate_len[256] = {
+static const ng_uint8_t utf8_immediate_len[256] = {
    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* 0x00-0x0F */
    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* 0x10-0x1F */
    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* 0x20-0x2F */
@@ -778,7 +778,7 @@ static const uint8_t utf8_immediate_len[256] = {
  * 0xE0-0xEF: 3
  * 0xF0-0xF4: 4
  */
-static const uint8_t utf8_count_len[256] = {
+static const ng_uint8_t utf8_count_len[256] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x00-0x0F */
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x10-0x1F */
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x20-0x2F */
@@ -797,22 +797,22 @@ static const uint8_t utf8_count_len[256] = {
   4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0, /* 0xF0-0xFF */
 };
 
-static uint8_t utf8_len(const uint8_t* str, int inlen) {
+static ng_uint8_t utf8_len(const ng_uint8_t* str, int inlen) {
   if (inlen < 2)
   {
     return inlen;
   }
   else
   {
-    const uint8_t lead = *str;
+    const ng_uint8_t lead = *str;
 
-    const uint8_t immediate_len = utf8_immediate_len[lead];
+    const ng_uint8_t immediate_len = utf8_immediate_len[lead];
     if (immediate_len != 0xFF) {
       return immediate_len;
     }
 
-    const uint8_t count = utf8_count_len[lead];
-    uint8_t trail = *(++str);
+    const ng_uint8_t count = utf8_count_len[lead];
+    ng_uint8_t trail = *(++str);
 
     if (count == 3) 
     {
@@ -835,7 +835,7 @@ static uint8_t utf8_len(const uint8_t* str, int inlen) {
       }
     }
 
-    uint8_t size = 1;
+    ng_uint8_t size = 1;
     for (; size < count; ++size) 
     {
       if (!UTF8_TRAIL(trail)) 
@@ -849,9 +849,9 @@ static uint8_t utf8_len(const uint8_t* str, int inlen) {
 }
 
 // Function to calculate the size of the output buffer
-size_t calculate_buffer_size(const char *utf8, size_t len) 
+ng_size_t calculate_buffer_size(const char *utf8, ng_size_t len) 
 {
-  size_t size = 1;  // Start with 1 for the null terminator
+  ng_size_t size = 1;  // Start with 1 for the null terminator
   unsigned char *ptr = (unsigned char *)utf8;
   const unsigned char *end = ptr + len;
   while (ptr < end) {
@@ -879,26 +879,26 @@ size_t calculate_buffer_size(const char *utf8, size_t len)
 #include <stdio.h>
 
 #if 0
-static inline void __char_to_escape(char *buf_ptr, uint8_t c)
+static inline void __char_to_escape(char *buf_ptr, ng_uint8_t c)
 {
   sprintf(buf_ptr, "\\u%04X", c);
 }
 #else
-static inline void __char_to_escape(char *buf_ptr, uint8_t c)
+static inline void __char_to_escape(char *buf_ptr, ng_uint8_t c)
 {
-  *(uint32_t*)buf_ptr = *(const uint32_t*)"\\u00";
+  *(ng_uint32_t*)buf_ptr = *(const ng_uint32_t*)"\\u00";
   const struct _str_enc *uh = &url_hex_char[c];
-  *(uint16_t *)&buf_ptr[4] = *(uint16_t *)(uh->buf4+1);
+  *(ng_uint16_t *)&buf_ptr[4] = *(ng_uint16_t *)(uh->buf4+1);
 }
 #endif
 
 // Function to convert UTF-8 to Unicode escape sequence and store in buffer
 void convert_utf8_to_unicode_escape(const char *utf8, 
-  size_t len, ng_buffer_s *buffer) 
+  ng_size_t len, ng_buffer_s *buffer) 
 {
-  const uint8_t *ptr = (const uint8_t *)utf8;
-  const uint8_t *end = ptr + len;
-  uint8_t codepoint = 0;
+  const ng_uint8_t *ptr = (const ng_uint8_t *)utf8;
+  const ng_uint8_t *end = ptr + len;
+  ng_uint8_t codepoint = 0;
   char *buf_ptr = (char *)buffer->ptr;
 
   while (ptr < end) {
@@ -962,7 +962,7 @@ static void __test_encode_url(const char *output, int outlen,
   const char *input, int inlen)
 {
   ng_buffer_s b;
-  if (0 > encode_url(&b, (const uint8_t *)output, outlen))
+  if (0 > encode_url(&b, (const ng_uint8_t *)output, outlen))
   {
     log_verbose("test encode_url FAILED.");
     return;
@@ -1008,7 +1008,7 @@ __test_decode_url(const char *output, int outlen,
   const char *input, int inlen)
 {
   ng_buffer_s b;
-  if (0 > decode_url(&b, (const uint8_t *)output, outlen))
+  if (0 > decode_url(&b, (const ng_uint8_t *)output, outlen))
   {
     log_verbose("test decode_url FAILED.");
     return;

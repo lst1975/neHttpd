@@ -877,8 +877,8 @@ httpd_find_service(const char *context, int context_len)
   for (cur = _httpd_services_head; cur; cur = cur->next)
   {
     if (cur->name_len == 4 
-      &&  (*(uint32_t*)cur->name == *(const uint32_t*)"FILE"
-        || *(uint32_t*)cur->name == *(const uint32_t*)"DATA"))
+      &&  (*(ng_uint32_t*)cur->name == *(const ng_uint32_t*)"FILE"
+        || *(ng_uint32_t*)cur->name == *(const ng_uint32_t*)"DATA"))
     {
       if (!memcmp(cur->context, context, cur->context_len))
         return cur;
@@ -950,11 +950,11 @@ httpd_send_header(httpd_conn_s *res, int code)
     {
       ng_memcpy(BUF_CUR_PTR(&b), cur->key.cptr, cur->key.len);
       BUF_GO(&b, cur->key.len);
-      *(uint16_t*)BUF_CUR_PTR(&b) = *(const uint16_t*)": ";
+      *(ng_uint16_t*)BUF_CUR_PTR(&b) = *(const ng_uint16_t*)": ";
       BUF_GO(&b, 2);
       ng_memcpy(BUF_CUR_PTR(&b), cur->val.cptr, cur->val.len);
       BUF_GO(&b, cur->val.len);
-      *(uint16_t*)BUF_CUR_PTR(&b) = *(const uint16_t*)"\r\n";
+      *(ng_uint16_t*)BUF_CUR_PTR(&b) = *(const ng_uint16_t*)"\r\n";
       BUF_GO(&b, 2);
     }
     else
@@ -970,7 +970,7 @@ httpd_send_header(httpd_conn_s *res, int code)
   /* set end of header */
   if (BUF_REMAIN(&b) > 1)
   {
-    *(uint16_t*)BUF_CUR_PTR(&b) = *(const uint16_t*)"\r\n";
+    *(ng_uint16_t*)BUF_CUR_PTR(&b) = *(const ng_uint16_t*)"\r\n";
     BUF_GO(&b, 2);
   }
   else
@@ -1010,7 +1010,7 @@ _httpd_send_html_message(httpd_conn_s *conn, int reason,
   herror_t r;
   char *buf;
   char slen[5];
-  size_t len;
+  ng_size_t len;
   ng_block_s b;
   const ng_block_s *c = http_code2name(reason);
   
@@ -1199,10 +1199,10 @@ httpd_free(httpd_conn_s *conn)
 
 static void *
 _httpd_decode_authorization(int *tmplen, 
-  const char *_value, size_t inlen, ng_block_s *user, 
+  const char *_value, ng_size_t inlen, ng_block_s *user, 
   ng_block_s *pass)
 {
-  size_t len, value_len;
+  ng_size_t len, value_len;
   unsigned char *tmp, *tmp2;
   const char *value;
 
@@ -1308,7 +1308,7 @@ httpd_session_main(void *data)
   hservice_t *service;
   herror_t status;
 #ifdef __NHTTP_INTERNAL
-  uint64_t start, duration;
+  ng_uint64_t start, duration;
 #endif			
   int done;
 
@@ -1496,7 +1496,7 @@ _httpd_wait_for_empty_conn(void)
   int ret = httpd_enter_mutex(&_httpd_connection_lock);
   if (ret < 0) return NULL;
   
-  for (uint32_t i=0;nanohttpd_is_running();i++)
+  for (ng_uint32_t i=0;nanohttpd_is_running();i++)
   {
     int k = i %_httpd_max_connections;
     conn = &_httpd_connection[k];
@@ -1582,10 +1582,10 @@ _httpd_start_thread(conndata_t *conn)
 #define __NHTTP_EPOLL_WAIT_TIMEOUT 1000
 #define __NHTTP_EPOLL_WAIT_LOG 5
 
-static void __httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep, uint64_t rt)
+static void __httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep, ng_uint64_t rt)
 {
   static rte_atomic64_t last_log = RTE_ATOMIC64_INIT(0);
-  uint64_t last_rt = rte_atomic64_read(&last_log);
+  ng_uint64_t last_rt = rte_atomic64_read(&last_log);
   if (ng_difftime(rt, last_rt) < __NHTTP_EPOLL_WAIT_LOG)
     return;
   rte_atomic64_set(&last_log, rt);
@@ -1607,7 +1607,7 @@ __httpd_run(hsocket_s *sock, const char *name)
 {
   herror_t err;
   struct epoll_event event;
-  uint64_t start = ng_get_time();
+  ng_uint64_t start = ng_get_time();
   
   log_verbose("starting run routine: %s", name);
 
@@ -1738,7 +1738,7 @@ __httpd_run(hsocket_s *sock, const char *name)
 {
   herror_t err;
   WSAPOLLFD event = { 0 };
-  uint64_t start = ng_get_time();
+  ng_uint64_t start = ng_get_time();
   
   log_verbose("starting run routine: %s", name);
 
@@ -1863,7 +1863,7 @@ __httpd_run(hsocket_s *sock, const char *name)
 #endif
   herror_t err;
   fd_set fds;
-  uint64_t start = ng_get_time();
+  ng_uint64_t start = ng_get_time();
 
   log_verbose("starting run routine: %s", name);
 
@@ -2289,7 +2289,7 @@ unsigned char *
 httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req, 
   long *received, long max)
 {
-  size_t content_length = 0, rcved, total_len;
+  ng_size_t content_length = 0, rcved, total_len;
   unsigned char *postdata = NULL;
 
   if (req->method == HTTP_REQUEST_METHOD_POST)

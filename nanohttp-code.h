@@ -777,8 +777,8 @@ typedef struct _http_code http_code_s;
 struct _http_code {
   ng_block_s name;
   ng_block_s desc;
-  uint32_t code;
-  uint32_t type;
+  ng_uint32_t code;
+  ng_uint32_t type;
   ng_block_s code_int_str;
 };
 

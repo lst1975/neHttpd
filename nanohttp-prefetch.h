@@ -60,144 +60,173 @@
  *                              https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
-#ifndef __nanohttp_buffer_h
-#define __nanohttp_buffer_h
+#ifndef __nanohttp_prefetch_h
+#define __nanohttp_prefetch_h
 
-#include <string.h>
-#include "nanohttp-defs.h"
-
-#define __STRUCT_BLOCK_DEF \
-  union{ \
-    void *data; \
-    const char *cptr; \
-    unsigned char *ptr;\
-    char *buf; \
-  }; \
-  ng_uint64_t len:53; \
-  ng_uint64_t n:10; \
-  ng_uint64_t x:1
-
-typedef struct {
-  __STRUCT_BLOCK_DEF;
-} ng_block_s;
-
-struct _httpd_buf {
-  union{
-    struct{
-      __STRUCT_BLOCK_DEF; // MUST start from the first byte
-    };
-    ng_block_s b;
-  };
-  char *p;
-  ng_size_t size;
-  ng_size_t nbytes;
-};
-
-typedef struct _httpd_buf ng_buffer_s;
-
-#define DECL_CONST_STR_N(a,v) { .n=a, .cptr=v, .len=sizeof(v)-1 }
-#define DECL_CONST_STR_NULL() { .cptr=NULL, .len=0 }
-#define DECL_CONST_STR(v) { .cptr=v, .len=sizeof(v)-1 }
-
-static inline void BUF_GO(ng_buffer_s *b, ng_size_t len)
+#if defined(aarch64)
+static inline void rte_prefetch0(const volatile void *p)
 {
-  b->p   += len;
-  b->len += len;
+	asm volatile ("PRFM PLDL1KEEP, [%0]" : : "r" (p));
 }
 
-static inline void BUF_SET_CHR(ng_buffer_s *b, char c)
+static inline void rte_prefetch1(const volatile void *p)
 {
-  b->p[0] = (char)c;
+	asm volatile ("PRFM PLDL2KEEP, [%0]" : : "r" (p));
 }
 
-static inline ng_size_t BUF_LEN(ng_buffer_s *b)
+static inline void rte_prefetch2(const volatile void *p)
 {
-  return b->len;
+	asm volatile ("PRFM PLDL3KEEP, [%0]" : : "r" (p));
 }
 
-static inline char *BUF_CUR_PTR(ng_buffer_s *b)
+static inline void rte_prefetch_non_temporal(const volatile void *p)
 {
-  return b->p;
+	asm volatile ("PRFM PLDL1STRM, [%0]" : : "r" (p));
 }
-
-static inline ng_size_t BUF_REMAIN(ng_buffer_s *b)
+#elif defined(__arm__)
+static inline void rte_prefetch0(const volatile void *p)
 {
-  return b->size - b->len;
+	asm volatile ("pld [%0]" : : "r" (p));
 }
 
-static inline void BUF_SET(ng_buffer_s *b, char *ptr, ng_size_t len)
+static inline void rte_prefetch1(const volatile void *p)
 {
-  b->buf = ptr;
-  b->len = len;
+	asm volatile ("pld [%0]" : : "r" (p));
 }
 
-static inline void BUF_SIZE_INIT(ng_buffer_s *b, char *buf, ng_size_t size)
+static inline void rte_prefetch2(const volatile void *p)
 {
-  b->p      = buf;
-  b->data   = buf;
-  b->len    = 0;
-  b->size   = size;
-  b->nbytes = 0;
+	asm volatile ("pld [%0]" : : "r" (p));
 }
 
-static inline void BUF_CLEAR(ng_buffer_s *b)
+static inline void rte_prefetch_non_temporal(const volatile void *p)
 {
-  b->p      = b->buf;
-  b->len    = 0;
-  b->nbytes = 0;
+	/* non-temporal version not available, fallback to rte_prefetch0 */
+	rte_prefetch0(p);
 }
-
-static inline void ng_block_init(ng_block_s *blk)
-{ 
-  blk->data = NULL;
-  blk->len  = 0;
-}
-
-static inline void ng_block_set(ng_block_s *blk, const char *ptr, ng_size_t len)
-{ 
-  blk->cptr = ptr;
-  blk->len  = len;
-}
-
-static inline int ng_block_isequal(const void *blk, const void *buf, ng_size_t size)
+#elif defined(__i386__) || defined(__x86_64__)
+#ifdef RTE_TOOLCHAIN_MSVC
+#include <emmintrin.h>
+#endif
+static inline void rte_prefetch0(const volatile void *p)
 {
-  const ng_block_s *b = (const ng_block_s *)blk;
-  return b->len == size && !ng_memcmp(b->data, buf, size);
+#ifdef RTE_TOOLCHAIN_MSVC
+	_mm_prefetch((const char *)(ng_uintptr_t)p, _MM_HINT_T0);
+#else
+	asm volatile ("prefetcht0 %[p]" : : [p] "m" (*(const volatile char *)p));
+#endif
 }
 
-static inline int ng_block_isequal__(const void *blka, const void *blkb)
+static inline void rte_prefetch1(const volatile void *p)
 {
-  const ng_block_s *a = (const ng_block_s *)blka;
-  const ng_block_s *b = (const ng_block_s *)blkb;
-  return ng_block_isequal(a, b->data, b->len);
+#ifdef RTE_TOOLCHAIN_MSVC
+	_mm_prefetch((const char *)(ng_uintptr_t)p, _MM_HINT_T1);
+#else
+	asm volatile ("prefetcht1 %[p]" : : [p] "m" (*(const volatile char *)p));
+#endif
 }
 
-static inline int ng_block_isequal_case(const void *blka, const void *blkb)
+static inline void rte_prefetch2(const volatile void *p)
 {
-  const ng_block_s *a = (const ng_block_s *)blka;
-  const ng_block_s *b = (const ng_block_s *)blkb;
-  return ng_block_isequal(a, b->buf, b->len);
+#ifdef RTE_TOOLCHAIN_MSVC
+	_mm_prefetch((const char *)(ng_uintptr_t)p, _MM_HINT_T2);
+#else
+	asm volatile ("prefetcht2 %[p]" : : [p] "m" (*(const volatile char *)p));
+#endif
 }
 
-static inline int ng_block_isequal_nocase(const void *blka, const void *blkb)
+static inline void rte_prefetch_non_temporal(const volatile void *p)
 {
-  const ng_block_s *a = (const ng_block_s *)blka;
-  const ng_block_s *b = (const ng_block_s *)blkb;
-  if (a->len != b->len) return 0;
-  return !ng_strnocasecmp(a->cptr, b->cptr, b->len);
+#ifdef RTE_TOOLCHAIN_MSVC
+	_mm_prefetch((const char *)(ng_uintptr_t)p, _MM_HINT_NTA);
+#else
+	asm volatile ("prefetchnta %[p]" : : [p] "m" (*(const volatile char *)p));
+#endif
 }
-
-static inline const char *ng_block_end(const void *blka)
+#elif defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__)
+static inline void rte_prefetch0(const volatile void *p)
 {
-  const ng_block_s *a = (const ng_block_s *)blka;
-  return a->cptr + a->len;
+	asm volatile ("dcbt 0,%[p],0" : : [p] "r" (p));
 }
 
-extern void ng_free_data_buffer(ng_buffer_s *data);
-extern void ng_free_data_block(ng_block_s *block);
-extern int ng_dup_data_block(ng_block_s *block, const ng_block_s *n, int free_old);
-extern int ng_dup_data_block_str(ng_block_s *block, const ng_block_s *n, int free_old);
+static inline void rte_prefetch1(const volatile void *p)
+{
+	asm volatile ("dcbt 0,%[p],0" : : [p] "r" (p));
+}
 
-extern const ng_block_s __ng_uint8_string[];
+static inline void rte_prefetch2(const volatile void *p)
+{
+	asm volatile ("dcbt 0,%[p],0" : : [p] "r" (p));
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	/* non-temporal version not available, fallback to rte_prefetch0 */
+	rte_prefetch0(p);
+}
+#elif defined(__riscv__) || defined(__riscv) || defined(__RISCV64__) || defined(__riscv64__)
+static inline void rte_prefetch0(const volatile void *p)
+{
+	RTE_SET_USED(p);
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+	RTE_SET_USED(p);
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+	RTE_SET_USED(p);
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	/* non-temporal version not available, fallback to rte_prefetch0 */
+	rte_prefetch0(p);
+}
+#elif defined(__loongarch__)
+static inline void rte_prefetch0(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(ng_uintptr_t)p, 0, 3);
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(ng_uintptr_t)p, 0, 2);
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(ng_uintptr_t)p, 0, 1);
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	/* non-temporal version not available, fallback to rte_prefetch0 */
+	rte_prefetch0(p);
+}
+#else
+static inline void rte_prefetch0(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(ng_uintptr_t)p, 0, 3);
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(ng_uintptr_t)p, 0, 2);
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+	__builtin_prefetch((const void *)(ng_uintptr_t)p, 0, 1);
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	/* non-temporal version not available, fallback to rte_prefetch0 */
+	rte_prefetch0(p);
+}
+#endif
 
 #endif

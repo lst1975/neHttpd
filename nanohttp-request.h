@@ -214,7 +214,7 @@ struct request_statistics
 {
   unsigned long bytes_transmitted;
   unsigned long bytes_received;
-  uint64_t time;
+  ng_uint64_t time;
 };
 typedef struct request_statistics request_statistics_s;
 #endif
@@ -230,7 +230,7 @@ struct hrequest_t
   ng_list_head_s query;
   ng_list_head_s header;
   void    *conn;
-  size_t   content_length;
+  ng_size_t   content_length;
 #ifdef __NHTTP_INTERNAL
   request_statistics_s statistics;
 #endif

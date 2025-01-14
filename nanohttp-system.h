@@ -79,28 +79,28 @@
 #define NG_OS_VER_NAME_LEN_MAX 256
 
 struct _ng_os_info {
-  uint64_t   ngx_pid;
-  uint64_t   ngx_ppid;
-  uint64_t   ngx_ncpu;
-  uint64_t   ngx_max_sockets;
+  ng_uint64_t   ngx_pid;
+  ng_uint64_t   ngx_ppid;
+  ng_uint64_t   ngx_ncpu;
+  ng_uint64_t   ngx_max_sockets;
   char       ng_os_version[NG_OS_VER_NAME_LEN_MAX + 1];
-  size_t     ngx_pagesize;
-  size_t     ngx_pagesize_shift;
-  size_t     ngx_cacheline_size;
+  ng_size_t     ngx_pagesize;
+  ng_size_t     ngx_pagesize_shift;
+  ng_size_t     ngx_cacheline_size;
   ng_uint_t  ngx_allocation_granularity;
   double     freq;
-  uint64_t   tsc_hz;
-  size_t     cacheline_size;
-  uint64_t timer_freq;
-  uint64_t tz_offset;
+  ng_uint64_t   tsc_hz;
+  ng_size_t     cacheline_size;
+  ng_uint64_t timer_freq;
+  ng_uint64_t tz_offset;
   char       tz[8];
 };
 
 struct _meminfo {
-  uint64_t ullTotalPhys;
-  uint64_t ullAvailPhys;
-  uint64_t ullTotalVirtual;
-  uint64_t ullAvailVirtual;
+  ng_uint64_t ullTotalPhys;
+  ng_uint64_t ullAvailPhys;
+  ng_uint64_t ullTotalVirtual;
+  ng_uint64_t ullAvailVirtual;
 };
 typedef struct _meminfo mg_mem_info_s;
 
@@ -112,10 +112,10 @@ extern ng_os_info_s ng_os_info;
 void ng_os_deinit(void);
 ng_result_t ng_os_init(void);
 int ng_os_usleep(int usec);
-uint64_t ng_get_freq(void);
+ng_uint64_t ng_get_freq(void);
 void ng_os_dump(ng_buffer_s *b, void *printer);
 const char *__os_strerror(int err);
-char *ng_get_pwd(char *path, size_t len);
+char *ng_get_pwd(char *path, ng_size_t len);
 void ng_gettimeofday(ng_tmv_s *tp);
 
 #endif

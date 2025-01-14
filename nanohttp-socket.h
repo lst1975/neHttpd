@@ -152,8 +152,8 @@ struct _hsocket_t
     struct sockaddr_in addr;
     struct sockaddr_in6 addr6;
   };
-  size_t bytes_transmitted;
-  size_t bytes_received;
+  ng_size_t bytes_transmitted;
+  ng_size_t bytes_received;
   int salen;
   void *ssl;
   herror_t status;
@@ -245,7 +245,7 @@ hsocket_close(hsocket_s *sock);
  * @see hsocket_listen()
  */
 extern herror_t 
-hsocket_bind(uint8_t fam, hsocket_s *sock, unsigned short port);
+hsocket_bind(ng_uint8_t fam, hsocket_s *sock, unsigned short port);
 
 /** This function sets the socket to the listen mode. You must bind the
  * socket to a port with hsocket_bind() before you can listen to the
@@ -284,7 +284,7 @@ hsocket_accept(hsocket_s *sock, hsocket_s *dest);
  *         - HSOCKET_ERROR_SEND
  */
 extern herror_t 
-hsocket_send(hsocket_s *sock, const unsigned char *bytes, size_t size);
+hsocket_send(hsocket_s *sock, const unsigned char *bytes, ng_size_t size);
 
 /** This function sends a string throught the socket
  *
@@ -299,7 +299,7 @@ extern herror_t
 hsocket_send_string(hsocket_s *sock, const char *fmt, ...);
 
 extern int 
-hsocket_select_recv(hsocket_s *sock, char *buf, size_t len);
+hsocket_select_recv(hsocket_s *sock, char *buf, ng_size_t len);
 #if __NHTTP_USE_EPOLL
 herror_t 
 hsocket_epoll_create(hsocket_s *dest);
@@ -322,7 +322,7 @@ hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
  */
 extern herror_t 
 hsocket_recv(hsocket_s *sock, unsigned char *buffer, 
-  size_t size, int force, size_t *len);
+  ng_size_t size, int force, ng_size_t *len);
 
 /** This function gets the socket read/write timeout.
  *
@@ -343,7 +343,7 @@ extern void hsocket_set_timeout(int secs);
 
 extern herror_t 
 http_header_recv(hsocket_s *sock, char *buffer, 
-  size_t size, size_t *hdrlen, size_t *rcvbytes);
+  ng_size_t size, ng_size_t *hdrlen, ng_size_t *rcvbytes);
 
 #ifdef __cplusplus
 }

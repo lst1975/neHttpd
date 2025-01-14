@@ -126,18 +126,18 @@ ng_inet_pton(int af, const char *src, int len, void *dst)
  *  Paul Vixie, 1996.
  */
 int
-ng_inet_pton4(const char *src, int len, uint8_t *dst)
+ng_inet_pton4(const char *src, int len, ng_uint8_t *dst)
 {
   int saw_digit, octets, ch;
   const char *end = len ? src + len : NULL;
-  uint8_t tmp[NG_INADDRSZ], *tp;
+  ng_uint8_t tmp[NG_INADDRSZ], *tp;
 
   saw_digit = 0;
   octets = 0;
   *(tp = tmp) = 0;
   while ((end == NULL || src < end) && (ch = *src++) != '\0') {
     if (__ng_isdigit(ch)){
-      uint32_t _new = *tp * 10 + ch - '0';
+      ng_uint32_t _new = *tp * 10 + ch - '0';
 
       if (_new > 255)
         return ng_FALSE;
@@ -175,16 +175,16 @@ ng_inet_pton4(const char *src, int len, uint8_t *dst)
  *  Paul Vixie, 1996.
  */
 int
-ng_inet_pton6(const char *src, int len, uint8_t *dst)
+ng_inet_pton6(const char *src, int len, ng_uint8_t *dst)
 {
   const char *end = len ? src + len : NULL;
   const unsigned char *xdigits = __ng_hex_digit;
   
-  uint8_t tmp[NG_IN6ADDRSZ], *tp, *endp, *colonp;
+  ng_uint8_t tmp[NG_IN6ADDRSZ], *tp, *endp, *colonp;
   const char *curtok;
-  uint8_t ch;
+  ng_uint8_t ch;
   int saw_xdigit, count_xdigit;
-  uint32_t val;
+  ng_uint32_t val;
 
   ng_memset((tp = tmp), '\0', NG_IN6ADDRSZ);
   endp = tp + NG_IN6ADDRSZ;
@@ -221,8 +221,8 @@ ng_inet_pton6(const char *src, int len, uint8_t *dst)
       }
       if (tp + NG_INT16SZ > endp)
         return ng_FALSE;
-      *tp++ = (uint8_t) (val >> 8) & 0xff;
-      *tp++ = (uint8_t) val & 0xff;
+      *tp++ = (ng_uint8_t) (val >> 8) & 0xff;
+      *tp++ = (ng_uint8_t) val & 0xff;
       saw_xdigit = 0;
       count_xdigit = 0;
       val = 0;
@@ -240,8 +240,8 @@ ng_inet_pton6(const char *src, int len, uint8_t *dst)
   if (saw_xdigit) {
     if (tp + NG_INT16SZ > endp)
       return (0);
-    *tp++ = (uint8_t) (val >> 8) & 0xff;
-    *tp++ = (uint8_t) val & 0xff;
+    *tp++ = (ng_uint8_t) (val >> 8) & 0xff;
+    *tp++ = (ng_uint8_t) val & 0xff;
   }
   if (colonp != NULL) {
     /*
@@ -274,13 +274,13 @@ ng_inet_pton6(const char *src, int len, uint8_t *dst)
  *	Paul Vixie, 1996.
  */
 int
-ng_inet_ntop(int af, const char *src, char *dst, size_t size)
+ng_inet_ntop(int af, const char *src, char *dst, ng_size_t size)
 {
 	switch (af) {
   case AF_INET:
-		return (ng_inet_ntop4(src, dst, (size_t)size));
+		return (ng_inet_ntop4(src, dst, (ng_size_t)size));
   case AF_INET6:
-		return (ng_inet_ntop6(src, dst, (size_t)size));
+		return (ng_inet_ntop6(src, dst, (ng_size_t)size));
 	default:
 		return 0;
 	}
@@ -288,7 +288,7 @@ ng_inet_ntop(int af, const char *src, char *dst, size_t size)
 }
 
 int
-ng_inet_ntop_su(void *__sa, char *dst, size_t size)
+ng_inet_ntop_su(void *__sa, char *dst, ng_size_t size)
 {
   switch (((struct sockaddr *)__sa)->sa_family) {
   case AF_INET:
@@ -312,15 +312,15 @@ ng_inet_ntop_su(void *__sa, char *dst, size_t size)
  *	Paul Vixie, 1996.
  */
 int
-ng_inet_ntop4(const char *src, char *dst, size_t size)
+ng_inet_ntop4(const char *src, char *dst, ng_size_t size)
 {
 	char tmp[sizeof "255.255.255.255"];
-	size_t l;
+	ng_size_t l;
   char *p = tmp;
   
   for (int i = 0; i < 4; i++) {
     /* hold each IP quad in normal order */
-    const ng_block_s *b = &__ng_uint8_string[(uint8_t)src[i]];
+    const ng_block_s *b = &__ng_uint8_string[(ng_uint8_t)src[i]];
     for (int x=0;x<b->len;x++)
       *p++ = b->cptr[x];
     if (i < 3)
@@ -340,10 +340,10 @@ ng_inet_ntop4(const char *src, char *dst, size_t size)
  *	Paul Vixie, 1996.
  */
 int
-ng_inet_ntop6(const char *src, char *dst, size_t size)
+ng_inet_ntop6(const char *src, char *dst, ng_size_t size)
 {
 	/*
-	 * Note that int32_t and int16_t need only be "at least" large enough
+	 * Note that ng_int32_t and ng_int16_t need only be "at least" large enough
 	 * to contain a value of the specified size.  On some systems, like
 	 * Crays, there is no such thing as an integer variable with 16 bits.
 	 * Keep this in mind if you think this function should have been coded
@@ -353,7 +353,7 @@ ng_inet_ntop6(const char *src, char *dst, size_t size)
 	char tmp[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"];
 	char *tp, *ep;
 	struct { int base, len; } best, cur;
-	uint32_t words[NG_IN6ADDRSZ / NG_INT16SZ];
+	ng_uint32_t words[NG_IN6ADDRSZ / NG_INT16SZ];
 	int i;
 	int advance;
 
@@ -413,7 +413,7 @@ ng_inet_ntop6(const char *src, char *dst, size_t size)
 		/* Is this address an encapsulated IPv4? */
 		if (i == 6 && best.base == 0 &&
 		    (best.len == 6 || (best.len == 5 && words[5] == 0xffff))) {
-		  int n = ng_inet_ntop4(src+12, tp, (size_t)(ep - tp));
+		  int n = ng_inet_ntop4(src+12, tp, (ng_size_t)(ep - tp));
 			if (!n)
 				return 0;
 			tp += n;
@@ -437,7 +437,7 @@ ng_inet_ntop6(const char *src, char *dst, size_t size)
 	/*
 	 * Check for overflow, copy, and we're done.
 	 */
-	if ((size_t)(tp - tmp) > size) {
+	if ((ng_size_t)(tp - tmp) > size) {
     return 0;
 	}
   

@@ -107,10 +107,10 @@ struct _pair { char t, o; };
 static const struct _pair s_pairs[] = { P('0'), P('1'), P('2'), P('3'), P('4'), P('5'), P('6'), P('7'), P('8'), P('9') };
 
 #define W(N, I) *(struct _pair*)&b[N] = s_pairs[I]
-#define A(N) t = ((uint64_t)(1) << (32 + ((N / 5 * N * 53) >> 4))) / (uint32_t)(1e##N) + 1 + N/6 - (N>>3), \
+#define A(N) t = ((ng_uint64_t)(1) << (32 + ((N / 5 * N * 53) >> 4))) / (ng_uint32_t)(1e##N) + 1 + N/6 - (N>>3), \
                     t *= u, t >>= ((N / 5 * N * 53) >> 4), t += (N / 6) << 2, W(0, t >> 32)
-#define S(N) b[N] = (char)((uint64_t)(10) * (uint32_t)(t) >> 32) + '0'
-#define D(N) t = (uint64_t)(100) * (uint32_t)(t), W(N, t >> 32)
+#define S(N) b[N] = (char)((ng_uint64_t)(10) * (ng_uint32_t)(t) >> 32) + '0'
+#define D(N) t = (ng_uint64_t)(100) * (ng_uint32_t)(t), W(N, t >> 32)
 
 #define C0 b[0] = (char)(u) + '0'
 #define C1 W(0, u)
@@ -138,35 +138,35 @@ static const struct _pair s_pairs[] = { P('0'), P('1'), P('2'), P('3'), P('4'), 
 #define POS(N) (N < length ? C##N, N + 1 : N + 1)
 #define NEG(N) (N + 1 < length ? *b++ = '-', C##N, N + 2 : N + 2)
 
-static __ng_inline__ size_t u32to_chars_jeaiii(char* b, size_t length, uint32_t u)
+static __ng_inline__ ng_size_t u32to_chars_jeaiii(char* b, ng_size_t length, ng_uint32_t u)
 {
-  uint64_t t;
+  ng_uint64_t t;
   return L09(POS);
 }
 
-static __ng_inline__ size_t i32to_chars_jeaiii(char* b, size_t length, int32_t i)
+static __ng_inline__ ng_size_t i32to_chars_jeaiii(char* b, ng_size_t length, ng_int32_t i)
 {
-  uint64_t t;
-  uint32_t u = i;
+  ng_uint64_t t;
+  ng_uint32_t u = i;
   return i < 0 ? u = 0 - u, L09(NEG) : L09(POS);
 }
 
-static __ng_inline__ size_t u64to_chars_jeaiii(char* b, size_t length, uint64_t n)
+static __ng_inline__ ng_size_t u64to_chars_jeaiii(char* b, ng_size_t length, ng_uint64_t n)
 {
   rte_prefetch0(s_pairs);
   
-  size_t count;
-  uint32_t u = (uint32_t)(n);
-  uint64_t t;
+  ng_size_t count;
+  ng_uint32_t u = (ng_uint32_t)(n);
+  ng_uint64_t t;
 
   if (u == n)
     return L09(POS);
 
-  uint64_t a = n / 100000000;
+  ng_uint64_t a = n / 100000000;
 
-  if ((uint32_t)(a) == a)
+  if ((ng_uint32_t)(a) == a)
   {
-    u = (uint32_t)(a);
+    u = (ng_uint32_t)(a);
     b += count = L09(POS);
     count += 8;
     if (count > length)
@@ -174,7 +174,7 @@ static __ng_inline__ size_t u64to_chars_jeaiii(char* b, size_t length, uint64_t 
   }
   else
   {
-    u = (uint32_t)(a / 100000000);
+    u = (ng_uint32_t)(a / 100000000);
     b += count = L03(POS);
     count += 16;
     if (count > length)
@@ -190,29 +190,29 @@ static __ng_inline__ size_t u64to_chars_jeaiii(char* b, size_t length, uint64_t 
   return count;
 }
 
-static __ng_inline__ size_t i64to_chars_jeaiii(char* b, size_t length, int64_t i)
+static __ng_inline__ ng_size_t i64to_chars_jeaiii(char* b, ng_size_t length, ng_int64_t i)
 {
   return i < 0
-    ? u64to_chars_jeaiii(b + 1, length > 0 ? b[0] = '-', length - 1 : 0, (uint64_t)(0) - (uint64_t)(i)) + 1
-    : u64to_chars_jeaiii(b, length, (uint64_t)(i));
+    ? u64to_chars_jeaiii(b + 1, length > 0 ? b[0] = '-', length - 1 : 0, (ng_uint64_t)(0) - (ng_uint64_t)(i)) + 1
+    : u64to_chars_jeaiii(b, length, (ng_uint64_t)(i));
 }
 
-size_t u32toa_jeaiii(uint32_t u, char* b, size_t length)
+ng_size_t u32toa_jeaiii(ng_uint32_t u, char* b, ng_size_t length)
 {
   return u32to_chars_jeaiii(b, length, u);
 }
 
-size_t i32toa_jeaiii(int32_t i, char* b, size_t length)
+ng_size_t i32toa_jeaiii(ng_int32_t i, char* b, ng_size_t length)
 {
   return i32to_chars_jeaiii(b, length, i);
 }
 
-size_t u64toa_jeaiii(uint64_t n, char* b, size_t length)
+ng_size_t u64toa_jeaiii(ng_uint64_t n, char* b, ng_size_t length)
 {
   return u64to_chars_jeaiii(b, length, n);
 }
 
-size_t i64toa_jeaiii(int64_t i, char* b, size_t length)
+ng_size_t i64toa_jeaiii(ng_int64_t i, char* b, ng_size_t length)
 {
   return i64to_chars_jeaiii(b, length, i);
 }
@@ -254,9 +254,9 @@ static const char digitsLowerAlpha[513] =
   "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
 
 int 
-u32toh_jeaiii(uint32_t num, char *s, int len, int lowerAlpha)
+u32toh_jeaiii(ng_uint32_t num, char *s, int len, int lowerAlpha)
 {
-  uint32_t x = (uint32_t)num;
+  ng_uint32_t x = (ng_uint32_t)num;
 	int i = 3;
 	const char *lut = ((lowerAlpha) ? digitsLowerAlpha : digitsUpperAlpha);
 	while (i >= 0 && i < len)
@@ -276,7 +276,7 @@ u32toh_jeaiii(uint32_t num, char *s, int len, int lowerAlpha)
 }
 
 int 
-u64toh_jeaiii(uint64_t num, char *s, int len, int lowerAlpha)
+u64toh_jeaiii(ng_uint64_t num, char *s, int len, int lowerAlpha)
 {
   int l = u32toh_jeaiii(num>>32, s, len, lowerAlpha);
   if (l < len)

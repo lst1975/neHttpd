@@ -73,6 +73,9 @@
 #define HAVE_STDLIB_H
 #define HAVE_STRING_H
 #define HAVE_ERRNO_H
+#define HAVE_STDARG_H
+#define HAVE_SYSLOG_H
+
 #ifndef WIN32
 #define HAVE_SYS_TIME_H
 #define HAVE_NETINET_IN_H
@@ -105,11 +108,6 @@
 #undef HAVE_NETDB_H
 #endif
 
-#define HAVE_STDARG_H
-#define HAVE_CTYPE_H
-
-#define HAVE_SYSLOG_H
-
 #define __NHTTP_INTERNAL
 
 #define __NHTTP_TEST 1
@@ -118,6 +116,7 @@
 
 #undef HAVE_SSL
 
+#define _nanoConfig_PATH_MAX                      1024
 #define _nanoConfig_HTTPD_PORT                    8080
 #define _nanoConfig_HTTPD_MAX_CONNECTIONS         128
 #define _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS 256
@@ -150,12 +149,11 @@
 
 #define __NHTTP_USE_NATIVE_MEM 0
 
-#include <stdint.h>
-#include <math.h>
-#include <limits.h>  // For PATH_MAX
 #include <assert.h>
 #include <syslog.h>
-#include <inttypes.h>
+#include <stdarg.h>
+#include <stdalign.h>
+#include <stdatomic.h>
 
 #ifdef HAVE_STDIO_H
 #include <stdio.h>
@@ -175,10 +173,6 @@
 
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
-#endif
-
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
 #endif
 
 #ifdef HAVE_PTHREAD_H

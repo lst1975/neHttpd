@@ -179,7 +179,7 @@ httpd_get_terminate_signal(void)
 void signal_handler_segfault(int sig) {
   NG_UNUSED(sig);
 }
-uint64_t
+ng_uint64_t
 os__rte_rdtsc_syscall(void)
 {
   LARGE_INTEGER frequency, start, end;
@@ -223,17 +223,17 @@ void signal_handler_segfault(int sig) {
  * This call is easily portable to any architecture, however,
  * it may require a system call and imprecise for some tasks.
  */
-uint64_t
+ng_uint64_t
 os__rte_rdtsc_syscall(void)
 {
   struct timespec val;
-  uint64_t v;
+  ng_uint64_t v;
 
   while (clock_gettime(CLOCK_MONOTONIC_RAW, &val) != 0)
   /* no body */;
 
-  v  = (uint64_t) val.tv_sec * 1000000000LL;
-  v += (uint64_t) val.tv_nsec;
+  v  = (ng_uint64_t) val.tv_sec * 1000000000LL;
+  v += (ng_uint64_t) val.tv_nsec;
   return v;
 }
 #endif

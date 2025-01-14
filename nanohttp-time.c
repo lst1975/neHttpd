@@ -72,14 +72,14 @@
 void (*rte_delay_us)(unsigned int) = NULL;
 
 /* The frequency of the RDTSC timer resolution */
-static uint64_t eal_tsc_resolution_hz;
+static ng_uint64_t eal_tsc_resolution_hz;
 
 #define MS_PER_S 1000
 #define US_PER_S 1000000
 #define NS_PER_S 1000000000
 
 #if defined(__aarch64__) || defined(__arm__) || defined(__arm) || defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7__)
-uint64_t
+ng_uint64_t
 get_tsc_freq_arch(void)
 {
 #if defined RTE_ARCH_ARM64 && !defined RTE_ARM_EAL_RDTSC_USE_PMU
@@ -89,9 +89,9 @@ get_tsc_freq_arch(void)
 	/* Use the generic counter ticks to calculate the PMU
 	 * cycle frequency.
 	 */
-	uint64_t ticks;
-	uint64_t start_ticks, cur_ticks;
-	uint64_t start_pmu_cycles, end_pmu_cycles;
+	ng_uint64_t ticks;
+	ng_uint64_t start_ticks, cur_ticks;
+	ng_uint64_t start_pmu_cycles, end_pmu_cycles;
 
 	/* Number of ticks for 1/10 second */
 	ticks = __rte_arm64_cntfrq() / 10;
@@ -131,9 +131,9 @@ get_tsc_freq_arch(void)
 	 (t3 == 0x69746e65))   /* itne */
 
 static unsigned int
-rte_cpu_get_model(uint32_t fam_mod_step)
+rte_cpu_get_model(ng_uint32_t fam_mod_step)
 {
-	uint32_t family, model, ext_model;
+	ng_uint32_t family, model, ext_model;
 
 	family = (fam_mod_step >> 8) & 0xf;
 	model = (fam_mod_step >> 4) & 0xf;
@@ -146,8 +146,8 @@ rte_cpu_get_model(uint32_t fam_mod_step)
 	return model;
 }
 
-static int32_t
-rdmsr(int msr, uint64_t *val)
+static ng_int32_t
+rdmsr(int msr, ng_uint64_t *val)
 {
 #ifdef RTE_EXEC_ENV_LINUX
 	int fd;
@@ -157,7 +157,7 @@ rdmsr(int msr, uint64_t *val)
 	if (fd < 0)
 		return fd;
 
-	ret = pread(fd, val, sizeof(uint64_t), msr);
+	ret = pread(fd, val, sizeof(ng_uint64_t), msr);
 
 	close(fd);
 
@@ -170,8 +170,8 @@ rdmsr(int msr, uint64_t *val)
 #endif
 }
 
-static uint32_t
-check_model_wsm_nhm(uint8_t model)
+static ng_uint32_t
+check_model_wsm_nhm(ng_uint8_t model)
 {
 	switch (model) {
 	/* Westmere */
@@ -189,8 +189,8 @@ check_model_wsm_nhm(uint8_t model)
 	return 0;
 }
 
-static uint32_t
-check_model_gdm_dnv(uint8_t model)
+static ng_uint32_t
+check_model_gdm_dnv(ng_uint8_t model)
 {
 	switch (model) {
 	/* Goldmont */
@@ -208,7 +208,7 @@ check_model_gdm_dnv(uint8_t model)
 int
 __get_cpuid_max(unsigned int e, unsigned int *s)
 {
-	uint32_t cpuinfo[4];
+	ng_uint32_t cpuinfo[4];
 
 	__cpuid(cpuinfo, e);
 	if (s)
@@ -218,16 +218,16 @@ __get_cpuid_max(unsigned int e, unsigned int *s)
 #endif
 #endif
 
-uint64_t
+ng_uint64_t
 get_tsc_freq_arch(void)
 {
 #if defined(RTE_TOOLCHAIN_MSVC) || defined(WIN32)
 	int cpuinfo[4];
 #endif
-	uint64_t tsc_hz = 0;
-	uint32_t a, b, c, d, maxleaf;
-	uint8_t mult, model;
-	int32_t ret;
+	ng_uint64_t tsc_hz = 0;
+	ng_uint32_t a, b, c, d, maxleaf;
+	ng_uint8_t mult, model;
+	ng_int32_t ret;
 
 #if defined(RTE_TOOLCHAIN_MSVC) || defined(WIN32)
 	__cpuid(cpuinfo, 0);
@@ -303,13 +303,13 @@ get_tsc_freq_arch(void)
 #include "rte_log.h"
 
 /** Read generic counter frequency */
-static uint64_t
+static ng_uint64_t
 __rte_riscv_timefrq(void)
 {
 #define TIMEBASE_FREQ_SIZE	8
 	if (RTE_RISCV_TIME_FREQ > 0)
 		return RTE_RISCV_TIME_FREQ;
-	uint8_t buf[TIMEBASE_FREQ_SIZE];
+	ng_uint8_t buf[TIMEBASE_FREQ_SIZE];
 	ssize_t cnt;
 	FILE *file;
 
@@ -321,9 +321,9 @@ __rte_riscv_timefrq(void)
 	fclose(file);
 	switch (cnt) {
 	case 8:
-		return rte_be_to_cpu_64(*(uint64_t *)buf);
+		return rte_be_to_cpu_64(*(ng_uint64_t *)buf);
 	case 4:
-		return rte_be_to_cpu_32(*(uint32_t *)buf);
+		return rte_be_to_cpu_32(*(ng_uint32_t *)buf);
 	default:
 		break;
 	}
@@ -332,7 +332,7 @@ fail:
 	return 0;
 }
 
-uint64_t
+ng_uint64_t
 get_tsc_freq_arch(void)
 {
 	log_info("TSC using RISC-V %s.",
@@ -343,9 +343,9 @@ get_tsc_freq_arch(void)
 	/*
 	 * Use real time clock to estimate current cycle frequency
 	 */
-	uint64_t ticks, frq;
-	uint64_t start_ticks, cur_ticks;
-	uint64_t start_cycle, end_cycle;
+	ng_uint64_t ticks, frq;
+	ng_uint64_t start_ticks, cur_ticks;
+	ng_uint64_t start_cycle, end_cycle;
 
 	/* Do not proceed unless clock frequency can be obtained. */
 	frq = __rte_riscv_timefrq();
@@ -377,7 +377,7 @@ get_tsc_freq_arch(void)
 #define CPUCFG5_CCDIV_MASK	0xFFFF0000
 #define CPUCFG5_CCDIV_SHIFT	16
 
-static __rte_noinline uint32_t
+static __rte_noinline ng_uint32_t
 read_cpucfg(int arg)
 {
 	int ret = 0;
@@ -392,10 +392,10 @@ read_cpucfg(int arg)
 	return ret;
 }
 
-uint64_t
+ng_uint64_t
 get_tsc_freq_arch(void)
 {
-	uint32_t base_freq, mul_factor, div_factor;
+	ng_uint32_t base_freq, mul_factor, div_factor;
 
 	base_freq = read_cpucfg(LOONGARCH_CPUCFG4);
 	mul_factor = (read_cpucfg(LOONGARCH_CPUCFG5) & CPUCFG5_CCMUL_MASK) >>
@@ -414,7 +414,7 @@ get_tsc_freq_arch(void)
 #include <stdio.h>
 #endif
 
-uint64_t
+ng_uint64_t
 get_tsc_freq_arch(void)
 {
 #ifdef __GLIBC__
@@ -446,27 +446,27 @@ get_tsc_freq_arch(void)
 	}
 	fclose(f);
 out:
-	return (uint64_t) base;
+	return (ng_uint64_t) base;
 #else
 	return 0;
 #endif
 
 }
 #else
-uint64_t get_tsc_freq_arch(void)
+ng_uint64_t get_tsc_freq_arch(void)
 {
   return ng_get_freq();
 }
 #endif
 
-static uint64_t
+static ng_uint64_t
 estimate_tsc_freq(void)
 {
 #define CYC_PER_10MHZ 1E7
 	log_warn("WARNING: TSC frequency estimated roughly"
 		" - clock timings may be less accurate.");
 	/* assume that the rte_delay_us_sleep() will sleep for 1 second */
-	uint64_t start = rte_rdtsc();
+	ng_uint64_t start = rte_rdtsc();
 	rte_delay_us_sleep(US_PER_S);
 	/* Round up to 10Mhz. 1E7 ~ 10Mhz */
 	return RTE_ALIGN_MUL_NEAR(rte_rdtsc() - start, CYC_PER_10MHZ);
@@ -475,7 +475,7 @@ estimate_tsc_freq(void)
 void
 set_tsc_freq(void)
 {
-	uint64_t freq;
+	ng_uint64_t freq;
 
 	freq = get_tsc_freq_arch();
 	if (!freq)
@@ -513,7 +513,7 @@ rte_delay_us_sleep(unsigned int us)
    * due_time's uom is 100 ns, multiply by 10 to convert to microseconds
    * set us microseconds time for timer
    */
-  due_time.QuadPart = -((int64_t)us * 10);
+  due_time.QuadPart = -((ng_int64_t)us * 10);
   if (!SetWaitableTimer(timer, &due_time, 0, NULL, NULL, FALSE)) 
   {
     int err = GetLastError();
@@ -536,13 +536,13 @@ clean0:
   return;
 }
 
-uint64_t
+ng_uint64_t
 get_tsc_freq(void)
 {
 	LARGE_INTEGER t_start, t_end, elapsed_us;
 	LARGE_INTEGER frequency;
-	uint64_t tsc_hz;
-	uint64_t end, start;
+	ng_uint64_t tsc_hz;
+	ng_uint64_t end, start;
 
 	QueryPerformanceFrequency(&frequency);
 
@@ -567,7 +567,7 @@ get_tsc_freq(void)
 	elapsed_us.QuadPart /= frequency.QuadPart;
 
 	double secs = ((double)elapsed_us.QuadPart)/US_PER_SEC;
-	tsc_hz = (uint64_t)((end - start)/secs);
+	tsc_hz = (ng_uint64_t)((end - start)/secs);
 
 	/* Round up to 10Mhz. 1E7 ~ 10Mhz */
 	return RTE_ALIGN_MUL_NEAR(tsc_hz, CYC_PER_10MHZ);
@@ -602,12 +602,12 @@ rte_delay_us_sleep(unsigned int us)
 	}
 }
 #if defined(__FreeBSD__)
-uint64_t
+ng_uint64_t
 get_tsc_freq(void)
 {
-	size_t sz;
+	ng_size_t sz;
 	int tmp;
-	uint64_t tsc_hz;
+	ng_uint64_t tsc_hz;
 
 	sz = sizeof(tmp);
 	tmp = 0;
@@ -642,7 +642,7 @@ rte_eal_timer_init(void)
 
 #else
 
-uint64_t
+ng_uint64_t
 get_tsc_freq(void)
 {
 #ifdef CLOCK_MONOTONIC_RAW
@@ -652,10 +652,10 @@ get_tsc_freq(void)
 	struct timespec sleeptime = {.tv_nsec = NS_PER_SEC / 10 }; /* 1/10 second */
 
 	struct timespec t_start, t_end;
-	uint64_t tsc_hz;
+	ng_uint64_t tsc_hz;
 
 	if (clock_gettime(CLOCK_MONOTONIC_RAW, &t_start) == 0) {
-		uint64_t ns, end, start = rte_rdtsc();
+		ng_uint64_t ns, end, start = rte_rdtsc();
 		nanosleep(&sleeptime,NULL);
 		clock_gettime(CLOCK_MONOTONIC_RAW, &t_end);
 		end = rte_rdtsc();
@@ -663,7 +663,7 @@ get_tsc_freq(void)
 		ns += (t_end.tv_nsec - t_start.tv_nsec);
 
 		double secs = (double)ns/NS_PER_SEC;
-		tsc_hz = (uint64_t)((end - start)/secs);
+		tsc_hz = (ng_uint64_t)((end - start)/secs);
 		/* Round up to 10Mhz. 1E7 ~ 10Mhz */
 		return RTE_ALIGN_MUL_NEAR(tsc_hz, CYC_PER_10MHZ);
 	}
@@ -680,7 +680,7 @@ rte_eal_timer_init(void)
 
 #endif
 
-uint64_t
+ng_uint64_t
 rte_get_tsc_hz(void)
 {
 	return eal_tsc_resolution_hz;
@@ -692,10 +692,10 @@ rte_get_tsc_hz(void)
  * @return
  *   The number of cycles in one second.
  */
-uint64_t
+ng_uint64_t
 rte_get_timer_hz(void)
 {
-	uint64_t freq = rte_get_tsc_hz();
+	ng_uint64_t freq = rte_get_tsc_hz();
   if (!freq) freq = ng_os_info.freq;
   return freq;
 }
@@ -703,20 +703,61 @@ rte_get_timer_hz(void)
 void
 rte_delay_us_block(unsigned int us)
 {
-	const uint64_t start = rte_get_timer_cycles();
-	const uint64_t ticks = (uint64_t)us * rte_get_timer_hz() / 1E6;
+	const ng_uint64_t start = rte_get_timer_cycles();
+	const ng_uint64_t ticks = (ng_uint64_t)us * rte_get_timer_hz() / 1E6;
 	while ((rte_get_timer_cycles() - start) < ticks)
 		rte_pause();
 }
 
-static uint64_t startime;  
-static uint64_t starcycles;  
+static ng_uint64_t startime;  
+static ng_uint64_t starcycles;  
 
-uint64_t ng_get_time(void)
+// Function to round a double value to the nearest ng_int64_t value
+static inline ng_int64_t round_to_int64(double num) {
+  // Check if the number is within the range of ng_int64_t
+  double max_int64 = (double)NG_INT64_MAX;
+  double min_int64 = (double)NG_INT64_MIN;
+
+  if (num > max_int64) {
+    log_warn("Number exceeds ng_int64_t maximum range.");
+    return NG_INT64_MAX;
+  } else if (num < min_int64) {
+    log_warn("Number exceeds ng_int64_t minimum range.");
+    return NG_INT64_MIN;
+  }
+
+  // Round the number to the nearest integer
+  ng_int64_t rounded = (ng_int64_t)(num + (num >= 0 ? 0.5 : -0.5));
+
+  return rounded;
+}
+
+// Function to round a double value to the nearest ng_uint64_t value
+static inline ng_uint64_t round_to_uint64(double num) {
+  // Check if the number is negative
+  if (num < 0) {
+    log_warn("Cannot round a negative number to ng_uint64_t.");
+    return 0;
+  }
+
+  // Check if the number is greater than the maximum value of ng_uint64_t
+  double max_uint64 = (double)NG_UINT64_MAX;
+  if (num > max_uint64) {
+    log_warn("Number exceeds ng_uint64_t range.");
+    return NG_UINT64_MAX;
+  }
+
+  // Round the number to the nearest integer
+  ng_uint64_t rounded = (ng_uint64_t)(num + 0.5);
+
+  return rounded;
+}
+
+ng_uint64_t ng_get_time(void)
 {
-  uint64_t endcycles, elapsed, result;
+  ng_uint64_t endcycles, elapsed, result;
   endcycles = rte_get_timer_cycles();
-  elapsed = round(ng_cycles2sec(ng_difftime(endcycles, starcycles), 0));
+  elapsed = round_to_uint64(ng_cycles2sec(ng_difftime(endcycles, starcycles), 0));
   result = startime+elapsed;
   if (endcycles <= starcycles)
   {
@@ -739,7 +780,7 @@ void ng_update_time(void)
 #define __ng_DAYS_N   31
 #define __ng_HOURS_N  23
 
-static const uint64_t __ng_YEARS[256] = {
+static const ng_uint64_t __ng_YEARS[256] = {
   UINT64_C(         0),
   UINT64_C(  31536000), UINT64_C(  63072000), UINT64_C(  94694400), 
   UINT64_C( 126230400), UINT64_C( 157766400), UINT64_C( 189302400),
@@ -826,21 +867,21 @@ static const uint64_t __ng_YEARS[256] = {
   UINT64_C(7794576000), UINT64_C(7826112000), UINT64_C(7857648000), 
   UINT64_C(7889184000), UINT64_C(7920806400), UINT64_C(7952342400)};
 
-static const uint32_t __ng_MONTHS[16] = {
+static const ng_uint32_t __ng_MONTHS[16] = {
   UINT32_C(       0), UINT32_C( 2678400), UINT32_C( 5097600),  
   UINT32_C( 7776000), UINT32_C(10368000), UINT32_C(13046400), 
   UINT32_C(15638400), UINT32_C(18316800), UINT32_C(20995200), 
   UINT32_C(23587200), UINT32_C(26265600), UINT32_C(28857600), 
   UINT32_C(31536000)};
   
-static const uint32_t __ng_MONTHS_leap[16] = {
+static const ng_uint32_t __ng_MONTHS_leap[16] = {
   UINT32_C(       0), UINT32_C( 2678400), UINT32_C( 5184000), 
   UINT32_C( 7862400), UINT32_C(10454400), UINT32_C(13132800), 
   UINT32_C(15724800), UINT32_C(18403200), UINT32_C(21081600), 
   UINT32_C(23673600), UINT32_C(26352000), UINT32_C(28944000), 
   UINT32_C(31622400)};
   
-static const uint32_t __ng_DAYS[32] = {
+static const ng_uint32_t __ng_DAYS[32] = {
   UINT32_C(      0), UINT32_C(  86400), UINT32_C( 172800), 
   UINT32_C( 259200), UINT32_C( 345600), UINT32_C( 432000), 
   UINT32_C( 518400), UINT32_C( 604800), UINT32_C( 691200), 
@@ -853,7 +894,7 @@ static const uint32_t __ng_DAYS[32] = {
   UINT32_C(2332800), UINT32_C(2419200), UINT32_C(2505600), 
   UINT32_C(2592000), UINT32_C(2678400)};
   
-static const uint32_t __ng_HOURS[32] = {
+static const ng_uint32_t __ng_HOURS[32] = {
   UINT32_C(    0), UINT32_C( 3600), UINT32_C( 7200), 
   UINT32_C(10800), UINT32_C(14400), UINT32_C(18000), 
   UINT32_C(21600), UINT32_C(25200), UINT32_C(28800), 
@@ -864,7 +905,7 @@ static const uint32_t __ng_HOURS[32] = {
   UINT32_C(75600), UINT32_C(79200), UINT32_C(82800), 
   UINT32_C(86400)};
   
-static const uint32_t __ng_MINUTES[64] = {
+static const ng_uint32_t __ng_MINUTES[64] = {
   UINT32_C(   0), UINT32_C(  60), UINT32_C( 120), UINT32_C( 180), 
   UINT32_C( 240), UINT32_C( 300), UINT32_C( 360), UINT32_C( 420), 
   UINT32_C( 480), UINT32_C( 540), UINT32_C( 600), UINT32_C( 660), 
@@ -882,7 +923,7 @@ static const uint32_t __ng_MINUTES[64] = {
   UINT32_C(3360), UINT32_C(3420), UINT32_C(3480), UINT32_C(3540), 
   UINT32_C(3600)};
   
-static const uint32_t __ng_mon_DAYS[32] = {
+static const ng_uint32_t __ng_mon_DAYS[32] = {
   UINT32_C(31), UINT32_C(28), UINT32_C(31), UINT32_C(30), 
   UINT32_C(31), UINT32_C(30), UINT32_C(31), UINT32_C(31), 
   UINT32_C(30), UINT32_C(31), UINT32_C(30), UINT32_C(31),
@@ -890,7 +931,7 @@ static const uint32_t __ng_mon_DAYS[32] = {
   UINT32_C(31), UINT32_C(30), UINT32_C(31), UINT32_C(31), 
   UINT32_C(30), UINT32_C(31), UINT32_C(30), UINT32_C(31)};
   
-static const uint32_t __ng_year_DAYS[32] = {
+static const ng_uint32_t __ng_year_DAYS[32] = {
   UINT32_C(  0), UINT32_C( 31), UINT32_C( 59), UINT32_C( 90), 
   UINT32_C(120), UINT32_C(151), UINT32_C(181), UINT32_C(212), 
   UINT32_C(243), UINT32_C(273), UINT32_C(304), UINT32_C(334), 
@@ -968,7 +1009,7 @@ ng_result_t
 ng_unix2tm_time(ng_rtc_time_s *tm, ng_tmv_s *tv, int tz_offset) 
 {
   int i, leap = 0;
-  const uint32_t *m;
+  const ng_uint32_t *m;
   ng_time_t day_in_epoch;
   ng_time_t t = tv->tv_sec;
   
@@ -1136,7 +1177,7 @@ ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
   }
   
   if (p[3] != ',' || p[4] != ' ' 
-    || *(uint32_t *)&p[25] != *(const uint32_t *)" GMT")
+    || *(ng_uint32_t *)&p[25] != *(const ng_uint32_t *)" GMT")
   {
     return -1;
   }
@@ -1144,41 +1185,41 @@ ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
   switch (p[0])
   {
     case 'S':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"un")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"un")
         tm->tm_wday = 0;
-      else if (*(uint16_t*)&p[1] == *(const uint16_t*)"at")
+      else if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"at")
         tm->tm_wday = 6;
       else
         return -1;
       break;
       
     case 'T':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ue")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ue")
         tm->tm_wday = 2;
-      else if (*(uint16_t*)&p[1] == *(const uint16_t*)"hu")
+      else if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"hu")
         tm->tm_wday = 4;
       else
         return -1;
       break;
       
     case 'M':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"on")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"on")
         tm->tm_wday = 1;
-      else if (*(uint16_t*)&p[1] == *(const uint16_t*)"ay")
+      else if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ay")
         tm->tm_wday = 4;
       else
         return -1;
       break;
       
     case 'W':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ed")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ed")
         tm->tm_wday = 3;
       else
         return -1;
       break;
       
     case 'F':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ed")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ed")
         tm->tm_wday = 5;
       else
         return -1;
@@ -1207,55 +1248,55 @@ ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
   switch (p[0])
   {
     case 'J':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"an")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"an")
         tm->tm_mon = 0;
-      else if (*(uint16_t*)&p[1] == *(const uint16_t*)"un")
+      else if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"un")
         tm->tm_mon = 5;
-      else if (*(uint16_t*)&p[1] == *(const uint16_t*)"ul")
+      else if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ul")
         tm->tm_mon = 6;
       else
         return -1;
       break;
     case 'F':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"eb")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"eb")
         tm->tm_mon = 1;
       else
         return -1;
       break;
     case 'M':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ar")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ar")
         tm->tm_mon = 2;
       else
         return -1;
       break;
     case 'A':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"pr")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"pr")
         tm->tm_mon = 3;
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ug")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ug")
         tm->tm_mon = 7;
       else
         return -1;
       break;
     case 'S':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ep")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ep")
         tm->tm_mon = 8;
       else
         return -1;
       break;
     case 'O':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ct")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ct")
         tm->tm_mon = 9;
       else
         return -1;
       break;
     case 'N':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ov")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ov")
         tm->tm_mon = 10;
       else
         return -1;
       break;
     case 'D':
-      if (*(uint16_t*)&p[1] == *(const uint16_t*)"ec")
+      if (*(ng_uint16_t*)&p[1] == *(const ng_uint16_t*)"ec")
         tm->tm_mon = 11;
       else
         return -1;
@@ -1310,33 +1351,33 @@ static int __raw_ng_http_tm(ng_rtc_time_s *tm, char *buf, int len, int isHttp,
 
   if (isHttp)
   {
-    *(uint64_t*)p = *(const uint64_t*)"Date:   ";
+    *(ng_uint64_t*)p = *(const ng_uint64_t*)"Date:   ";
     p += 6;
   }
-  *(uint32_t*)p = *(const uint32_t*)week_name[tm->tm_wday];
+  *(ng_uint32_t*)p = *(const ng_uint32_t*)week_name[tm->tm_wday];
   p += 4;
-  *(uint32_t*)p = *(const uint32_t*)min_sec_hour_day_name[tm->tm_mday];
+  *(ng_uint32_t*)p = *(const ng_uint32_t*)min_sec_hour_day_name[tm->tm_mday];
   p += 4;
-  *(uint32_t*)p = *(const uint32_t*)month_name[tm->tm_mon];
+  *(ng_uint32_t*)p = *(const ng_uint32_t*)month_name[tm->tm_mon];
   p += 4;
-  *(uint32_t*)p = *(const uint32_t*)year_name[tm->tm_year - 70];
+  *(ng_uint32_t*)p = *(const ng_uint32_t*)year_name[tm->tm_year - 70];
   p[4] = ' ';
   p += 5;
-  *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm->tm_hour]+1);
+  *(ng_uint16_t*)p = *(const ng_uint32_t*)(min_sec_hour_day_name[tm->tm_hour]+1);
   p[2] = ':';
   p += 3;
-  *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm->tm_min]+1);
+  *(ng_uint16_t*)p = *(const ng_uint32_t*)(min_sec_hour_day_name[tm->tm_min]+1);
   p[2] = ':';
   p += 3;
-  *(uint16_t*)p = *(const uint32_t*)(min_sec_hour_day_name[tm->tm_sec]+1);
+  *(ng_uint16_t*)p = *(const ng_uint32_t*)(min_sec_hour_day_name[tm->tm_sec]+1);
   p += 2;
   if (tz == NULL) 
     tz = ng_os_info.tz;
-  *(uint32_t*)p = *(const uint32_t*)tz;
+  *(ng_uint32_t*)p = *(const ng_uint32_t*)tz;
   p += 4;
   if (isHttp)
   {
-    *(uint16_t*)p = *(const uint16_t*)"\r\n";
+    *(ng_uint16_t*)p = *(const ng_uint16_t*)"\r\n";
     p += 2;
   }
   return p - buf;
@@ -1418,7 +1459,7 @@ void ng_date_print(void)
   BUF_SET(&b, date, sizeof(date));
   __ng_http_date(b.buf, b.len, 0, NULL);
   log_print("\nSystem is already running %"PRIu64" seconds\n", 
-    ng_get_time() - (uint64_t)startime);
+    ng_get_time() - (ng_uint64_t)startime);
   log_print("Date   : %.*s\n\n", (int)b.len, b.cptr);
   
 }

@@ -281,10 +281,10 @@ typedef int (*httpd_auth_f) (hrequest_s *req,
 struct service_statistics
 {
 #if __NHTTP_USE_STAT_RWLOCK
-  volatile uint64_t requests;
-  volatile uint64_t bytes_transmitted;
-  volatile uint64_t bytes_received;
-  volatile uint64_t time;
+  volatile ng_uint64_t requests;
+  volatile ng_uint64_t bytes_transmitted;
+  volatile ng_uint64_t bytes_received;
+  volatile ng_uint64_t time;
   pthread_rwlock_t lock;
 #else
   rte_atomic64_t requests;
