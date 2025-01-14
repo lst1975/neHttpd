@@ -125,14 +125,14 @@ extern "C" {
  * hpairnode_t represents a pair (key, value) pair. This is also a linked list.
  *
  */
-struct hpair
+struct _hpair
 {
   ng_block_s key;
   ng_block_s val;
   ng_list_head_s link;
 };
 
-typedef struct hpair hpair_t;
+typedef struct _hpair hpair_s;
 
 /**
  *
@@ -176,11 +176,11 @@ typedef struct _content_type content_type_s;
  * @param value the value of the (key,value) pair
  * @param next next pair node in the linked list
  *
- * @return A newly crated hpair_t object. Use hpair_free() or hpair_free_deep()
+ * @return A newly crated hpair_s object. Use hpair_free() or hpair_free_deep()
  *         to http_free the pair.
  *
  */
-extern hpair_t *
+extern hpair_s *
 hpairnode_new(const ng_block_s *key, const ng_block_s *val, ng_list_head_s *head);
 
 /**
@@ -194,11 +194,11 @@ hpairnode_new(const ng_block_s *key, const ng_block_s *val, ng_list_head_s *head
  * @param delim a delimiter to use while splitting into key,value
  * @param next next pair node in the linked list
  *
- * @return A newly crated hpair_t object. Use hpair_free() or hpair_free_deep()
+ * @return A newly crated hpair_s object. Use hpair_free() or hpair_free_deep()
  *         to http_free the pair.
  *
  */
-extern hpair_t *
+extern hpair_s *
 hpairnode_parse(const char *str, int _size, char delim, ng_list_head_s *head);
 
 /**
@@ -208,7 +208,7 @@ hpairnode_parse(const char *str, int _size, char delim, ng_list_head_s *head);
  * @param pair the pair to http_free
  *
  */
-extern void hpairnode_free(hpair_t *pair);
+extern void hpairnode_free(hpair_s *pair);
 
 /**
  *
@@ -232,7 +232,7 @@ extern void hpairnode_free_deep(ng_list_head_s *head);
  *         the key 'key'.
  *
  */
-extern hpair_t *hpairnode_get(ng_list_head_s *head, const ng_block_s *key);
+extern hpair_s *hpairnode_get(ng_list_head_s *head, const ng_block_s *key);
 
 /**
  *
@@ -247,7 +247,7 @@ extern hpair_t *hpairnode_get(ng_list_head_s *head, const ng_block_s *key);
  *         the key 'key'.
  *
  */
-extern hpair_t *
+extern hpair_s *
 hpairnode_get_ignore_case(ng_list_head_s *head, const char *key, int len);
 
 /**
@@ -263,7 +263,7 @@ hpairnode_get_ignore_case(ng_list_head_s *head, const char *key, int len);
  * @see hpairnode_copy_deep
  *
  */
-extern hpair_t *hpairnode_copy(const hpair_t *src, ng_list_head_s *head);
+extern hpair_s *hpairnode_copy(const hpair_s *src, ng_list_head_s *head);
 
 /**
  *
@@ -312,7 +312,7 @@ extern void __hpairnode_dump_deep(const ng_list_head_s *head);
  * Dumps the pair specified.
  *
  */
-extern void hpairnode_dump(const hpair_t *pair);
+extern void hpairnode_dump(const hpair_s *pair);
 
 /**
  *

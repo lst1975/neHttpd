@@ -895,7 +895,7 @@ herror_t
 httpd_send_header(httpd_conn_s *res, int code)
 {
   char *header;
-  hpair_t *cur;
+  hpair_s *cur;
   herror_t status = H_OK;
   ng_buffer_s b;
   int n;
@@ -944,7 +944,7 @@ httpd_send_header(httpd_conn_s *res, int code)
   /* strcat (header, "Connection: close\r\n"); */
 
   /* add pairs */
-  ng_list_for_each_entry(cur, hpair_t, &res->header, link)
+  ng_list_for_each_entry(cur, hpair_s, &res->header, link)
   {
     if (BUF_REMAIN(&b) > cur->key.len + cur->val.len + 4)
     {
@@ -1135,7 +1135,7 @@ httpd_send_not_implemented(httpd_conn_s *conn, const char *msg)
 static void
 _httpd_request_print(hrequest_s *req)
 {
-  hpair_t *pair;
+  hpair_s *pair;
   const ng_block_s *level;
 
   log_verbose("++++++ Request +++++++++");
@@ -1146,11 +1146,11 @@ _httpd_request_print(hrequest_s *req)
                (req->version == HTTP_VERSION_1_0) ? "HTTP/1.0" : "HTTP/1.1");
   log_verbose(" ++++++ Parsed Query string :");
 
-  ng_list_for_each_entry(pair,hpair_t,&req->query,link)
+  ng_list_for_each_entry(pair,hpair_s,&req->query,link)
     log_verbose(" %pS = %pS", &pair->key, &pair->val);
 
   log_verbose(" ++++++ Parsed Header :");
-  ng_list_for_each_entry(pair,hpair_t,&req->header,link)
+  ng_list_for_each_entry(pair,hpair_s,&req->header,link)
     log_verbose(" %pS = %pS", &pair->key, &pair->val);
 
   content_type_print(req->content_type);
@@ -1263,7 +1263,7 @@ static int
 _httpd_authenticate_request(hrequest_s *req, httpd_auth_f auth)
 {
   ng_block_s user, pass;
-  hpair_t *authorization_pair;
+  hpair_s *authorization_pair;
   int ret, tmplen;
   void *tmp;
 
@@ -1364,7 +1364,7 @@ httpd_session_main(void *data)
     else
     {
       char buffer[REQUEST_MAX_PATH_SIZE+256+1];
-      hpair_t *conn_pair;
+      hpair_s *conn_pair;
 
       req->conn = conn;
       req->userLevel = _N_http_user_type_NONE;
@@ -2294,7 +2294,7 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
 
   if (req->method == HTTP_REQUEST_METHOD_POST)
   {
-    hpair_t *content_length_pair;
+    hpair_s *content_length_pair;
     content_length_pair = hpairnode_get_ignore_case(&req->header, 
         __HDR_BUF(HEADER_CONTENT_LENGTH));
     if (content_length_pair != NULL)

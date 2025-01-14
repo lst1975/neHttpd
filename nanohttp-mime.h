@@ -195,19 +195,19 @@
 extern "C" {
 #endif
 
-typedef struct _multipartpart multipartpart;
-typedef struct _multipartparser multipartparser;
-typedef struct _multipartparser_callbacks multipartparser_callbacks;
+typedef struct _mime_part mime_part_s;
+typedef struct _mime_parser mime_parser_s;
+typedef struct _mime_callbacks mime_callbacks_s;
 
-typedef size_t (*multipart_cb) (multipartparser*);
-typedef size_t (*multipart_data_cb) (multipartparser*, const char* data, size_t size);
+typedef size_t (*mime_note_cb_f) (mime_parser_s*);
+typedef size_t (*mime_data_cb_f) (mime_parser_s*, const char* data, size_t size);
 
 /**
  *
  * part. Attachment
  *
  */
-struct _multipartpart {
+struct _mime_part {
   ng_list_head_s header;
   ng_list_head_s link;
   content_type_s *content_disposition;
@@ -223,7 +223,7 @@ struct _multipartpart {
   ng_block_s  type;
 };
 
-struct _multipartparser {
+struct _mime_parser {
   /** PRIVATE **/
   char buffer[HTTP_FILED_NAME_LEN_MAX+HTTP_FILED_VALUE_LEN_MAX];
   ng_buffer_s field;
@@ -240,20 +240,21 @@ struct _multipartparser {
   void *data;
   void *arg;
 
-  multipartpart part;
-  multipartparser_callbacks *settings;
+  mime_part_s part;
+  mime_callbacks_s *settings;
 };
 
-struct _multipartparser_callbacks {
-  multipart_cb      on_body_begin;
-  multipart_cb      on_part_begin;
-  multipart_cb      on_header_begin;
-  multipart_data_cb on_header_field;
-  multipart_data_cb on_header_value;
-  multipart_cb      on_headers_complete;
-  multipart_cb      on_part_end;
-  multipart_data_cb on_data;
-  multipart_cb      on_body_end;
+struct _mime_callbacks {
+  mime_note_cb_f on_body_begin;
+  mime_note_cb_f on_part_begin;
+  mime_note_cb_f on_header_begin;
+  mime_note_cb_f on_headers_complete;
+  mime_note_cb_f on_part_end;
+  mime_note_cb_f on_body_end;
+
+  mime_data_cb_f on_data;
+  mime_data_cb_f on_header_field;
+  mime_data_cb_f on_header_value;
 };
 
 /**
@@ -261,28 +262,28 @@ struct _multipartparser_callbacks {
  * Attachments
  *
  */
-struct _attachments_t
+struct _mime_attachment_t
 {
   ng_list_head_s parts;
   ng_list_head_s link;
-  hpair_t *boundary;
-  hpair_t *root_id;
+  hpair_s *boundary;
+  hpair_s *root_id;
 };
-typedef struct _attachments_t attachments_t;
+typedef struct _mime_attachment_t mime_attachment_s;
 
-herror_t multipartparser_init(multipartparser *parser, 
+herror_t multipartparser_init(mime_parser_s *parser, 
         void *arg, content_type_s *ct);
-void multipartparser_free(multipartparser *parser);
+void multipartparser_free(mime_parser_s *parser);
 
-multipartpart *multipartpart_new(void);
-void multipartpart_free(multipartpart *part);
-void multipartpart_init(multipartpart *part);
-herror_t multipart_get_attachment(multipartparser *p, 
+mime_part_s *multipartpart_new(void);
+void multipartpart_free(mime_part_s *part);
+void multipartpart_init(mime_part_s *part);
+herror_t multipart_get_attachment(mime_parser_s *p, 
   http_input_stream_s *in);
 
 size_t multipartparser_execute(
-    multipartparser* parser, 
-    multipartparser_callbacks* callbacks,
+    mime_parser_s *parser, 
+    mime_callbacks_s* callbacks,
     const char* data,
     size_t size);
 
@@ -292,13 +293,13 @@ size_t multipartparser_execute(
 extern ng_result_t ng_http_mime_type_init(void);
 extern herror_t mime_add_content_type_header(ng_list_head_s *header, 
   void *conn_ptr, int conn_id, const ng_block_s *params);
-extern multipartpart *mime_part_new(ng_list_head_s *part_list, 
+extern mime_part_s *mime_part_new(ng_list_head_s *part_list, 
   const ng_block_s *params);
 
-extern void mime_part_free(multipartpart * part);
+extern void mime_part_free(mime_part_s * part);
 
 /* should be used internally */
-extern attachments_t *attachments_new(ng_list_head_s *attachments_list);
+extern mime_attachment_s *attachments_new(ng_list_head_s *attachments_list);
 
 /**
  *
@@ -307,9 +308,9 @@ extern attachments_t *attachments_new(ng_list_head_s *attachments_list);
  * @see mime_get_attachments
  *
  */
-extern void attachments_free(attachments_t *message);
-extern void attachments_add_part(attachments_t *attachments, 
-  multipartpart *part);
+extern void attachments_free(mime_attachment_s *message);
+extern void attachments_add_part(mime_attachment_s *attachments, 
+  mime_part_s *part);
 
 extern const ng_block_s *ng_http_get_mime_type_from_file(const ng_block_s *file);
 extern const ng_block_s *ng_http_get_mime_type(const ng_block_s *ext);

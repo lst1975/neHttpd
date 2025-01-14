@@ -119,7 +119,7 @@ _hresponse_new(void)
 static hresponse_t *
 _hresponse_parse_header(const char *buffer, size_t len)
 {
-  hpair_t *pair;
+  hpair_s *pair;
   hresponse_t *res;
   const char *s1, *str, *end, *endp;
 
@@ -329,7 +329,7 @@ hresponse_free(hresponse_t *res)
       content_type_free(res->content_type);
 
     if (res->attachments)
-      attachments_free((attachments_t *)res->attachments);
+      attachments_free((mime_attachment_s *)res->attachments);
 
     http_free(res);
   }

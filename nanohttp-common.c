@@ -92,15 +92,15 @@
 #include "nanohttp-ctype.h"
 #include "nanohttp-header.h"
 
-hpair_t *
+hpair_s *
 hpairnode_new(const ng_block_s *key, const ng_block_s *val, 
   ng_list_head_s *head)
 {
-  hpair_t *pair;
+  hpair_s *pair;
 
   log_verbose("new pair ('%pS','%pS')", key, val);
 
-  pair = (hpair_t *)http_malloc(sizeof(hpair_t));
+  pair = (hpair_s *)http_malloc(sizeof(hpair_s));
   if (pair == NULL)
   {
     log_error("http_malloc failed.");
@@ -132,7 +132,7 @@ clean0:
   return NULL;
 }
 
-hpair_t *
+hpair_s *
 hpairnode_parse(const char *str, int _size, char delim, 
   ng_list_head_s *head)
 {
@@ -164,8 +164,8 @@ hpairnode_parse(const char *str, int _size, char delim,
   return hpairnode_new(&key, &val, head);
 }
 
-hpair_t *
-hpairnode_copy(const hpair_t *src, ng_list_head_s *head)
+hpair_s *
+hpairnode_copy(const hpair_s *src, ng_list_head_s *head)
 {
   if (src == NULL)
     return NULL;
@@ -177,12 +177,12 @@ int
 hpairnode_copy_deep(const ng_list_head_s *src, 
   ng_list_head_s *dst)
 {
-  hpair_t *pair;
+  hpair_s *pair;
 
   if (src == NULL)
     return -1;
 
-  ng_list_for_each_entry(pair, hpair_t, src, link)
+  ng_list_for_each_entry(pair, hpair_s, src, link)
   {
     if (NULL == hpairnode_copy(pair, dst))
       return -1;
@@ -192,7 +192,7 @@ hpairnode_copy_deep(const ng_list_head_s *src,
 }
 
 void
-hpairnode_dump(const hpair_t *pair)
+hpairnode_dump(const hpair_s *pair)
 {
   if (pair == NULL)
   {
@@ -207,20 +207,20 @@ hpairnode_dump(const hpair_t *pair)
 void
 __hpairnode_dump_deep(const ng_list_head_s *head)
 {
-  const hpair_t *p;
+  const hpair_s *p;
 
-  log_verbose("-- BEGIN dump_deep hpair_t --");
-  ng_list_for_each_entry(p, hpair_t, head, link)
+  log_verbose("-- BEGIN dump_deep hpair_s --");
+  ng_list_for_each_entry(p, hpair_s, head, link)
   {
     hpairnode_dump(p);
   }
-  log_verbose("-- END dump_deep hpair_t --");
+  log_verbose("-- END dump_deep hpair_s --");
 
   return;
 }
 
 void
-hpairnode_free(hpair_t *pair)
+hpairnode_free(hpair_s *pair)
 {
   if (pair == NULL)
     return;
@@ -237,8 +237,8 @@ hpairnode_free_deep(ng_list_head_s *head)
 {
   while (!ng_list_empty(head))
   {
-    hpair_t *pair;
-    pair = ng_list_first_entry(head,hpair_t,link);
+    hpair_s *pair;
+    pair = ng_list_first_entry(head,hpair_s,link);
     assert(pair != NULL);
     ng_list_del(&pair->link);
     hpairnode_free(pair);
@@ -247,7 +247,7 @@ hpairnode_free_deep(ng_list_head_s *head)
   return;
 }
 
-hpair_t *
+hpair_s *
 hpairnode_get_ignore_case(ng_list_head_s *head, 
   const char *key, int len)
 {
@@ -257,10 +257,10 @@ hpairnode_get_ignore_case(ng_list_head_s *head,
     return NULL;
   }
 
-  hpair_t *pair;
+  hpair_s *pair;
   const ng_block_s b={.cptr=key, .len = len};
   
-  ng_list_for_each_entry(pair, hpair_t, head, link)
+  ng_list_for_each_entry(pair, hpair_s, head, link)
   {
     if (ng_block_isequal_nocase(&pair->key, &b))
     {
@@ -271,7 +271,7 @@ hpairnode_get_ignore_case(ng_list_head_s *head,
   return NULL;
 }
 
-hpair_t *
+hpair_s *
 hpairnode_get(ng_list_head_s *head, const ng_block_s *key)
 {
   if (key == NULL)
@@ -280,8 +280,8 @@ hpairnode_get(ng_list_head_s *head, const ng_block_s *key)
     return NULL;
   }
 
-  hpair_t *pair;
-  ng_list_for_each_entry(pair, hpair_t, head, link)
+  hpair_s *pair;
+  ng_list_for_each_entry(pair, hpair_s, head, link)
   {
     if (ng_block_isequal__(&pair->key, key))
     {
@@ -331,9 +331,9 @@ int
 hpairnode_add_header_list(ng_list_head_s *header, 
   const ng_list_head_s *values)
 {
-  hpair_t *p;
+  hpair_s *p;
   
-  ng_list_for_each_entry(p,hpair_t,values,link)
+  ng_list_for_each_entry(p,hpair_s,values,link)
   {
     if (0 > hpairnode_add_header(header, &p->key, &p->val))
     {
@@ -361,7 +361,7 @@ int
 hpairnode_set_header(ng_list_head_s *head, const ng_block_s *key, 
   const ng_block_s *val)
 {
-  hpair_t *p;
+  hpair_s *p;
 
   p = hpairnode_get(head, key);
   if (p != NULL)
@@ -396,9 +396,9 @@ hpairnode_set_header(ng_list_head_s *head, const ng_block_s *key,
 int
 hpairnode_set_header_list(ng_list_head_s *dst, const ng_list_head_s *src)
 {
-  hpair_t *p;
+  hpair_s *p;
   
-  ng_list_for_each_entry(p, hpair_t, src, link)
+  ng_list_for_each_entry(p, hpair_s, src, link)
   {
     if (0 > hpairnode_set_header(dst, &p->key, &p->val))
     {
@@ -429,10 +429,10 @@ content_type_print(content_type_s *ct)
 {
   if (ct != NULL)
   {
-    hpair_t *pair;
+    hpair_s *pair;
     log_verbose(" ++++++ Parsed Content-Type :");
     log_verbose(" Content-Type : %s", ct->type);
-    ng_list_for_each_entry(pair,hpair_t,&ct->params,link)
+    ng_list_for_each_entry(pair,hpair_s,&ct->params,link)
     {
       log_verbose("    %pS = %pS", &pair->key, &pair->val);
     }
@@ -452,7 +452,7 @@ content_type_print(content_type_s *ct)
 content_type_s *
 content_type_new(const char *content_type_str, int len)
 {
-  hpair_t *pair = NULL;
+  hpair_s *pair = NULL;
   content_type_s *ct = NULL;
   char ch;
   ng_block_s key;

@@ -273,8 +273,8 @@ in conn through conn->sock.
 herror_t
 httpc_send_header(httpc_conn_s *conn)
 {
-  hpair_t *walker;
-  ng_list_for_each_entry(walker,hpair_t,&conn->header,link)
+  hpair_s *walker;
+  ng_list_for_each_entry(walker,hpair_s,&conn->header,link)
   {
     if (walker->key.len && walker->val.len)
     {

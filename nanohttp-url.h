@@ -132,7 +132,7 @@ extern "C" {
  *
  * @see http://www.ietf.org/rfc/rfc2396.txt
  */
-struct __ng_url_t
+struct __ng_url
 {
   uint16_t port;              /**< The port number. If no port number was given
                                  in the URL, one of the default port numbers
@@ -156,7 +156,7 @@ struct __ng_url_t
   char *data;
 };
 
-typedef struct __ng_url_t ng_url_s;
+typedef struct __ng_url ng_url_s;
 
 /** This function parses the given 'urlstr' and fills the given hurl_t
  * object. Parse an URI

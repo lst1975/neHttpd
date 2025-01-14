@@ -80,15 +80,15 @@
             goto error;                                 \
     }
 
-static size_t __multipart_cb_header_begin(multipartparser *p);
-static size_t __multipart_cb_header_value(multipartparser *p, const char *data, size_t size);
-static size_t __multipart_cb_header_field(multipartparser *p, const char *data, size_t size);
-static size_t __multipart_cb_data(multipartparser *p, const char *data, size_t size);
-static size_t __multipart_cb_part_end(multipartparser *p);
-static size_t __multipart_cb_part_begin(multipartparser *p);
-static size_t __multipart_cb_body_end(multipartparser *p);
-static size_t __multipart_cb_body_begin(multipartparser *p);
-static size_t __multipart_cb_headers_complete(multipartparser *p);
+static size_t __multipart_cb_header_begin(mime_parser_s *p);
+static size_t __multipart_cb_header_value(mime_parser_s *p, const char *data, size_t size);
+static size_t __multipart_cb_header_field(mime_parser_s *p, const char *data, size_t size);
+static size_t __multipart_cb_data(mime_parser_s *p, const char *data, size_t size);
+static size_t __multipart_cb_part_end(mime_parser_s *p);
+static size_t __multipart_cb_part_begin(mime_parser_s *p);
+static size_t __multipart_cb_body_end(mime_parser_s *p);
+static size_t __multipart_cb_body_begin(mime_parser_s *p);
+static size_t __multipart_cb_headers_complete(mime_parser_s *p);
 
 #define CR '\r'
 #define LF '\n'
@@ -330,8 +330,8 @@ enum state {
 /* SP or HTAB : ((x) == 9 || (x) == 32) : 0x101 || 0x10 */
 #define __is_OWS(x) ((x) == 9 || (x) == 32)
 
-size_t multipartparser_execute(multipartparser *parser,
-                 multipartparser_callbacks *callbacks,
+size_t multipartparser_execute(mime_parser_s *parser,
+                 mime_callbacks_s *callbacks,
                  const char *data,
                  size_t size)
 {
@@ -619,7 +619,7 @@ error:
 }
 
 void
-multipartpart_init(multipartpart *part)
+multipartpart_init(mime_part_s *part)
 {
   ng_INIT_LIST_HEAD(&part->header);
   part->content_disposition = NULL;
@@ -628,15 +628,15 @@ multipartpart_init(multipartpart *part)
   return;
 }
 
-multipartpart * 
+mime_part_s * 
 multipartpart_new(void)
 {
-  multipartpart *part;
+  mime_part_s *part;
 
   part = http_malloc(sizeof(*part));
   if (part == NULL)
   {
-    log_fatal("Failed to malloc multipartpart.");
+    log_fatal("Failed to malloc mime_part_s.");
     return NULL;
   }
 
@@ -645,7 +645,7 @@ multipartpart_new(void)
 }
 
 void
-multipartpart_free(multipartpart *part)
+multipartpart_free(mime_part_s *part)
 {
   if (part == NULL)
     return;
@@ -656,7 +656,7 @@ multipartpart_free(multipartpart *part)
   return;
 }
 
-static multipartparser_callbacks __multipart_settings = {
+static mime_callbacks_s __multipart_settings = {
   .on_data             = __multipart_cb_data,
   .on_header_begin     = __multipart_cb_header_begin,
   .on_header_field     = __multipart_cb_header_field,
@@ -669,10 +669,10 @@ static multipartparser_callbacks __multipart_settings = {
 };
 
 herror_t 
-multipartparser_init(multipartparser *parser, 
+multipartparser_init(mime_parser_s *parser, 
   void *arg, content_type_s *ct)
 {
-  hpair_t *pair;
+  hpair_s *pair;
   herror_t status;
 
   /* Check for MIME message */
@@ -748,13 +748,13 @@ multipartparser_init(multipartparser *parser,
 }
 
 void 
-multipartparser_free(multipartparser *parser)
+multipartparser_free(mime_parser_s *parser)
 {
   multipartpart_free(&parser->part);
 }
 
 static size_t
-__build_header_field_value(multipartparser *p)
+__build_header_field_value(mime_parser_s *p)
 {
   if (BUF_LEN(&p->field))
   {
@@ -773,7 +773,7 @@ __build_header_field_value(multipartparser *p)
 }
 
 static size_t 
-__multipart_cb_header_begin(multipartparser *p)
+__multipart_cb_header_begin(mime_parser_s *p)
 {
   return __build_header_field_value(p);
 }
@@ -784,12 +784,12 @@ __multipart_cb_header_begin(multipartparser *p)
   Content-Type: application/x-xz\r\n\r\n
  */
 static size_t 
-__multipart_cb_headers_complete(multipartparser *p)
+__multipart_cb_headers_complete(mime_parser_s *p)
 {
   int n;
-  hpair_t *pair;
+  hpair_s *pair;
   content_type_s *ct;
-  multipartpart *part = &p->part;
+  mime_part_s *part = &p->part;
 
   if (__build_header_field_value(p) < 0)
   {
@@ -896,13 +896,13 @@ __multipart_cb_headers_complete(multipartparser *p)
 }
 
 static size_t 
-__multipart_cb_body_begin(multipartparser *p)
+__multipart_cb_body_begin(mime_parser_s *p)
 {
   return 0;
 }
 
 static size_t 
-__multipart_cb_body_end(multipartparser *p)
+__multipart_cb_body_end(mime_parser_s *p)
 {
   switch (p->mime_type)
   {
@@ -928,21 +928,21 @@ __multipart_cb_body_end(multipartparser *p)
 }
 
 static size_t 
-__multipart_cb_part_begin(multipartparser *p)
+__multipart_cb_part_begin(mime_parser_s *p)
 {
   p->part.id++;
   return 0;
 }
 
 static size_t 
-__multipart_cb_part_end(multipartparser *p)
+__multipart_cb_part_end(mime_parser_s *p)
 {
   multipartpart_free(&p->part);
   return 0;
 }
 
 static size_t
-__multipart_cb_data(multipartparser *p, const char *data, 
+__multipart_cb_data(mime_parser_s *p, const char *data, 
   size_t size)
 {
   size_t nbytes;
@@ -961,7 +961,7 @@ __multipart_cb_data(multipartparser *p, const char *data,
 }
 
 static size_t
-__multipart_cb_header_field(multipartparser *p, 
+__multipart_cb_header_field(mime_parser_s *p, 
   const char *data, size_t size)
 {
   if (BUF_REMAIN(&p->field) < size)
@@ -976,7 +976,7 @@ __multipart_cb_header_field(multipartparser *p,
 }
 
 static size_t
-__multipart_cb_header_value(multipartparser *p, 
+__multipart_cb_header_value(mime_parser_s *p, 
   const char *data, size_t size)
 {
   if (BUF_REMAIN(&p->value) < size)
@@ -991,7 +991,7 @@ __multipart_cb_header_value(multipartparser *p,
 }
 
 herror_t
-multipart_get_attachment(multipartparser *p, 
+multipart_get_attachment(mime_parser_s *p, 
   http_input_stream_s *in)
 {
   herror_t r = H_OK;
@@ -1025,7 +1025,7 @@ finished:
 }
 
 void
-mime_part_free(multipartpart *part)
+mime_part_free(mime_part_s *part)
 {
   if (part == NULL)
     return;
@@ -1037,19 +1037,19 @@ mime_part_free(multipartpart *part)
 }
 
 void
-attachments_init(attachments_t *attachments)               
+attachments_init(mime_attachment_s *attachments)               
 {
   ng_INIT_LIST_HEAD(&attachments->parts);
   attachments->boundary = NULL;
   attachments->root_id  = NULL;
 }
 
-attachments_t *
+mime_attachment_s *
 attachments_new(ng_list_head_s *attachments_list)               
 {
-  attachments_t *attachments;
+  mime_attachment_s *attachments;
 
-  attachments = (attachments_t *)http_malloc(sizeof(attachments_t));
+  attachments = (mime_attachment_s *)http_malloc(sizeof(mime_attachment_s));
   if (attachments == NULL)
   {
     log_error("http_malloc failed (%s)", os_strerror(ng_errno));
@@ -1064,7 +1064,7 @@ attachments_new(ng_list_head_s *attachments_list)
 }
 
 void
-attachments_add_part(attachments_t *attachments, multipartpart *part)
+attachments_add_part(mime_attachment_s *attachments, mime_part_s *part)
 {
   if (!attachments)
     return;
@@ -1077,15 +1077,15 @@ attachments_add_part(attachments_t *attachments, multipartpart *part)
   Free a mime message 
 */
 void
-attachments_free(attachments_t *message)
+attachments_free(mime_attachment_s *message)
 {
   if (!message)
     return;
 
   while (!ng_list_empty(&message->parts))
   {
-    multipartpart *part;
-    part = ng_list_first_entry(&message->parts,multipartpart,link);
+    mime_part_s *part;
+    part = ng_list_first_entry(&message->parts,mime_part_s,link);
     assert(part != NULL);
     ng_list_del(&part->link);
     mime_part_free(part);
@@ -1211,13 +1211,13 @@ clean0:
   return status;
 }
 
-multipartpart *
+mime_part_s *
 mime_part_new(ng_list_head_s *part_list, const ng_block_s *params)
 {
   int n;
-  multipartpart  *part;
+  mime_part_s  *part;
   char    *buffer;
-  hpair_t *pair;
+  hpair_s *pair;
   ng_buffer_s disposition;
 
   const ng_block_s *id;
@@ -1243,7 +1243,7 @@ mime_part_new(ng_list_head_s *part_list, const ng_block_s *params)
   }
   BUF_SIZE_INIT(&disposition, buffer, ___BUFSZ);
 
-  part = (multipartpart *)http_malloc(sizeof(multipartpart));
+  part = (mime_part_s *)http_malloc(sizeof(mime_part_s));
   if (part == NULL)
   {
     log_error("http_malloc failed (%s)", os_strerror(ng_errno));

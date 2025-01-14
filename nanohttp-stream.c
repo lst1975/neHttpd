@@ -104,7 +104,7 @@ _http_stream_has_content_length(ng_list_head_s *header)
 static int
 _http_stream_is_chunked(ng_list_head_s *header)
 {
-  hpair_t *chunked;
+  hpair_s *chunked;
 
   chunked = hpairnode_get_ignore_case(header, 
     __HDR_BUF(HEADER_TRANSFER_ENCODING));
@@ -420,7 +420,7 @@ http_input_stream_new(hsocket_s *sock, ng_list_head_s *header,
   /* Check if Content-type */
   if (_http_stream_has_content_length(header))
   {
-    hpair_t *cl;
+    hpair_s *cl;
     log_verbose("Stream transfer with 'Content-length'");
     cl = hpairnode_get_ignore_case(header, __HDR_BUF(HEADER_CONTENT_LENGTH));
     assert(cl != NULL);
@@ -567,7 +567,7 @@ http_output_stream_new(hsocket_s *sock, ng_list_head_s *header)
   /* Check if Content-type */
   if (_http_stream_has_content_length(header))
   {
-    hpair_t *cl;
+    hpair_s *cl;
     log_verbose("Stream transfer with 'Content-length'");
     cl = hpairnode_get_ignore_case(header, 
       __HDR_BUF(HEADER_CONTENT_LENGTH));

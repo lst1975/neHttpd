@@ -188,7 +188,7 @@
  * @code
  * static void headers_service(httpd_conn_s *conn, struct hrequest_t *req)
  * {
- *   hpair_t *walker;
+ *   hpair_s *walker;
  *
  *   httpd_send_header(conn, 200, HTTP_STATUS_200_REASON_PHRASE);
  *   http_output_stream_write_string(conn->out,

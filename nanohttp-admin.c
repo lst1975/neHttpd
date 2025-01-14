@@ -355,9 +355,9 @@ _httpd_admin_set_loglevel(httpd_conn_s *conn, const char *loglevel)
 }
 
 static void
-_httpd_admin_handle_get(httpd_conn_s * conn, hrequest_s *req)
+_httpd_admin_handle_get(httpd_conn_s *conn, hrequest_s *req)
 {
-  hpair_t *param;
+  hpair_s *param;
 #define ___(X) (X), sizeof(X)-1
   if ((param = hpairnode_get_ignore_case(&req->query, 
         ___(NHTTPD_ADMIN_QUERY_SERVICES))))

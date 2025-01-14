@@ -131,7 +131,7 @@ clean0:
 static hrequest_s *
 _hrequest_parse_header(char *data, size_t len)
 {
-  hpair_t *tmppair;
+  hpair_s *tmppair;
   hrequest_s *req;
 
   char *tmp;
@@ -271,7 +271,7 @@ _hrequest_parse_header(char *data, size_t len)
         for (;result;)
         {
           ng_block_s k, v;
-          hpair_t *tmppair;
+          hpair_s *tmppair;
           
           result++;
           opt_key = result;
@@ -289,7 +289,7 @@ _hrequest_parse_header(char *data, size_t len)
           opt_value = ng_memchr(opt_key, '=', key - opt_key);
           
           /* create option pair */
-          if (!(tmppair = (hpair_t *)http_malloc(sizeof(hpair_t))))
+          if (!(tmppair = (hpair_s *)http_malloc(sizeof(hpair_s))))
           {
             log_error("http_malloc failed (%s)", os_strerror(ng_errno));
             goto clean1;
@@ -370,7 +370,7 @@ hrequest_free(hrequest_s * req)
     content_type_free(req->content_type);
 
   if (req->attachments)
-    attachments_free((attachments_t *)req->attachments);
+    attachments_free((mime_attachment_s *)req->attachments);
 
   ng_free_data_block(&req->path);
   http_free(req);

@@ -129,7 +129,7 @@ default_service(httpd_conn_s *conn, hrequest_s *req)
 static void
 headers_service(httpd_conn_s *conn, hrequest_s *req)
 {
-  hpair_t *walker;
+  hpair_s *walker;
   herror_t status;
 
   status = httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
@@ -145,7 +145,7 @@ headers_service(httpd_conn_s *conn, hrequest_s *req)
         "<ul>");
   if (status != H_OK) goto clean0;
 
-  ng_list_for_each_entry(walker,hpair_t,&req->header,link)
+  ng_list_for_each_entry(walker,hpair_s,&req->header,link)
   {
     status = http_output_stream_write_printf(conn->out, 
       "<li>%pS: %pS</li>", &walker->key, &walker->val);
@@ -193,7 +193,7 @@ __post_service(httpd_conn_s *conn, hrequest_s *req,
   
   if (req->method == HTTP_REQUEST_METHOD_POST)
   {
-    multipartparser p;
+    mime_parser_s p;
 
     r = multipartparser_init(&p, req, req->content_type);
     if (r != H_OK)
@@ -500,7 +500,7 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
     char buf[126]={0};
     int n, len, id;
     unsigned char *query;
-    hpair_t *data;
+    hpair_s *data;
     JSONPair_t *pair,*p;
     JSONStatus_t result;
     ng_buffer_s in;
