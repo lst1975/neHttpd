@@ -501,8 +501,8 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
     int n, len, id;
     unsigned char *query;
     hpair_s *data;
-    JSONPair_t *pair,*p;
-    JSONStatus_t result;
+    JSONPair_s *pair,*p;
+    JSONStatus_e result;
     ng_buffer_s in;
 
     data = hpairnode_get(&req->query, &cstr_data);
@@ -712,7 +712,7 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
     else if (ng_block_isequal__(&__ADD_FILE, &req->path))
     {
       int err;
-      JSONPair_t *usr, *pwd, *type;
+      JSONPair_s *usr, *pwd, *type;
       // Process add operation
       p = json_find_bykey(pair, "value", 5);
       if (p != NULL && p->jsonType != JSONObject)
@@ -990,8 +990,8 @@ void json_show( const char * json,
            size_t length )
 {
   size_t start = 0, next = 0;
-  JSONPair_t pair = { 0 };
-  JSONStatus_t result;
+  JSONPair_s pair = { 0 };
+  JSONStatus_e result;
 
   result = JSON_Validate(json, length);
   if (result == JSONSuccess)
@@ -1017,7 +1017,7 @@ void json_show( const char * json,
 static int json_test(void)
 {
   // Variables used in this example.
-  JSONStatus_t result;
+  JSONStatus_e result;
   char buffer[] = "{\"foo\":\"abc\",\"bar\":{\"foo\":\"xyz\"},"
     "\"ar\":[{\"a1\":0,\"a2\":true},{\"a1\":1,\"a2\":false}]}";
   size_t bufferLength = sizeof( buffer ) - 1;
@@ -1051,7 +1051,7 @@ static int json_test(void)
   json_show(buffer,strlen(buffer));
 
   printf("\n\n");
-  JSONPair_t *p;
+  JSONPair_s *p;
   result = json_parse(&p, buffer,bufferLength);
 
   //json_print(p,0,"  ");

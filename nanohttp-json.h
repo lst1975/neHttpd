@@ -113,7 +113,7 @@ typedef enum
   JSONNotFound,         /**< @brief Query key could not be found in the JSON document. */
   JSONNullParameter,    /**< @brief Pointer parameter passed to a function is NULL. */
   JSONBadParameter      /**< @brief Query key is empty, or any subpart is empty, or max is 0. */
-} JSONStatus_t;
+} JSONStatus_e;
 
 /**
  * @brief Parse a buffer to determine if it contains a valid JSON document.
@@ -138,7 +138,7 @@ typedef enum
  * <b>Example</b>
  * @code{c}
  *     // Variables used in this example.
- *     JSONStatus_t result;
+ *     JSONStatus_e result;
  *     char buffer[] = "{\"foo\":\"abc\",\"bar\":{\"foo\":\"xyz\"}}";
  *     size_t bufferLength = sizeof( buffer ) - 1;
  *
@@ -149,8 +149,12 @@ typedef enum
  * @endcode
  */
 /* @[declare_json_validate] */
-JSONStatus_t JSON_Validate( const char * buf,
-                            size_t max );
+JSONStatus_e 
+JSON_Validate(
+  const char *buf,
+  size_t max 
+);
+
 /* @[declare_json_validate] */
 
 /**
@@ -197,7 +201,7 @@ JSONStatus_t JSON_Validate( const char * buf,
  * <b>Example</b>
  * @code{c}
  *     // Variables used in this example.
- *     JSONStatus_t result;
+ *     JSONStatus_e result;
  *     char buffer[] = "{\"foo\":\"abc\",\"bar\":{\"foo\":\"xyz\"}}";
  *     size_t bufferLength = sizeof( buffer ) - 1;
  *     char query[] = "bar.foo";
@@ -255,7 +259,7 @@ typedef enum
   JSONObject,      /**< @brief A collection of zero or more key-value pairs. */
   JSONArray,       /**< @brief A collection of zero or more values. */
   JSONTypes_MAX     
-} JSONTypes_t;
+} JSONTypes_e;
 
 /**
  * @brief Same as JSON_Search(), but also outputs a type for the value found
@@ -271,13 +275,16 @@ typedef enum
  * @param[out] outType  An enum indicating the JSON-specific type of the value.
  */
 /* @[declare_json_searcht] */
-JSONStatus_t JSON_SearchT( char * buf,
-                           size_t max,
-                           const char * query,
-                           size_t queryLength,
-                           char ** outValue,
-                           size_t * outValueLength,
-                           JSONTypes_t * outType );
+JSONStatus_e 
+JSON_SearchT(
+  char        *buf,
+  size_t       max,
+  const char  *query,
+  size_t       queryLength,
+  char       **outValue,
+  size_t      *outValueLength,
+  JSONTypes_e *outType
+);
 /* @[declare_json_searcht] */
 
 /**
@@ -294,52 +301,122 @@ JSONStatus_t JSON_SearchT( char * buf,
  * @param[out] outType  An enum indicating the JSON-specific type of the value.
  */
 /* @[declare_json_searchconst] */
-JSONStatus_t JSON_SearchConst( const char * buf,
-                           size_t max,
-                           const char * query,
-                           size_t queryLength,
-                           const char ** outValue,
-                           size_t * outValueLength,
-                           JSONTypes_t * outType );
+JSONStatus_e 
+JSON_SearchConst(
+  const char   *buf,
+  size_t        max,
+  const char   *query,
+  size_t        queryLength,
+  const char  **outValue,
+  size_t       *outValueLength,
+  JSONTypes_e  *outType 
+);
+
 /* @[declare_json_searchconst] */
 
 /**
  * @ingroup json_struct_types
  * @brief Structure to represent a key-value pair.
  */
-typedef struct json_pair
+typedef struct _json_pair JSONPair_s;
+struct _json_pair
 {
   ng_block_s key;       /**< @brief Pointer to the code point sequence for key. */
   ng_block_s val;       /**< @brief Pointer to the code point sequence for value. */
   uint64_t isDouble:1;   
-  JSONTypes_t jsonType; /**< @brief JSON-specific type of the value. */
-  struct json_pair *siblings;
-  struct json_pair *children;
+  JSONTypes_e jsonType; /**< @brief JSON-specific type of the value. */
+  JSONPair_s *siblings;
+  JSONPair_s *children;
   union{
     signed long long vint;
     double vdouble;
     char *str;
   };
-} JSONPair_t;
+};
 
 typedef int (*JSON_PRINTER_f)(ng_buffer_s *b, const char *fmt, ...);
 
-const char *json_type2str(JSONTypes_t type);
-void json_pairs_free(JSONPair_t *pair);
-JSONStatus_t json_print(JSONPair_t *pair, int depth, const char *pad);
-int json_to_printer(JSON_PRINTER_f printer, ng_buffer_s *b, JSONPair_t *pair, int depth, const char *pad);
-int json_tostr(JSONPair_t *pair, char *buf, 
-  size_t length, int depth, const char *pad);
-int json_cal_length(JSONPair_t *pair, int depth, const char *pad);
-JSONStatus_t json_parse(JSONPair_t **pair, const char *json, size_t length);
-JSONPair_t *json_find_bykey(JSONPair_t *pair, const char *key, 
-  size_t length);
-JSONPair_t *json_find_bykey_head(JSONPair_t *pair, const char *key, 
-  size_t length);
-JSONPair_t *json_find_bykey_head_tail(JSONPair_t *pair, const char *key, 
-  size_t headLen, const char *tailKey, size_t tailKeyLen);
-JSONPair_t *json_find_bykey_head_offset(JSONPair_t *pair, const char *key, 
-  size_t headLen, size_t startOffset, const char *startKey, size_t startKeyLen);
+const char *
+json_type2str(
+  JSONTypes_e type
+);
+
+void 
+json_pairs_free(
+  JSONPair_s *pair
+);
+
+JSONStatus_e 
+json_print(
+  JSONPair_s *pair, 
+  int depth, 
+  const char *pad
+);
+
+int 
+json_to_printer(
+  JSON_PRINTER_f printer, 
+  ng_buffer_s *b, 
+  JSONPair_s *pair, 
+  int depth, 
+  const char *pad
+);
+
+int 
+json_tostr(
+  JSONPair_s *pair, 
+  char *buf, 
+  size_t length, 
+  int depth, 
+  const char *pad
+);
+
+int 
+json_cal_length(
+  JSONPair_s *pair, 
+  int depth, 
+  const char *pad
+);
+
+JSONStatus_e 
+json_parse(
+  JSONPair_s **pair, 
+  const char *json, 
+  size_t length
+);
+
+JSONPair_s *
+json_find_bykey(
+  JSONPair_s *pair, 
+  const char *key, 
+  size_t length
+);
+
+JSONPair_s *
+json_find_bykey_head(
+  JSONPair_s *pair, 
+  const char *key, 
+  size_t length
+);
+
+JSONPair_s *
+json_find_bykey_head_tail(
+  JSONPair_s *pair, 
+  const char *key, 
+  size_t headLen, 
+  const char *tailKey, 
+  size_t tailKeyLen
+);
+
+JSONPair_s *
+json_find_bykey_head_offset(
+  JSONPair_s *pair, 
+  const char *key, 
+  size_t headLen, 
+  size_t startOffset, 
+  const char *startKey, 
+  size_t startKeyLen
+);
 
 /**
  * @brief Output the next key-value pair or value from a collection.
@@ -385,8 +462,8 @@ JSONPair_t *json_find_bykey_head_offset(JSONPair_t *pair, const char *key,
  *                size_t length )
  *     {
  *         size_t start = 0, next = 0;
- *         JSONPair_t pair = { 0 };
- *         JSONStatus_t result;
+ *         JSONPair_s pair = { 0 };
+ *         JSONStatus_e result;
  *
  *         result = JSON_Validate( json, length );
  *         if( result == JSONSuccess )
@@ -410,14 +487,23 @@ JSONPair_t *json_find_bykey_head_offset(JSONPair_t *pair, const char *key,
  * @endcode
  */
 /* @[declare_json_iterate] */
-JSONStatus_t JSON_Iterate( const char * buf,
-                           size_t max,
-                           size_t * start,
-                           size_t * next,
-                           JSONPair_t * outPair );
+JSONStatus_e 
+JSON_Iterate(
+  const char *buf,
+  size_t       max,
+  size_t      *start,
+  size_t      *next,
+  JSONPair_s  *outPair 
+);
+
 /* @[declare_json_iterate] */
 
-extern int json_printer_default(ng_buffer_s *b, const char *fmt, ...);
+extern int 
+json_printer_default(
+  ng_buffer_s *b, 
+  const char *fmt, 
+  ...
+);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

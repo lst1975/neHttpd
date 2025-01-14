@@ -1128,11 +1128,11 @@ static void skipScalars( const char * buf,
 #ifndef JSON_MAX_DEPTH
   #define JSON_MAX_DEPTH  32
 #endif
-static JSONStatus_t skipCollection( const char * buf,
+static JSONStatus_e skipCollection( const char * buf,
                   size_t * start,
                   size_t max )
 {
-  JSONStatus_t ret = JSONPartial;
+  JSONStatus_e ret = JSONPartial;
   char c, stack[ JSON_MAX_DEPTH ];
   int16_t depth = -1;
   size_t i = 0U;
@@ -1210,10 +1210,10 @@ static JSONStatus_t skipCollection( const char * buf,
  * Verify that the entire buffer contains exactly one scalar
  * or collection within optional whitespace.
  */
-JSONStatus_t JSON_Validate( const char * buf,
+JSONStatus_e JSON_Validate( const char * buf,
               size_t max )
 {
-  JSONStatus_t ret;
+  JSONStatus_e ret;
   size_t i = 0U;
 
   if( buf == NULL )
@@ -1586,14 +1586,14 @@ static ng_bool_t skipQueryPart( const char * buf,
  *
  * @note Parsing stops upon finding a match.
  */
-static JSONStatus_t multiSearch( const char * buf,
+static JSONStatus_e multiSearch( const char * buf,
                  size_t max,
                  const char * query,
                  size_t queryLength,
                  size_t * outValue,
                  size_t * outValueLength )
 {
-  JSONStatus_t ret = JSONSuccess;
+  JSONStatus_e ret = JSONSuccess;
   size_t i = 0U, start = 0U, queryStart = 0U, value = 0U, length = max;
 
   assert( ( buf != NULL ) && ( query != NULL ) );
@@ -1670,11 +1670,11 @@ static JSONStatus_t multiSearch( const char * buf,
  *
  * @param[in] c  The character to classify.
  *
- * @return an enum of JSONTypes_t
+ * @return an enum of JSONTypes_e
  */
-static JSONTypes_t getType( char c )
+static JSONTypes_e getType(char c)
 {
-  JSONTypes_t t;
+  JSONTypes_e t;
 
   switch( c )
   {
@@ -1715,15 +1715,15 @@ static JSONTypes_t getType( char c )
 /**
  * See core_json.h for docs.
  */
-JSONStatus_t JSON_SearchConst( const char * buf,
+JSONStatus_e JSON_SearchConst( const char * buf,
                  size_t max,
                  const char * query,
                  size_t queryLength,
                  const char ** outValue,
                  size_t * outValueLength,
-                 JSONTypes_t * outType )
+                 JSONTypes_e * outType )
 {
-  JSONStatus_t ret;
+  JSONStatus_e ret;
   size_t value = 0U;
 
   if( ( buf == NULL ) || ( query == NULL ) ||
@@ -1742,7 +1742,7 @@ JSONStatus_t JSON_SearchConst( const char * buf,
 
   if( ret == JSONSuccess )
   {
-    JSONTypes_t t = getType( buf[ value ] );
+    JSONTypes_e t = getType( buf[ value ] );
 
     if( t == JSONString )
     {
@@ -1765,13 +1765,13 @@ JSONStatus_t JSON_SearchConst( const char * buf,
 /**
  * See core_json.h for docs.
  */
-JSONStatus_t JSON_SearchT( char * buf,
+JSONStatus_e JSON_SearchT( char * buf,
                size_t max,
                const char * query,
                size_t queryLength,
                char ** outValue,
                size_t * outValueLength,
-               JSONTypes_t * outType )
+               JSONTypes_e * outType )
 {
   /* MISRA Ref 11.3.1 [Misaligned access] */
   /* More details at: https://github.com/FreeRTOS/coreJSON/blob/main/MISRA.md#rule-113 */
@@ -1798,7 +1798,7 @@ JSONStatus_t JSON_SearchT( char * buf,
  * #JSONIllegalDocument if the buffer does not begin with '[' or '{';
  * #JSONNotFound if there are no further values in the collection.
  */
-static JSONStatus_t iterate( const char * buf,
+static JSONStatus_e iterate( const char * buf,
                size_t max,
                size_t * start,
                size_t * next,
@@ -1807,7 +1807,7 @@ static JSONStatus_t iterate( const char * buf,
                size_t * outValue,
                size_t * outValueLength )
 {
-  JSONStatus_t ret = JSONNotFound;
+  JSONStatus_e ret = JSONNotFound;
   ng_bool_t found = ng_FALSE;
 
   assert( ( buf != NULL ) && ( max > 0U ) );
@@ -1855,13 +1855,13 @@ static JSONStatus_t iterate( const char * buf,
 /**
  * See core_json.h for docs.
  */
-JSONStatus_t JSON_Iterate( const char * buf,
-               size_t max,
-               size_t * start,
-               size_t * next,
-               JSONPair_t * outPair )
+JSONStatus_e JSON_Iterate(const char *buf,
+               size_t  max,
+               size_t *start,
+               size_t *next,
+               JSONPair_s *outPair)
 {
-  JSONStatus_t ret;
+  JSONStatus_e ret;
   size_t key = 0U, keyLength = 0U, value = 0U, valueLength = 0U;
 
   if( ( buf == NULL ) || ( start == NULL ) || ( next == NULL ) ||
@@ -1889,7 +1889,7 @@ JSONStatus_t JSON_Iterate( const char * buf,
 
   if( ret == JSONSuccess )
   {
-    JSONTypes_t t = getType( buf[ value ] );
+    JSONTypes_e t = getType( buf[ value ] );
 
     if( t == JSONString )
     {
@@ -1919,12 +1919,12 @@ static char *json_types[] =
   "object",
   "array"
 };
-const char *json_type2str(JSONTypes_t type)
+const char *json_type2str(JSONTypes_e type)
 {
   return (type >= JSONTypes_MAX) ? "<unknown>" : json_types[type];
 }
 
-void json_pairs_free(JSONPair_t *pair)
+void json_pairs_free(JSONPair_s *pair)
 {
   if (pair == NULL)
     return;
@@ -1942,13 +1942,13 @@ void json_pairs_free(JSONPair_t *pair)
 
 #define json_MIN(a,b) ((a)<(b) ? (a) : (b))
 
-static JSONStatus_t __json_parse(JSONTypes_t parent_jsonType, 
-  JSONPair_t **__pair, const char *json, size_t length)
+static JSONStatus_e __json_parse(JSONTypes_e parent_jsonType, 
+  JSONPair_s **__pair, const char *json, size_t length)
 {
   size_t start = 0, next = 0;
-  JSONStatus_t result;
-  JSONPair_t *prev = NULL;
-  JSONPair_t *cur = NULL;
+  JSONStatus_e result;
+  JSONPair_s *prev = NULL;
+  JSONPair_s *cur = NULL;
 
   result = JSON_Validate(json, length);
   if (result != JSONSuccess)
@@ -1959,7 +1959,7 @@ static JSONStatus_t __json_parse(JSONTypes_t parent_jsonType,
 
   while (result != JSONNotFound)
   {
-    JSONPair_t *pair = http_malloc(sizeof(*pair));
+    JSONPair_s *pair = http_malloc(sizeof(*pair));
     if (pair == NULL)
     {
       result = JSONBadParameter;
@@ -2044,7 +2044,7 @@ static JSONStatus_t __json_parse(JSONTypes_t parent_jsonType,
       case JSONArray:
       case JSONObject:
         {
-          JSONPair_t *child;
+          JSONPair_s *child;
 
           result = __json_parse(pair->jsonType, &child, pair->val.cptr, pair->val.len);
           if (result != JSONSuccess && result != JSONNotFound)
@@ -2067,7 +2067,7 @@ clean0:
   return result;
 }
 
-JSONStatus_t json_parse(JSONPair_t **__pair, const char *json, size_t length)
+JSONStatus_e json_parse(JSONPair_s **__pair, const char *json, size_t length)
 {
   return __json_parse(JSONInvalid, __pair, json, length);
 }
@@ -2140,7 +2140,7 @@ int json_printer_default(ng_buffer_s *b, const char *fmt, ...)
 
 static int 
 __json_print(JSON_PRINTER_f printer, ng_buffer_s *b, 
-  JSONPair_t *pair, int depth, const char *pad)
+  JSONPair_s *pair, int depth, const char *pad)
 {
   size_t n, k=0;
   
@@ -2294,7 +2294,7 @@ __json_print(JSON_PRINTER_f printer, ng_buffer_s *b,
   return k;
 }
 
-JSONStatus_t json_print(JSONPair_t *pair, int depth, const char *pad)
+JSONStatus_e json_print(JSONPair_s *pair, int depth, const char *pad)
 {
   int n;
   ng_buffer_s b;
@@ -2329,7 +2329,7 @@ json_printer_buffer(ng_buffer_s *b, const char *fmt, ...)
   return n;
 }
 
-int json_tostr(JSONPair_t *pair, char *buf,
+int json_tostr(JSONPair_s *pair, char *buf,
   size_t length, int depth, const char *pad)
 {
   int k=0;
@@ -2360,7 +2360,7 @@ int json_tostr(JSONPair_t *pair, char *buf,
 }
 
 int json_to_printer(JSON_PRINTER_f printer, ng_buffer_s *b, 
-  JSONPair_t *pair, int depth, const char *pad)
+  JSONPair_s *pair, int depth, const char *pad)
 {
   int n, k=0;
 
@@ -2395,7 +2395,7 @@ static int __json_pad_length(int depth, const char *pad)
   return depth * strlen(pad);
 }
 
-static int __json_cal_length(JSONPair_t *pair, int depth, const char *pad)
+static int __json_cal_length(JSONPair_s *pair, int depth, const char *pad)
 {
   int n = 0;
   char temp[256];
@@ -2481,7 +2481,7 @@ clean0:
   return n;
 }
 
-int json_cal_length(JSONPair_t *pair, int depth, const char *pad)
+int json_cal_length(JSONPair_s *pair, int depth, const char *pad)
 {
   int n = 0;
 
@@ -2497,7 +2497,7 @@ int json_cal_length(JSONPair_t *pair, int depth, const char *pad)
   return n;
 }
 
-JSONPair_t *json_find_bykey(JSONPair_t *pair, const char *key, 
+JSONPair_s *json_find_bykey(JSONPair_s *pair, const char *key, 
   size_t length)
 {
   while (pair != NULL)
@@ -2510,7 +2510,7 @@ JSONPair_t *json_find_bykey(JSONPair_t *pair, const char *key,
   return NULL;
 }
 
-JSONPair_t *json_find_bykey_head(JSONPair_t *pair, const char *key, 
+JSONPair_s *json_find_bykey_head(JSONPair_s *pair, const char *key, 
   size_t length)
 {
   while (pair != NULL)
@@ -2523,7 +2523,7 @@ JSONPair_t *json_find_bykey_head(JSONPair_t *pair, const char *key,
   return NULL;
 }
 
-JSONPair_t *json_find_bykey_head_tail(JSONPair_t *pair, const char *key, 
+JSONPair_s *json_find_bykey_head_tail(JSONPair_s *pair, const char *key, 
   size_t headLen, const char *tailKey, size_t tailKeyLen)
 {
   while (pair != NULL)
@@ -2539,7 +2539,7 @@ JSONPair_t *json_find_bykey_head_tail(JSONPair_t *pair, const char *key,
   return NULL;
 }
 
-JSONPair_t *json_find_bykey_head_offset(JSONPair_t *pair, const char *key, 
+JSONPair_s *json_find_bykey_head_offset(JSONPair_s *pair, const char *key, 
   size_t headLen, size_t startOffset, const char *startKey, size_t startKeyLen)
 {
   while (pair != NULL)

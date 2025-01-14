@@ -104,12 +104,12 @@ static int __nanohttp_users_is_super(const char *name, int nameLen)
   return ng_block_isequal(&__superuser->name, name, nameLen);
 }
 
-static int __nanohttp_users_init__one(JSONPair_t *p)
+static int __nanohttp_users_init__one(JSONPair_s *p)
 {
   int err = -1;
 
   httpd_user_t *entry;
-  JSONPair_t *usr, *pwd, *type;
+  JSONPair_s *usr, *pwd, *type;
   if (p->jsonType != JSONObject)
     goto clean2;
   usr = json_find_bykey(p->children,  "username", 8);
@@ -157,8 +157,8 @@ int nanohttp_users_init(void)
 {
   int err = -1;
   herror_t r;
-  JSONPair_t *pair, *p, *s;
-  JSONStatus_t result;
+  JSONPair_s *pair, *p, *s;
+  JSONStatus_e result;
   ng_buffer_s tmp, _b, *b = &_b;
   
   b->len = nanohttp_file_size(__USER_FILE, sizeof(__USER_FILE)-1);
@@ -450,8 +450,8 @@ __nanohttp_users2file(void)
   char buf[8192];
   char *p = buf;
   int len = sizeof(buf);
-  JSONStatus_t result;
-  JSONPair_t *json;
+  JSONStatus_e result;
+  JSONPair_s *json;
   void *fp;
   ng_buffer_s b;
 
