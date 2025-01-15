@@ -94,10 +94,6 @@
 #define ng_atomic_inc(x)  atomic_inc(x) 
 #define ng_atomic_dec(x)  atomic_dec(x) 
 #define ng_atomic_set(x,n)  atomic_set(x,n) 
-#define ng_smp_mb() smp_mb()
-#define ng_smp_wmb() smp_wmb()
-#define ng_smp_rmb() smp_rmb()
-#define ng_barrier() barrier()
 typedef u32 NG_U32;
 #define ng_assert(x) BUG_ON(!(x))
 #define NG_ATOMIC_T(x) atomic_t
@@ -113,10 +109,6 @@ typedef ng_uint32_t NG_U32;
 /* We provide internal macro here to allow conditional expansion
  * in the body of the per-arch rte_atomic_thread_fence inline functions.
  */
-#define ng_smp_mb()  __atomic_thread_fence(__ATOMIC_ACQ_REL)
-#define ng_smp_wmb() __atomic_thread_fence(__ATOMIC_RELEASE)
-#define ng_smp_rmb() __atomic_thread_fence(__ATOMIC_CONSUME)
-#define ng_barrier() HTTPD_UNUSED(0)
 #define ng_atomic_inc(x)    __atomic_add_fetch(&(x), 1, __ATOMIC_RELAXED)
 #define ng_atomic_dec(x)    __atomic_add_fetch(&(x), -1, __ATOMIC_RELAXED)
 #define ng_atomic_read(x)   __atomic_load_n(&(x), __ATOMIC_RELAXED)
@@ -136,15 +128,6 @@ typedef struct ng_singleRW_ring ng_singlerw_ring_s;
 
 int ng_singlerw_ring_init(ng_singlerw_ring_s *ring, NG_U32 size);
 void ng_singlerw_ring_free(ng_singlerw_ring_s *ring);
-
-/* true if x is a power of 2 */
-#define POWEROF2(x) ((((x)-1) & (x)) == 0)
-
-static inline int
-ng_is_power_of_2(NG_U32 n)
-{
-  return n && POWEROF2(n);
-}
 
 static inline void *
 ng_singlerw_ring_get(ng_singlerw_ring_s *ring)
@@ -210,92 +193,6 @@ typedef ng_uint64_t unaligned_uint64_t __rte_aligned(1);
 #define RTE_CACHE_GUARD_LINES 1
 #ifndef RTE_ASSERT
 #define RTE_ASSERT(x) ng_assert(x)
-#endif
-
-/* The memory order is an integer type in GCC built-ins,
- * not an enumerated type like in C11.
- */
-typedef int rte_memory_order;
-
-#if defined(aarch64)
-#define rte_mb() asm volatile("dmb osh" : : : "memory")
-#define rte_wmb() asm volatile("dmb oshst" : : : "memory")
-#define rte_rmb() asm volatile("dmb oshld" : : : "memory")
-#define rte_smp_mb() asm volatile("dmb ish" : : : "memory")
-#define rte_smp_wmb() asm volatile("dmb ishst" : : : "memory")
-#define rte_smp_rmb() asm volatile("dmb ishld" : : : "memory")
-static inline void rte_pause(void)
-{
-}
-#elif defined(__arm__)
-#define  rte_mb()  __sync_synchronize()
-#define  rte_wmb() do { asm volatile ("dmb st" : : : "memory"); } while (0)
-#define  rte_rmb() __sync_synchronize()
-#define rte_smp_mb() rte_mb()
-#define rte_smp_wmb() rte_wmb()
-#define rte_smp_rmb() rte_rmb()
-static inline void rte_pause(void)
-{
-  asm volatile("yield" ::: "memory");
-}
-#elif defined(__i386__) || defined(__x86_64__)
-#include <emmintrin.h>
-#define  rte_mb() _mm_mfence()
-#define  rte_wmb() _mm_sfence()
-#define  rte_rmb() _mm_lfence()
-#define rte_smp_wmb() rte_compiler_barrier()
-#define rte_smp_rmb() rte_compiler_barrier()
-static inline void rte_pause(void)
-{
-  _mm_pause();
-}
-#elif defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__)
-#define  rte_mb()  asm volatile("sync" : : : "memory")
-#define  rte_wmb() asm volatile("sync" : : : "memory")
-#define  rte_rmb() asm volatile("sync" : : : "memory")
-#define rte_smp_mb() rte_mb()
-#define rte_smp_wmb() rte_wmb()
-#define rte_smp_rmb() rte_rmb()
-static inline void rte_pause(void)
-{
-  /* Set hardware multi-threading low priority */
-  asm volatile("or 1,1,1");
-  /* Set hardware multi-threading medium priority */
-  asm volatile("or 2,2,2");
-  rte_compiler_barrier();
-}
-#elif defined(__riscv__) || defined(__riscv) || defined(__RISCV64__) || defined(__riscv64__)
-#define rte_mb()  asm volatile("fence rw, rw" : : : "memory")
-#define rte_wmb()  asm volatile("fence w, w" : : : "memory")
-#define rte_rmb()  asm volatile("fence r, r" : : : "memory")
-#define rte_smp_mb()  rte_mb()
-#define rte_smp_wmb()  rte_wmb()
-#define rte_smp_rmb()  rte_rmb()
-static inline void rte_pause(void)
-{
-  /* Insert pause hint directly to be compatible with old compilers.
-   * This will work even on platforms without Zihintpause extension
-   * because this is a FENCE hint instruction which evaluates to NOP.
-   */
-  asm volatile(".int 0x0100000F" : : : "memory");
-}
-#elif defined(__loongarch__)
-#define rte_mb()  do { asm volatile("dbar 0":::"memory"); } while (0)
-#define rte_wmb()  rte_mb()
-#define rte_rmb()  rte_mb()
-#define rte_smp_mb()  rte_mb()
-#define rte_smp_wmb()  rte_mb()
-#define rte_smp_rmb()  rte_mb()
-static inline void rte_pause(void)
-{
-}
-#else
-#define rte_smp_mb()  ng_smp_mb()
-#define rte_smp_wmb()  ng_smp_wmb()
-#define rte_smp_rmb()  ng_smp_rmb()
-static inline void rte_pause(void)
-{
-}
 #endif
 
 static __rte_always_inline void

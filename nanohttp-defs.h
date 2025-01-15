@@ -71,6 +71,39 @@
 #define ng_FALSE 0
 #define ng_TRUE  1
 
+#if defined(_MSC_VER)
+#define RTE_TOOLCHAIN_MSVC
+#endif
+
+#if defined(__linux__)
+#define RTE_ENV_LINUX
+#define RTE_EXEC_ENV_LINUX
+#endif
+
+#ifndef RTE_TOOLCHAIN_MSVC
+#ifndef typeof
+#define typeof __typeof__
+#endif
+#endif
+
+#ifndef __cplusplus
+#ifndef asm
+#define asm __asm__
+#endif
+#endif
+
+#ifdef RTE_TOOLCHAIN_MSVC
+#ifdef __cplusplus
+#define __extension__
+#endif
+#endif
+
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_constant(e) 0
+#else
+#define __rte_constant(e) __extension__(__builtin_constant_p(e))
+#endif
+
 #if defined(__GNUC__)
 #define GCC_VERSION (__GNUC__ * 10000 \
                      + __GNUC_MINOR__ * 100 \
@@ -135,15 +168,6 @@ typedef int ng_bool_t;
  */
 #define RTE_BUILD_BUG_ON(condition) do { static_assert(!(condition), #condition); } while (0)
 
-#if defined(_MSC_VER)
-#define RTE_TOOLCHAIN_MSVC
-#endif
-
-#if defined(__linux__)
-#define RTE_ENV_LINUX
-#define RTE_EXEC_ENV_LINUX
-#endif
-
 #define NG_ITEMS(ar) (sizeof(ar)/sizeof((ar)[0]))
 #ifndef RTE_ASSERT
 #define RTE_ASSERT assert
@@ -153,28 +177,6 @@ typedef int ng_bool_t;
 typedef int ng_int_t;
 typedef unsigned int ng_uint_t;
 typedef int int_t;
-
-#define rte_memory_order_relaxed __ATOMIC_RELAXED
-#define rte_memory_order_consume __ATOMIC_CONSUME
-#define rte_memory_order_acquire __ATOMIC_ACQUIRE
-#define rte_memory_order_release __ATOMIC_RELEASE
-#define rte_memory_order_acq_rel __ATOMIC_ACQ_REL
-#define rte_memory_order_seq_cst __ATOMIC_SEQ_CST
-#define rte_atomic_thread_fence(x) __atomic_thread_fence(x)
-
-/**
- * Compiler barrier.
- *
- * Guarantees that operation reordering does not occur at compile time
- * for operations directly before and after the barrier.
- */
-#if defined(_MSC_VER)
-#define rte_compiler_barrier() _ReadWriteBarrier()
-#else
-#define	rte_compiler_barrier() do {		\
-	asm volatile ("" : : : "memory");	\
-} while(0)
-#endif
 
 /**
  * Force a function to be inlined
@@ -192,6 +194,8 @@ typedef int int_t;
 
 #define HTTPD_UNUSED(x) (void)(x)
 #define NG_UNUSED(x) HTTPD_UNUSED(x)
+#define RTE_SET_USED(x) HTTPD_UNUSED(x)
+
 typedef int ng_result_t;
 
 /**
@@ -270,7 +274,59 @@ typedef int ng_result_t;
   defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__) ||\
   defined(__s390x__) || defined(__RISCV64__) || defined(__riscv64__)
   
-#define RTE_MIN(x,y) ((x)<(y) ? (x) : (y))
+/*********** Macros for calculating min and max **********/
+
+/**
+ * Macro to return the minimum of two numbers
+ */
+#define RTE_MIN(a, b) \
+	__extension__ ({ \
+		typeof (a) _a = (a); \
+		typeof (b) _b = (b); \
+		_a < _b ? _a : _b; \
+	})
+
+/**
+ * Macro to return the minimum of two numbers
+ *
+ * As opposed to RTE_MIN, it does not use temporary variables so it is not safe
+ * if a or b is an expression. Yet it is guaranteed to be constant for use in
+ * static_assert().
+ */
+#define RTE_MIN_T(a, b, t) \
+	((t)(a) < (t)(b) ? (t)(a) : (t)(b))
+
+/**
+ * Macro to return the maximum of two numbers
+ */
+#define RTE_MAX(a, b) \
+	__extension__ ({ \
+		typeof (a) _a = (a); \
+		typeof (b) _b = (b); \
+		_a > _b ? _a : _b; \
+	})
+
+/**
+ * Macro to return the maximum of two numbers
+ *
+ * As opposed to RTE_MAX, it does not use temporary variables so it is not safe
+ * if a or b is an expression. Yet it is guaranteed to be constant for use in
+ * static_assert().
+ */
+#define RTE_MAX_T(a, b, t) \
+	((t)(a) > (t)(b) ? (t)(a) : (t)(b))
+
+/* true if x is a power of 2 */
+#define POWEROF2(x) ((((x)-1) & (x)) == 0)
+
+#include "nanohttp-align.h"
+#include "nanohttp-endian.h"
+#include "nanohttp-cpu.h"
+#include "nanohttp-atomic.h"
+#include "nanohttp-prefetch.h"
+#include "nanohttp-utils.h"
+#include "nanohttp-lfq.h"
+#include "nanohttp-vsprintf.h"
 
 #define ng_snprintf   __ng_snprintf
 #define ng_vsnprintf  __ng_vsnprintf
@@ -278,12 +334,10 @@ typedef int ng_result_t;
 #define ng_vfprintf   __ng_vfprintf
 #define ng_strstr     strstr
 
-#include "nanohttp-align.h"
-#include "nanohttp-endian.h"
-#include "nanohttp-atomic.h"
-#include "nanohttp-prefetch.h"
-#include "nanohttp-utils.h"
-#include "nanohttp-lfq.h"
-#include "nanohttp-vsprintf.h"
+static inline int
+ng_is_power_of_2(ng_uint64_t n)
+{
+  return n && POWEROF2(n);
+}
 
 #endif

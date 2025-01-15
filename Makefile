@@ -89,6 +89,7 @@ objects = \
 	nanohttp-system.o \
 	nanohttp-time.o \
 	nanohttp-ctype.o \
+	nanohttp-freq.o \
 	nanohttp-atoi.o \
 	nanohttp-itoa.o \
 	nanohttp-dtoa.o \
