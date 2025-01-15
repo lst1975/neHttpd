@@ -65,7 +65,7 @@ var labelConv = {
   "Host Name":"Host Name",
 };
 
-function valid8_Validation(buffer) 
+function utf8_Validation(buffer) 
 {
   if (gmtIsString(buffer))
   {
@@ -356,7 +356,7 @@ function cfgOperation(page, alwaysActive, action)
               if (!gmtIsString(v))
                 return "Format Error! Not string";
               if (!(/^[\x20-\x7E]+$/).test(v)
-                && !valid8_Validation(v))
+                && !utf8_Validation(v))
                 return "Format Error! Non-printable character";
               var zv = z.data("osrc");
               if (zv.range && gmtIsArray(zv.range))
