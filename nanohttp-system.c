@@ -567,12 +567,12 @@ __os_sys_status(void *log)
 
     if (strlen(osvi.szCSDVersion))
       ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-        "OS: Windows %u build:%u, \"%s\", suite:%X, type:%u",
+        "Windows %u build:%u, \"%s\", suite:%X, type:%u",
         ngx_win32_version, osvi.dwBuildNumber, osvi.szCSDVersion,
         osviex_stub->wSuiteMask, osviex_stub->wProductType);
     else
       ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-        "OS: Windows %u build:%u, suite:%X, type:%u",
+        "Windows %u build:%u, suite:%X, type:%u",
         ngx_win32_version, osvi.dwBuildNumber, 
         osviex_stub->wSuiteMask, osviex_stub->wProductType);
   } 
@@ -583,7 +583,7 @@ __os_sys_status(void *log)
       /* Win9x build */
       if (strlen(osvi.szCSDVersion))
         ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-            "OS: Windows %u build:%u.%u.%u, \"%s\"",
+            "Windows %u build:%u.%u.%u, \"%s\"",
             ngx_win32_version,
             osvi.dwBuildNumber >> 24,
             (osvi.dwBuildNumber >> 16) & 0xff,
@@ -591,7 +591,7 @@ __os_sys_status(void *log)
             osvi.szCSDVersion);
       else
         ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-            "OS: Windows %u build:%u.%u.%u",
+            "Windows %u build:%u.%u.%u",
             ngx_win32_version,
             osvi.dwBuildNumber >> 24,
             (osvi.dwBuildNumber >> 16) & 0xff,
@@ -607,12 +607,12 @@ __os_sys_status(void *log)
        */
       if (strlen(osvi.szCSDVersion))
         ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-            "OS: Windows %u build:%u, \"%s\"",
+            "Windows %u build:%u, \"%s\"",
             ngx_win32_version, osvi.dwBuildNumber,
             osvi.szCSDVersion);
       else
         ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-            "OS: Windows %u build:%u",
+            "Windows %u build:%u",
             ngx_win32_version, osvi.dwBuildNumber);
     }
   }
@@ -983,7 +983,7 @@ __os_specific_init(void *log)
 
   ng_snprintf(ng_os_info.ng_os_version, 
     sizeof(ng_os_info.ng_os_version),
-    "OS: %s build:%s", u.sysname, u.release);
+    "%s build:%s", u.sysname, u.release);
 #endif
 
   return ng_ERR_NONE;
