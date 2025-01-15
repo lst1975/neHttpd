@@ -281,8 +281,8 @@ typedef int ng_result_t;
 #include "nanohttp-prefetch.h"
 #include "nanohttp-utils.h"
 #include "nanohttp-lfq.h"
-#include "nanohttp-vsprintf.h"
 #include "nanohttp-lcore.h"
+#include "nanohttp-vsprintf.h"
 
 #define ng_snprintf   __ng_snprintf
 #define ng_vsnprintf  __ng_vsnprintf

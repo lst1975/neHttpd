@@ -96,6 +96,7 @@ objects = \
 	nanohttp-buffer.o \
 	nanohttp-signal.o \
 	nanohttp-utils.o \
+	nanohttp-utf8.o \
 	nanohttp-inet.o \
 	nanohttp-header.o \
 	nanohttp-code.o \
