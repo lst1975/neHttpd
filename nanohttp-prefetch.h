@@ -63,6 +63,9 @@
 #ifndef __nanohttp_prefetch_h
 #define __nanohttp_prefetch_h
 
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      aarch64
+/////////////////////////////////////////////////////////////////////////////////*/
 #if defined(aarch64)
 static inline void rte_prefetch0(const volatile void *p)
 {
@@ -83,6 +86,9 @@ static inline void rte_prefetch_non_temporal(const volatile void *p)
 {
 	asm volatile ("PRFM PLDL1STRM, [%0]" : : "r" (p));
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __arm__
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__arm__)
 static inline void rte_prefetch0(const volatile void *p)
 {
@@ -104,6 +110,9 @@ static inline void rte_prefetch_non_temporal(const volatile void *p)
 	/* non-temporal version not available, fallback to rte_prefetch0 */
 	rte_prefetch0(p);
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      x86
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__i386__) || defined(__x86_64__)
 #ifdef RTE_TOOLCHAIN_MSVC
 #include <emmintrin.h>
@@ -143,6 +152,9 @@ static inline void rte_prefetch_non_temporal(const volatile void *p)
 	asm volatile ("prefetchnta %[p]" : : [p] "m" (*(const volatile char *)p));
 #endif
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __powerpc64__
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__)
 static inline void rte_prefetch0(const volatile void *p)
 {
@@ -164,6 +176,9 @@ static inline void rte_prefetch_non_temporal(const volatile void *p)
 	/* non-temporal version not available, fallback to rte_prefetch0 */
 	rte_prefetch0(p);
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __riscv__
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__riscv__) || defined(__riscv) || defined(__RISCV64__) || defined(__riscv64__)
 static inline void rte_prefetch0(const volatile void *p)
 {
@@ -185,6 +200,9 @@ static inline void rte_prefetch_non_temporal(const volatile void *p)
 	/* non-temporal version not available, fallback to rte_prefetch0 */
 	rte_prefetch0(p);
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __loongarch__
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__loongarch__)
 static inline void rte_prefetch0(const volatile void *p)
 {
@@ -206,6 +224,9 @@ static inline void rte_prefetch_non_temporal(const volatile void *p)
 	/* non-temporal version not available, fallback to rte_prefetch0 */
 	rte_prefetch0(p);
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      ¿
+/////////////////////////////////////////////////////////////////////////////////*/
 #else
 static inline void rte_prefetch0(const volatile void *p)
 {

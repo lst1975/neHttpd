@@ -107,7 +107,7 @@ static void ng_print_version(void *log)
 #include <pdhmsg.h>
 #include <stdio.h>
 #include <locale.h>
-#if defined(_MSC_VER)
+#if RTE_TOOLCHAIN_MSVC
 #pragma comment(lib, "pdh.lib")
 #endif
 
@@ -402,7 +402,7 @@ typedef BOOL (PASCAL FAR * LPFN_TRANSMITFILE)(
 
 #ifndef TP_ELEMENT_FILE
 
-#ifdef _MSC_VER
+#if RTE_TOOLCHAIN_MSVC
 #pragma warning(disable:4201) /* Nonstandard extension, nameless struct/union */
 #endif
 
@@ -422,7 +422,7 @@ typedef struct _TRANSMIT_PACKETS_ELEMENT {
 } TRANSMIT_PACKETS_ELEMENT, *PTRANSMIT_PACKETS_ELEMENT,
     FAR *LPTRANSMIT_PACKETS_ELEMENT;
 
-#ifdef _MSC_VER
+#if RTE_TOOLCHAIN_MSVC
 #pragma warning(default:4201)
 #endif
 
@@ -507,7 +507,7 @@ __os_sys_status(void *log)
   ng_bzero(&osvi, sizeof(OSVERSIONINFOEX));
   osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 
-#ifdef _MSC_VER
+#if RTE_TOOLCHAIN_MSVC
 #pragma warning(disable:4996)
 #endif
 
@@ -551,7 +551,7 @@ __os_sys_status(void *log)
                          + osvi.wServicePackMinor;
   }
 
-#ifdef _MSC_VER
+#if RTE_TOOLCHAIN_MSVC
 #pragma warning(default:4996)
 #endif
 
@@ -567,12 +567,12 @@ __os_sys_status(void *log)
 
     if (strlen(osvi.szCSDVersion))
       ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-        "Windows %u build:%u, \"%s\", suite:%X, type:%u",
+        "OS: Windows %u build:%u, \"%s\", suite:%X, type:%u",
         ngx_win32_version, osvi.dwBuildNumber, osvi.szCSDVersion,
         osviex_stub->wSuiteMask, osviex_stub->wProductType);
     else
       ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-        "Windows %u build:%u, suite:%X, type:%u",
+        "OS: Windows %u build:%u, suite:%X, type:%u",
         ngx_win32_version, osvi.dwBuildNumber, 
         osviex_stub->wSuiteMask, osviex_stub->wProductType);
   } 
@@ -583,7 +583,7 @@ __os_sys_status(void *log)
       /* Win9x build */
       if (strlen(osvi.szCSDVersion))
         ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-            "Windows %u build:%u.%u.%u, \"%s\"",
+            "OS: Windows %u build:%u.%u.%u, \"%s\"",
             ngx_win32_version,
             osvi.dwBuildNumber >> 24,
             (osvi.dwBuildNumber >> 16) & 0xff,
@@ -591,7 +591,7 @@ __os_sys_status(void *log)
             osvi.szCSDVersion);
       else
         ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-            "Windows %u build:%u.%u.%u",
+            "OS: Windows %u build:%u.%u.%u",
             ngx_win32_version,
             osvi.dwBuildNumber >> 24,
             (osvi.dwBuildNumber >> 16) & 0xff,
@@ -607,12 +607,12 @@ __os_sys_status(void *log)
        */
       if (strlen(osvi.szCSDVersion))
         ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-            "Windows %u build:%u, \"%s\"",
+            "OS: Windows %u build:%u, \"%s\"",
             ngx_win32_version, osvi.dwBuildNumber,
             osvi.szCSDVersion);
       else
         ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
-            "Windows %u build:%u",
+            "OS: Windows %u build:%u",
             ngx_win32_version, osvi.dwBuildNumber);
     }
   }
@@ -836,7 +836,7 @@ __os_get_tzoffset(void)
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#if defined(RTE_ENV_LINUX) || defined(__linux__)
+#if defined(RTE_ENV_LINUX)
 #include <sys/utsname.h>
 #endif
 #include <sys/resource.h>
@@ -972,7 +972,7 @@ typedef pid_t ngx_pid_t;
 static ng_result_t
 __os_specific_init(void *log)
 {
-#if defined(RTE_ENV_LINUX) || defined(__linux__)
+#if defined(RTE_ENV_LINUX)
   struct utsname  u;
 
   if (uname(&u) == -1) {
@@ -983,7 +983,7 @@ __os_specific_init(void *log)
 
   ng_snprintf(ng_os_info.ng_os_version, 
     sizeof(ng_os_info.ng_os_version),
-    "%s build:%s", u.sysname, u.release);
+    "OS: %s build:%s", u.sysname, u.release);
 #endif
 
   return ng_ERR_NONE;
@@ -992,7 +992,7 @@ __os_specific_init(void *log)
 static void
 __os_specific_status(void *log)
 {
-#if defined(RTE_ENV_LINUX) || defined(__linux__)
+#if defined(RTE_ENV_LINUX)
   log_info("OS: %s", ng_os_info.ng_os_version);
 #endif
 }
@@ -1157,7 +1157,7 @@ static ng_size_t CacheLineSize(void) {
 	return lineSize;
 }
 
-#elif defined(__linux__)
+#elif defined(RTE_ENV_LINUX)
 
 #include <stdio.h>
 static ng_size_t CacheLineSize(void) {
@@ -1415,7 +1415,7 @@ clean0:
   return r;
 }
 
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
+#if RTE_TOOLCHAIN_MSVC || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
 #include <windows.h>
 int ng_os_get_meminfo(mg_mem_info_s *m) {
   MEMORYSTATUSEX statex;

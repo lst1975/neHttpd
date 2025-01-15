@@ -202,7 +202,7 @@ rte_constant_bswap64(ng_uint64_t x)
 #endif
 
 #ifdef RTE_FORCE_INTRINSICS
-#if defined(_MSC_VER)
+#if RTE_TOOLCHAIN_MSVC
 #define rte_bswap16(x) _byteswap_ushort(x)
 
 #define rte_bswap32(x) _byteswap_ulong(x)

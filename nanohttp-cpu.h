@@ -95,7 +95,7 @@
  * Guarantees that operation reordering does not occur at compile time
  * for operations directly before and after the barrier.
  */
-#if defined(_MSC_VER)
+#if RTE_TOOLCHAIN_MSVC
 #define rte_compiler_barrier() _ReadWriteBarrier()
 #else
 #define	rte_compiler_barrier() do {		\
@@ -108,6 +108,9 @@
  */
 typedef int rte_memory_order;
 
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      aarch64
+/////////////////////////////////////////////////////////////////////////////////*/
 #if defined(aarch64)
 #define rte_mb() asm volatile("dmb osh" : : : "memory")
 #define rte_wmb() asm volatile("dmb oshst" : : : "memory")
@@ -118,6 +121,9 @@ typedef int rte_memory_order;
 static inline void rte_pause(void)
 {
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __arm__
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__arm__)
 #define  rte_mb()  __sync_synchronize()
 #define  rte_wmb() do { asm volatile ("dmb st" : : : "memory"); } while (0)
@@ -129,6 +135,9 @@ static inline void rte_pause(void)
 {
   asm volatile("yield" ::: "memory");
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      x86
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__i386__) || defined(__x86_64__)
 #include <emmintrin.h>
 #define  rte_mb() _mm_mfence()
@@ -140,6 +149,9 @@ static inline void rte_pause(void)
 {
   _mm_pause();
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      powerpc
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__)
 #define  rte_mb()  asm volatile("sync" : : : "memory")
 #define  rte_wmb() asm volatile("sync" : : : "memory")
@@ -155,6 +167,9 @@ static inline void rte_pause(void)
   asm volatile("or 2,2,2");
   rte_compiler_barrier();
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __riscv__
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__riscv__) || defined(__riscv) || defined(__RISCV64__) || defined(__riscv64__)
 #define rte_mb()  asm volatile("fence rw, rw" : : : "memory")
 #define rte_wmb()  asm volatile("fence w, w" : : : "memory")
@@ -170,6 +185,9 @@ static inline void rte_pause(void)
    */
   asm volatile(".int 0x0100000F" : : : "memory");
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __loongarch__
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__loongarch__)
 #define rte_mb()  do { asm volatile("dbar 0":::"memory"); } while (0)
 #define rte_wmb()  rte_mb()
@@ -180,6 +198,9 @@ static inline void rte_pause(void)
 static inline void rte_pause(void)
 {
 }
+/*/////////////////////////////////////////////////////////////////////////////////
+                                        ¿
+/////////////////////////////////////////////////////////////////////////////////*/
 #else
 #define rte_smp_mb()  ng_smp_mb()
 #define rte_smp_wmb()  ng_smp_wmb()

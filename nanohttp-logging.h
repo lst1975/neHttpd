@@ -172,7 +172,7 @@ extern const char *nanohttp_log_get_logfile(void);
 extern int nanohttp_log_set_logtype(int type);
 
 #ifdef WIN32
-#if defined(_MSC_VER) && _MSC_VER <= 1200
+#if RTE_TOOLCHAIN_MSVC && _MSC_VER <= 1200
 extern char *VisualC_funcname(const char *file, int line); /* not thread safe! */
 #define __FUNCTION__  VisualC_funcname(__FILE__, __LINE__)
 #endif

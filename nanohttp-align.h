@@ -132,7 +132,7 @@
  * If alignment of an object/variable is required then this macro should
  * not be used, instead prefer C11 alignas(a).
  */
-#if defined(_MSC_VER)
+#if RTE_TOOLCHAIN_MSVC
 #define __rte_aligned(a) __declspec(align(a))
 #else
 #define __rte_aligned(a) __attribute__((__aligned__(a)))

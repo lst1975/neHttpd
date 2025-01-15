@@ -56,8 +56,8 @@
  * IN THE SOFTWARE.
  *
  *************************************************************************************
- *                              https://github.com/lst1975/ngRTOS
- *                              https://github.com/lst1975/neHttpd
+ *                         https://github.com/lst1975/ngRTOS
+ *                         https://github.com/lst1975/neHttpd
  **************************************************************************************
  */
 #ifndef __nanohttp_atomic_h
@@ -92,7 +92,7 @@ static inline int
 rte_atomic64_cmpset(volatile ng_uint64_t *dst, 
   ng_uint64_t exp, ng_uint64_t src)
 {
-	return __sync_bool_compare_and_swap(dst, exp, src);
+  return __sync_bool_compare_and_swap(dst, exp, src);
 }
 
 #define rte_atomic_load_explicit(ptr, memorder) \
@@ -113,7 +113,7 @@ rte_atomic64_cmpset(volatile ng_uint64_t *dst,
   __atomic_fetch_add(ptr, val, memorder)
     
 #define rte_atomic_exchange_explicit(ptr, val, memorder) \
-	atomic_exchange_explicit(ptr, val, memorder)
+  atomic_exchange_explicit(ptr, val, memorder)
 
 /**
  * Atomic exchange.
@@ -133,14 +133,14 @@ rte_atomic64_cmpset(volatile ng_uint64_t *dst,
 static inline ng_uint64_t
 rte_atomic64_exchange(volatile ng_uint64_t *dst, ng_uint64_t val)
 {
-	return rte_atomic_exchange_explicit(dst, val, rte_memory_order_seq_cst);
+  return rte_atomic_exchange_explicit(dst, val, rte_memory_order_seq_cst);
 }
 
 /**
  * The atomic counter structure.
  */
 typedef struct {
-	volatile ng_int64_t cnt;  /**< Internal counter value. */
+  volatile ng_int64_t cnt;  /**< Internal counter value. */
 } rte_atomic64_t;
 
 /**
@@ -158,16 +158,16 @@ static inline void
 rte_atomic64_init(rte_atomic64_t *v)
 {
 #if NG_IS_64BIT_SYS
-	v->cnt = 0;
+  v->cnt = 0;
 #else
-	int success = 0;
-	ng_uint64_t tmp;
+  int success = 0;
+  ng_uint64_t tmp;
 
-	while (success == 0) {
-		tmp = v->cnt;
-		success = rte_atomic64_cmpset((volatile ng_uint64_t *)&v->cnt,
-		                              tmp, 0);
-	}
+  while (success == 0) {
+    tmp = v->cnt;
+    success = rte_atomic64_cmpset(
+      (volatile ng_uint64_t *)&v->cnt, tmp, 0);
+  }
 #endif
 }
 
@@ -183,18 +183,18 @@ static inline ng_int64_t
 rte_atomic64_read(rte_atomic64_t *v)
 {
 #if NG_IS_64BIT_SYS
-	return v->cnt;
+  return v->cnt;
 #else
-	int success = 0;
-	ng_uint64_t tmp;
+  int success = 0;
+  ng_uint64_t tmp;
 
-	while (success == 0) {
-		tmp = v->cnt;
-		/* replace the value by itself */
-		success = rte_atomic64_cmpset((volatile ng_uint64_t *)&v->cnt,
-		                              tmp, tmp);
-	}
-	return tmp;
+  while (success == 0) {
+    tmp = v->cnt;
+    /* replace the value by itself */
+    success = rte_atomic64_cmpset(
+      (volatile ng_uint64_t *)&v->cnt, tmp, tmp);
+  }
+  return tmp;
 #endif
 }
 
@@ -210,16 +210,16 @@ static inline void
 rte_atomic64_set(rte_atomic64_t *v, ng_int64_t new_value)
 {
 #if NG_IS_64BIT_SYS
-	v->cnt = new_value;
+  v->cnt = new_value;
 #else
-	int success = 0;
-	ng_uint64_t tmp;
+  int success = 0;
+  ng_uint64_t tmp;
 
-	while (success == 0) {
-		tmp = v->cnt;
-		success = rte_atomic64_cmpset((volatile ng_uint64_t *)&v->cnt,
-		                              tmp, new_value);
-	}
+  while (success == 0) {
+    tmp = v->cnt;
+    success = rte_atomic64_cmpset(
+      (volatile ng_uint64_t *)&v->cnt, tmp, new_value);
+  }
 #endif
 }
 
@@ -234,8 +234,9 @@ rte_atomic64_set(rte_atomic64_t *v, ng_int64_t new_value)
 static inline void
 rte_atomic64_add(rte_atomic64_t *v, ng_int64_t inc)
 {
-	rte_atomic_fetch_add_explicit((volatile __std_rte_atomic ng_int64_t *)&v->cnt, inc,
-		rte_memory_order_seq_cst);
+  rte_atomic_fetch_add_explicit(
+    (volatile __std_rte_atomic ng_int64_t *)&v->cnt, inc,
+    rte_memory_order_seq_cst);
 }
 
 /**
@@ -249,8 +250,9 @@ rte_atomic64_add(rte_atomic64_t *v, ng_int64_t inc)
 static inline void
 rte_atomic64_sub(rte_atomic64_t *v, ng_int64_t dec)
 {
-	rte_atomic_fetch_sub_explicit((volatile __std_rte_atomic ng_int64_t *)&v->cnt, dec,
-		rte_memory_order_seq_cst);
+  rte_atomic_fetch_sub_explicit(
+    (volatile __std_rte_atomic ng_int64_t *)&v->cnt, dec,
+    rte_memory_order_seq_cst);
 }
 
 /**
@@ -262,7 +264,7 @@ rte_atomic64_sub(rte_atomic64_t *v, ng_int64_t dec)
 static inline void
 rte_atomic64_inc(rte_atomic64_t *v)
 {
-	rte_atomic64_add(v, 1);
+  rte_atomic64_add(v, 1);
 }
 
 /**
@@ -274,7 +276,7 @@ rte_atomic64_inc(rte_atomic64_t *v)
 static inline void
 rte_atomic64_dec(rte_atomic64_t *v)
 {
-	rte_atomic64_sub(v, 1);
+  rte_atomic64_sub(v, 1);
 }
 
 /**
@@ -293,8 +295,8 @@ rte_atomic64_dec(rte_atomic64_t *v)
 static inline ng_int64_t
 rte_atomic64_add_return(rte_atomic64_t *v, ng_int64_t inc)
 {
-	return rte_atomic_fetch_add_explicit((volatile __std_rte_atomic ng_int64_t *)&v->cnt, inc,
-		rte_memory_order_seq_cst) + inc;
+  return rte_atomic_fetch_add_explicit((volatile __std_rte_atomic ng_int64_t *)&v->cnt, inc,
+    rte_memory_order_seq_cst) + inc;
 }
 
 /**
@@ -313,8 +315,9 @@ rte_atomic64_add_return(rte_atomic64_t *v, ng_int64_t inc)
 static inline ng_int64_t
 rte_atomic64_sub_return(rte_atomic64_t *v, ng_int64_t dec)
 {
-	return rte_atomic_fetch_sub_explicit((volatile __std_rte_atomic ng_int64_t *)&v->cnt, dec,
-		rte_memory_order_seq_cst) - dec;
+  return rte_atomic_fetch_sub_explicit(
+    (volatile __std_rte_atomic ng_int64_t *)&v->cnt, dec,
+    rte_memory_order_seq_cst) - dec;
 }
 
 /**
@@ -328,9 +331,10 @@ rte_atomic64_sub_return(rte_atomic64_t *v, ng_int64_t dec)
  * @return
  *   True if the result after the addition is 0; false otherwise.
  */
-static inline int rte_atomic64_inc_and_test(rte_atomic64_t *v)
+static inline int 
+rte_atomic64_inc_and_test(rte_atomic64_t *v)
 {
-	return rte_atomic64_add_return(v, 1) == 0;
+  return rte_atomic64_add_return(v, 1) == 0;
 }
 
 /**
@@ -344,9 +348,10 @@ static inline int rte_atomic64_inc_and_test(rte_atomic64_t *v)
  * @return
  *   True if the result after subtraction is 0; false otherwise.
  */
-static inline int rte_atomic64_dec_and_test(rte_atomic64_t *v)
+static inline int 
+rte_atomic64_dec_and_test(rte_atomic64_t *v)
 {
-	return rte_atomic64_sub_return(v, 1) == 0;
+  return rte_atomic64_sub_return(v, 1) == 0;
 }
 
 /**
@@ -360,9 +365,10 @@ static inline int rte_atomic64_dec_and_test(rte_atomic64_t *v)
  * @return
  *   0 if failed; else 1, success.
  */
-static inline int rte_atomic64_test_and_set(rte_atomic64_t *v)
+static inline int 
+rte_atomic64_test_and_set(rte_atomic64_t *v)
 {
-	return rte_atomic64_cmpset((volatile ng_uint64_t *)&v->cnt, 0, 1);
+  return rte_atomic64_cmpset((volatile ng_uint64_t *)&v->cnt, 0, 1);
 }
 
 /**
@@ -371,9 +377,10 @@ static inline int rte_atomic64_test_and_set(rte_atomic64_t *v)
  * @param v
  *   A pointer to the atomic counter.
  */
-static inline void rte_atomic64_clear(rte_atomic64_t *v)
+static inline void 
+rte_atomic64_clear(rte_atomic64_t *v)
 {
-	rte_atomic64_set(v, 0);
+  rte_atomic64_set(v, 0);
 }
 
 #endif

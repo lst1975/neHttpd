@@ -80,7 +80,7 @@ extern ng_uint64_t os__rte_rdtsc_syscall(void);
 #define HTTPD_DATE_STRLEN_MIN 29
 
 #if (defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(__i386__) || defined(__i386))
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
+#if RTE_TOOLCHAIN_MSVC || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
 #include <intrin.h>
 #else
 #include <x86intrin.h>

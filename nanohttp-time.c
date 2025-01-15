@@ -108,7 +108,7 @@ set_tsc_freq(void)
 	ng_os_info.tsc_hz = freq;
 }
 
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
+#if RTE_TOOLCHAIN_MSVC || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
 #include <windows.h>
 #define US_PER_SEC 1E6
 #define CYC_PER_10MHZ 1E7

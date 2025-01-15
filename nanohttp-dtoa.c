@@ -1499,7 +1499,7 @@ static inline void  multiply_128(
    unsigned __int128  value_w = ((unsigned __int128)u) * v;
    w[0] = ((ng_uint64_t)( value_w       ));
    w[1] = ((ng_uint64_t)( value_w >> 64 ));
-#elif defined(_MSC_VER) && defined(_M_X64)
+#elif RTE_TOOLCHAIN_MSVC && defined(_M_X64)
    w[0] = _umul128( u, v, w + 1 );
 #else
    // On other processors and compilers, do column multiplication.
@@ -1534,11 +1534,11 @@ static inline unsigned int  count_leading_zeros( ng_uint64_t  a )
   // (if processor has this instruction and compiler allows for using it).
 #if defined(__GNUC__) || defined(__clang__)
   return  __builtin_clzll( a );
-#elif defined(_MSC_VER) && defined(_M_X64)
+#elif RTE_TOOLCHAIN_MSVC && defined(_M_X64)
   unsigned long  most_significant_bit_number = 0;
   _BitScanReverse64( &most_significant_bit_number, a );
   return  63 - most_significant_bit_number;
-#elif defined(_MSC_VER) && (!defined(_M_X64))
+#elif RTE_TOOLCHAIN_MSVC && (!defined(_M_X64))
   if( a <= UINT64_C(0xFFFFFFFF) )
   {
     unsigned long  most_significant_bit_number = 0;

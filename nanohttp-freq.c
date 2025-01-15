@@ -63,6 +63,9 @@
 
 #include "nanohttp-defs.h"
 
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __arm__
+/////////////////////////////////////////////////////////////////////////////////*/
 #if defined(__aarch64__) || defined(__arm__) || defined(__arm) || defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7__)
 ng_uint64_t
 get_tsc_freq_arch(void)
@@ -96,6 +99,9 @@ get_tsc_freq_arch(void)
 #endif
 }
 
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __x86_64__
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif (defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(__i386__) || defined(__i386))
 
 /* SPDX-License-Identifier: BSD-3-Clause
@@ -272,7 +278,12 @@ get_tsc_freq_arch(void)
 
 	return ((tsc_hz >> 8) & 0xff) * mult * 1E6;
 }
+
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __riscv
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__riscv)
+
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2015 Cavium, Inc
  * Copyright(c) 2022 StarFive
@@ -343,7 +354,12 @@ get_tsc_freq_arch(void)
 	/* Adjust the cycles to next 1Mhz */
 	return RTE_ALIGN_MUL_CEIL((end_cycle - start_cycle) * 10, CYC_PER_1MHZ);
 }
+
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __loongarch__
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif defined(__loongarch__)
+
 #define LOONGARCH_CPUCFG4	0x4
 #define CPUCFG4_CCFREQ_MASK	0xFFFFFFFF
 #define CPUCFG4_CCFREQ_SHIFT	0
@@ -383,7 +399,12 @@ get_tsc_freq_arch(void)
 
 	return base_freq * mul_factor / div_factor;
 }
+
+/*/////////////////////////////////////////////////////////////////////////////////
+                                      __powerpc__
+/////////////////////////////////////////////////////////////////////////////////*/
 #elif (defined(__powerpc__) || defined(__powerpc) || defined(__ppc__))
+
 #include <features.h>
 #ifdef __GLIBC__
 #include <sys/platform/ppc.h>
@@ -430,11 +451,17 @@ out:
 #endif
 
 }
+
+/*/////////////////////////////////////////////////////////////////////////////////
+ ?
+/////////////////////////////////////////////////////////////////////////////////*/
 #else
+
 extern ng_uint64_t ng_get_freq(void);
 ng_uint64_t get_tsc_freq_arch(void)
 {
   return ng_get_freq();
 }
+
 #endif
 

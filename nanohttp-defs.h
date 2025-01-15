@@ -139,19 +139,20 @@ typedef int int_t;
 /**
  * Force a function to be inlined
  */
-#if defined(_MSC_VER)
+#if RTE_TOOLCHAIN_MSVC
 #define __rte_always_inline inline
 #else
 #define __rte_always_inline inline __attribute__((always_inline))
 #endif
 #define __ng_inline__ __rte_always_inline
+
 /**
  * Force a function to be noinlined
  */
 #define __rte_noinline __attribute__((noinline))
 
 #define HTTPD_UNUSED(x) (void)(x)
-#define NG_UNUSED(x) HTTPD_UNUSED(x)
+#define NG_UNUSED(x)    HTTPD_UNUSED(x)
 #define RTE_SET_USED(x) HTTPD_UNUSED(x)
 
 typedef int ng_result_t;
@@ -190,7 +191,7 @@ typedef int ng_result_t;
 /**
  * short definition to mark a function parameter unused
  */
-#if defined(_MSC_VER)
+#if RTE_TOOLCHAIN_MSVC
 #define __rte_unused
 #else
 #define __rte_unused __attribute__((__unused__))
@@ -211,7 +212,7 @@ typedef int ng_result_t;
  *  struct wrapper *w = container_of(x, struct wrapper, c);
  */
 #ifndef container_of
-#if defined(_MSC_VER)
+#if RTE_TOOLCHAIN_MSVC
 #define container_of(ptr, type, member) \
 			((type *)((ng_uintptr_t)(ptr) - offsetof(type, member)))
 #else
@@ -224,14 +225,18 @@ typedef int ng_result_t;
 #endif
 #endif
 
-#define NG_IS_64BIT_SYS defined(__64BIT__) || defined(_LP64) || defined(__LP64__) || defined(_WIN64) ||\
+#if defined(__64BIT__) || defined(_LP64) || defined(__LP64__) || defined(_WIN64) ||\
   defined(__x86_64__) || defined(_M_X64) ||\
   defined(__ia64) || defined(_M_IA64) ||\
   defined(__aarch64__) ||\
   defined(__mips64) ||\
   defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__) ||\
   defined(__s390x__) || defined(__RISCV64__) || defined(__riscv64__)
-  
+#define NG_IS_64BIT_SYS 1  
+#else
+#define NG_IS_64BIT_SYS 0
+#endif
+
 /*********** Macros for calculating min and max **********/
 
 /**
