@@ -89,19 +89,19 @@ typedef signed char        ng_int8_t;
 #define UINT16_C(c) c ## U
 #endif
 #ifndef UINT8_C
-#define UINT8_C(c) c
+#define UINT8_C(c)  c ## U
 #endif
 #ifndef INT64_C
-#define INT64_C(c) c ## LL
+#define INT64_C(c)  c ## LL
 #endif
 #ifndef INT32_C
-#define INT32_C(c) c ## L
+#define INT32_C(c)  c ## L
 #endif
 #ifndef INT16_C
-#define INT16_C(c) c
+#define INT16_C(c)  c
 #endif
 #ifndef INT8_C
-#define INT8_C(c) c
+#define INT8_C(c)   c
 #endif
 
 #define NG_UINT_MAX    UINT32_C(0xFFFFFFFF)
