@@ -349,7 +349,7 @@ httpd_parse_arguments(int argc, char **argv)
   
   while (i < argc)
   {
-    if (!strcmp(argv[i], NHTTPD_ARG_PORT))
+    if (!ng_strcmp(argv[i], NHTTPD_ARG_PORT))
     {
       if (++i >= argc)
       {
@@ -363,7 +363,7 @@ httpd_parse_arguments(int argc, char **argv)
       }
       _httpd_port = ng_atoi(argv[i], 0);
     }
-    else if (!strcmp(argv[i], NHTTPD_ARG_TERMSIG))
+    else if (!ng_strcmp(argv[i], NHTTPD_ARG_TERMSIG))
     {
       if (++i >= argc)
       {
@@ -377,7 +377,7 @@ httpd_parse_arguments(int argc, char **argv)
       }
       httpd_set_terminate_signal(ng_atoi(argv[++i], 0));
     }
-    else if (!strcmp(argv[i], NHTTPD_ARG_MAXCONN))
+    else if (!ng_strcmp(argv[i], NHTTPD_ARG_MAXCONN))
     {
       if (++i >= argc)
       {
@@ -391,7 +391,7 @@ httpd_parse_arguments(int argc, char **argv)
       }
       _httpd_max_connections = ng_atoi(argv[++i], 0);
     }
-    else if (!strcmp(argv[i], NHTTPD_ARG_MAXCONN_PEND))
+    else if (!ng_strcmp(argv[i], NHTTPD_ARG_MAXCONN_PEND))
     {
       if (++i >= argc)
       {
@@ -405,45 +405,45 @@ httpd_parse_arguments(int argc, char **argv)
       }
       _httpd_max_pending_connections = ng_atoi(argv[++i], 0);
     }
-    else if (!strcmp(argv[i], NHTTPD_ARG_LOGLEVEL))
+    else if (!ng_strcmp(argv[i], NHTTPD_ARG_LOGLEVEL))
     {
       if (++i >= argc)
       {
         log_print("Need number for %s\n", NHTTPD_ARG_TIMEOUT);
         return HTTP_INIT_PARSE_RESULT_ERR;
       }
-      if (!strcmp(argv[i], "fatal"))
+      if (!ng_strcmp(argv[i], "fatal"))
       {
         nanohttp_log_set_loglevel(NANOHTTP_LOG_FATAL);
       }
-      else if (!strcmp(argv[i], "error"))
+      else if (!ng_strcmp(argv[i], "error"))
       {
         nanohttp_log_set_loglevel(NANOHTTP_LOG_ERROR);
       }
-      else if (!strcmp(argv[i], "warn"))
+      else if (!ng_strcmp(argv[i], "warn"))
       {
         nanohttp_log_set_loglevel(NANOHTTP_LOG_WARN);
       }
-      else if (!strcmp(argv[i], "event"))
+      else if (!ng_strcmp(argv[i], "event"))
       {
         nanohttp_log_set_loglevel(NANOHTTP_LOG_INFO);
       }
-      else if (!strcmp(argv[i], "debug"))
+      else if (!ng_strcmp(argv[i], "debug"))
       {
         nanohttp_log_set_loglevel(NANOHTTP_LOG_DEBUG);
       }
-      else if (!strcmp(argv[i], "verbose"))
+      else if (!ng_strcmp(argv[i], "verbose"))
       {
         nanohttp_log_set_loglevel(NANOHTTP_LOG_VERBOSE);
       }
-      else if (!strcmp(argv[i], "off"))
+      else if (!ng_strcmp(argv[i], "off"))
       {
         nanohttp_log_set_loglevel(NANOHTTP_LOG_OFF);
       }
       else
         return HTTP_INIT_PARSE_RESULT_ERR;
     }
-    else if (!strcmp(argv[i], NHTTPD_ARG_TIMEOUT))
+    else if (!ng_strcmp(argv[i], NHTTPD_ARG_TIMEOUT))
     {
       if (++i >= argc)
       {
@@ -457,17 +457,17 @@ httpd_parse_arguments(int argc, char **argv)
       }
       hsocket_set_timeout(ng_atoi(argv[++i], 0));
     }
-    else if (!strcmp(argv[i], NHTTPD_ARG_DAEMONIZE)
-      || !strcmp(argv[i], "-d"))
+    else if (!ng_strcmp(argv[i], NHTTPD_ARG_DAEMONIZE)
+      || !ng_strcmp(argv[i], "-d"))
     {
       parse_result = HTTP_INIT_PARSE_RESULT_DAEMON;
     }
-    else if (!strcmp(argv[i], NHTTPD_ARG_HELP)
-      || !strcmp(argv[i], "-h"))
+    else if (!ng_strcmp(argv[i], NHTTPD_ARG_HELP)
+      || !ng_strcmp(argv[i], "-h"))
     {
       parse_result = HTTP_INIT_PARSE_RESULT_HELP;
     }
-    else if (!strcmp(argv[i], "-v"))
+    else if (!ng_strcmp(argv[i], "-v"))
     {
       nanohttp_log_set_loglevel(NANOHTTP_LOG_VERBOSE);
     }

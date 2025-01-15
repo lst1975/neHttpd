@@ -334,19 +334,19 @@ _hssl_parse_arguments(int argc, char **argv)
 
   for (i=1; i<argc; i++)
   {
-    if (!strcmp(argv[i - 1], NHTTP_ARG_CERT))
+    if (!ng_strcmp(argv[i - 1], NHTTP_ARG_CERT))
     {
       hssl_set_certificate(argv[i]);
     }
-    else if (!strcmp(argv[i - 1], NHTTP_ARG_CERTPASS))
+    else if (!ng_strcmp(argv[i - 1], NHTTP_ARG_CERTPASS))
     {
       hssl_set_certpass(argv[i]);
     }
-    else if (!strcmp(argv[i - 1], NHTTP_ARG_CA))
+    else if (!ng_strcmp(argv[i - 1], NHTTP_ARG_CA))
     {
       hssl_set_ca_list(argv[i]);
     }
-    else if (!strcmp(argv[i - 1], NHTTPD_ARG_HTTPS))
+    else if (!ng_strcmp(argv[i - 1], NHTTPD_ARG_HTTPS))
     {
       hssl_enable();
     }

@@ -283,31 +283,31 @@ _httpd_admin_set_loglevel(httpd_conn_s *conn, const char *loglevel)
   char buffer[256];
   char *tmp;
 
-  if (strcmp(loglevel, NANOHTTP_LOG_LEVEL_OFF_STRING) == 0)
+  if (ng_strcmp(loglevel, NANOHTTP_LOG_LEVEL_OFF_STRING) == 0)
   {
     old = nanohttp_log_set_loglevel(NANOHTTP_LOG_OFF);
   }
-  else if (strcmp(loglevel, NANOHTTP_LOG_LEVEL_VERBOSE_STRING) == 0)
+  else if (ng_strcmp(loglevel, NANOHTTP_LOG_LEVEL_VERBOSE_STRING) == 0)
   {
     old = nanohttp_log_set_loglevel(NANOHTTP_LOG_VERBOSE);
   }
-  else if (strcmp(loglevel, NANOHTTP_LOG_LEVEL_DEBUG_STRING) == 0)
+  else if (ng_strcmp(loglevel, NANOHTTP_LOG_LEVEL_DEBUG_STRING) == 0)
   {
     old = nanohttp_log_set_loglevel(NANOHTTP_LOG_DEBUG);
   }
-  else if (strcmp(loglevel, NANOHTTP_LOG_LEVEL_INFO_STRING) == 0)
+  else if (ng_strcmp(loglevel, NANOHTTP_LOG_LEVEL_INFO_STRING) == 0)
   {
     old = nanohttp_log_set_loglevel(NANOHTTP_LOG_INFO);
   }
-  else if (strcmp(loglevel, NANOHTTP_LOG_LEVEL_WARN_STRING) == 0)
+  else if (ng_strcmp(loglevel, NANOHTTP_LOG_LEVEL_WARN_STRING) == 0)
   {
     old = nanohttp_log_set_loglevel(NANOHTTP_LOG_WARN);
   }
-  else if (strcmp(loglevel, NANOHTTP_LOG_LEVEL_ERROR_STRING) == 0)
+  else if (ng_strcmp(loglevel, NANOHTTP_LOG_LEVEL_ERROR_STRING) == 0)
   {
     old = nanohttp_log_set_loglevel(NANOHTTP_LOG_ERROR);
   }
-  else if (strcmp(loglevel, NANOHTTP_LOG_LEVEL_FATAL_STRING) == 0)
+  else if (ng_strcmp(loglevel, NANOHTTP_LOG_LEVEL_FATAL_STRING) == 0)
   {
     old = nanohttp_log_set_loglevel(NANOHTTP_LOG_FATAL);
   }
@@ -444,7 +444,7 @@ httpd_admin_init_args(int argc, char **argv)
 
   for (i=0; i<argc; i++)
   {
-    if (!strcmp(argv[i], NHTTPD_ARG_ENABLE_ADMIN))
+    if (!ng_strcmp(argv[i], NHTTPD_ARG_ENABLE_ADMIN))
     {
       httpd_register(NHTTPD_ADMIN_CONTEXT, 
         sizeof(NHTTPD_ADMIN_CONTEXT)-1, _httpd_admin_entry, "ADMIN", 5);
