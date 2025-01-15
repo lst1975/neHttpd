@@ -491,8 +491,9 @@ _httpd_connection_slots_init(void)
 #if !__HTTP_USE_CONN_RING
   if (httpd_create_mutex(&_httpd_connection_lock))
   {
-    status = herror_new("httpd_create_mutex",  GENERAL_ERROR,
-                               "Failed to create mutex!");
+    status = herror_new("httpd_create_mutex",  
+                        GENERAL_ERROR,
+                        "Failed to create mutex!");
     goto clean0;
   }
 #endif
@@ -502,20 +503,21 @@ _httpd_connection_slots_init(void)
   if (_httpd_connection == NULL)
   {
     status = herror_new("_httpd_connection_slots_init",
-                               GENERAL_ERROR,
-                               "Failed malloc _httpd_connection!");
+                         GENERAL_ERROR,
+                         "Failed malloc _httpd_connection!");
     goto clean1;
   }
   
 #if __HTTP_USE_CONN_RING
   ng_ring_s *ring;
-  ring = rte_ring_create("http_conn", _httpd_max_connections, RING_F_EXACT_SZ);
+  ring = rte_ring_create(CONST_STR_ARG("http_conn"), 
+    _httpd_max_connections, RING_F_EXACT_SZ);
   if (ring == NULL)
   {
     log_fatal("rte_ring_create failed.");
     status = herror_new("_httpd_connection_slots_init",
-                               GENERAL_ERROR,
-                               "Failed create ring for _httpd_connection!");
+                         GENERAL_ERROR,
+                         "Failed create ring for _httpd_connection!");
     goto clean2;
   }
   rte_ring_dump(ring);
@@ -535,8 +537,8 @@ _httpd_connection_slots_init(void)
     {
       log_fatal("rte_ring_mp_enqueue failed.");
       status = herror_new("_httpd_connection_slots_init",
-                                 GENERAL_ERROR,
-                                 "Failed rte_ring_mp_enqueue!");
+                          GENERAL_ERROR,
+                          "Failed rte_ring_mp_enqueue!");
       goto clean3;
     }
 #endif

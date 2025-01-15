@@ -341,4 +341,6 @@ ng_is_power_of_2(ng_uint64_t n)
   return n && POWEROF2(n);
 }
 
+#define CONST_STR_ARG(s) s, sizeof(s)-1
+
 #endif

@@ -169,7 +169,8 @@ int http_memcache_init(void)
   }
 #endif
   
-  __http_mem_ring = rte_ring_create("httm_mem", TSN_MEM_Cache_Max, 0);
+  __http_mem_ring = rte_ring_create(CONST_STR_ARG("httm_mem"), 
+      TSN_MEM_Cache_Max, 0);
   if (__http_mem_ring == NULL)
   {
     log_fatal("ng_singlerw_ring_init failed.");

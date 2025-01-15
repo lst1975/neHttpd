@@ -1236,8 +1236,8 @@ ssize_t rte_ring_get_memsize_elem(unsigned int esize, unsigned int count);
  *    - EEXIST - a memzone with the same name already exists
  *    - ENOMEM - no appropriate memory area found in which to create memzone
  */
-ng_ring_s *rte_ring_create_elem(const char *name, unsigned int esize,
-      unsigned int count, unsigned int flags);
+ng_ring_s *rte_ring_create_elem(const char *name, size_t name_len, 
+  unsigned int esize, unsigned int count, unsigned int flags);
 
 /**
  * Enqueue several objects on the ring (multi-producers safe).
@@ -1877,8 +1877,8 @@ ssize_t rte_ring_get_memsize(unsigned int count);
  * @return
  *   0 on success, or a negative value on error.
  */
-int rte_ring_init(ng_ring_s *r, const char *name, unsigned int count,
-  unsigned int flags);
+int rte_ring_init(ng_ring_s *r, const char *name, size_t name_len,
+  unsigned int count, unsigned int flags);
 
 /**
  * Create a new ring named *name* in memory.
@@ -1943,8 +1943,8 @@ int rte_ring_init(ng_ring_s *r, const char *name, unsigned int count,
  *    - EEXIST - a memzone with the same name already exists
  *    - ENOMEM - no appropriate memory area found in which to create memzone
  */
-ng_ring_s *rte_ring_create(const char *name, unsigned int count,
-         unsigned int flags);
+ng_ring_s *rte_ring_create(const char *name, size_t name_len, 
+  unsigned int count, unsigned int flags);
 
 /**
  * De-allocate all memory used by the ring.

@@ -244,8 +244,8 @@ rte_align32pow2(ng_uint32_t x)
 }
 
 int
-rte_ring_init(ng_ring_s *r, const char *name, unsigned int count,
-  unsigned int flags)
+rte_ring_init(ng_ring_s *r, const char *name, size_t name_len, 
+  unsigned int count, unsigned int flags)
 {
   int ret;
 
@@ -266,9 +266,12 @@ rte_ring_init(ng_ring_s *r, const char *name, unsigned int count,
 
   /* init the ring structure */
   ng_memset(r, 0, sizeof(*r));
-  ret = strlcpy(r->name, name, sizeof(r->name));
-  if (ret < 0 || ret >= (int)sizeof(r->name))
+  
+  if (name_len + 1 >= sizeof(r->name))
     return -ENAMETOOLONG;
+  ng_memcpy(r->name, name, name_len);
+  r->name[name_len] = '\0';
+  
   r->flags = flags;
   ret = get_sync_type(flags, &r->prod.sync_type, &r->cons.sync_type);
   if (ret != 0)
@@ -295,8 +298,8 @@ rte_ring_init(ng_ring_s *r, const char *name, unsigned int count,
 
 /* create the ring for a given element size */
 ng_ring_s *
-rte_ring_create_elem(const char *name, unsigned int esize, unsigned int count,
-    unsigned int flags)
+rte_ring_create_elem(const char *name, size_t name_len, 
+  unsigned int esize, unsigned int count, unsigned int flags)
 {
   ng_ring_s *r;
   ssize_t ring_size;
@@ -320,7 +323,7 @@ rte_ring_create_elem(const char *name, unsigned int esize, unsigned int count,
   if (r != NULL) {
     /* no need to check return value here, we already checked the
      * arguments above */
-    rte_ring_init(r, name, requested_count, flags);
+    rte_ring_init(r, name, name_len, requested_count, flags);
     r->memzone = NULL;
   } else {
     r = NULL;
@@ -332,9 +335,10 @@ rte_ring_create_elem(const char *name, unsigned int esize, unsigned int count,
 
 /* create the ring */
 ng_ring_s *
-rte_ring_create(const char *name, unsigned int count, unsigned int flags)
+rte_ring_create(const char *name, size_t name_len, 
+  unsigned int count, unsigned int flags)
 {
-  return rte_ring_create_elem(name, sizeof(void *), count, flags);
+  return rte_ring_create_elem(name, name_len, sizeof(void *), count, flags);
 }
 
 /* os_free the ring */
@@ -628,7 +632,7 @@ static void __test_ring(void)
     goto cleanup0;
   }
 
-  __test_rte_ring = rte_ring_create("ring_test", 1024, 0);
+  __test_rte_ring = rte_ring_create(CONST_STR_ARG("ring_test"), 1024, 0);
   if (__test_rte_ring == NULL)
   {
     log_fatal("ng_singlerw_ring_init failed"__LN);
