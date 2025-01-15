@@ -113,53 +113,10 @@
 typedef unsigned long ng_ulong_t;
 typedef int ng_bool_t;
 
-#ifdef WIN32
-#define ng_strnocasecmp ng_local_strncasecmp
-#else
-#define ng_strnocasecmp strncasecmp
-#endif
-
-#define ng_strncpy(s1,s2,l) strncpy(s1,s2,l)
-#define ng_strcmp(s1,s2)    strcmp(s1,s2)
-#define ng_strlen(s)        strlen(s)
-#define ng_memmove(d,s,l)   memmove(d,s,l)
-#define ng_memcpy(d,s,l)    memcpy(d,s,l)
-#define ng_memcmp(d,s,l)    memcmp(d,s,l)
-#define ng_memset(d,s,l)    memset(d,s,l)
-#define ng_memchr(d,c,l)    memchr(d,c,l)
-#define ng_bzero(s,l)       ng_memset(s, 0, l)
-
 /* Workaround for toolchain issues with missing C11 macro in FreeBSD */
 #if !defined(static_assert) && !defined(__cplusplus)
 #define	static_assert	_Static_assert
 #endif
-
-#ifdef WIN32
-#define RTE_DEFINE_PER_LCORE(type, name)			\
-	__declspec(thread) type per_lcore_##name
-
-#define RTE_DECLARE_PER_LCORE(type, name)			\
-	extern __declspec(thread) type per_lcore_##name
-#else
-/**
- * Macro to define a per lcore variable "var" of type "type", don't
- * use keywords like "static" or "volatile" in type, just prefix the
- * whole macro.
- */
-#define RTE_DEFINE_PER_LCORE(type, name)			\
-	__thread type per_lcore_##name
-
-/**
- * Macro to declare an extern per lcore variable "var" of type "type"
- */
-#define RTE_DECLARE_PER_LCORE(type, name)			\
-	extern __thread type per_lcore_##name
-#endif
-
-/**
- * Read/write the per-lcore variable value
- */
-#define RTE_PER_LCORE(name) (per_lcore_##name)
 
 /**
  * Triggers an error at compilation time if the condition is true.
@@ -317,9 +274,6 @@ typedef int ng_result_t;
 #define RTE_MAX_T(a, b, t) \
 	((t)(a) > (t)(b) ? (t)(a) : (t)(b))
 
-/* true if x is a power of 2 */
-#define POWEROF2(x) ((((x)-1) & (x)) == 0)
-
 #include "nanohttp-align.h"
 #include "nanohttp-endian.h"
 #include "nanohttp-cpu.h"
@@ -328,12 +282,32 @@ typedef int ng_result_t;
 #include "nanohttp-utils.h"
 #include "nanohttp-lfq.h"
 #include "nanohttp-vsprintf.h"
+#include "nanohttp-lcore.h"
 
 #define ng_snprintf   __ng_snprintf
 #define ng_vsnprintf  __ng_vsnprintf
 #define ng_fprintf    __ng_fprintf
 #define ng_vfprintf   __ng_vfprintf
 #define ng_strstr     strstr
+
+#ifdef WIN32
+#define ng_strnocasecmp ng_local_strncasecmp
+#else
+#define ng_strnocasecmp strncasecmp
+#endif
+
+#define ng_strncpy(s1,s2,l) strncpy(s1,s2,l)
+#define ng_strcmp(s1,s2)    strcmp(s1,s2)
+#define ng_strlen(s)        strlen(s)
+#define ng_memmove(d,s,l)   memmove(d,s,l)
+#define ng_memcpy(d,s,l)    memcpy(d,s,l)
+#define ng_memcmp(d,s,l)    memcmp(d,s,l)
+#define ng_memset(d,s,l)    memset(d,s,l)
+#define ng_memchr(d,c,l)    memchr(d,c,l)
+#define ng_bzero(s,l)       ng_memset(s, 0, l)
+
+/* true if x is a power of 2 */
+#define POWEROF2(x) ((((x)-1) & (x)) == 0)
 
 static inline int
 ng_is_power_of_2(ng_uint64_t n)
