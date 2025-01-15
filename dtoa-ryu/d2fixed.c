@@ -329,7 +329,7 @@ static inline ng_uint32_t lengthForIndex(const ng_uint32_t idx) {
 }
 
 static inline int copy_special_str_printf(char* const result, const bool sign, const ng_uint64_t mantissa) {
-#if defined(_MSC_VER)
+#if RTE_TOOLCHAIN_MSVC
   // TODO: Check that -nan is expected output on Windows.
   if (sign) {
     result[0] = '-';

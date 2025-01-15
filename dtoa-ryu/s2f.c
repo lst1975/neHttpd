@@ -33,7 +33,7 @@
 #define FLOAT_EXPONENT_BITS 8
 #define FLOAT_EXPONENT_BIAS 127
 
-#if defined(_MSC_VER)
+#if RTE_TOOLCHAIN_MSVC
 #include <intrin.h>
 
 static inline ng_uint32_t floor_log2(const ng_uint32_t value) {

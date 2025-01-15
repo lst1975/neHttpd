@@ -24,9 +24,9 @@
 
 // ABSL avoids uint128_t on Win32 even if __SIZEOF_INT128__ is defined.
 // Let's do the same for now.
-#if defined(__SIZEOF_INT128__) && !defined(_MSC_VER) && !defined(RYU_ONLY_64_BIT_OPS)
+#if defined(__SIZEOF_INT128__) && !RTE_TOOLCHAIN_MSVC && !defined(RYU_ONLY_64_BIT_OPS)
 #define HAS_UINT128
-#elif defined(_MSC_VER) && !defined(RYU_ONLY_64_BIT_OPS) && defined(_M_X64)
+#elif RTE_TOOLCHAIN_MSVC && !defined(RYU_ONLY_64_BIT_OPS) && defined(_M_X64)
 #define HAS_64_BIT_INTRINSICS
 #endif
 

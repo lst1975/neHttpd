@@ -39,7 +39,7 @@
 #define DOUBLE_EXPONENT_BITS 11
 #define DOUBLE_EXPONENT_BIAS 1023
 
-#if defined(_MSC_VER)
+#if RTE_TOOLCHAIN_MSVC
 #include <intrin.h>
 
 static inline ng_uint32_t floor_log2(const ng_uint64_t value) {
@@ -267,6 +267,6 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   return SUCCESS;
 }
 
-enum Status s2d(const char * buffer, double *result) {
+enum Status s2d(const char *buffer, double *result) {
   return s2d_n(buffer, strlen(buffer), result);
 }
