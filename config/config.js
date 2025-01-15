@@ -90,20 +90,20 @@ function valid8_Validation(buffer)
     n = buffer[i];
     if (mode) {
       if (0x80 !== (0xC0 & n)) {
-        return;
+        return false;
       }
       code = code << 6 | n & 0x3F;
       if (--mode) {
         continue;
       }
       if (maxBytes < 5 && code > 0x0010FFFF) {
-        return;
+        return false;
       }
       if (!surrogates && (0xD800 <= code && code <= 0xDFFF)) {
-        return;
+        return false;
       }
       if (!(code >> mask)) {
-        return;
+        return false;
       }
       continue;
     }
@@ -111,10 +111,10 @@ function valid8_Validation(buffer)
       continue;
     }
     if (n === 0xFF || n === 0xFE || n === 0xC0 || n === 0xC1) {
-      return;
+      return false;
     }
     if (!(n & 0x40)) {
-      return;
+      return false;
     }
     mode = 1;
     mask = 0x20;
@@ -123,7 +123,7 @@ function valid8_Validation(buffer)
       mode++;
     }
     if (mode >= maxBytes) {
-      return;
+      return false;
     }
     code = n & mask - 1;
     mask = 5 * mode + 1;
@@ -134,6 +134,7 @@ function valid8_Validation(buffer)
   }
   return true;
 };
+
 var Base64 = {
     _keyStr: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
         "abcdefghijklmnopqrstuvwxyz0123456789+/=",
