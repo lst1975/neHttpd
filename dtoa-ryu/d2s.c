@@ -354,10 +354,10 @@ d2s_to_chars(const floating_decimal_64 v, const ng_bool_t sign,
     const ng_uint32_t c1 = (c / 100) << 1;
     const ng_uint32_t d0 = (d % 100) << 1;
     const ng_uint32_t d1 = (d / 100) << 1;
-    memcpy(result + index + olength - 1, DIGIT_TABLE + c0, 2);
-    memcpy(result + index + olength - 3, DIGIT_TABLE + c1, 2);
-    memcpy(result + index + olength - 5, DIGIT_TABLE + d0, 2);
-    memcpy(result + index + olength - 7, DIGIT_TABLE + d1, 2);
+    ng_memcpy(result + index + olength - 1, DIGIT_TABLE + c0, 2);
+    ng_memcpy(result + index + olength - 3, DIGIT_TABLE + c1, 2);
+    ng_memcpy(result + index + olength - 5, DIGIT_TABLE + d0, 2);
+    ng_memcpy(result + index + olength - 7, DIGIT_TABLE + d1, 2);
     i += 8;
   }
   ng_uint32_t output2 = (ng_uint32_t) output;
@@ -370,14 +370,14 @@ d2s_to_chars(const floating_decimal_64 v, const ng_bool_t sign,
     output2 /= 10000;
     const ng_uint32_t c0 = (c % 100) << 1;
     const ng_uint32_t c1 = (c / 100) << 1;
-    memcpy(result + index + olength - i - 1, DIGIT_TABLE + c0, 2);
-    memcpy(result + index + olength - i - 3, DIGIT_TABLE + c1, 2);
+    ng_memcpy(result + index + olength - i - 1, DIGIT_TABLE + c0, 2);
+    ng_memcpy(result + index + olength - i - 3, DIGIT_TABLE + c1, 2);
     i += 4;
   }
   if (output2 >= 100) {
     const ng_uint32_t c = (output2 % 100) << 1;
     output2 /= 100;
-    memcpy(result + index + olength - i - 1, DIGIT_TABLE + c, 2);
+    ng_memcpy(result + index + olength - i - 1, DIGIT_TABLE + c, 2);
     i += 2;
   }
   if (output2 >= 10) {
@@ -431,11 +431,11 @@ d2s_to_chars(const floating_decimal_64 v, const ng_bool_t sign,
 #if 0
   if (exp >= 100) {
     const ng_int32_t c = exp % 10;
-    memcpy(result + index, DIGIT_TABLE + 2 * (exp / 10), 2);
+    ng_memcpy(result + index, DIGIT_TABLE + 2 * (exp / 10), 2);
     result[index + 2] = (char) ('0' + c);
     index += 3;
   } else if (exp >= 10) {
-    memcpy(result + index, DIGIT_TABLE + 2 * exp, 2);
+    ng_memcpy(result + index, DIGIT_TABLE + 2 * exp, 2);
     index += 2;
   } else {
     result[index++] = (char) ('0' + exp);

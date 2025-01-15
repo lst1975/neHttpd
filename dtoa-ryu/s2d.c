@@ -267,6 +267,6 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   return SUCCESS;
 }
 
-enum Status s2d(const char * buffer, double * result) {
+enum Status s2d(const char * buffer, double *result) {
   return s2d_n(buffer, strlen(buffer), result);
 }

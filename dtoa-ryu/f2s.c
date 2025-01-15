@@ -258,14 +258,14 @@ f2s_to_chars(const floating_decimal_32 v, const ng_bool_t sign,
     output /= 10000;
     const ng_uint32_t c0 = (c % 100) << 1;
     const ng_uint32_t c1 = (c / 100) << 1;
-    memcpy(result + index + olength - i - 1, DIGIT_TABLE + c0, 2);
-    memcpy(result + index + olength - i - 3, DIGIT_TABLE + c1, 2);
+    ng_memcpy(result + index + olength - i - 1, DIGIT_TABLE + c0, 2);
+    ng_memcpy(result + index + olength - i - 3, DIGIT_TABLE + c1, 2);
     i += 4;
   }
   if (output >= 100) {
     const ng_uint32_t c = (output % 100) << 1;
     output /= 100;
-    memcpy(result + index + olength - i - 1, DIGIT_TABLE + c, 2);
+    ng_memcpy(result + index + olength - i - 1, DIGIT_TABLE + c, 2);
     i += 2;
   }
   if (output >= 10) {
@@ -319,7 +319,7 @@ f2s_to_chars(const floating_decimal_32 v, const ng_bool_t sign,
 
 #if 0
   if (exp >= 10) {
-    memcpy(result + index, DIGIT_TABLE + 2 * exp, 2);
+    ng_memcpy(result + index, DIGIT_TABLE + 2 * exp, 2);
     index += 2;
   } else {
     result[index++] = (char) ('0' + exp);
