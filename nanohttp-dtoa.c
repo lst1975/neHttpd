@@ -2149,7 +2149,7 @@ static int  bcd_round( int  new_ndigits, ng_uint8_t*  decimal_mantissa, ng_int32
           break;     // no overflow
       else
       {
-        memmove( decimal_mantissa + 1, decimal_mantissa, 19 );
+        ng_memmove(decimal_mantissa + 1, decimal_mantissa, 19 );
         decimal_mantissa[0] = 0;
         ++( *exponent );
         // if there was an overflow, then make one more iteration
@@ -2863,11 +2863,11 @@ int  dconvstr_ieee754_scan(
   if( n_parsed_digits < ((int)( sizeof(parsed_digits) )) )
   {
     int  delta = sizeof(parsed_digits) - n_parsed_digits;
-    memset( parsed_digits + n_parsed_digits, 0, delta );
+    ng_memset( parsed_digits + n_parsed_digits, 0, delta );
     n_parsed_digits += delta;
     exponent_offset -= delta;
   }
-  memmove( parsed_digits + 1, parsed_digits, sizeof(parsed_digits) - 1 ); 
+  ng_memmove( parsed_digits + 1, parsed_digits, sizeof(parsed_digits) - 1 ); 
   parsed_digits[0] = 0;
   ++exponent_offset;
   ng_uint64_t  mantissa = bcd_compress( parsed_digits );

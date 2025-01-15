@@ -77,7 +77,7 @@ static herror_t
 __file_user(void *arg, const char *buf, ng_size_t length) 
 {
   ng_buffer_s *t = (ng_buffer_s *)arg;
-  memcpy((char *)t->data + t->len, buf, length);
+  ng_memcpy((char *)t->data + t->len, buf, length);
   t->len += length;
   return NULL;
 }
@@ -141,11 +141,11 @@ static int __nanohttp_users_init__one(JSONPair_s *p)
   }
   entry->name.data = ((char *)(entry+1));
   entry->name.len  = usr->val.len;
-  memcpy(entry->name.data, usr->val.cptr, entry->name.len);
+  ng_memcpy(entry->name.data, usr->val.cptr, entry->name.len);
 
   entry->pswd.data = ((char *)(entry+1))+usr->val.len;
   entry->pswd.len  = pwd->val.len;
-  memcpy(entry->pswd.data, pwd->val.cptr, entry->pswd.len);
+  ng_memcpy(entry->pswd.data, pwd->val.cptr, entry->pswd.len);
   ng_list_add_tail(&entry->link, &users);
   err = 0;
 
@@ -279,7 +279,7 @@ nanohttp_pswd_enc(ng_buffer_s *b, const char *pswd, int len)
   if (b->ptr == NULL)
     return -1;
   p = b->ptr + b->size;
-  memcpy(p, pswd, len);
+  ng_memcpy(p, pswd, len);
   for (int i=0;i<len;i++)
   {
     p[i] ^= __http_user_crypt.cptr[i%__http_user_crypt.len];
@@ -298,7 +298,7 @@ nanohttp_pswd_dec(ng_buffer_s *b, const char *pswd, int len)
   if (b->ptr == NULL)
     return -1;
   p = b->ptr + b->size;
-  memcpy(p, pswd, len);
+  ng_memcpy(p, pswd, len);
   p[len] = '\0';
   
   b->len = b64Decode(p, len, b->ptr, b->size);
@@ -320,13 +320,13 @@ nanohttp_users_match(const char *name, int nameLen,
   {
     if (entry->name.len != nameLen)
       continue;
-    if (memcmp(name, entry->name.cptr, nameLen))
+    if (ng_memcmp(name, entry->name.cptr, nameLen))
       continue;
     if (pswdLen)
     {
       if (entry->pswd.len != pswdLen)
         continue;
-      if (memcmp(entry->pswd.cptr, pswd, pswdLen))
+      if (ng_memcmp(entry->pswd.cptr, pswd, pswdLen))
         continue;
     }
     return entry;
@@ -592,11 +592,11 @@ nanohttp_users_add(const char *name, int nameLen,
   
   entry->name.data = ((char *)(entry+1));
   entry->name.len  = nameLen;
-  memcpy(entry->name.data, name, entry->name.len);
+  ng_memcpy(entry->name.data, name, entry->name.len);
   
   entry->pswd.data = ((char *)(entry+1))+nameLen;
   entry->pswd.len  = pswdLen;
-  memcpy(entry->pswd.data, pswd, pswdLen);
+  ng_memcpy(entry->pswd.data, pswd, pswdLen);
 
   ng_list_add_tail(&entry->link, &users);
 
@@ -669,11 +669,11 @@ nanohttp_users_update(const char *name, int nameLen,
 
   entry->name.data = ((char *)(entry+1));
   entry->name.len  = nameLen;
-  memcpy(entry->name.data, name, entry->name.len);
+  ng_memcpy(entry->name.data, name, entry->name.len);
   
   entry->pswd.data = ((char *)(entry+1))+nameLen;
   entry->pswd.len  = pswdLen;
-  memcpy(entry->pswd.data, pswd, pswdLen);
+  ng_memcpy(entry->pswd.data, pswd, pswdLen);
 
   ng_list_add_after(&entry->link, &old->link);
   ng_list_del(&old->link);

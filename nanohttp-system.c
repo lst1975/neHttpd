@@ -1346,7 +1346,7 @@ static void __ng_get_tzname(void)
       {
         if (i < sizeof(ng_os_info.tz))
           ng_os_info.tz[i++]=*p;
-        p = memchr(p, ' ', e - p);
+        p = ng_memchr(p, ' ', e - p);
         if (p == NULL)
           break;
         while (__ng_isspace(*p)){p++;};

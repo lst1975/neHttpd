@@ -397,22 +397,22 @@ __rte_ring_enqueue_elems_128(ng_ring_s *r, ng_uint32_t prod_head,
   if (likely(idx + n <= size)) 
   {
     for (i = 0; i < (n & ~0x1); i += 2, idx += 2)
-      memcpy((void *)(ring + idx),
+      ng_memcpy((void *)(ring + idx),
         (const void *)(obj + i), 32);
     switch (n & 0x1) {
     case 1:
-      memcpy((void *)(ring + idx),
+      ng_memcpy((void *)(ring + idx),
         (const void *)(obj + i), 16);
     }
   } 
   else 
   {
     for (i = 0; idx < size; i++, idx++)
-      memcpy((void *)(ring + idx),
+      ng_memcpy((void *)(ring + idx),
         (const void *)(obj + i), 16);
     /* Start at the beginning */
     for (idx = 0; i < n; i++, idx++)
-      memcpy((void *)(ring + idx),
+      ng_memcpy((void *)(ring + idx),
         (const void *)(obj + i), 16);
   }
 }
@@ -539,17 +539,17 @@ __rte_ring_dequeue_elems_128(ng_ring_s *r, ng_uint32_t cons_head,
   rte_int128_t *obj = (rte_int128_t *)obj_table;
   if (likely(idx + n <= size)) {
     for (i = 0; i < (n & ~0x1); i += 2, idx += 2)
-      memcpy((void *)(obj + i), (void *)(ring + idx), 32);
+      ng_memcpy((void *)(obj + i), (void *)(ring + idx), 32);
     switch (n & 0x1) {
     case 1:
-      memcpy((void *)(obj + i), (void *)(ring + idx), 16);
+      ng_memcpy((void *)(obj + i), (void *)(ring + idx), 16);
     }
   } else {
     for (i = 0; idx < size; i++, idx++)
-      memcpy((void *)(obj + i), (void *)(ring + idx), 16);
+      ng_memcpy((void *)(obj + i), (void *)(ring + idx), 16);
     /* Start at the beginning */
     for (idx = 0; i < n; i++, idx++)
-      memcpy((void *)(obj + i), (void *)(ring + idx), 16);
+      ng_memcpy((void *)(obj + i), (void *)(ring + idx), 16);
   }
 }
 

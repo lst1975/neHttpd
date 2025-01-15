@@ -587,7 +587,7 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
       for (p=p->children; p != NULL; p = p->siblings)
       {
         if (p->key.len >= ___USER_PFX_LEN 
-          && !memcmp(p->key.cptr, ___USER_PFX_STR, ___USER_PFX_LEN))
+          && !ng_memcmp(p->key.cptr, ___USER_PFX_STR, ___USER_PFX_LEN))
         {
           const char *colon;
           
@@ -599,7 +599,7 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
             goto finished;
           }
           
-          colon = memchr(p->key.cptr, ':', p->key.len);
+          colon = ng_memchr(p->key.cptr, ':', p->key.len);
           if (colon != NULL && colon - p->key.cptr > ___USER_PFX_LEN)
           {
             const char *usr;
@@ -615,7 +615,7 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
                     &p->key);
               goto finished;
             }
-            if (!memcmp(p->key.cptr+p->key.len-2, ".0", 2))
+            if (!ng_memcmp(p->key.cptr+p->key.len-2, ".0", 2))
             {
               n = ng_snprintf(buf, sizeof buf, 
                     CFG_RET1("This user does not exists."), 
@@ -624,12 +624,12 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
             }
             else 
             {
-              if (!memcmp(p->key.cptr+p->key.len-2, ".1", 2))
+              if (!ng_memcmp(p->key.cptr+p->key.len-2, ".1", 2))
               {
                 err = nanohttp_users_update(usr, usrLen, 
                         p->val.cptr, p->val.len, NULL, 0);
               }
-              else if (!memcmp(p->key.cptr+p->key.len-2, ".2", 2))
+              else if (!ng_memcmp(p->key.cptr+p->key.len-2, ".2", 2))
               {
                 err = nanohttp_users_update(usr, usrLen, 
                         NULL, 0, p->val.cptr, p->val.len);
@@ -816,7 +816,7 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
       }
 
       if (p->val.len >= ___USER_PFX_LEN
-        && !memcmp(p->val.cptr, ___USER_PFX_STR, ___USER_PFX_LEN))
+        && !ng_memcmp(p->val.cptr, ___USER_PFX_STR, ___USER_PFX_LEN))
       {
         if (req->userLevel != _N_http_user_type_SUPER)
         {
@@ -825,7 +825,7 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
           goto finished;
         }
 
-        colon = memchr(p->val.cptr, ':', p->val.len);
+        colon = ng_memchr(p->val.cptr, ':', p->val.len);
         if (colon == NULL || colon-p->val.cptr < ___USER_PFX_LEN + 1)
         {
           n = ng_snprintf(buf, sizeof buf, 
@@ -1048,7 +1048,7 @@ static int json_test(void)
     value[ valueLength ] = save;
   }
   
-  json_show(buffer,strlen(buffer));
+  json_show(buffer,ng_strlen(buffer));
 
   printf("\n\n");
   JSONPair_s *p;
@@ -1087,7 +1087,7 @@ void main_print_license(int daemonize)
 
   json_printer_default(NULL, "\n");
   while (1) {
-    p = memchr(s, '\n', len);
+    p = ng_memchr(s, '\n', len);
     if (p == NULL)
       break;
     if (daemonize)
@@ -1110,10 +1110,11 @@ main(int argc, char **argv)
   RTE_BUILD_BUG_ON(sizeof(ng_uint32_t) != 4);
   RTE_BUILD_BUG_ON(sizeof(ng_uint16_t) != 2);
   RTE_BUILD_BUG_ON(sizeof(ng_uint8_t)  != 1);
-  RTE_BUILD_BUG_ON(sizeof(ng_int64_t) != 8);
-  RTE_BUILD_BUG_ON(sizeof(ng_int32_t) != 4);
-  RTE_BUILD_BUG_ON(sizeof(ng_int16_t) != 2);
-  RTE_BUILD_BUG_ON(sizeof(ng_int8_t)  != 1);
+  
+  RTE_BUILD_BUG_ON(sizeof( ng_int64_t) != 8);
+  RTE_BUILD_BUG_ON(sizeof( ng_int32_t) != 4);
+  RTE_BUILD_BUG_ON(sizeof( ng_int16_t) != 2);
+  RTE_BUILD_BUG_ON(sizeof( ng_int8_t)  != 1);
   
   int daemonize = 0, result; 
   herror_t status;

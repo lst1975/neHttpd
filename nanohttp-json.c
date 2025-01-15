@@ -92,6 +92,7 @@
 #include "nanohttp-json.h"
 #include "nanohttp-user.h"
 #include "nanohttp-logging.h"
+#include "dtoa-ryu/ryu_parse.h"
 
 /** @cond DO_NOT_DOCUMENT */
 
@@ -1965,7 +1966,7 @@ static JSONStatus_e __json_parse(JSONTypes_e parent_jsonType,
       result = JSONBadParameter;
       goto clean0;
     }
-    memset(pair,0,sizeof(*pair));
+    ng_memset(pair,0,sizeof(*pair));
 
     result = JSON_Iterate(json, length, &start, &next, pair);
     if (result != JSONSuccess)
@@ -2010,25 +2011,25 @@ static JSONStatus_e __json_parse(JSONTypes_e parent_jsonType,
         break;
       case JSONNumber:
         {
-          char str[128];
-          char *p=NULL;
-          int len = json_MIN(sizeof(str)-1, pair->val.len);
-          memcpy(str, pair->val.cptr, len);
-          str[len] = '\0';
-          if (NULL != strchr(str, '.'))
+          if (NULL != ng_memchr(pair->val.cptr, '.', pair->val.len))
           {
             pair->isDouble = 1;
-            pair->vdouble = strtod(str, &p);
+            if (s2d_n(pair->val.cptr, pair->val.len, &pair->vdouble) != SUCCESS)
+            {
+              result = JSONBadParameter;
+              goto clean0;
+            }
           }
           else
           {
+            const char *p = NULL;
             pair->isDouble = 0;
-            pair->vint = strtoll(str, &p, 10);
-          }
-          if (p != str + len)
-          {
-            result = JSONBadParameter;
-            goto clean0;
+            pair->vint = ng_atoi64(pair->val.cptr, pair->val.len, &p);
+            if (p != pair->val.cptr + pair->val.len)
+            {
+              result = JSONBadParameter;
+              goto clean0;
+            }
           }
         }
         break;
@@ -2503,7 +2504,7 @@ JSONPair_s *json_find_bykey(JSONPair_s *pair, const char *key,
   while (pair != NULL)
   {
     if (pair->key.len == length
-      && !memcmp(pair->key.cptr, key, length))
+      && !ng_memcmp(pair->key.cptr, key, length))
       return pair;
     pair = pair->siblings;
   }
@@ -2516,7 +2517,7 @@ JSONPair_s *json_find_bykey_head(JSONPair_s *pair, const char *key,
   while (pair != NULL)
   {
     if (pair->key.len >= length
-      && !memcmp(pair->key.cptr, key, length))
+      && !ng_memcmp(pair->key.cptr, key, length))
       return pair;
     pair = pair->siblings;
   }
@@ -2529,8 +2530,8 @@ JSONPair_s *json_find_bykey_head_tail(JSONPair_s *pair, const char *key,
   while (pair != NULL)
   {
     if (pair->key.len >= headLen + tailKeyLen
-      && !memcmp(pair->key.cptr, key, headLen)
-      && !memcmp(pair->key.cptr+pair->key.len-tailKeyLen, tailKey, tailKeyLen))
+      && !ng_memcmp(pair->key.cptr, key, headLen)
+      && !ng_memcmp(pair->key.cptr+pair->key.len-tailKeyLen, tailKey, tailKeyLen))
     {
       return pair;
     }
@@ -2546,8 +2547,8 @@ JSONPair_s *json_find_bykey_head_offset(JSONPair_s *pair, const char *key,
   {
     if (pair->key.len >= headLen + startKeyLen
       && pair->key.len >= startOffset + startKeyLen
-      && !memcmp(pair->key.cptr, key, headLen)
-      && !memcmp(pair->key.cptr+startOffset, startKey, startKeyLen))
+      && !ng_memcmp(pair->key.cptr, key, headLen)
+      && !ng_memcmp(pair->key.cptr+startOffset, startKey, startKeyLen))
     {
       return pair;
     }

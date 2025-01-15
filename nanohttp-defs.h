@@ -120,13 +120,14 @@ typedef int ng_bool_t;
 #endif
 
 #define ng_strncpy(s1,s2,l) strncpy(s1,s2,l)
-#define ng_strcmp(s1,s2) strcmp(s1,s2)
-#define ng_strlen(s) strlen(s)
-#define ng_memcpy(d,s,l) memcpy(d,s,l)
-#define ng_memcmp(d,s,l) memcmp(d,s,l)
-#define ng_memset(d,s,l) memset(d,s,l)
-#define ng_memchr(d,c,l) memchr(d,c,l)
-#define ng_bzero(s,l) ng_memset(s, 0, l)
+#define ng_strcmp(s1,s2)    strcmp(s1,s2)
+#define ng_strlen(s)        strlen(s)
+#define ng_memmove(d,s,l)   memmove(d,s,l)
+#define ng_memcpy(d,s,l)    memcpy(d,s,l)
+#define ng_memcmp(d,s,l)    memcmp(d,s,l)
+#define ng_memset(d,s,l)    memset(d,s,l)
+#define ng_memchr(d,c,l)    memchr(d,c,l)
+#define ng_bzero(s,l)       ng_memset(s, 0, l)
 
 /* Workaround for toolchain issues with missing C11 macro in FreeBSD */
 #if !defined(static_assert) && !defined(__cplusplus)

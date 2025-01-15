@@ -1114,9 +1114,9 @@ _mime_copy3(char *buffer, ng_size_t blen, const char *d1, ng_size_t d1len,
   {
     return _mime_toolarge("httpc_mime_copy3", blen);
   }
-  memcpy(buffer, d1, d1len);
-  memcpy(buffer+d1len, d2, d2len);
-  memcpy(buffer+d1len+d2len, d3, d3len);
+  ng_memcpy(buffer, d1, d1len);
+  ng_memcpy(buffer+d1len, d2, d2len);
+  ng_memcpy(buffer+d1len+d2len, d3, d3len);
   return H_OK;
 }
 

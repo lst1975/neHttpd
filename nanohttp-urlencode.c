@@ -968,7 +968,7 @@ static void __test_encode_url(const char *output, int outlen,
     return;
   }
   if (b.len != inlen
-    || memcmp(input, b.ptr, b.len))
+    || ng_memcmp(input, b.ptr, b.len))
   {
     log_verbose("test encode_url FAILED.");
     http_free(b.ptr);
@@ -1014,7 +1014,7 @@ __test_decode_url(const char *output, int outlen,
     return;
   }
   if (b.len != inlen
-    || memcmp(input, b.ptr, b.len))
+    || ng_memcmp(input, b.ptr, b.len))
   {
     log_verbose("test decode_url FAILED.");
     http_free(b.ptr);

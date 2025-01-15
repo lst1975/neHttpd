@@ -110,7 +110,7 @@ static inline char *__http_strdup(const char *p
     );
   if (np == NULL)
     return NULL;
-  memcpy(np, p, len);
+  ng_memcpy(np, p, len);
   return np;
 }
 
@@ -130,7 +130,7 @@ static inline char *__http_strdup_size(const char *p, int len
     );
   if (np == NULL)
     return NULL;
-  memcpy(np, p, len);
+  ng_memcpy(np, p, len);
   np[len] = '\0';
   return np;
 }
@@ -152,7 +152,7 @@ static inline char *__http_strdup_len(const char *p, int *_len
     );
   if (np == NULL)
     return NULL;
-  memcpy(np, p, len);
+  ng_memcpy(np, p, len);
   *_len = len - 1;
   return np;
 }

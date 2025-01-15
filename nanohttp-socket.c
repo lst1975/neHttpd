@@ -418,7 +418,7 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
   if (fam == AF_INET)
   {
     addr = (struct sockaddr *)&dsock->addr;
-    memset(addr, 0, sizeof(dsock->addr));
+    ng_memset(addr, 0, sizeof(dsock->addr));
     dsock->addr.sin_family = AF_INET;
     dsock->addr.sin_port = htons(port);
     dsock->addr.sin_addr.s_addr = INADDR_ANY;
@@ -427,7 +427,7 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
   else
   {
     addr = (struct sockaddr *)&dsock->addr6;
-    memset(addr, 0, sizeof(dsock->addr6));
+    ng_memset(addr, 0, sizeof(dsock->addr6));
     dsock->addr6.sin6_family = AF_INET6;
     dsock->addr6.sin6_port = htons(port);
     dsock->addr6.sin6_addr = in6addr_any;

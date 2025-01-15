@@ -265,7 +265,7 @@ rte_ring_init(ng_ring_s *r, const char *name, unsigned int count,
   }
 
   /* init the ring structure */
-  memset(r, 0, sizeof(*r));
+  ng_memset(r, 0, sizeof(*r));
   ret = strlcpy(r->name, name, sizeof(r->name));
   if (ret < 0 || ret >= (int)sizeof(r->name))
     return -ENAMETOOLONG;

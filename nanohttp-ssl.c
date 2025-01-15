@@ -258,8 +258,8 @@ verify_sn(X509 * cert, int who, int nid, char *str)
   char name[256];
   char buf[256];
 
-  memset(name, '\0', 256);
-  memset(buf, '\0', 256);
+  ng_memset(name, '\0', 256);
+  ng_memset(buf, '\0', 256);
 
   if (who == CERT_SUBJECT)
   {

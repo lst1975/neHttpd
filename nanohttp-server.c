@@ -318,7 +318,7 @@ void httpd_thread_init(conndata_t *conn)
 #ifdef WIN32
   conn->tid = NULL;
 #else
-  memset(&conn->tid, 0, sizeof(conn->tid));
+  ng_memset(&conn->tid, 0, sizeof(conn->tid));
   pthread_attr_init(&(conn->attr));
 #endif
 }
@@ -880,11 +880,11 @@ httpd_find_service(const char *context, int context_len)
       &&  (*(ng_uint32_t*)cur->name == *(const ng_uint32_t*)"FILE"
         || *(ng_uint32_t*)cur->name == *(const ng_uint32_t*)"DATA"))
     {
-      if (!memcmp(cur->context, context, cur->context_len))
+      if (!ng_memcmp(cur->context, context, cur->context_len))
         return cur;
     }
     else if (cur->context_len == context_len
-        && !memcmp(cur->context, context, context_len))
+        && !ng_memcmp(cur->context, context, context_len))
       return cur;
   }
 
