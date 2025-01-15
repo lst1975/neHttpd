@@ -295,7 +295,8 @@ rte_atomic64_dec(rte_atomic64_t *v)
 static inline ng_int64_t
 rte_atomic64_add_return(rte_atomic64_t *v, ng_int64_t inc)
 {
-  return rte_atomic_fetch_add_explicit((volatile __std_rte_atomic ng_int64_t *)&v->cnt, inc,
+  return rte_atomic_fetch_add_explicit(
+    (volatile __std_rte_atomic ng_int64_t *)&v->cnt, inc,
     rte_memory_order_seq_cst) + inc;
 }
 
