@@ -93,6 +93,75 @@
 
 #include "nanohttp-types.h"
 
+#if (defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64))
+/*
+ * An architecture-optimized byte swap for a 64-bit value.
+ *
+ * Do not use this function directly. The preferred function is rte_bswap64().
+ */
+/* 64-bit mode */
+static inline uint64_t rte_arch_bswap64(uint64_t _x)
+{
+	uint64_t x = _x;
+	asm volatile ("bswap %[x]"
+		      : [x] "+r" (x)
+		      );
+	return x;
+}
+#define RTE_ARCH_BSWAP16 0
+#define RTE_ARCH_BSWAP32 0
+#define RTE_ARCH_BSWAP64 1
+#elif (defined(__i386__) || defined(__i386))
+/*
+ * An architecture-optimized byte swap for a 16-bit value.
+ *
+ * Do not use this function directly. The preferred function is rte_bswap16().
+ */
+static inline uint16_t rte_arch_bswap16(uint16_t _x)
+{
+	uint16_t x = _x;
+	asm volatile ("xchgb %b[x1],%h[x2]"
+		      : [x1] "=Q" (x)
+		      : [x2] "0" (x)
+		      );
+	return x;
+}
+
+/*
+ * An architecture-optimized byte swap for a 32-bit value.
+ *
+ * Do not use this function directly. The preferred function is rte_bswap32().
+ */
+static inline uint32_t rte_arch_bswap32(uint32_t _x)
+{
+	uint32_t x = _x;
+	asm volatile ("bswap %[x]"
+		      : [x] "+r" (x)
+		      );
+	return x;
+}
+/*
+ * An architecture-optimized byte swap for a 64-bit value.
+ *
+ * Do not use this function directly. The preferred function is rte_bswap64().
+ */
+/* Compat./Leg. mode */
+static inline uint64_t rte_arch_bswap64(uint64_t x)
+{
+	uint64_t ret = 0;
+	ret |= ((uint64_t)rte_arch_bswap32(x & 0xffffffffUL) << 32);
+	ret |= ((uint64_t)rte_arch_bswap32((x >> 32) & 0xffffffffUL));
+	return ret;
+}
+#define RTE_ARCH_BSWAP16 1
+#define RTE_ARCH_BSWAP32 1
+#define RTE_ARCH_BSWAP64 1
+#else
+#define RTE_ARCH_BSWAP16 0
+#define RTE_ARCH_BSWAP32 0
+#define RTE_ARCH_BSWAP64 0
+#endif
+
 /*
  * The following types should be used when handling values according to a
  * specific byte ordering, which may differ from that of the host CPU.
@@ -136,7 +205,11 @@ typedef ng_uint64_t rte_le64_t; /**< 64-bit little-endian value. */
 static inline ng_uint16_t
 rte_constant_bswap16(ng_uint16_t x)
 {
+#if RTE_ARCH_BSWAP16
+  return (ng_uint64_t)rte_arch_bswap16(x);
+#else
 	return (ng_uint16_t)RTE_STATIC_BSWAP16(x);
+#endif
 }
 
 /*
@@ -148,7 +221,11 @@ rte_constant_bswap16(ng_uint16_t x)
 static inline ng_uint32_t
 rte_constant_bswap32(ng_uint32_t x)
 {
+#if RTE_ARCH_BSWAP32
+  return (ng_uint64_t)rte_arch_bswap32(x);
+#else
 	return (ng_uint32_t)RTE_STATIC_BSWAP32(x);
+#endif
 }
 
 /*
@@ -160,7 +237,11 @@ rte_constant_bswap32(ng_uint32_t x)
 static inline ng_uint64_t
 rte_constant_bswap64(ng_uint64_t x)
 {
-	return (ng_uint64_t)RTE_STATIC_BSWAP64(x);
+#if RTE_ARCH_BSWAP64
+  return (ng_uint64_t)rte_arch_bswap64(x);
+#else
+  return (ng_uint64_t)RTE_STATIC_BSWAP64(x);
+#endif
 }
 
 /* ARM architecture is bi-endian (both big and little). */
@@ -204,17 +285,17 @@ rte_constant_bswap64(ng_uint64_t x)
 #ifdef RTE_FORCE_INTRINSICS
 #if RTE_TOOLCHAIN_MSVC
 #define rte_bswap16(x) _byteswap_ushort(x)
-
 #define rte_bswap32(x) _byteswap_ulong(x)
-
 #define rte_bswap64(x) _byteswap_uint64(x)
 #else
 #define rte_bswap16(x) __builtin_bswap16(x)
-
 #define rte_bswap32(x) __builtin_bswap32(x)
-
 #define rte_bswap64(x) __builtin_bswap64(x)
 #endif
+#else
+#define rte_bswap16(x) rte_constant_bswap16(x)
+#define rte_bswap32(x) rte_constant_bswap32(x)
+#define rte_bswap64(x) rte_constant_bswap64(x)
 #endif
 
 #define ng_ntohs  rte_be_to_cpu_16
