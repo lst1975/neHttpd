@@ -66,7 +66,7 @@
  * CSOAP Project:  A http client/server library in C
  * Copyright (C) 2003-2004  Ferhat Ayaz
  *
- * This library is http_free software; you can redistribute it and/or
+ * This library is ng_free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
  * version 2 of the License, or (at your option) any later version.
@@ -177,7 +177,7 @@ typedef struct _content_type content_type_s;
  * @param next next pair node in the linked list
  *
  * @return A newly crated hpair_s object. Use hpair_free() or hpair_free_deep()
- *         to http_free the pair.
+ *         to ng_free the pair.
  *
  */
 extern hpair_s *
@@ -195,7 +195,7 @@ hpairnode_new(const ng_block_s *key, const ng_block_s *val, ng_list_head_s *head
  * @param next next pair node in the linked list
  *
  * @return A newly crated hpair_s object. Use hpair_free() or hpair_free_deep()
- *         to http_free the pair.
+ *         to ng_free the pair.
  *
  */
 extern hpair_s *
@@ -205,17 +205,17 @@ hpairnode_parse(const char *str, int _size, char delim, ng_list_head_s *head);
  *
  * Frees a given pair.
  *
- * @param pair the pair to http_free
+ * @param pair the pair to ng_free
  *
  */
 extern void hpairnode_free(hpair_s *pair);
 
 /**
  *
- * Makes a deep http_free operation. All pairnodes, beginning with the given pari, in
+ * Makes a deep ng_free operation. All pairnodes, beginning with the given pari, in
  * the linked list will be destroyed. 
  *
- * @param pair the pair to start to http_free the linked list
+ * @param pair the pair to start to ng_free the linked list
  *
  */
 extern void hpairnode_free_deep(ng_list_head_s *head);
@@ -228,7 +228,7 @@ extern void hpairnode_free_deep(ng_list_head_s *head);
  * @param key key to find the in the pair.
  * @returns if a value will be found, this function will 
  *
- * @return the value (do not http_free this string) or NULL if no pair was found with
+ * @return the value (do not ng_free this string) or NULL if no pair was found with
  *         the key 'key'.
  *
  */
@@ -243,7 +243,7 @@ extern hpair_s *hpairnode_get(ng_list_head_s *head, const ng_block_s *key);
  * @param key key to find the in the pair.
  * @returns if a value will be found, this function will 
  *
- * @return the value (do not http_free this string) or NULL if no pair was found with
+ * @return the value (do not ng_free this string) or NULL if no pair was found with
  *         the key 'key'.
  *
  */

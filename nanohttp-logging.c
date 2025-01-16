@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2007 Heiko Ronsdorf
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -160,10 +160,10 @@ void
 nanohttp_log_set_logfile(const char *filename)
 {
   if (_nanohttp_log_logfile)
-    http_free(_nanohttp_log_logfile);
+    ng_free(_nanohttp_log_logfile);
 
   if (filename)
-    _nanohttp_log_logfile = http_strdup(filename);
+    _nanohttp_log_logfile = ng_strdup(filename);
 }
 
 void

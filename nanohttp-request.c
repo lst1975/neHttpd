@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -100,10 +100,10 @@ static hrequest_s *hrequest_new(void)
 {
   hrequest_s *req;
 
-  req = (hrequest_s *)http_malloc(sizeof(*req));
+  req = (hrequest_s *)ng_malloc(sizeof(*req));
   if (req == NULL)
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     goto clean0;
   }
 
@@ -223,7 +223,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
       }
 
       req->version = -1;
-      /* req->spec = (char *) http_malloc(strlen(tmp2) + 1); 
+      /* req->spec = (char *) ng_malloc(strlen(tmp2) + 1); 
         strcpy(req->spec, tmp2); */
       if (t - key - 1 == 8)
       {
@@ -246,7 +246,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
       opt_key = ng_memchr(result, '?', key-result);
 
       /* save path */
-      /* req->path = (char *) http_malloc(strlen(key) + 1); */
+      /* req->path = (char *) ng_malloc(strlen(key) + 1); */
       req->path.len = opt_key == NULL ? key-result : opt_key - result;
       if (req->path.len >= REQUEST_MAX_PATH_SIZE - 1)
       {
@@ -254,7 +254,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
           req->path.len, REQUEST_MAX_PATH_SIZE);
         goto clean1;
       }
-      req->path.buf = http_strdup_size(result, req->path.len);
+      req->path.buf = ng_strdup_size(result, req->path.len);
       if (req->path.buf == NULL)
       {
         req->path.len = 0;
@@ -289,9 +289,9 @@ _hrequest_parse_header(char *data, ng_size_t len)
           opt_value = ng_memchr(opt_key, '=', key - opt_key);
           
           /* create option pair */
-          if (!(tmppair = (hpair_s *)http_malloc(sizeof(hpair_s))))
+          if (!(tmppair = (hpair_s *)ng_malloc(sizeof(hpair_s))))
           {
-            log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+            log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
             goto clean1;
           }
 
@@ -373,7 +373,7 @@ hrequest_free(hrequest_s * req)
     attachments_free((mime_attachment_s *)req->attachments);
 
   ng_free_data_block(&req->path);
-  http_free(req);
+  ng_free(req);
 
   return;
 }
@@ -388,11 +388,11 @@ hrequest_new_from_socket(hsocket_s *sock, hrequest_s **out)
   hrequest_s *req;
   ng_buffer_s data;
 
-  buffer = http_malloc(MAX_HEADER_SIZE + 1);
+  buffer = ng_malloc(MAX_HEADER_SIZE + 1);
   if (buffer == NULL)
   {
     status = herror_new("hrequest_new_from_socket", GENERAL_ERROR, 
-      "http_malloc failed.");
+      "ng_malloc failed.");
     goto clean0;
   }
   
@@ -435,7 +435,7 @@ hrequest_new_from_socket(hsocket_s *sock, hrequest_s **out)
 clean2:  
   hrequest_free(req);
 clean1:  
-  http_free(buffer);
+  ng_free(buffer);
 clean0:  
   return status;
 }

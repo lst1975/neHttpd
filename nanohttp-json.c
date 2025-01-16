@@ -1935,10 +1935,10 @@ void json_pairs_free(JSONPair_s *pair)
     json_pairs_free(pair->siblings);
   if (pair->jsonType == JSONString && pair->str != NULL)
   {
-    http_free(pair->str);
+    ng_free(pair->str);
     pair->str = NULL;
   }
-  http_free(pair);
+  ng_free(pair);
 }
 
 #define json_MIN(a,b) ((a)<(b) ? (a) : (b))
@@ -1960,7 +1960,7 @@ static JSONStatus_e __json_parse(JSONTypes_e parent_jsonType,
 
   while (result != JSONNotFound)
   {
-    JSONPair_s *pair = http_malloc(sizeof(*pair));
+    JSONPair_s *pair = ng_malloc(sizeof(*pair));
     if (pair == NULL)
     {
       result = JSONBadParameter;
@@ -1971,7 +1971,7 @@ static JSONStatus_e __json_parse(JSONTypes_e parent_jsonType,
     result = JSON_Iterate(json, length, &start, &next, pair);
     if (result != JSONSuccess)
     {
-      http_free(pair);
+      ng_free(pair);
       if (result == JSONNotFound)
       {
         result = JSONSuccess;
@@ -1986,7 +1986,7 @@ static JSONStatus_e __json_parse(JSONTypes_e parent_jsonType,
             && pair->jsonType != JSONObject
             && parent_jsonType != JSONArray))
       {
-        http_free(pair);
+        ng_free(pair);
         result = JSONBadParameter;
         goto clean0;
       }

@@ -76,20 +76,18 @@ void http_memcache_free(void);
 int http_memcache_init(void);
 
 #if __NHTTP_MEM_DEBUG  
-#define http_malloc(size) __http_malloc(size, __FILE__, __LINE__)
-#define http_strdup(ptr) __http_strdup(ptr, __FILE__, __LINE__)
-#define http_strdup_len(ptr,len) __http_strdup_len(ptr, len, __FILE__, __LINE__)
-#define http_strdup_size(ptr,len) __http_strdup_size(ptr, len, __FILE__, __LINE__)
-#define http_calloc(n,size) __http_calloc(n,size, __FILE__, __LINE__)
+#define ng_malloc(size) __http_malloc(size, __FILE__, __LINE__)
+#define ng_strdup(ptr) __http_strdup(ptr, __FILE__, __LINE__)
+#define ng_strdup_len(ptr,len) __http_strdup_len(ptr, len, __FILE__, __LINE__)
+#define ng_strdup_size(ptr,len) __http_strdup_size(ptr, len, __FILE__, __LINE__)
 #else
-#define http_malloc(size) __http_malloc(size)
-#define http_strdup(ptr) __http_strdup(ptr)
-#define http_strdup_len(ptr,len) __http_strdup_len(ptr, len)
-#define http_strdup_size(ptr,len) __http_strdup_size(ptr, len)
-#define http_calloc(n,size) __http_calloc(n,size)
+#define ng_malloc(size) __http_malloc(size)
+#define ng_strdup(ptr) __http_strdup(ptr)
+#define ng_strdup_len(ptr,len) __http_strdup_len(ptr, len)
+#define ng_strdup_size(ptr,len) __http_strdup_size(ptr, len)
 #endif
 
-#define http_free(ptr) __http_free(ptr)
+#define ng_free(ptr) __http_free(ptr)
 #define os_malloc(size) malloc(size)
 #define os_free(ptr) free(ptr)
 

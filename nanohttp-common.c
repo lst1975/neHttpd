@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -100,10 +100,10 @@ hpairnode_new(const ng_block_s *key, const ng_block_s *val,
 
   log_verbose("new pair ('%pS','%pS')", key, val);
 
-  pair = (hpair_s *)http_malloc(sizeof(hpair_s));
+  pair = (hpair_s *)ng_malloc(sizeof(hpair_s));
   if (pair == NULL)
   {
-    log_error("http_malloc failed.");
+    log_error("ng_malloc failed.");
     goto clean0;
   }
 
@@ -127,7 +127,7 @@ hpairnode_new(const ng_block_s *key, const ng_block_s *val,
 clean2:
   ng_free_data_block(&pair->key);
 clean1:  
-  http_free(pair);
+  ng_free(pair);
 clean0:  
   return NULL;
 }
@@ -227,7 +227,7 @@ hpairnode_free(hpair_s *pair)
 
   ng_free_data_block(&pair->key);
   ng_free_data_block(&pair->val);
-  http_free(pair);
+  ng_free(pair);
 
   return;
 }
@@ -368,14 +368,14 @@ hpairnode_set_header(ng_list_head_s *head, const ng_block_s *key,
   {
     if (val->len)
     {
-      void *data = http_malloc(val->len);
+      void *data = ng_malloc(val->len);
       if (data == NULL)
       {
-        log_fatal("http_malloc for value failed.");
+        log_fatal("ng_malloc for value failed.");
         return -1;
       }
       ng_memcpy(data, val->data, val->len);
-      http_free(p->val.data);
+      ng_free(p->val.data);
       p->val.data = data;
       p->val.len  = val->len;
     }
@@ -462,7 +462,7 @@ content_type_new(const char *content_type_str, int len)
   /* 0: searching ';' 1: process key 2: process value */
 
   /* Create object */
-  ct = (content_type_s *)http_malloc(sizeof(*ct));
+  ct = (content_type_s *)ng_malloc(sizeof(*ct));
   if (ct == NULL)
   {
     log_fatal("Failed to malloc content_type_s.");
@@ -491,7 +491,7 @@ content_type_new(const char *content_type_str, int len)
       if (ch == ';' || ch == ' ' || ch == '\t')
       {
         ct->type.len  = c;
-        ct->type.data = http_strdup_size(content_type_str, c);
+        ct->type.data = ng_strdup_size(content_type_str, c);
         if (ct->type.data == NULL)
         {
           log_fatal("Failed to malloc content_type_s->type.");
@@ -628,6 +628,6 @@ content_type_free(content_type_s * ct)
 
   ng_free_data_block(&ct->type);
   hpairnode_free_deep(&ct->params);
-  http_free(ct);
+  ng_free(ct);
   return;
 }

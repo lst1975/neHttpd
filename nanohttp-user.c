@@ -90,7 +90,7 @@ void nanohttp_users_free(void)
   {
     entry = ng_list_first_entry(&users,httpd_user_t,link);
     ng_list_del(&entry->link);
-    http_free(entry);
+    ng_free(entry);
   }
 
   log_info("[OK]: nanohttp_users_free");
@@ -122,7 +122,7 @@ static int __nanohttp_users_init__one(JSONPair_s *p)
   type = json_find_bykey(type->children,"value", 5);
   if (!usr || !pwd || !type)
     goto clean2;
-  entry = http_malloc(sizeof(*entry)+usr->val.len+pwd->val.len);
+  entry = ng_malloc(sizeof(*entry)+usr->val.len+pwd->val.len);
   if (entry == NULL)
     goto clean2;
   if (ng_block_isequal(&type->val, "Administrator", 13))
@@ -136,7 +136,7 @@ static int __nanohttp_users_init__one(JSONPair_s *p)
   }
   else
   {
-    http_free(entry);
+    ng_free(entry);
     goto clean2;
   }
   entry->name.data = ((char *)(entry+1));
@@ -167,7 +167,7 @@ int nanohttp_users_init(void)
     log_verbose("failed to get file size");
     goto clean0;
   }
-  tmp.data = b->data = http_malloc(b->len);
+  tmp.data = b->data = ng_malloc(b->len);
   if (b->data == NULL)
   {
     log_verbose("failed to malloc file size");
@@ -229,7 +229,7 @@ int nanohttp_users_init(void)
 clean2:
   json_pairs_free(pair);
 clean1:
-  http_free(b->data);
+  ng_free(b->data);
   b->data = NULL;
 clean0:
   return err;
@@ -275,7 +275,7 @@ nanohttp_pswd_enc(ng_buffer_s *b, const char *pswd, int len)
   unsigned char *p;
 
   b->size = BASE64_ENCODE_OUT_SIZE(len);
-  b->ptr = (unsigned char *)http_malloc(b->size + len);
+  b->ptr = (unsigned char *)ng_malloc(b->size + len);
   if (b->ptr == NULL)
     return -1;
   p = b->ptr + b->size;
@@ -294,7 +294,7 @@ nanohttp_pswd_dec(ng_buffer_s *b, const char *pswd, int len)
   unsigned char *p;
 
   b->size = BASE64_DECODE_OUT_SIZE(len);
-  b->ptr = http_malloc(b->size + len);
+  b->ptr = ng_malloc(b->size + len);
   if (b->ptr == NULL)
     return -1;
   p = b->ptr + b->size;
@@ -584,7 +584,7 @@ nanohttp_users_add(const char *name, int nameLen,
   entry = nanohttp_users_match(name, nameLen, NULL, 0);
   if (entry != NULL)
     return _N_http_user_error_EXIST;
-  entry = http_malloc(sizeof(*entry)+nameLen+pswdLen);
+  entry = ng_malloc(sizeof(*entry)+nameLen+pswdLen);
   if (entry == NULL)
     return _N_http_user_error_SYS;
 
@@ -603,7 +603,7 @@ nanohttp_users_add(const char *name, int nameLen,
   if (__nanohttp_users2file() < 0)
   {
     ng_list_del(&entry->link);
-    http_free(entry);
+    ng_free(entry);
     return _N_http_user_error_SYS;
   }
   
@@ -661,7 +661,7 @@ nanohttp_users_update(const char *name, int nameLen,
     pswdLen = old->pswd.len;
   }
 
-  entry = http_malloc(sizeof(*entry)+nameLen+pswdLen);
+  entry = ng_malloc(sizeof(*entry)+nameLen+pswdLen);
   if (entry == NULL)
     return _N_http_user_error_SYS;
 
@@ -677,12 +677,12 @@ nanohttp_users_update(const char *name, int nameLen,
 
   ng_list_add_after(&entry->link, &old->link);
   ng_list_del(&old->link);
-  http_free(old);
+  ng_free(old);
   
   if (__nanohttp_users2file() < 0)
   {
     ng_list_del(&entry->link);
-    http_free(entry);
+    ng_free(entry);
     return _N_http_user_error_SYS;
   }
   

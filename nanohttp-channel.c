@@ -162,7 +162,7 @@ ng_system_instance_deinit(ng_instance_s *t)
       ng_list_get_from_head(head,d,ng_devtab_s,link);
       NG_ASSERT(d != NULL);
       if (d->alloc)
-        http_free(d);
+        ng_free(d);
     }
   }
 }
@@ -231,7 +231,7 @@ ng_system_instance_add(ng_devtab_s **devs, int n)
     goto clean0;
   }
   
-  t = http_malloc(sizeof(*t));
+  t = ng_malloc(sizeof(*t));
   if (t == NULL)
   {
     log_error("failed to malloc ng_instance_s.");
@@ -260,7 +260,7 @@ clean1:
   ng_instance_num--;
   ng_instance_table[id] = NULL;
   ng_list_del(&t->link);
-  http_free(t);
+  ng_free(t);
 clean0:
   return r;
 }
@@ -281,7 +281,7 @@ ng_system_instance_del(int id)
   ng_instance_num--;
   ng_instance_table[id] = NULL;
   ng_list_del(&t->link);
-  http_free(t);
+  ng_free(t);
   return ng_ERR_NONE;
 }
 
@@ -318,7 +318,7 @@ ng_result_t ng_dev_register(ng_devtab_s *dp, ng_instance_s *t)
 {
   ng_devtab_s *d;
 
-  d = (ng_devtab_s *)http_malloc(dp->size);
+  d = (ng_devtab_s *)ng_malloc(dp->size);
   if (d == NULL)
   {
     log_error("Failed to malloc device %pS.", &dp->name);
@@ -339,7 +339,7 @@ ng_result_t ng_dev_unregister(ng_devtab_s *dp)
 {
   ng_list_del(&dp->link);
   if (dp->alloc)
-    http_free(dp);
+    ng_free(dp);
   return ng_ERR_NONE;
 }
 
@@ -376,7 +376,7 @@ ng_open(const char *fmt, ...)
   va_list args;
 
 #define __BUF_SZ 1024
-  buffer = http_malloc(__BUF_SZ);
+  buffer = ng_malloc(__BUF_SZ);
   if (buffer == NULL)
   {
     log_error("Failed to malloc temp buffer.");
@@ -424,7 +424,7 @@ ng_open(const char *fmt, ...)
   }
   BUF_GO(&s,n+1);
   
-  ch = (ng_channel_s *)http_malloc(sizeof(*ch));
+  ch = (ng_channel_s *)ng_malloc(sizeof(*ch));
   if (ch == NULL) 
   {
     log_error("Failed to malloc channel %pS.", name);
@@ -441,16 +441,16 @@ ng_open(const char *fmt, ...)
     goto err1;
   }
 
-  http_free(buffer);
+  ng_free(buffer);
   ng_list_add_tail(&ch->link, &dp->channels);
   return ch;
 #undef __BUF_SZ
   
 err1:  
-  http_free(ch);
+  ng_free(ch);
 err0:  
   log_error("Failed to open channel %pS.", name);
-  http_free(buffer);
+  ng_free(buffer);
 clean0:
   return NULL;
 }
@@ -465,7 +465,7 @@ ng_result_t ng_close(ng_channel_s *ch)
   
   r = (*ch->dp->close)(ch);
   ng_list_del(&ch->link);
-  http_free(ch);
+  ng_free(ch);
   return r;
 }
 

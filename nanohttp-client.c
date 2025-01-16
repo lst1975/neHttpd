@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -119,21 +119,21 @@ httpc_conn_s *httpc_new(void)
   herror_t status;
   httpc_conn_s *res;
  
-  if (!(res = (httpc_conn_s *) http_malloc(sizeof(httpc_conn_s))))
+  if (!(res = (httpc_conn_s *) ng_malloc(sizeof(httpc_conn_s))))
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     goto clean0;
   }
 
-  if (!(res->sock = (hsocket_s *)http_malloc(sizeof(hsocket_s))))
+  if (!(res->sock = (hsocket_s *)ng_malloc(sizeof(hsocket_s))))
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     goto clean1;
   }
 
   if (ng_url_init(&res->url) < 0)
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     goto clean2;
   }
 
@@ -154,9 +154,9 @@ httpc_conn_s *httpc_new(void)
 clean3:
   ng_url_free(&res->url);
 clean2:
-  http_free(res->sock);
+  ng_free(res->sock);
 clean1:
-  http_free(res);
+  ng_free(res);
 clean0:
   return NULL;
 }
@@ -179,8 +179,8 @@ httpc_free(httpc_conn_s * conn)
   ng_url_free(&conn->url);
 
   if (conn->sock)
-    http_free(conn->sock);
-  http_free(conn);
+    ng_free(conn->sock);
+  ng_free(conn);
 
   return;
 }
@@ -209,7 +209,7 @@ _httpc_set_basic_authorization_header(httpc_conn_s *conn,
   inlen  = user->len + password->len + 1;
   outlen = B64_ENCLEN(inlen);
 
-  p = (unsigned char *)http_malloc(6+inlen+1+outlen);
+  p = (unsigned char *)ng_malloc(6+inlen+1+outlen);
   if (p == NULL)
   {
     log_fatal("Malloc failed.");
@@ -230,12 +230,12 @@ _httpc_set_basic_authorization_header(httpc_conn_s *conn,
   
   if (0 > hpairnode_set_header(&conn->header, key, &out))
   {
-    http_free(p);
+    ng_free(p);
     log_fatal("httpc_set_header failed.");
     return -1;
   }
   
-  http_free(p);
+  ng_free(p);
   return 0;
 }
 
@@ -343,7 +343,7 @@ _httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn,
   int len, ssl;
 
 #define ___BUFSZ 4096
-  buffer = (char *)http_malloc(___BUFSZ);
+  buffer = (char *)ng_malloc(___BUFSZ);
   if (buffer == NULL)
   {
     log_fatal("Failed to malloc temp buffer.");
@@ -438,7 +438,7 @@ _httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn,
     goto clean2;
   }
 
-  http_free(buffer);
+  ng_free(buffer);
   return H_OK;
 
 #undef ___BUFSZ
@@ -446,7 +446,7 @@ _httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn,
 clean2:
   hsocket_close(conn->sock);
 clean1:
-  http_free(buffer);
+  ng_free(buffer);
 clean0:
   return status;
 }

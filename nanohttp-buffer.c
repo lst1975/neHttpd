@@ -71,7 +71,7 @@ ng_free_data_buffer(ng_buffer_s *data)
 {
   if (data->buf != NULL)
   {
-    http_free(data->buf);
+    ng_free(data->buf);
     data->buf = NULL;
     data->len = 0;
   }
@@ -82,7 +82,7 @@ ng_free_data_block(ng_block_s *block)
 {
   if (block->buf != NULL)
   {
-    http_free(block->buf);
+    ng_free(block->buf);
     block->buf = NULL;
     block->len = 0;
   }
@@ -93,7 +93,7 @@ ng_dup_data_block(ng_block_s *block, const ng_block_s *n, int free_old)
 {
   if (n->data != NULL && n->len)
   {
-    void *p = http_malloc(n->len);
+    void *p = ng_malloc(n->len);
     if (p == NULL)
     {
       log_fatal("ng_dup_data_block failed.");
@@ -112,7 +112,7 @@ ng_dup_data_block(ng_block_s *block, const ng_block_s *n, int free_old)
 int
 ng_dup_data_block_str(ng_block_s *block, const ng_block_s *n, int free_old)
 {
-  void *p = http_malloc(n->len+1);
+  void *p = ng_malloc(n->len+1);
   if (p == NULL)
     return -1;
   if (free_old)

@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003-2004  Ferhat Ayaz
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -100,9 +100,9 @@ _hresponse_new(void)
 {
   hresponse_t *res;
 
-  if (!(res = (hresponse_t *) http_malloc(sizeof(hresponse_t))))
+  if (!(res = (hresponse_t *) ng_malloc(sizeof(hresponse_t))))
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
 
@@ -183,9 +183,9 @@ _hresponse_parse_header(const char *buffer, ng_size_t len)
     goto clean1;
   }
 
-  /*	res->desc = (char *) http_malloc(strlen(str) + 1);*/
+  /*	res->desc = (char *) ng_malloc(strlen(str) + 1);*/
   res->desc_len = str - s1;
-  res->desc = http_strdup_size(str, res->desc_len);
+  res->desc = ng_strdup_size(str, res->desc_len);
   if (res->desc == NULL)
   {
     log_error("Parse error reading HTTP description");
@@ -250,11 +250,11 @@ hresponse_new_from_socket(hsocket_s *sock, hresponse_t **out)
   char *buffer;
   ng_buffer_s data;
 
-  buffer = http_malloc(MAX_HEADER_SIZE + 1);
+  buffer = ng_malloc(MAX_HEADER_SIZE + 1);
   if (buffer == NULL)
   {
     status = herror_new("hresponse_new_from_socket", GENERAL_ERROR, 
-      "http_malloc failed.");
+      "ng_malloc failed.");
     goto clean0;
   }
 
@@ -307,7 +307,7 @@ read_header:                   /* for errorcode: 100 (continue) */
 clean2:  
   hresponse_free(res);
 clean1:  
-  http_free(buffer);
+  ng_free(buffer);
 clean0:  
   return status;
 }
@@ -318,7 +318,7 @@ hresponse_free(hresponse_t *res)
   if (res)
   {
     if (res->desc)
-      http_free(res->desc);
+      ng_free(res->desc);
     
     hpairnode_free_deep(&res->header);
 
@@ -331,7 +331,7 @@ hresponse_free(hresponse_t *res)
     if (res->attachments)
       attachments_free((mime_attachment_s *)res->attachments);
 
-    http_free(res);
+    ng_free(res);
   }
   return;
 }

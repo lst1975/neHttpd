@@ -496,10 +496,10 @@ int encode_url(ng_buffer_s *b, const ng_uint8_t *input, int len)
   if (!len) 
     len = strlen((const char *)input);
   
-  encoded = (ng_uint8_t*)http_malloc(sizeof(ng_uint8_t) * len * 6);
+  encoded = (ng_uint8_t*)ng_malloc(sizeof(ng_uint8_t) * len * 6);
   if (encoded == NULL)
   {
-    log_fatal("Failed to http_malloc.");
+    log_fatal("Failed to ng_malloc.");
     return -1;
   }
   b->ptr = encoded;
@@ -598,10 +598,10 @@ int decode_url(ng_buffer_s *b, const ng_uint8_t* input, int len)
   int out_cursor = 0;
 
   if (!len) len = strlen((const char *)input);
-  b->ptr = decoded = (ng_uint8_t*)http_malloc(sizeof(ng_uint8_t) * len);
+  b->ptr = decoded = (ng_uint8_t*)ng_malloc(sizeof(ng_uint8_t) * len);
   if (decoded == NULL)
   {
-    log_fatal("Failed to http_malloc.");
+    log_fatal("Failed to ng_malloc.");
     return -1;
   }
   
@@ -971,10 +971,10 @@ static void __test_encode_url(const char *output, int outlen,
     || ng_memcmp(input, b.ptr, b.len))
   {
     log_verbose("test encode_url FAILED.");
-    http_free(b.ptr);
+    ng_free(b.ptr);
     return;
   }
-  http_free(b.ptr);
+  ng_free(b.ptr);
   log_verbose("test encode_url OK.");
 }
 
@@ -1017,12 +1017,12 @@ __test_decode_url(const char *output, int outlen,
     || ng_memcmp(input, b.ptr, b.len))
   {
     log_verbose("test decode_url FAILED.");
-    http_free(b.ptr);
+    ng_free(b.ptr);
     return;
   }
   log_verbose("test decode_url OK.");
   log_verbose("%.*s", b.len, b.ptr);
-  http_free(b.ptr);
+  ng_free(b.ptr);
 }
 
 static void test_decode_url1(void)

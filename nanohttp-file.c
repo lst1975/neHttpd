@@ -99,7 +99,7 @@ nanohttp_dir_init(const char *pfile)
                       "Parameter pfile is NULL");
   }
   
-  char *d = http_malloc(_nanoConfig_PATH_MAX);
+  char *d = ng_malloc(_nanoConfig_PATH_MAX);
   if (d == NULL)
   {
     log_error("hsocket_dir_init failed");
@@ -110,7 +110,7 @@ nanohttp_dir_init(const char *pfile)
   const char *pwd = ng_get_pwd(d, _nanoConfig_PATH_MAX);
   if (pwd == NULL)  
   {
-    http_free(d);
+    ng_free(d);
     log_error("hsocket_dir_init failed");
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_SYSTEM,
                       "Unable to execute getcwd");
@@ -120,7 +120,7 @@ nanohttp_dir_init(const char *pfile)
   char *p = strrchr(pwd, __PATH_DLIM);
   if (p == NULL)
   {
-    http_free(d);
+    ng_free(d);
     log_error("bad parameter pfile: %s", pfile);
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_INVAL,
                       "bad parameter pfile: %s", pfile);
@@ -160,7 +160,7 @@ nanohttp_dir_init(const char *pfile)
                       "Parameter pfile is NULL");
   }
   
-  char *d = http_malloc(_nanoConfig_PATH_MAX);
+  char *d = ng_malloc(_nanoConfig_PATH_MAX);
   if (d == NULL)
   {
     log_error("hsocket_dir_init failed");
@@ -170,7 +170,7 @@ nanohttp_dir_init(const char *pfile)
   const char *pwd = ng_get_pwd(d, _nanoConfig_PATH_MAX);
   if (pwd == NULL)  
   {
-    http_free(d);
+    ng_free(d);
     log_error("hsocket_dir_init failed");
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_SYSTEM,
                       "Unable to execute getcwd");
@@ -180,7 +180,7 @@ nanohttp_dir_init(const char *pfile)
   const char *p = strrchr(pfile, __PATH_DLIM);
   if (p == NULL)
   {
-    http_free(d);
+    ng_free(d);
     log_error("bad parameter pfile: %s", pfile);
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_INVAL,
                       "bad parameter pfile: %s", pfile);
@@ -200,7 +200,7 @@ nanohttp_dir_init(const char *pfile)
   {
     if (flen + plen + 1 >= _nanoConfig_PATH_MAX)
     {
-      http_free(d);
+      ng_free(d);
       log_error("dir length is too large: %u", flen + plen + 1);
       return herror_new("nanohttp_dir_init", GENERAL_ERROR_INVAL,
                         "dir length is too large: %u", flen + plen + 1);
@@ -226,7 +226,7 @@ nanohttp_dir_free(void)
 {
   if (httpd_base_path.buf != NULL)
   {
-    http_free(httpd_base_path.buf);
+    ng_free(httpd_base_path.buf);
     ng_block_init(&httpd_base_path);
   }
   log_info("[OK]: nanohttp_dir_free.");
@@ -237,7 +237,7 @@ nanohttp_file_get_path(const char *file, int flen)
 {
   ng_block_s url;
   ng_block_s *b = &httpd_base_path;
-  char *path = http_malloc(_nanoConfig_PATH_MAX);
+  char *path = ng_malloc(_nanoConfig_PATH_MAX);
   if (path == NULL)
     return NULL;
 
@@ -247,7 +247,7 @@ nanohttp_file_get_path(const char *file, int flen)
   {
     if (flen >= _nanoConfig_PATH_MAX)
     {
-      http_free(path);
+      ng_free(path);
       return NULL;
     }
     ng_memcpy(path, file, flen+1);
@@ -255,7 +255,7 @@ nanohttp_file_get_path(const char *file, int flen)
   }
   if (flen + b->len >= _nanoConfig_PATH_MAX)
   {
-    http_free(path);
+    ng_free(path);
     return NULL;
   }
 
@@ -267,7 +267,7 @@ nanohttp_file_get_path(const char *file, int flen)
   
   if (ng_urlorPath_normalize(&url) < 0)
   {
-    http_free(path);
+    ng_free(path);
     return NULL;
   }
   
@@ -284,7 +284,7 @@ static void *nanohttp_file_open(const char *file,
   if (fpath != NULL)
   {
     void *fp = fopen(fpath, mode);
-    http_free(fpath);
+    ng_free(fpath);
     return fp;
   }
 
@@ -404,13 +404,13 @@ int nanohttp_file_delete(const char *file, int len)
   if (remove(fpath) != 0)
   {
     int err = errno;
-    http_free(fpath);
+    ng_free(fpath);
     log_error("Failed to remove file %s (%d:%s).", 
       fpath, err, os_strerror(err));
     return -1;
   }
 
-  http_free(fpath);
+  ng_free(fpath);
   return 0;
 }
 
@@ -460,7 +460,7 @@ ng_size_t nanohttp_file_size(const char *file, int len)
 error1:
   close(fd);
 error0:
-  http_free(fpath);
+  ng_free(fpath);
   return size;
 }
 
@@ -497,12 +497,12 @@ int nanohttp_dir_isok(const ng_block_s *path)
   switch (__nanohttp_dir_isok(fpath))
   {
     case NDIR_OK:
-      http_free(fpath);
+      ng_free(fpath);
       return 0;
     default:
     case NDIR_NOT_EXIST:
     case NDIR_NOT_DIR:
-      http_free(fpath);
+      ng_free(fpath);
       return -1;
   }
 }
@@ -522,21 +522,21 @@ int nanohttp_dir_create(const ng_block_s *path)
     case NDIR_NOT_EXIST:
       break;
     case NDIR_OK:
-      http_free(fpath);
+      ng_free(fpath);
       return 0;
     default:
     case NDIR_NOT_DIR:
-      http_free(fpath);
+      ng_free(fpath);
       return -1;
   }
 
   switch (mkdir(fpath, 0755)) // 0755 sets the permissions
   {
     case 0:
-      http_free(fpath);
+      ng_free(fpath);
       return 0;
     default:
-      http_free(fpath);
+      ng_free(fpath);
       log_error("Failed to create file path: %pS.", path);
       return -1;
   }

@@ -401,7 +401,7 @@ thread_pool_reader_burst(void *arg)
       {
         ng_atomic_dec(&malloc_count);
         ng_smp_wmb();
-        http_free(data[i]);
+        ng_free(data[i]);
       }
     }
   }
@@ -418,7 +418,7 @@ thread_pool_writer_burst(void *arg)
     void *data[16];
     for (i=0;i<16;i++)
     {
-      data[i] = http_malloc(256);
+      data[i] = ng_malloc(256);
       if (data[i] == NULL)
         break;
       ng_atomic_inc(&malloc_count);
@@ -430,7 +430,7 @@ thread_pool_writer_burst(void *arg)
       {
         ng_atomic_dec(&malloc_count);
         ng_smp_wmb();
-        http_free(data[n]);
+        ng_free(data[n]);
       }
     }
   }
@@ -450,7 +450,7 @@ ng_thread_pool_free(ng_thread_pool_s *p)
   {
     pthread_join(p->pool[i],NULL);
   }
-  http_free(p);
+  ng_free(p);
 }
 
 ng_thread_pool_s *
@@ -458,9 +458,9 @@ ng_thread_pool_create(int count, ng_thread_routine_f (*get_routine)(int))
 {
   ng_thread_pool_s *p;
 
-  p = (ng_thread_pool_s *)http_malloc(sizeof(*p)+count*sizeof(pthread_t));
+  p = (ng_thread_pool_s *)ng_malloc(sizeof(*p)+count*sizeof(pthread_t));
   if (p == NULL) {
-    log_fatal("failed to http_malloc ng_thread_pool_s"__LN);
+    log_fatal("failed to ng_malloc ng_thread_pool_s"__LN);
     goto cleanup0;
   }
   p->count = count;
@@ -492,7 +492,7 @@ thread_start_1(void *arg)
   ng_atomic_inc(&__running);
   while (!__stopped)
   {
-    void *data = http_malloc(sizeof(ng_singlerw_ring_s));
+    void *data = ng_malloc(sizeof(ng_singlerw_ring_s));
     if (data != NULL)
     {
       ng_atomic_inc(&malloc_count);
@@ -500,7 +500,7 @@ thread_start_1(void *arg)
       if (0 > ng_singlerw_ring_set(&__ring, data))
       {
         ng_atomic_dec(&malloc_count);
-        http_free(data);
+        ng_free(data);
       }
     }
   }
@@ -519,7 +519,7 @@ thread_start_2(void *arg)
     {
       ng_atomic_dec(&malloc_count);
       ng_smp_wmb();
-      http_free(data);
+      ng_free(data);
     }
   }
   ng_atomic_dec(&__running);
@@ -537,7 +537,7 @@ thread_start_reader(void *arg)
     {
       ng_atomic_dec(&malloc_count);
       ng_smp_wmb();
-      http_free(data);
+      ng_free(data);
     }
   }
   ng_atomic_dec(&__running);
@@ -550,7 +550,7 @@ thread_start_writer(void *arg)
   ng_atomic_inc(&__running);
   while (!__stopped)
   {
-    void *data = http_malloc(sizeof(ng_singlerw_ring_s));
+    void *data = ng_malloc(sizeof(ng_singlerw_ring_s));
     if (data != NULL)
     {
       ng_atomic_inc(&malloc_count);
@@ -558,7 +558,7 @@ thread_start_writer(void *arg)
       if (0 > rte_ring_mp_enqueue(__test_rte_ring, data))
       {
         ng_atomic_dec(&malloc_count);
-        http_free(data);
+        ng_free(data);
       }
     }
   }
@@ -581,7 +581,7 @@ thread_start_reader_burst(void *arg)
       {
         ng_atomic_dec(&malloc_count);
         ng_smp_wmb();
-        http_free(data[i]);
+        ng_free(data[i]);
       }
     }
   }
@@ -599,7 +599,7 @@ thread_start_writer_burst(void *arg)
     void *data[16];
     for (i=0;i<16;i++)
     {
-      data[i] = http_malloc(256);
+      data[i] = ng_malloc(256);
       if (data[i] == NULL)
         break;
       ng_atomic_inc(&malloc_count);
@@ -611,7 +611,7 @@ thread_start_writer_burst(void *arg)
       {
         ng_atomic_dec(&malloc_count);
         ng_smp_wmb();
-        http_free(data[n]);
+        ng_free(data[n]);
       }
     }
   }
@@ -783,13 +783,13 @@ void test_ring(void)
     if (data != NULL)
     {
       ng_atomic_dec(&malloc_count);
-      http_free(data);
+      ng_free(data);
     }
   }
   while (!rte_ring_dequeue(__test_rte_ring, &data))
   {
     ng_atomic_dec(&malloc_count);
-    http_free(data);
+    ng_free(data);
   }
   
   count = ng_atomic_read(&malloc_count);

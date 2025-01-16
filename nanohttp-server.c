@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -499,7 +499,7 @@ _httpd_connection_slots_init(void)
 #endif
 
   _httpd_connection = (conndata_t *)
-        http_calloc(_httpd_max_connections, sizeof(conndata_t));
+        ng_malloc(sizeof(conndata_t)*_httpd_max_connections);
   if (_httpd_connection == NULL)
   {
     status = herror_new("_httpd_connection_slots_init",
@@ -552,7 +552,7 @@ clean3:
   rte_ring_free(_httpd_connection_ring);
   _httpd_connection_ring = NULL;
 clean2:
-  http_free(_httpd_connection);
+  ng_free(_httpd_connection);
   _httpd_connection = NULL;
 #endif
 clean1:
@@ -595,7 +595,7 @@ _httpd_connection_slots_free(void)
 
   if (_httpd_connection)
   {
-    http_free(_httpd_connection);
+    ng_free(_httpd_connection);
     _httpd_connection = NULL;
   }
   
@@ -724,11 +724,11 @@ httpd_register_secure(const char *context, int context_len,
 {
   hservice_t *service;
 
-  if (!(service = (hservice_t *)http_malloc(sizeof(hservice_t)+context_len+1)))
+  if (!(service = (hservice_t *)ng_malloc(sizeof(hservice_t)+context_len+1)))
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     return herror_new("httpd_register_secure", 0, 
-      "http_malloc failed (%s)", os_strerror(ng_errno));
+      "ng_malloc failed (%s)", os_strerror(ng_errno));
   }
 
 #ifdef __NHTTP_INTERNAL
@@ -831,7 +831,7 @@ hservice_free(hservice_t *service)
     return;
 
   log_verbose("unregister service \"%s\"", service->context);
-  http_free(service);
+  ng_free(service);
 
   return;
 }
@@ -904,7 +904,7 @@ httpd_send_header(httpd_conn_s *res, int code)
   
 #define __BUF_SZ 1024
 #define __BUF BUF_CUR_PTR(&b), BUF_REMAIN(&b)
-  header = (char *)http_malloc(__BUF_SZ);
+  header = (char *)ng_malloc(__BUF_SZ);
   if (header == NULL)
   {
     log_fatal("Failed to malloc tempary buffer");
@@ -1000,7 +1000,7 @@ httpd_send_header(httpd_conn_s *res, int code)
   }
 
 clean1:
-  http_free(header);
+  ng_free(header);
 clean0:
   return status;
 }
@@ -1029,7 +1029,7 @@ _httpd_send_html_message(httpd_conn_s *conn, int reason,
     "</html>";
 
 #define __BUF_SZ 4096
-  buf = http_malloc(__BUF_SZ);
+  buf = ng_malloc(__BUF_SZ);
   if (buf == NULL)
   {
     r = herror_new("_httpd_send_html_message", GENERAL_ERROR,
@@ -1056,7 +1056,7 @@ _httpd_send_html_message(httpd_conn_s *conn, int reason,
 #undef __BUF_SZ
 
 clean1:
-  http_free(buf);
+  ng_free(buf);
 clean0:
   return r;
 }
@@ -1171,9 +1171,9 @@ httpd_new(hsocket_s *sock)
 {
   httpd_conn_s *conn;
 
-  if (!(conn = (httpd_conn_s *) http_malloc(sizeof(httpd_conn_s))))
+  if (!(conn = (httpd_conn_s *) ng_malloc(sizeof(httpd_conn_s))))
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
   conn->sock = sock;
@@ -1194,7 +1194,7 @@ httpd_free(httpd_conn_s *conn)
     http_output_stream_free(conn->out);
 
   hpairnode_free_deep(&conn->header);
-  http_free(conn);
+  ng_free(conn);
 
   return;
 }
@@ -1209,16 +1209,16 @@ _httpd_decode_authorization(int *tmplen,
   const char *value;
 
   len = B64_DECLEN(inlen);
-  if (!(tmp = (unsigned char *)http_malloc(len)))
+  if (!(tmp = (unsigned char *)ng_malloc(len)))
   {
-    log_error("http_calloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_alloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
   value = ng_memchr(_value, ' ', inlen);
   if (value == NULL)
   {
     log_error("Authorization malformed.");
-    http_free(tmp);
+    ng_free(tmp);
     return NULL;
   }
   value++;
@@ -1233,7 +1233,7 @@ _httpd_decode_authorization(int *tmplen,
   if (len < 0)
   {
     log_error("b64Decode failed");
-    http_free(tmp);
+    ng_free(tmp);
     return NULL;
   }
 
@@ -1294,7 +1294,7 @@ _httpd_authenticate_request(hrequest_s *req, httpd_auth_f auth)
     log_info("Authentication failed for user=\"%pS\"", &user);
 
   ng_bzero(tmp, tmplen);
-  http_free(tmp);
+  ng_free(tmp);
   return ret;
 }
 
@@ -2318,17 +2318,17 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
   if (content_length == 0)
   {
     *received = 0;
-    if (!(postdata = (unsigned char *)http_malloc(1)))
+    if (!(postdata = (unsigned char *)ng_malloc(1)))
     {
-      log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+      log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
       return NULL;
     }
     postdata[0] = '\0';
     return postdata;
   }
-  if (!(postdata = (unsigned char *) http_malloc(content_length + 1)))
+  if (!(postdata = (unsigned char *) ng_malloc(content_length + 1)))
   {
-    log_error("http_malloc failed (%)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%)", os_strerror(ng_errno));
     return NULL;
   }
 
@@ -2347,6 +2347,6 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
     }
   }
   
-  http_free(postdata);
+  ng_free(postdata);
   return NULL;
 }

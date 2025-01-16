@@ -103,8 +103,8 @@ typedef u32 NG_U32;
 #define __rte_atomic
 #define NG_ATOMIC_T(x) x
 #define ng_assert(x) assert(x)
-#define ng_srw_malloc(x) http_malloc(x)
-#define ng_srw_free(x) http_free(x)
+#define ng_srw_malloc(x) ng_malloc(x)
+#define ng_srw_free(x) ng_free(x)
 typedef ng_uint32_t NG_U32;
 /* We provide internal macro here to allow conditional expansion
  * in the body of the per-arch rte_atomic_thread_fence inline functions.
@@ -626,7 +626,7 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, ng_uint32_t old_val,
  * @param new_head
  *   Returns the current/new head value i.e. where enqueue finishes
  * @param free_entries
- *   Returns the amount of http_free space in the ring BEFORE head was moved
+ *   Returns the amount of ng_free space in the ring BEFORE head was moved
  * @return
  *   Actual number of objects enqueued.
  *   If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
@@ -931,7 +931,7 @@ __rte_ring_update_tail(struct rte_ring_headtail *ht, ng_uint32_t old_val,
  * @param new_head
  *   Returns the current/new head value i.e. where enqueue finishes
  * @param free_entries
- *   Returns the amount of http_free space in the ring BEFORE head was moved
+ *   Returns the amount of ng_free space in the ring BEFORE head was moved
  * @return
  *   Actual number of objects enqueued.
  *   If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
@@ -1950,7 +1950,7 @@ ng_ring_s *rte_ring_create(const char *name, size_t name_len,
  * De-allocate all memory used by the ring.
  *
  * @param r
- *   Ring to http_free.
+ *   Ring to ng_free.
  *   If NULL then, the function does nothing.
  */
 void rte_ring_free(ng_ring_s *r);
@@ -2269,12 +2269,12 @@ rte_ring_count(const ng_ring_s *r)
 }
 
 /**
- * Return the number of http_free entries in a ring.
+ * Return the number of ng_free entries in a ring.
  *
  * @param r
  *   A pointer to the ring structure.
  * @return
- *   The number of http_free entries in the ring.
+ *   The number of ng_free entries in the ring.
  */
 static inline unsigned int
 rte_ring_free_count(const ng_ring_s *r)

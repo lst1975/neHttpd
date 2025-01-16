@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -98,7 +98,7 @@ int base64_encode_string(const unsigned char *instr, unsigned char *outstr)
 {
   char counts = 0;
   char buffer[3];
-  char* cipher = (char*)outstr; //http_malloc(strlen(plain) * 4 / 3 + 4);
+  char* cipher = (char*)outstr; //ng_malloc(strlen(plain) * 4 / 3 + 4);
   int i = 0, c = 0;
 
   for(i = 0; instr[i] != '\0'; i++) {
@@ -133,7 +133,7 @@ int base64_decode_string(const unsigned char *instr, unsigned char *outstr)
 {
   char counts = 0;
   char buffer[4];
-  char* plain = (char*)outstr; //http_malloc(strlen(cipher) * 3 / 4);
+  char* plain = (char*)outstr; //ng_malloc(strlen(cipher) * 3 / 4);
   int i = 0, p = 0;
 
   for(i = 0; instr[i] != '\0'; i++) {

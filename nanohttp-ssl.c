@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2001-2005  Rochester Institute of Technology
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -290,9 +290,9 @@ void
 hssl_set_certificate(const char *filename)
 {
   if (_hssl_certificate)
-    http_free(_hssl_certificate);
+    ng_free(_hssl_certificate);
 
-  _hssl_certificate = http_strdup(filename);
+  _hssl_certificate = ng_strdup(filename);
 
   return;
 }
@@ -301,9 +301,9 @@ void
 hssl_set_certpass(const char *password)
 {
   if (_hssl_certpass)
-    http_free(_hssl_certpass);
+    ng_free(_hssl_certpass);
 
-  _hssl_certpass = http_strdup(password);
+  _hssl_certpass = ng_strdup(password);
 
   return;
 }
@@ -312,9 +312,9 @@ void
 hssl_set_ca_list(const char *filename)
 {
   if (_hssl_ca_list)
-    http_free(_hssl_ca_list);
+    ng_free(_hssl_ca_list);
 
-  _hssl_ca_list = http_strdup(filename);
+  _hssl_ca_list = ng_strdup(filename);
 
   return;
 }
@@ -473,19 +473,19 @@ hssl_module_destroy(void)
 
   if (_hssl_certpass)
   {
-    http_free(_hssl_certpass);
+    ng_free(_hssl_certpass);
     _hssl_certpass = NULL;
   }
 
   if (_hssl_ca_list)
   {
-    http_free(_hssl_ca_list);
+    ng_free(_hssl_ca_list);
     _hssl_ca_list = NULL;
   }
 
   if (_hssl_certificate)
   {
-    http_free(_hssl_certificate);
+    ng_free(_hssl_certificate);
     _hssl_certificate = NULL;
   }
 

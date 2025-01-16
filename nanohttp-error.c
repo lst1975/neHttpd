@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -107,14 +107,14 @@ herror_new(const char *func, int errcode, const char *format, ...)
   va_list ap;
   herror_impl_t *impl;
  
-  if (!(impl = (herror_impl_t *) http_malloc(sizeof(herror_impl_t))))
+  if (!(impl = (herror_impl_t *) ng_malloc(sizeof(herror_impl_t))))
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
 
   impl->errcode = errcode;
-  impl->func = func ? http_strdup(func) : NULL;
+  impl->func = func ? ng_strdup(func) : NULL;
 
   va_start(ap, format);
   ng_vsnprintf(impl->message, sizeof(impl->message), format, ap);
@@ -172,9 +172,9 @@ herror_release(herror_t err)
     return;
 
   if (impl->func)
-    http_free(impl->func);
+    ng_free(impl->func);
 
-  http_free(impl);
+  ng_free(impl);
 
   return;
 }

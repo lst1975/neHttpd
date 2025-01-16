@@ -390,10 +390,10 @@ root_service(httpd_conn_s *conn, hrequest_s *req)
       do
       {
         int len = B64_DECLEN(sizeof(favorICON)-1)+1;
-        bf = (unsigned char *)http_malloc(len);
+        bf = (unsigned char *)ng_malloc(len);
         if (bf == NULL) 
         {
-          log_error("http_malloc failed");
+          log_error("ng_malloc failed");
           break;
         }
 #if __configUseStreamBase64
@@ -421,7 +421,7 @@ root_service(httpd_conn_s *conn, hrequest_s *req)
       while(0);
       
       if (bf != NULL)
-        http_free(bf);
+        ng_free(bf);
     }
     else if (!ng_block_isequal__(&__MIB_FILE, &req->path)
           && !ng_block_isequal__(&__ADD_FILE, &req->path)
@@ -524,11 +524,11 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
     log_debug("decoded query is : %.*s", in.len, in.cptr);
 
     len = B64_DECLEN(in.len) + 1;
-    query = (unsigned char *)http_malloc(len);
+    query = (unsigned char *)ng_malloc(len);
     if (query == NULL)
     {
-      http_free(in.ptr);
-      log_error("Failed to http_malloc key");
+      ng_free(in.ptr);
+      log_error("Failed to ng_malloc key");
       goto finished;
     }
     
@@ -537,14 +537,14 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
       len = b64Decode_with_len(in.buf, in.len, (char *)query, len);
       if (len < 0)
       {
-        http_free(in.ptr);
+        ng_free(in.ptr);
         log_error("b64Decode failed");
         goto finished;
       }
 #else      
       len = base64_decode_string(in.ptr, query);
 #endif
-      http_free(in.ptr);
+      ng_free(in.ptr);
       log_debug("decoded query is : %s", query);
     }
 
@@ -935,7 +935,7 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
         goto finished;
       }
       
-      http_free(query);
+      ng_free(query);
       json_pairs_free(pair);
       root_service(conn, req);
       return;
@@ -953,7 +953,7 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
     }
 
 finished:  
-    http_free(query);
+    ng_free(query);
     json_pairs_free(pair);
     r = httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
     herror_release(r);

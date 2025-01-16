@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003  Ferhat Ayaz
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -228,10 +228,10 @@ int ng_urlorPath_normalize(ng_block_s *url)
 
   ng_urlorpath_dlim_convert(url->buf, url->len, '\\', '/');
   
-  stack = (struct _topp *)http_malloc(sizeof(*stack)*__TOP_MAX);
+  stack = (struct _topp *)ng_malloc(sizeof(*stack)*__TOP_MAX);
   if (stack == NULL)
   {
-    log_error("http_malloc temporary buffer failed.");
+    log_error("ng_malloc temporary buffer failed.");
     return ng_ERR_ESYSTEM;
   }
   
@@ -244,7 +244,7 @@ int ng_urlorPath_normalize(ng_block_s *url)
     {
       if (top >= __TOP_MAX_E)
       { 
-        http_free(stack);
+        ng_free(stack);
         return ng_ERR_E2BIG;
 	    }
   	  t = &stack[++top];
@@ -282,7 +282,7 @@ int ng_urlorPath_normalize(ng_block_s *url)
   	{
       if (top >= __TOP_MAX_E)
       { 
-        http_free(stack);
+        ng_free(stack);
         return ng_ERR_E2BIG;
       }
       t = &stack[++top];
@@ -310,7 +310,7 @@ int ng_urlorPath_normalize(ng_block_s *url)
   	p += t->l;
   }
 
-  http_free(stack);
+  ng_free(stack);
   url->len = p - url->cptr;
   *p = '\0';
 
@@ -460,7 +460,7 @@ __ng_url_parse(ng_url_s *url, const char *urlstr, int urllen)
   
   urllen =  url->host.len + url->context.len 
           + url->user.len + url->pswd.len + 4;
-  url->data = b = http_malloc(urllen);
+  url->data = b = ng_malloc(urllen);
   if (url->data == NULL)
   {
     log_fatal("Failed to malloc url.");
@@ -535,7 +535,7 @@ ng_url_free(ng_url_s *url)
 {
   if (url->data != NULL)
   {
-    http_free(url->data);
+    ng_free(url->data);
     ng_url_init(url);
   }
 

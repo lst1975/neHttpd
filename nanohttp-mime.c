@@ -633,7 +633,7 @@ multipartpart_new(void)
 {
   mime_part_s *part;
 
-  part = http_malloc(sizeof(*part));
+  part = ng_malloc(sizeof(*part));
   if (part == NULL)
   {
     log_fatal("Failed to malloc mime_part_s.");
@@ -1033,7 +1033,7 @@ mime_part_free(mime_part_s *part)
   hpairnode_free_deep(&part->header);
   content_type_free(part->content_disposition);
   part->content_disposition = NULL;
-  http_free(part);
+  ng_free(part);
 }
 
 void
@@ -1049,10 +1049,10 @@ attachments_new(ng_list_head_s *attachments_list)
 {
   mime_attachment_s *attachments;
 
-  attachments = (mime_attachment_s *)http_malloc(sizeof(mime_attachment_s));
+  attachments = (mime_attachment_s *)ng_malloc(sizeof(mime_attachment_s));
   if (attachments == NULL)
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
 
@@ -1091,7 +1091,7 @@ attachments_free(mime_attachment_s *message)
     mime_part_free(part);
   }
 
-  http_free(message);
+  ng_free(message);
 
   return;
 }
@@ -1141,7 +1141,7 @@ mime_add_content_type_header(ng_list_head_s *header,
   
 #define ___BUFSZ 512
   tsize = ___BUFSZ+_HTTPC_MIME_BOUNDARY_SIZE_MAX;
-  buffer = (char *)http_malloc(tsize);
+  buffer = (char *)ng_malloc(tsize);
   if (buffer == NULL)
   {
     log_fatal("Failed to malloc temp buffer.");
@@ -1206,7 +1206,7 @@ mime_add_content_type_header(ng_list_head_s *header,
 #undef ___BUFSZ
   
 clean1:
-  http_free(buffer);
+  ng_free(buffer);
 clean0:
   return status;
 }
@@ -1235,7 +1235,7 @@ mime_part_new(ng_list_head_s *part_list, const ng_block_s *params)
   transfer_encoding = &params[MIME_CONTENT_TYPE_PARAM_part_transfer_encoding];
   
 #define ___BUFSZ 1892
-  buffer = (char *)http_malloc(___BUFSZ);
+  buffer = (char *)ng_malloc(___BUFSZ);
   if (buffer == NULL)
   {
     log_fatal("Failed to malloc temp buffer.");
@@ -1243,10 +1243,10 @@ mime_part_new(ng_list_head_s *part_list, const ng_block_s *params)
   }
   BUF_SIZE_INIT(&disposition, buffer, ___BUFSZ);
 
-  part = (mime_part_s *)http_malloc(sizeof(mime_part_s));
+  part = (mime_part_s *)ng_malloc(sizeof(mime_part_s));
   if (part == NULL)
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     goto clean1;
   }
   part->content_disposition = NULL;

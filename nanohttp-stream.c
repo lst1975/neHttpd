@@ -67,7 +67,7 @@
 * CSOAP Project:  A http client/server library in C
 * Copyright (C) 2003-2004  Ferhat Ayaz
 *
-* This library is http_free software; you can redistribute it and/or
+* This library is ng_free software; you can redistribute it and/or
 * modify it under the terms of the GNU Library General Public
 * License as published by the Free Software Foundation; either
 * version 2 of the License, or (at your option) any later version.
@@ -133,7 +133,7 @@ http_input_stream_free(http_input_stream_s *stream)
   }
   ng_free_data_block(&stream->filename);
   herror_release(stream->err);
-  http_free(stream);
+  ng_free(stream);
 }
 
 static int
@@ -403,9 +403,9 @@ http_input_stream_new(hsocket_s *sock, ng_list_head_s *header,
   http_input_stream_s *result;
 
   if (!(result = (http_input_stream_s *) 
-    http_malloc(sizeof(http_input_stream_s))))
+    ng_malloc(sizeof(http_input_stream_s))))
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
 
@@ -475,10 +475,10 @@ http_input_stream_new_from_file(const char *filename,
 
   /* Create object */
   result = (http_input_stream_s *) 
-      http_malloc(sizeof(http_input_stream_s));
+      ng_malloc(sizeof(http_input_stream_s));
   if (result == NULL) 
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     goto clean1;
   }
 
@@ -488,10 +488,10 @@ http_input_stream_new_from_file(const char *filename,
   result->deleteOnExit = 0;
   result->stream_ready = _http_input_stream_is_file_ready;
   result->stream_read  = _http_input_stream_file_read;
-  result->filename.data = http_strdup_size(filename, len);
+  result->filename.data = ng_strdup_size(filename, len);
   if (result->filename.data == NULL)
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     goto clean2;
   }
   result->filename.len = len;
@@ -499,7 +499,7 @@ http_input_stream_new_from_file(const char *filename,
   return result;
 
 clean2:
-  http_free(result);
+  ng_free(result);
 clean1:
   nanohttp_file_close(fd);
 clean0:
@@ -551,10 +551,10 @@ http_output_stream_new(hsocket_s *sock, ng_list_head_s *header)
   http_output_stream_s *result;
 
   /* Create object */
-  result = (http_output_stream_s *)http_malloc(sizeof(*result));
+  result = (http_output_stream_s *)ng_malloc(sizeof(*result));
   if (result == NULL)
   {
-    log_error("http_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
     return NULL;
   }
 
@@ -598,7 +598,7 @@ void
 http_output_stream_free(http_output_stream_s *stream)
 {
   herror_release(stream->status);
-  http_free(stream);
+  ng_free(stream);
   return;
 }
 

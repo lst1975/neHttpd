@@ -66,7 +66,7 @@
  * CSOAP Project:  A http client/server library in C
  * Copyright (C) 2003-2004  Ferhat Ayaz
  *
- * This library is http_free software; you can redistribute it and/or
+ * This library is ng_free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
  * version 2 of the License, or (at your option) any later version.
@@ -211,7 +211,7 @@ http_input_stream_new_from_file(const char *filename, int len);
 /** Free input stream. Note that the socket will not be closed by this
  * functions.
  *
- * @param stream the input stream to http_free.
+ * @param stream the input stream to ng_free.
  */
 extern void 
 http_input_stream_free(http_input_stream_s *stream);
@@ -267,7 +267,7 @@ http_output_stream_new(hsocket_s *sock, ng_list_head_s *header);
 /** This function frees the given output stream. Note that this
  * function will not close any socket connections.
  *
- * @param stream The stream to http_free.
+ * @param stream The stream to ng_free.
  */
 extern void 
 http_output_stream_free(http_output_stream_s *stream);
