@@ -86,6 +86,11 @@
 #include "nanohttp-inet.h"
 #include "nanohttp-atoi.h"
 
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 #define NG_INT64SZ    8      /* for systems without 64-bit ints */
 #define NG_INT32SZ    4      /* for systems without 32-bit ints */
 #define NG_INT16SZ    2      /* for systems without 16-bit ints */
@@ -444,4 +449,8 @@ ng_inet_ntop6(const char *src, char *dst, ng_size_t size)
 	ng_memcpy(dst, tmp, tp - tmp);
 	return tp - tmp;
 }
+
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic pop
+#endif
 

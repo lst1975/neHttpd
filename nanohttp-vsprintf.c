@@ -140,6 +140,11 @@
 #include "nanohttp-server.h"
 #include "nanohttp-file.h"
 
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 #ifdef WIN32
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
@@ -1845,6 +1850,10 @@ __ng_snprintf_cb(ng_vsout_f out, void *arg, char const * format, ...)
 
   return rval;
 }
+
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic pop
+#endif
 
 #if __NHTTP_VSNPRINTF_DEBUG
 

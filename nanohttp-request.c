@@ -134,12 +134,12 @@ _hrequest_parse_header(char *data, ng_size_t len)
   hpair_s *tmppair;
   hrequest_s *req;
 
-  char *tmp;
-  char *result;
-  char *key;
-  char *end;
-  char *opt_key;
-  char *opt_value;
+  const char *tmp;
+  const char *result;
+  const char *key;
+  const char *end;
+  const char *opt_key;
+  const char *opt_value;
   int firstline = 1;
 
   req = hrequest_new();
@@ -175,7 +175,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
     if (firstline)
     {
       int key_len;
-      char *t;
+      const char *t;
       firstline = 0;
 
       /* parse [GET|POST] [PATH] [SPEC] */
@@ -298,17 +298,17 @@ _hrequest_parse_header(char *data, ng_size_t len)
           /* fill hpairnode_t struct */
           if (opt_value != NULL)
           {
-            v.buf = opt_value+1;
-            v.len = key - v.buf;
-            k.len = opt_value - opt_key;
-            k.buf = opt_key;
+            v.cptr = opt_value+1;
+            v.len  = key - v.cptr;
+            k.len  = opt_value - opt_key;
+            k.cptr = opt_key;
           }
           else
           {
-            k.len = key - opt_key;
-            k.buf = opt_key;
-            v.buf = NULL;
-            v.len = 0;
+            k.len  = key - opt_key;
+            k.cptr = opt_key;
+            v.cptr = NULL;
+            v.len  = 0;
           }
           tmppair = hpairnode_new(&k, &v, &req->query);
           if (tmppair == NULL)

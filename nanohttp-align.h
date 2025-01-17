@@ -121,6 +121,15 @@
 #define RTE_CACHE_LINE_SIZE 64
 
 /**
+ * Force a structure to be packed
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_packed
+#else
+#define __rte_packed __attribute__((__packed__))
+#endif
+
+/**
  * Force type alignment
  *
  * This macro should be used when alignment of a struct or union type

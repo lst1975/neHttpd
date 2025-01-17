@@ -63,6 +63,11 @@
 #include "nanohttp-defs.h"
 #include "nanohttp-dtoa.h"
 
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 //=====================================================================================================
 //
 // TYPES AND CONSTANTS
@@ -2923,4 +2928,8 @@ int  dconvstr_ieee754_scan(
   ) );
   return  1;
 }
+
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+#pragma GCC diagnostic pop
+#endif
 

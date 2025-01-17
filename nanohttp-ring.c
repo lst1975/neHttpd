@@ -244,7 +244,7 @@ rte_align32pow2(ng_uint32_t x)
 }
 
 int
-rte_ring_init(ng_ring_s *r, const char *name, size_t name_len, 
+rte_ring_init(ng_ring_s *r, const char *name, ng_size_t name_len, 
   unsigned int count, unsigned int flags)
 {
   int ret;
@@ -298,7 +298,7 @@ rte_ring_init(ng_ring_s *r, const char *name, size_t name_len,
 
 /* create the ring for a given element size */
 ng_ring_s *
-rte_ring_create_elem(const char *name, size_t name_len, 
+rte_ring_create_elem(const char *name, ng_size_t name_len, 
   unsigned int esize, unsigned int count, unsigned int flags)
 {
   ng_ring_s *r;
@@ -335,7 +335,7 @@ rte_ring_create_elem(const char *name, size_t name_len,
 
 /* create the ring */
 ng_ring_s *
-rte_ring_create(const char *name, size_t name_len, 
+rte_ring_create(const char *name, ng_size_t name_len, 
   unsigned int count, unsigned int flags)
 {
   return rte_ring_create_elem(name, name_len, sizeof(void *), count, flags);

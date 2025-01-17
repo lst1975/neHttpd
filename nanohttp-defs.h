@@ -75,6 +75,10 @@
 #define RTE_TOOLCHAIN_MSVC
 #endif
 
+#if defined(__GNUC__)
+#define RTE_TOOLCHAIN_GCC
+#endif
+
 #if defined(__linux__)
 #define RTE_ENV_LINUX
 #define RTE_EXEC_ENV_LINUX
@@ -102,6 +106,15 @@
 #define __rte_constant(e) 0
 #else
 #define __rte_constant(e) __extension__(__builtin_constant_p(e))
+#endif
+
+/**
+ * Macro to mark a type that is not subject to type-based aliasing rules
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_may_alias
+#else
+#define __rte_may_alias __attribute__((__may_alias__))
 #endif
 
 #if defined(__GNUC__)
@@ -225,6 +238,110 @@ typedef int ng_result_t;
 #endif
 #endif
 
+#define RTE_PRIORITY_LOG 101
+#define RTE_PRIORITY_BUS 110
+#define RTE_PRIORITY_CLASS 120
+#define RTE_PRIORITY_LAST 65535
+
+#define RTE_PRIO(prio) \
+	RTE_PRIORITY_ ## prio
+
+/**
+ * Run function before main() with high priority.
+ *
+ * @param func
+ *   Constructor function.
+ * @param prio
+ *   Priority number must be above 100.
+ *   Lowest number is the first to run.
+ */
+#ifndef RTE_INIT_PRIO /* Allow to override from EAL */
+#ifndef RTE_TOOLCHAIN_MSVC
+#define RTE_INIT_PRIO(func, prio) \
+static void __attribute__((constructor(RTE_PRIO(prio)), used)) func(void)
+#else
+/* definition from the Microsoft CRT */
+typedef int(__cdecl *_PIFV)(void);
+
+#define CTOR_SECTION_LOG ".CRT$XIB"
+#define CTOR_SECTION_BUS ".CRT$XIC"
+#define CTOR_SECTION_CLASS ".CRT$XID"
+#define CTOR_SECTION_LAST ".CRT$XIY"
+
+#define CTOR_PRIORITY_TO_SECTION(priority) CTOR_SECTION_ ## priority
+
+#define RTE_INIT_PRIO(name, priority) \
+	static void name(void); \
+	static int __cdecl name ## _thunk(void) { name(); return 0; } \
+	__pragma(const_seg(CTOR_PRIORITY_TO_SECTION(priority))) \
+	__declspec(allocate(CTOR_PRIORITY_TO_SECTION(priority))) \
+	    _PIFV name ## _pointer = &name ## _thunk; \
+	__pragma(const_seg()) \
+	static void name(void)
+#endif
+#endif
+
+/**
+ * Run function before main() with low priority.
+ *
+ * The constructor will be run after prioritized constructors.
+ *
+ * @param func
+ *   Constructor function.
+ */
+#define RTE_INIT(func) \
+	RTE_INIT_PRIO(func, LAST)
+
+/**
+ * Run after main() with low priority.
+ *
+ * @param func
+ *   Destructor function name.
+ * @param prio
+ *   Priority number must be above 100.
+ *   Lowest number is the last to run.
+ */
+#ifndef RTE_FINI_PRIO /* Allow to override from EAL */
+#ifndef RTE_TOOLCHAIN_MSVC
+#define RTE_FINI_PRIO(func, prio) \
+static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
+#else
+#define DTOR_SECTION_LOG "mydtor$B"
+#define DTOR_SECTION_BUS "mydtor$C"
+#define DTOR_SECTION_CLASS "mydtor$D"
+#define DTOR_SECTION_LAST "mydtor$Y"
+
+#define DTOR_PRIORITY_TO_SECTION(priority) DTOR_SECTION_ ## priority
+
+#define RTE_FINI_PRIO(name, priority) \
+	static void name(void); \
+	__pragma(const_seg(DTOR_PRIORITY_TO_SECTION(priority))) \
+	__declspec(allocate(DTOR_PRIORITY_TO_SECTION(priority))) void *name ## _pointer = &name; \
+	__pragma(const_seg()) \
+	static void name(void)
+#endif
+#endif
+
+/**
+ * Run after main() with high priority.
+ *
+ * The destructor will be run *before* prioritized destructors.
+ *
+ * @param func
+ *   Destructor function name.
+ */
+#define RTE_FINI(func) \
+	RTE_FINI_PRIO(func, LAST)
+
+/**
+ * Hint never returning function
+ */
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __rte_noreturn
+#else
+#define __rte_noreturn __attribute__((noreturn))
+#endif
+
 #if defined(__64BIT__) || defined(_LP64) || defined(__LP64__) || defined(_WIN64) ||\
   defined(__x86_64__) || defined(_M_X64) ||\
   defined(__ia64) || defined(_M_IA64) ||\
@@ -288,6 +405,7 @@ typedef int ng_result_t;
 #include "nanohttp-lfq.h"
 #include "nanohttp-lcore.h"
 #include "nanohttp-vsprintf.h"
+#include "nanohttp-ctype.h"
 
 #define ng_snprintf   __ng_snprintf
 #define ng_vsnprintf  __ng_vsnprintf
@@ -295,20 +413,35 @@ typedef int ng_result_t;
 #define ng_vfprintf   __ng_vfprintf
 #define ng_strstr     strstr
 
+#define ng_strncpy(s1,s2,l) strncpy(s1,s2,l)
+#define ng_strlen(s)        strlen(s)
+#define ng_strcmp(s1,s2)    strcmp(s1,s2)
+#define ng_memmove(d,s,l)   memmove(d,s,l)
+
+#if defined(__AVX__) || defined(__AVX2__) || defined(__AVX512F__)
+#include <immintrin.h>  // For AVX2 intrinsics
+#include "mem/rte_memcpy.h"
+#include "mem/rte_memcmp.h"
+#include "mem/rte_memset.h"
+#include "mem/rte_memeq.h"
+#include "mem/rte_memchr.h"
+#include "mem/rte_strieq.h"
+#else
+#define ng_memeq (d,s,l)    (!memcmp(d,s,l))
+#define ng_memcpy(d,s,l)    ( memcpy(d,s,l))
+#define ng_memcmp(d,s,l)    ( memcmp(d,s,l))
+#define ng_memset(d,s,l)    ( memset(d,s,l))
+#define ng_memchr(d,c,l)    ( memchr(d,c,l))
+#endif
+
+#ifndef ng_strnocasecmp
 #ifdef WIN32
 #define ng_strnocasecmp ng_local_strncasecmp
 #else
 #define ng_strnocasecmp strncasecmp
 #endif
+#endif
 
-#define ng_strncpy(s1,s2,l) strncpy(s1,s2,l)
-#define ng_strcmp(s1,s2)    strcmp(s1,s2)
-#define ng_strlen(s)        strlen(s)
-#define ng_memmove(d,s,l)   memmove(d,s,l)
-#define ng_memcpy(d,s,l)    memcpy(d,s,l)
-#define ng_memcmp(d,s,l)    memcmp(d,s,l)
-#define ng_memset(d,s,l)    memset(d,s,l)
-#define ng_memchr(d,c,l)    memchr(d,c,l)
 #define ng_bzero(s,l)       ng_memset(s, 0, l)
 
 /* true if x is a power of 2 */

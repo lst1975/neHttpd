@@ -104,8 +104,8 @@ objects = \
 	nanohttp-vsprintf.o \
 	nanohttp-urlencode.o
 
-depends:= $(objects:.o=.d)
-sources:= $(objects:.o=.c)
+depends:=$(objects:.o=.d)
+sources:=$(objects:.o=.c)
 
 -include dtoa-ryu/Makefile
 
@@ -115,13 +115,34 @@ all: httpd
 
 -include $(depends)
 
-CFLAGS = -Wall -O3 -g3 -I.
-LDFLAGS = 
-
 # Check if __CYGWIN__ is defined and set a Makefile variable
 CYGWIN_CHECK := $(shell echo | gcc -dM -E - | grep -q "__CYGWIN__" && echo yes || echo no)
 MINGW64_CHECK := $(shell echo | gcc -dM -E - | grep -q "__MINGW64__" && echo yes || echo no)
 MINGW32_CHECK := $(shell echo | gcc -dM -E - | grep -q "__MINGW32__" && echo yes || echo no)
+AVX_CHECK := $(shell echo | gcc -dM -E - | grep -q "__AVX__" && echo yes || echo no)
+AVX2_CHECK := $(shell echo | gcc -dM -E - | grep -q "__AVX2__" && echo yes || echo no)
+AVX512F_CHECK := $(shell echo | gcc -dM -E - | grep -q "__AVX512f__" && echo yes || echo no)
+X86_64_CHECK := $(shell echo | gcc -dM -E - | grep -q "__x86_64__" && echo yes || echo no)
+
+ifeq ($(AVX512F_CHECK),yes)
+ARCH_MACHINE+=-mavx512f
+endif
+
+ifeq ($(AVX2_CHECK),yes)
+ARCH_MACHINE+=-mavx2
+endif
+
+ifeq ($(AVX_CHECK),yes)
+ARCH_MACHINE+=-mavx
+endif
+
+ifeq ($(X86_64_CHECK),yes)
+ARCH_MACHINE+=-mavx2
+-include mem/Makefile
+endif
+
+CFLAGS = $(ARCH_MACHINE) -Wall -O3 -g3 -I.
+LDFLAGS = 
 
 ifeq ($(CYGWIN_CHECK),yes)
 LDLIB = -lws2_32 -lc

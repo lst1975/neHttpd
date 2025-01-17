@@ -1121,6 +1121,11 @@ main(int argc, char **argv)
 
   nanohttp_log_set_loglevel(_nanoConfig_HTTPD_LOG_LEVEL);
     
+  if (memchr_test()<0)
+  {
+    goto error0;
+  }
+  
   result = httpd_parse_arguments(argc, argv);
   if (result == HTTP_INIT_PARSE_RESULT_DAEMON)
   {

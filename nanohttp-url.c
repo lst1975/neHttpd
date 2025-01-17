@@ -216,7 +216,7 @@ int ng_urlorPath_normalize(ng_block_s *url)
 {
   char *token;
   int top = -1;
-  char *end = url->buf + url->len;
+  const char *end = url->buf + url->len;
   struct _topp *t;
   char *p = url->buf;
   struct _topp *stack; // Stack to hold path components
@@ -312,7 +312,6 @@ int ng_urlorPath_normalize(ng_block_s *url)
 
   ng_free(stack);
   url->len = p - url->cptr;
-  *p = '\0';
 
   return ng_ERR_NONE;
 }
