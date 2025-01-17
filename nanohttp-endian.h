@@ -100,9 +100,9 @@
  * Do not use this function directly. The preferred function is rte_bswap64().
  */
 /* 64-bit mode */
-static inline uint64_t rte_arch_bswap64(uint64_t _x)
+static inline ng_uint64_t rte_arch_bswap64(ng_uint64_t _x)
 {
-	uint64_t x = _x;
+	ng_uint64_t x = _x;
 	asm volatile ("bswap %[x]"
 		      : [x] "+r" (x)
 		      );
@@ -117,9 +117,9 @@ static inline uint64_t rte_arch_bswap64(uint64_t _x)
  *
  * Do not use this function directly. The preferred function is rte_bswap16().
  */
-static inline uint16_t rte_arch_bswap16(uint16_t _x)
+static inline uint16_t rte_arch_bswap16(ng_uint16_t _x)
 {
-	uint16_t x = _x;
+	ng_uint16_t x = _x;
 	asm volatile ("xchgb %b[x1],%h[x2]"
 		      : [x1] "=Q" (x)
 		      : [x2] "0" (x)
@@ -132,9 +132,9 @@ static inline uint16_t rte_arch_bswap16(uint16_t _x)
  *
  * Do not use this function directly. The preferred function is rte_bswap32().
  */
-static inline uint32_t rte_arch_bswap32(uint32_t _x)
+static inline ng_uint32_t rte_arch_bswap32(ng_uint32_t _x)
 {
-	uint32_t x = _x;
+	ng_uint32_t x = _x;
 	asm volatile ("bswap %[x]"
 		      : [x] "+r" (x)
 		      );
@@ -146,11 +146,11 @@ static inline uint32_t rte_arch_bswap32(uint32_t _x)
  * Do not use this function directly. The preferred function is rte_bswap64().
  */
 /* Compat./Leg. mode */
-static inline uint64_t rte_arch_bswap64(uint64_t x)
+static inline ng_uint64_t rte_arch_bswap64(uint64_t x)
 {
-	uint64_t ret = 0;
-	ret |= ((uint64_t)rte_arch_bswap32(x & 0xffffffffUL) << 32);
-	ret |= ((uint64_t)rte_arch_bswap32((x >> 32) & 0xffffffffUL));
+	ng_uint64_t ret = 0;
+	ret |= ((ng_uint64_t)rte_arch_bswap32(x & 0xffffffffUL) << 32);
+	ret |= ((ng_uint64_t)rte_arch_bswap32((x >> 32) & 0xffffffffUL));
 	return ret;
 }
 #define RTE_ARCH_BSWAP16 1
