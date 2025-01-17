@@ -856,21 +856,21 @@ rte_memcmp(const void *dst, const void *src, ng_size_t n)
   s = (const ng_uint8_t *)src + n;
   while (e - d >= 8)
   {
-    if (*(const uint64_t *)d != *(const uint64_t *)s)
+    if (*(const ng_uint64_t *)d != *(const ng_uint64_t *)s)
       return rte_memcmp8(d,s,e);
     d += 8;
     s += 8;
   }
   while (e - d >= 4)
   {
-    if (*(const uint32_t *)d != *(const uint32_t *)s)
+    if (*(const ng_uint32_t *)d != *(const ng_uint32_t *)s)
       return rte_memcmp8(d,s,e);
     d += 4;
     s += 4;
   }
   while (e - d >= 2)
   {
-    if (*(const uint16_t *)d != *(const uint16_t *)s)
+    if (*(const ng_uint16_t *)d != *(const ng_uint16_t *)s)
       return rte_memcmp8(d,s,e);
     d += 2;
     s += 2;
