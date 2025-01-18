@@ -61,6 +61,7 @@
  **************************************************************************************
  */
 #include "nanohttp-config.h"
+#include "nanohttp-defs.h"
 #include "nanohttp-mem.h"
 #include "nanohttp-list.h"
 #include "nanohttp-ring.h"
@@ -214,7 +215,7 @@ clean0:
 #if __NHTTP_MEM_DEBUG  
 static const char *file_base_name(const char *file)
 {
-  const char *fp = strrchr(file, '/');
+  const char *fp = ng_memrchr(file, '/', ng_strlen(file));
   if (fp == NULL)
     fp = file;
   return fp;

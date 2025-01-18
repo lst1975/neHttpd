@@ -425,6 +425,7 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #include "mem/rte_memset.h"
 #include "mem/rte_memeq.h"
 #include "mem/rte_memchr.h"
+#include "mem/rte_memrchr.h"
 #include "mem/rte_strieq.h"
 #else
 #define ng_memeq (d,s,l)    (!memcmp(d,s,l))

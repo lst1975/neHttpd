@@ -117,7 +117,7 @@ nanohttp_dir_init(const char *pfile)
   }
   
   log_debug("Current path: %s", pwd);
-  char *p = strrchr(pwd, __PATH_DLIM);
+  char *p = ng_memrchr(pwd, __PATH_DLIM, ng_strlen(pwd));
   if (p == NULL)
   {
     ng_free(d);
@@ -177,9 +177,10 @@ nanohttp_dir_init(const char *pfile)
   }
 
   log_debug("Current path: %s", pwd);
-  const char *p = strrchr(pfile, __PATH_DLIM);
+  const char *p = ng_memrchr(pfile, __PATH_DLIM, ng_strlen(pfile));
   if (p == NULL)
   {
+    log_debug("################: %s", pwd);
     ng_free(d);
     log_error("bad parameter pfile: %s", pfile);
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_INVAL,
