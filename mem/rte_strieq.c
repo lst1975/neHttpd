@@ -102,6 +102,11 @@ int memrchr_test(void)
   return 0;
 }
 
+static char *memmove_wrap(char *dst, const char *c, int len)
+{
+  return ng_memmove(dst,c,len);
+}
+
 int memmove_test(void)
 {
   char buf[1024];
@@ -109,23 +114,25 @@ int memmove_test(void)
   const char *p = M_TEST;
   
   ng_memcpy(buf, M_TEST, len);
-  
+
   for (int i=0;i<len;i++)
   {
-    ng_memmove(buf, buf+i, len - i);
-    if (!ng_memeq(buf,p+i,len-i))
+    ng_memcpy(buf, M_TEST, len);
+    memmove_wrap(buf+len/2, buf+len-i, RTE_MIN(i,len/2));
+    if (!ng_memeq(buf+len/2,p+len-i,RTE_MIN(i,len/2)))
     {
-      log_error("memmove_test failed");
+      log_error("memmove_test failed %d", i);
       return -1;
     }
   }
 
   for (int i=0;i<len;i++)
   {
-    ng_memmove(buf+len, buf+len-i, i);
-    if (!ng_memeq(buf+len,p+len-i,i))
+    ng_memcpy(buf, M_TEST, len);
+    ng_memmove(buf, buf+i, len - i);
+    if (!ng_memeq(buf,p+i,len-i))
     {
-      log_error("memmove_test failed");
+      log_error("memmove_test failed %d", i);
       return -1;
     }
   }

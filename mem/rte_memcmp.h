@@ -78,6 +78,7 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
       ((const struct rte_uint64_alias *)src)->val)
       return dst;
     dst += 8;
+    src += 8;
   }
 
   if (n & 4) {
@@ -85,6 +86,7 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
       ((const struct rte_uint32_alias *)src)->val)
       return dst;
     dst += 4;
+    src += 4;
   }
 
   if (n & 2) {
@@ -92,6 +94,7 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
       ((const struct rte_uint16_alias *)src)->val)
       return dst;
     dst += 2;
+    src += 2;
   }
 
   if (n & 1)
