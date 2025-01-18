@@ -79,8 +79,9 @@ rte_memchr15_or_less(const ng_uint8_t *dst,
     xmm2 = _mm_cmpeq_epi8(*((const __m128i *)src), xmm1);
     xmm0 = _mm_cmpeq_epi8(memchr_const__C.A128,xmm2);
     mask = _mm_movemask_epi8(xmm0);
-    if (!mask) return NULL;
-    return dst + __builtin_ctz(mask);
+    if (mask) 
+      return dst + __builtin_ctz(mask);
+    dst += 8;
   }
 
   if (n & 4) {
@@ -89,8 +90,9 @@ rte_memchr15_or_less(const ng_uint8_t *dst,
     xmm2 = _mm_cmpeq_epi8(*((const __m128i *)src), xmm1);
     xmm0 = _mm_cmpeq_epi8(memchr_const__C.A128,xmm2);
     mask = _mm_movemask_epi8(xmm0);
-    if (!mask) return NULL;
-    return dst + __builtin_ctz(mask);
+    if (mask)
+      return dst + __builtin_ctz(mask);
+    dst += 4;
   }
 
   if (n & 2) {
@@ -98,6 +100,7 @@ rte_memchr15_or_less(const ng_uint8_t *dst,
       return dst;
     if (dst[1] == src[0])
       return dst+1;
+    dst += 2;
   }
 
   if (n & 1)

@@ -68,40 +68,52 @@ extern struct memrchr_const memrchr_const__C;
  * Use with n <= 15.
  */
 static __rte_always_inline const ng_uint8_t *
-rte_memrchr15_or_less(const ng_uint8_t *dst, const ng_uint8_t *src, 
-  ng_size_t n)
+rte_memrchr15_or_less(const ng_uint8_t *dst, 
+  const ng_uint8_t *src, ng_size_t n)
 {
   ng_uint32_t mask;
 
-  if (n & 8) {
+  if (n & 8) 
+  {
     __m128i xmm0,xmm1,xmm2;
-    xmm1 = _mm_set1_epi64(*(__m64 *)(dst-8));
+    xmm1 = _mm_set1_epi64(*(__m64 *)(dst - 8));
     xmm2 = _mm_cmpeq_epi8(*((const __m128i *)src), xmm1);
     xmm0 = _mm_cmpeq_epi8(memrchr_const__C.A128,xmm2);
     mask = _mm_movemask_epi8(xmm0);
-    if (!mask) return NULL;
-    return dst - __builtin_clz(mask);
+    if (mask)
+    {
+      int clz = __builtin_clz(mask) - 24;
+      return dst - clz - 1;
+    }
+    dst -= 8;
   }
 
-  if (n & 4) {
+  if (n & 4) 
+  {
     __m128i xmm0,xmm1,xmm2;
-    xmm1 = _mm_set1_epi32(*(int *)(dst-4));
+    xmm1 = _mm_set1_epi32(*(int *)(dst - 4));
     xmm2 = _mm_cmpeq_epi8(*((const __m128i *)src), xmm1);
     xmm0 = _mm_cmpeq_epi8(memrchr_const__C.A128,xmm2);
     mask = _mm_movemask_epi8(xmm0);
-    if (!mask) return NULL;
-    return dst - __builtin_clz(mask);
+    if (mask)
+    {
+      int clz = __builtin_clz(mask) - 28;
+      return dst - clz - 1;
+    }
+    dst -= 4;
   }
 
-  if (n & 2) {
+  if (n & 2) 
+  {
     if (dst[-1] == src[0])
-      return dst-1;
+      return dst - 1;
     if (dst[-2] == src[0])
-      return dst-2;
+      return dst - 2;
+    dst -= 2;
   }
 
   if (n & 1)
-    if (*(const ng_uint8_t *)dst[-1] == *(const ng_uint8_t *)src)
+    if (dst[-1] == *src)
       return dst - 1;
 
   return NULL;
@@ -120,7 +132,8 @@ rte_memrchr16(const ng_uint8_t *dst, const ng_uint8_t *src)
   xmm0 = _mm_cmpeq_epi8(memrchr_const__C.A128,xmm2);
   ng_uint32_t mask = _mm_movemask_epi8(xmm0);
   if (!mask) return NULL;
-  return dst - 16 + __builtin_clz(mask);
+  int clz = __builtin_clz(mask) - 16;
+  return dst - clz - 1;
 }
 
 /**
@@ -138,12 +151,13 @@ rte_memrchr32(const ng_uint8_t *dst, const ng_uint8_t *src)
   ymm0 = _mm256_cmpeq_epi8(memrchr_const__C.A256,ymm2);
   mask = _mm256_movemask_epi8(ymm0);
   if (!mask) return NULL;
-  return dst - 32 + __builtin_clz(mask);
+  int clz = __builtin_clz(mask);
+  return dst - clz - 1;
 #else /* SSE implementation */
   const ng_uint8_t *ret;
-  ret = rte_memrchr16((const ng_uint8_t *)dst - 0, src);
+  ret = rte_memrchr16(dst - 0 * 16, src);
   if (ret != NULL) return ret;
-  return rte_memrchr16((const ng_uint8_t *)dst - 16, src);
+  return rte_memrchr16(dst - 1 * 16, src);
 #endif
 }
 
@@ -161,12 +175,13 @@ rte_memrchr64(const ng_uint8_t *dst, const ng_uint8_t *src)
   zmm0 = _mm512_cmpeq_epi8(memrchr_const__C.A512,zmm2);
   ng_uint64_t mask = _mm512_movemask_epi8(zmm0);
   if (!mask) return NULL;
-  return dst - 64 + __builtin_clzll(mask);
+  int clz = __builtin_clzll(mask);
+  return dst - clz - 1;
 #else /* AVX2, AVX & SSE implementation */
   const ng_uint8_t *ret;
-  ret = rte_memrchr32((const ng_uint8_t *)dst - 0 * 32, src);
+  ret = rte_memrchr32(dst - 0 * 32, src);
   if (ret != NULL) return ret;
-  return rte_memrchr32((const ng_uint8_t *)dst - 1 * 32, src);
+  return rte_memrchr32(dst - 1 * 32, src);
 #endif
 }
 
@@ -204,13 +219,15 @@ rte_memrchr256(const ng_uint8_t *dst, const ng_uint8_t *src)
 
 #define ALIGNMENT_MASK 0x3F
 
-#define __m512_LOAD_MEMRCHR(i) do {\
-  md = dst - (i << 6); \
-  zmm1 = _mm512_loadu_si512((const void *)md); \
+#define __m512_LOAD_MEMRCHR(i) do {                         \
+  zmm1 = _mm512_loadu_si512((const void *)dst - (i << 6));  \
   zmm2 = _mm512_cmpeq_epi8(*((const __m512i *)src), zmm1); \
-  zmm0 = _mm512_cmpeq_epi8(memrchr_const__C.A512,zmm2); \
-  uint64_t mask = _mm512_movemask_epi8(zmm0); \
-  if (mask) return md + __builtin_clzll(mask); \
+  zmm0 = _mm512_cmpeq_epi8(memrchr_const__C.A512,zmm2);     \
+  uint64_t mask = _mm512_movemask_epi8(zmm0);               \
+  if (mask) {                                               \
+    int clz = __builtin_clzll(mask);                        \
+    return dst - clz - 1;                                   \
+  }                                                         \
 }while(0)
 
 /**
@@ -218,7 +235,8 @@ rte_memrchr256(const ng_uint8_t *dst, const ng_uint8_t *src)
  * locations should not overlap.
  */
 static __rte_always_inline const ng_uint8_t *
-rte_memrchr128blocks(const ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
+rte_memrchr128blocks(const ng_uint8_t *dst, 
+  const ng_uint8_t *src, ng_size_t n)
 {
   __m512i zmm0, zmm1, zmm2;
   ng_uint64_t mask;
@@ -226,7 +244,7 @@ rte_memrchr128blocks(const ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
 
   while (n >= 128) 
   {
-    n -= 128;
+    n   -= 128;
     __m512_LOAD_MEMRCHR(0);
     __m512_LOAD_MEMRCHR(1);
     dst -= 128;
@@ -240,13 +258,14 @@ rte_memrchr128blocks(const ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
  * locations should not overlap.
  */
 static __rte_always_inline const ng_uint8_t *
-rte_memrchr512blocks(const ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
+rte_memrchr512blocks(const ng_uint8_t *dst, 
+  const ng_uint8_t *src, ng_size_t n)
 {
   __m512i zmm0, zmm1;
 
   while (n >= 512) 
   {
-    n -= 512;
+    n   -= 512;
     __m512_LOAD_MEMRCHR(0);
     __m512_LOAD_MEMRCHR(1);
     __m512_LOAD_MEMRCHR(2);
@@ -284,6 +303,7 @@ rte_memrchr_generic(const ng_uint8_t *dst,
   {
     return rte_memrchr32(dst, src);
   }
+  
   if (n <= 32) 
   {
     ret = rte_memrchr16(dst, src);
@@ -292,32 +312,37 @@ rte_memrchr_generic(const ng_uint8_t *dst,
       return ret; /* avoid (harmless) duplicate copy */
     return rte_memrchr16(dst + (16 - n), src);
   }
+  
   if (__rte_constant(n) && n == 64) 
   {
     return rte_memrchr64(dst, src);
   }
+  
   if (n <= 64) 
   {
     ret = rte_memrchr32(dst, src);
     if (ret != NULL) return ret;
     return rte_memrchr32(dst + (32 - n), src);
   }
+  
   if (n <= 512) 
   {
     if (n >= 256) 
     {
-      n -= 256;
+      n   -= 256;
       ret = rte_memrchr256(dst, src);
       if (ret != NULL) return ret;
       dst -= 256;
     }
+    
     if (n >= 128) 
     {
-      n -= 128;
+      n   -= 128;
       ret = rte_memrchr128(dst, src);
       if (ret != NULL) return ret;
       dst -= 128;
     }
+    
 COPY_BLOCK_128_BACK63:
     if (n > 64) 
     {
@@ -325,8 +350,10 @@ COPY_BLOCK_128_BACK63:
       if (ret != NULL) return ret;
       return rte_memrchr64(dst + (64 - n), src);
     }
+    
     if (n > 0)
       return rte_memrchr64(dst + (64 - n), src);
+    
     return NULL;
   }
 
@@ -334,8 +361,9 @@ COPY_BLOCK_128_BACK63:
    * Make store aligned when copy size exceeds 512 bytes
    */
   dstofss = ((ng_uintptr_t)dst & 0x3F);
-  if (dstofss > 0) {
-    n -= dstofss;
+  if (dstofss > 0) 
+  {
+    n   -= dstofss;
     ret = rte_memrchr64(dst, src);
     if (ret != NULL) return ret;
     dst -= dstofss;
@@ -358,7 +386,8 @@ COPY_BLOCK_128_BACK63:
    * Use copy block function for better instruction order control,
    * which is important when load is unaligned.
    */
-  if (n >= 128) {
+  if (n >= 128) 
+  {
     ret = rte_memrchr128blocks(dst, src, n);
     if (ret != NULL) return ret;
     bits = n;
@@ -381,12 +410,15 @@ COPY_BLOCK_128_BACK63:
 
 #define ALIGNMENT_MASK 0x1F
 
-#define __m256_LOAD_MEMRCHR(dst) do {\
-  ymm1 = _mm256_loadu_si256((const void *)dst); \
+#define __m256_LOAD_MEMRCHR(dst) do {                       \
+  ymm1 = _mm256_loadu_si256((const void *)dst - 32);        \
   ymm2 = _mm256_cmpeq_epi8(*((const __m256i *)src), ymm1); \
-  ymm0 = _mm256_cmpeq_epi8(memrchr_const__C.A256, ymm2); \
-  mask = _mm256_movemask_epi8(ymm0); \
-  if (mask) return dst + __builtin_ctz(mask); \
+  ymm0 = _mm256_cmpeq_epi8(memrchr_const__C.A256, ymm2);    \
+  mask = _mm256_movemask_epi8(ymm0);                        \
+  if (mask) {                                               \
+    int clz = __builtin_clz(mask);                          \
+    return dst - clz - 1;                                   \
+  }                                                         \
 }while(0)
 
 /**
@@ -399,8 +431,9 @@ rte_memrchr128blocks(const ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
   __m256i ymm0, ymm1, ymm2;
   ng_uint32_t mask;
   
-  while (n >= 128) {
-    n -= 128;
+  while (n >= 128) 
+  {
+    n   -= 128;
     __m256_LOAD_MEMRCHR(dst -  0);
     __m256_LOAD_MEMRCHR(dst - 32);
     __m256_LOAD_MEMRCHR(dst - 64);
@@ -422,50 +455,66 @@ rte_memrchr_generic(const ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_memrchr15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 256 bytes
    */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     return rte_memrchr32(dst, src);
   }
-  if (n <= 32) {
+  
+  if (n <= 32) 
+  {
     ret = rte_memrchr16(dst, src);
     if (ret != NULL) return ret;
     if (__rte_constant(n) && n == 16)
       return ret; /* avoid (harmless) duplicate copy */
     return rte_memrchr16(dst + (16 - n), src);
   }
-  if (n <= 64) {
+
+  if (n <= 64) 
+  {
     ret = rte_memrchr32(dst, src);
     if (ret != NULL) return ret;
     return rte_memrchr32(dst + (32 - n), src);
   }
-  if (n <= 256) {
-    if (n >= 128) {
+  
+  if (n <= 256) 
+  {
+    if (n >= 128) 
+    {
       n -= 128;
       ret = rte_memrchr128(dst, src);
       if (ret != NULL) return ret;
       dst -= 128;
     }
+    
 COPY_BLOCK_128_BACK31:
-    if (n >= 64) {
+    if (n >= 64) 
+    {
       n -= 64;
       ret = rte_memrchr64(dst, src);
       if (ret != NULL) return ret;
       dst -= 64;
     }
-    if (n > 32) {
+    
+    if (n > 32) 
+    {
       ret = rte_memrchr32(dst, src);
       if (ret != NULL) return ret;
       return rte_memrchr32(dst + (32 - n), src);
     }
-    if (n > 0) {
+    
+    if (n > 0) 
+    {
       return rte_memrchr32(dst + (32 - n), src);
     }
+    
     return NULL;
   }
 
@@ -473,7 +522,8 @@ COPY_BLOCK_128_BACK31:
    * Make store aligned when copy size exceeds 256 bytes
    */
   dstofss = (ng_uintptr_t)dst & 0x1F;
-  if (dstofss > 0) {
+  if (dstofss > 0) 
+  {
     n -= dstofss;
     ret = rte_memrchr32(dst, src);
     if (ret != NULL) return ret;
@@ -518,21 +568,25 @@ rte_memrchr_generic(const ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_memrchr15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 512 bytes
    */
-  if (n <= 32) {
+  if (n <= 32) 
+  {
     ret = rte_memrchr16(dst, src);
     if (ret != NULL) return ret;
     if (__rte_constant(n) && n == 16)
       return ret; /* avoid (harmless) duplicate copy */
     return rte_memrchr16(dst + (16 - n), src);
   }
-  if (n <= 64) {
+
+  if (n <= 64) 
+  {
     ret = rte_memrchr32(dst, src);
     if (ret != NULL) return ret;
     if (n > 48)
@@ -542,47 +596,63 @@ rte_memrchr_generic(const ng_uint8_t *dst,
     }
     return rte_memrchr16(dst + (16 - n), src);
   }
-  if (n <= 128) {
+  
+  if (n <= 128) 
+  {
     goto COPY_BLOCK_128_BACK15;
   }
-  if (n <= 512) {
-    if (n >= 256) {
-      n -= 256;
+  
+  if (n <= 512) 
+  {
+    if (n >= 256) 
+    {
+      n   -= 256;
       ret = rte_memrchr128(dst, src);
       if (ret != NULL) return ret;
       ret = rte_memrchr128(dst - 128, src);
       if (ret != NULL) return ret;
       dst -= 256;
     }
+    
 COPY_BLOCK_255_BACK15:
-    if (n >= 128) {
-      n -= 128;
+    if (n >= 128) 
+    {
+      n   -= 128;
       ret = rte_memrchr128(dst, src);
       if (ret != NULL) return ret;
       dst -= 128;
     }
+    
 COPY_BLOCK_128_BACK15:
-    if (n >= 64) {
-      n -= 64;
+    if (n >= 64) 
+    {
+      n   -= 64;
       ret = rte_memrchr64(dst, src);
       if (ret != NULL) return ret;
       dst -= 64;
     }
+    
 COPY_BLOCK_64_BACK15:
-    if (n >= 32) {
-      n -= 32;
+    if (n >= 32) 
+    {
+      n   -= 32;
       ret = rte_memrchr32(dst, src);
       if (ret != NULL) return ret;
       dst -= 32;
     }
-    if (n > 16) {
+
+    if (n > 16) 
+    {
       ret = rte_memrchr16(dst, src);
       if (ret != NULL) return ret;
       return rte_memrchr16(dst + (16 - n), src);
     }
-    if (n > 0) {
+
+    if (n > 0) 
+    {
       return rte_memrchr16(dst + (16 - n), src);
     }
+    
     return NULL;
   }
 
@@ -595,7 +665,7 @@ COPY_BLOCK_64_BACK15:
   dstofss = (ng_uintptr_t)dst & 0x0F;
   if (dstofss > 0) 
   {
-    n -= dstofss;
+    n   -= dstofss;
     ret = rte_memrchr32(dst, src);
     if (ret != NULL) return ret;
     dst -= dstofss;
@@ -607,7 +677,8 @@ COPY_BLOCK_64_BACK15:
   /**
    * Copy 256-byte blocks
    */
-  for (; n >= 256; n -= 256) {
+  for (; n >= 256; n -= 256) 
+  {
     ret = rte_memrchr256(dst, src);
     if (ret != NULL) return ret;
     dst -= 256;
@@ -628,16 +699,19 @@ rte_memrchr_aligned(const ng_uint8_t *dst,
   const ng_uint8_t *ret;
   
   /* Copy size < 16 bytes */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_memrchr15_or_less(dst, src, n);
   }
 
   /* Copy 16 <= size <= 32 bytes */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     return rte_memrchr32(dst, src);
   }
   
-  if (n <= 32) {
+  if (n <= 32) 
+  {
     ret = rte_memrchr16(dst, src);
     if (ret != NULL) return ret;
     if (__rte_constant(n) && n == 16)
@@ -646,18 +720,21 @@ rte_memrchr_aligned(const ng_uint8_t *dst,
   }
 
   /* Copy 32 < size <= 64 bytes */
-  if (__rte_constant(n) && n == 64) {
+  if (__rte_constant(n) && n == 64) 
+  {
     return rte_memrchr64(dst, src);
   }
   
-  if (n <= 64) {
+  if (n <= 64) 
+  {
     ret = rte_memrchr32(dst, src);
     if (ret != NULL) return ret;
     return rte_memrchr32(dst + (32 - n), src);
   }
 
   /* Copy 64 bytes blocks */
-  for (; n > 64; n -= 64) {
+  for (; n > 64; n -= 64) 
+  {
     ret = rte_memrchr64(dst, src);
     if (ret != NULL) return ret;
     dst -= 64;
