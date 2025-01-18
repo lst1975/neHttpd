@@ -1004,6 +1004,7 @@ rte_strieq(const void *dst, const void *src, ng_size_t n)
 
 extern int memchr_test(void);
 extern int memrchr_test(void);
+extern int memmove_test(void);
 
 #ifdef __cplusplus
 }

@@ -293,7 +293,8 @@ COPY_BLOCK_128_BACK63:
    * Make store aligned when copy size exceeds 512 bytes
    */
   dstofss = ((ng_uintptr_t)dst & 0x3F);
-  if (dstofss > 0) {
+  if (dstofss > 0) 
+  {
     dstofss = 64 - dstofss;
     n -= dstofss;
     rte_mov64(dst, src);
@@ -318,7 +319,8 @@ COPY_BLOCK_128_BACK63:
    * Use copy block function for better instruction order control,
    * which is important when load is unaligned.
    */
-  if (n >= 128) {
+  if (n >= 128) 
+  {
     rte_mov128blocks(dst, src, n);
     bits = n;
     n &= 127;
@@ -350,21 +352,18 @@ rte_mov128blocks(ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
 {
   __m256i ymm0, ymm1, ymm2, ymm3;
 
-  while (n >= 128) {
+  while (n >= 128) 
+  {
     ymm0 = _mm256_loadu_si256((const __m256i *)(const void *)(src + 0 * 32));
     n -= 128;
     ymm1 = _mm256_loadu_si256((const __m256i *)(const void *)(src + 1 * 32));
     ymm2 = _mm256_loadu_si256((const __m256i *)(const void *)(src + 2 * 32));
     ymm3 = _mm256_loadu_si256((const __m256i *)(const void *)(src + 3 * 32));
     src += 128;
-    _mm256_storeu_si256((__m256i *)(void *)
-            ((ng_uint8_t *)dst + 0 * 32), ymm0);
-    _mm256_storeu_si256((__m256i *)(void *)
-            ((ng_uint8_t *)dst + 1 * 32), ymm1);
-    _mm256_storeu_si256((__m256i *)(void *)
-            ((ng_uint8_t *)dst + 2 * 32), ymm2);
-    _mm256_storeu_si256((__m256i *)(void *)
-            ((ng_uint8_t *)dst + 3 * 32), ymm3);
+    _mm256_storeu_si256((__m256i *)(void *)(dst + 0 * 32), ymm0);
+    _mm256_storeu_si256((__m256i *)(void *)(dst + 1 * 32), ymm1);
+    _mm256_storeu_si256((__m256i *)(void *)(dst + 2 * 32), ymm2);
+    _mm256_storeu_si256((__m256i *)(void *)(dst + 3 * 32), ymm3);
     dst += 128;
   }
 }
@@ -380,49 +379,64 @@ rte_memcpy_generic(ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_mov15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 256 bytes
    */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     rte_mov32(dst, src);
     return ret;
   }
-  if (n <= 32) {
+
+  if (n <= 32) 
+  {
     rte_mov16(dst, src);
     if (__rte_constant(n) && n == 16)
       return ret; /* avoid (harmless) duplicate copy */
     rte_mov16(dst - 16 + n, src - 16 + n);
     return ret;
   }
-  if (n <= 64) {
+  
+  if (n <= 64) 
+  {
     rte_mov32(dst, src);
     rte_mov32(dst - 32 + n, src - 32 + n);
     return ret;
   }
-  if (n <= 256) {
-    if (n >= 128) {
+  
+  if (n <= 256) 
+  {
+    if (n >= 128) 
+    {
       n -= 128;
       rte_mov128(dst, src);
       src += 128;
       dst += 128;
     }
+    
 COPY_BLOCK_128_BACK31:
-    if (n >= 64) {
+    if (n >= 64) 
+    {
       n -= 64;
       rte_mov64(dst, src);
       src += 64;
       dst += 64;
     }
-    if (n > 32) {
+    
+    if (n > 32) 
+    {
       rte_mov32(dst, src);
       rte_mov32(dst - 32 + n, src - 32 + n);
       return ret;
     }
-    if (n > 0) {
+    
+    if (n > 0) 
+    {
       rte_mov32(dst - 32 + n, src - 32 + n);
     }
     return ret;
@@ -432,7 +446,8 @@ COPY_BLOCK_128_BACK31:
    * Make store aligned when copy size exceeds 256 bytes
    */
   dstofss = (ng_uintptr_t)dst & 0x1F;
-  if (dstofss > 0) {
+  if (dstofss > 0) 
+  {
     dstofss = 32 - dstofss;
     n -= dstofss;
     rte_mov32(dst, src);
