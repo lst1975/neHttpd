@@ -55,7 +55,7 @@ rte_memmove(void *dst, const void *src, ng_size_t n);
  * locations should not overlap.
  * Use with n <= 15.
  */
-static __rte_always_inline ng_uint8_t *
+static __rte_always_inline void
 rte_mmov15_or_less(ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
 {
   /**
@@ -72,7 +72,6 @@ rte_mmov15_or_less(ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
     ng_uint16_t val;
   } __rte_packed __rte_may_alias;
 
-  void *ret = dst;
   if (n & 8) {
     ((struct rte_uint64_alias *)(dst-8))->val =
       ((const struct rte_uint64_alias *)(src-8))->val;
@@ -92,9 +91,9 @@ rte_mmov15_or_less(ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
     dst -= 2;
   }
   if (n & 1)
-    *dst = *src;
+    dst[-1] = src[-1];
   
-  return ret;
+  return;
 }
 
 /**
@@ -228,11 +227,10 @@ rte_mmov512blocks(ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
   }
 }
 
-static __rte_always_inline ng_uint8_t *
+static __rte_always_inline void
 rte_memmove_generic(ng_uint8_t *dst, 
   const ng_uint8_t *src, ng_size_t n)
 {
-  void *ret = dst;
   ng_size_t dstofss;
   ng_size_t bits;
 
@@ -248,23 +246,23 @@ rte_memmove_generic(ng_uint8_t *dst,
    */
   if (__rte_constant(n) && n == 32) {
     rte_mmov32(dst, src);
-    return ret;
+    return;
   }
   if (n <= 32) {
     rte_mmov16(dst, src);
     if (__rte_constant(n) && n == 16)
-      return ret; /* avoid (harmless) duplicate copy */
+      return; /* avoid (harmless) duplicate copy */
     rte_mmov16(dst - 16 + n, src - 16 + n);
-    return ret;
+    return;
   }
   if (__rte_constant(n) && n == 64) {
     rte_mmov64(dst, src);
-    return ret;
+    return;
   }
   if (n <= 64) {
     rte_mmov32(dst, src);
     rte_mmov32(dst - 32 + n, src - 32 + n);
-    return ret;
+    return;
   }
   if (n <= 512) {
     if (n >= 256) {
@@ -283,11 +281,11 @@ COPY_BLOCK_128_BACK63:
     if (n > 64) {
       rte_mmov64(dst, src);
       rte_mmov64(dst - 64 + n, src - 64 + n);
-      return ret;
+      return;
     }
     if (n > 0)
       rte_mmov64(dst - 64 + n, src - 64 + n);
-    return ret;
+    return;
   }
 
   /**
@@ -365,11 +363,10 @@ rte_mmov128blocks(ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
   }
 }
 
-static __rte_always_inline ng_uint8_t *
+static __rte_always_inline void
 rte_memmove_generic(ng_uint8_t *dst, 
   const ng_uint8_t *src, ng_size_t n)
 {
-  void *ret = dst;
   ng_size_t dstofss;
   ng_size_t bits;
 
@@ -387,21 +384,21 @@ rte_memmove_generic(ng_uint8_t *dst,
   if (__rte_constant(n) && n == 32) 
   {
     rte_mmov32(dst, src);
-    return ret;
+    return;
   }
   if (n <= 32) 
   {
     rte_mmov16(dst, src);
     if (__rte_constant(n) && n == 16)
-      return ret; /* avoid (harmless) duplicate copy */
-    rte_mmov16(dst + (16 - n), src - 16 + n);
-    return ret;
+      return; /* avoid (harmless) duplicate copy */
+    rte_mmov16(dst + (16 - n), src + (16 - n));
+    return;
   }
   if (n <= 64) 
   {
     rte_mmov32(dst, src);
     rte_mmov32(dst + (32 - n), src + (32 - n));
-    return ret;
+    return;
   }
   
   if (n <= 256) 
@@ -427,12 +424,12 @@ COPY_BLOCK_128_BACK31:
     {
       rte_mmov32(dst, src);
       rte_mmov32(dst + (32 - n), src + (32 - n));
-      return ret;
+      return;
     }
     if (n > 0) {
       rte_mmov32(dst + (32 - n), src + (32 - n));
     }
-    return ret;
+    return;
   }
 
   /**
@@ -565,12 +562,11 @@ COPY_BLOCK_128_BACK31:
     }                                                                  \
 }
 
-static __rte_always_inline ng_uint8_t *
+static __rte_always_inline void
 rte_memmove_generic(ng_uint8_t *dst, 
   const ng_uint8_t *src, ng_size_t n)
 {
   __m128i xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8;
-  void *ret = dst;
   ng_size_t dstofss;
   ng_size_t srcofs;
 
@@ -589,9 +585,9 @@ rte_memmove_generic(ng_uint8_t *dst,
   {
     rte_mmov16(dst, src);
     if (__rte_constant(n) && n == 16)
-      return ret; /* avoid (harmless) duplicate copy */
+      return; /* avoid (harmless) duplicate copy */
     rte_mmov16(dst + (16 - n), src + (16 - n));
-    return ret;
+    return;
   }
   
   if (n <= 64) 
@@ -600,7 +596,7 @@ rte_memmove_generic(ng_uint8_t *dst,
     if (n > 48)
       rte_mmov16(dst - 32, src - 32);
     rte_mmov16(dst + (16 - n), src + (16 - n));
-    return ret;
+    return;
   }
   
   if (n <= 128) 
@@ -649,16 +645,16 @@ COPY_BLOCK_64_BACK15:
     if (n > 16) 
     {
       rte_mmov16(dst, src);
-      rte_mmov16(dst - 16 + n, src - 16 + n);
-      return ret;
+      rte_mmov16(dst + (16 - n), src + (16 - n));
+      return;
     }
     
     if (n > 0) 
     {
-      rte_mmov16(dst - 16 + n, src - 16 + n);
+      rte_mmov16(dst + (16 - n), src + (16 - n));
     }
     
-    return ret;
+    return;
   }
 
   /**
@@ -711,12 +707,10 @@ COPY_BLOCK_64_BACK15:
 
 #endif /* __AVX512F__ */
 
-static __rte_always_inline ng_uint8_t *
+static __rte_always_inline void
 rte_memmove_aligned(ng_uint8_t *dst, 
   const ng_uint8_t *src, ng_size_t n)
 {
-  void *ret = dst;
-
   /* Copy size < 16 bytes */
   if (n < 16) 
   {
@@ -727,30 +721,30 @@ rte_memmove_aligned(ng_uint8_t *dst,
   if (__rte_constant(n) && n == 32) 
   {
     rte_mmov32(dst, src);
-    return ret;
+    return;
   }
   if (n <= 32) 
   {
     rte_mmov16(dst, src);
     if (__rte_constant(n) && n == 16)
-      return ret; /* avoid (harmless) duplicate copy */
+      return; /* avoid (harmless) duplicate copy */
     rte_mmov16(dst + (16 - n), src + (16 - n));
 
-    return ret;
+    return;
   }
 
   /* Copy 32 < size <= 64 bytes */
   if (__rte_constant(n) && n == 64) 
   {
     rte_mmov64(dst, src);
-    return ret;
+    return;
   }
   if (n <= 64) 
   {
     rte_mmov32(dst, src);
     rte_mmov32(dst + (32 - n), src + (32 - n));
 
-    return ret;
+    return;
   }
 
   /* Copy 64 bytes blocks */
@@ -764,7 +758,7 @@ rte_memmove_aligned(ng_uint8_t *dst,
   /* Copy whatever left */
   rte_mmov64(dst + (64 - n), src + (64 - n));
 
-  return ret;
+  return;
 }
 
 static __rte_always_inline void *
@@ -773,21 +767,15 @@ rte_memmove(void *dst, const void *src, ng_size_t n)
         ng_uint8_t *d = (      ng_uint8_t *)dst;
   const ng_uint8_t *s = (const ng_uint8_t *)src;
   
-#if defined __AVX512F__ && defined RTE_MEMMOVE_AVX512
-  if (d > s)
+  if (d >= s + n || d + n <= s)
     return rte_memcpy(dst, src, n);
-#elif defined RTE_MEMMOVE_AVX
-  if (d > s)
-    return rte_memcpy(dst, src, n);
-#else
-  if (d > s)
-    return rte_memcpy(dst, src, n);
-#endif
 
   if (!(((ng_uintptr_t)(d + n) | (ng_uintptr_t)(s + n)) & ALIGNMENT_MASK))
-    return rte_memmove_aligned(d + n, s + n, n);
+    rte_memmove_aligned(d + n, s + n, n);
   else
-    return rte_memmove_generic(d + n, s + n, n);
+    rte_memmove_generic(d + n, s + n, n);
+
+  return dst;
 }
 
 #undef ALIGNMENT_MASK
