@@ -77,7 +77,7 @@
     "                 https://github.com/lst1975/neHttpd                   \n" \
     "                                                                      \n" \
     "        Embedded HTTP Server with Web Configuraion Framework          \n" \
-    "                   Copyright (C) 2022 Songtao Liu                     \n" \
+    "                   Copyright (C) 2025 Songtao Liu                     \n" \
     "                          980680431@qq.com                            \n" \
     "                         All Rights Reserved                          \n" \
     "######################################################################\n"
