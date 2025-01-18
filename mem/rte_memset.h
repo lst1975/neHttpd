@@ -175,7 +175,7 @@ rte_set128blocks(ng_uint8_t *dst, const __m512i src, ng_size_t n)
     n -= 128;
     _mm512_storeu_si512((void *)(dst + 0 * 64), src);
     _mm512_storeu_si512((void *)(dst + 1 * 64), src);
-    dst = dst + 128;
+    dst += 128;
   }
 }
 
@@ -197,7 +197,7 @@ rte_set512blocks(ng_uint8_t *dst, const __m512i src, ng_size_t n)
     _mm512_storeu_si512((void *)(dst + 5 * 64), src);
     _mm512_storeu_si512((void *)(dst + 6 * 64), src);
     _mm512_storeu_si512((void *)(dst + 7 * 64), src);
-    dst = dst + 512;
+    dst += 512;
   }
 }
 
@@ -366,6 +366,7 @@ rte_memset_generic(ng_uint8_t *dst, ng_uint8_t x, ng_size_t n)
     rte_set32(dst, src);
     return ret;
   }
+  
   if (n <= 32) 
   {
     rte_set16(dst, src);
@@ -374,12 +375,14 @@ rte_memset_generic(ng_uint8_t *dst, ng_uint8_t x, ng_size_t n)
     rte_set16(dst - 16 + n,src);
     return ret;
   }
+  
   if (n <= 64) 
   {
     rte_set32(dst, src);
     rte_set32(dst - 32 + n,src);
     return ret;
   }
+  
   if (n <= 256) 
   {
     if (n >= 128) 
@@ -388,6 +391,7 @@ rte_memset_generic(ng_uint8_t *dst, ng_uint8_t x, ng_size_t n)
       rte_set128(dst, src);
       dst += 128;
     }
+    
 COPY_BLOCK_128_BACK31:
     if (n >= 64) 
     {
@@ -395,12 +399,14 @@ COPY_BLOCK_128_BACK31:
       rte_set64(dst, src);
       dst += 64;
     }
+    
     if (n > 32) 
     {
       rte_set32(dst, src);
       rte_set32(dst - 32 + n,src);
       return ret;
     }
+    
     if (n > 0) 
     {
       rte_set32(dst - 32 + n,src);
@@ -500,8 +506,8 @@ COPY_BLOCK_128_BACK31:
  * - __m128i <xmm0> ~ <xmm8> used in SETUNALIGNED_LEFT47_IMM must be pre-defined
  */
 #define SETUNALIGNED_LEFT47(dst, src, len, offset)                   \
-{                                                      \
-    switch (offset) {                                                 \
+{                                                                    \
+    switch (offset) {                                                \
     case 0x01: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x01); break;    \
     case 0x02: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x02); break;    \
     case 0x03: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x03); break;    \
