@@ -416,7 +416,6 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #define ng_strncpy(s1,s2,l) strncpy(s1,s2,l)
 #define ng_strlen(s)        strlen(s)
 #define ng_strcmp(s1,s2)    strcmp(s1,s2)
-#define ng_memmove(d,s,l)   memmove(d,s,l)
 
 #if defined(__AVX__) || defined(__AVX2__) || defined(__AVX512F__)
 #include <immintrin.h>  // For AVX2 intrinsics
@@ -434,6 +433,8 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #define ng_memset(d,s,l)    ( memset(d,s,l))
 #define ng_memchr(d,c,l)    ( memchr(d,c,l))
 #endif
+
+#define ng_memmove(d,s,l)   (memmove(d,s,l))
 
 #ifndef ng_strnocasecmp
 #ifdef WIN32

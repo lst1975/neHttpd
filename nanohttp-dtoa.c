@@ -2915,7 +2915,8 @@ int  dconvstr_ieee754_scan(
   // 6. Convert to binary representation, pack bits up and exit
   if( mantissa != 0 )
   {
-    if(! convert_extended_decimal_to_binary_and_round( mantissa, exponent, &mantissa, &exponent ) )
+    if(! convert_extended_decimal_to_binary_and_round( mantissa, 
+      exponent, &mantissa, &exponent ) )
       return  0;           // internal error
   }
   *output_erange = (! pack_ieee754_double(
