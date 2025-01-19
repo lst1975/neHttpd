@@ -56,7 +56,8 @@ rte_memeq(const void *dst, const void *src, ng_size_t n);
  * Use with n <= 15.
  */
 static __rte_always_inline int
-rte_meq15_or_less(const ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
+rte_meq15_or_less(const ng_uint8_t *dst, 
+  const ng_uint8_t *src, ng_size_t n)
 {
   /**
    * Use the following structs to avoid violating C standard
@@ -266,18 +267,21 @@ rte_memeq_generic(const ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_meq15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 512 bytes
    */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     ret = rte_meq32(dst, src);
     return ret;
   }
-  if (n <= 32) {
+  if (n <= 32) 
+  {
     ret = rte_meq16(dst, src);
     if (!ret) return ret;
     if (__rte_constant(n) && n == 16)
@@ -285,25 +289,31 @@ rte_memeq_generic(const ng_uint8_t *dst,
     ret = rte_meq16(dst - 16 + n, src - 16 + n);
     return ret;
   }
-  if (__rte_constant(n) && n == 64) {
+  if (__rte_constant(n) && n == 64) 
+  {
     ret = rte_meq64(dst, src);
     return ret;
   }
-  if (n <= 64) {
+  if (n <= 64) 
+  {
     ret = rte_meq32(dst, src);
     if (!ret) return ret;
     ret = rte_meq32(dst - 32 + n, src - 32 + n);
     return ret;
   }
-  if (n <= 512) {
-    if (n >= 256) {
+  
+  if (n <= 512) 
+  {
+    if (n >= 256) 
+    {
       n -= 256;
       ret = rte_meq256(dst, src);
       if (!ret) return ret;
       src += 256;
       dst += 256;
     }
-    if (n >= 128) {
+    if (n >= 128) 
+    {
       n -= 128;
       ret = rte_meq128(dst, src);
       if (!ret) return ret;
@@ -311,7 +321,8 @@ rte_memeq_generic(const ng_uint8_t *dst,
       dst += 128;
     }
 COPY_BLOCK_128_BACK63:
-    if (n > 64) {
+    if (n > 64) 
+    {
       ret = rte_meq64(dst, src);
       if (!ret) return ret;
       ret = rte_meq64(dst - 64 + n, src - 64 + n);
@@ -319,6 +330,7 @@ COPY_BLOCK_128_BACK63:
     }
     if (n > 0)
       return rte_meq64(dst - 64 + n, src - 64 + n);
+    
     return 1;
   }
 
@@ -326,7 +338,8 @@ COPY_BLOCK_128_BACK63:
    * Make store aligned when copy size exceeds 512 bytes
    */
   dstofss = ((ng_uintptr_t)dst & 0x3F);
-  if (dstofss > 0) {
+  if (dstofss > 0) 
+  {
     dstofss = 64 - dstofss;
     n -= dstofss;
     ret = rte_meq64(dst, src);
@@ -403,7 +416,8 @@ rte_meq128blocks(const ng_uint8_t *dst,
 {
   __m256i ymm0, ymm1;
 
-  while (n >= 128) {
+  while (n >= 128) 
+  {
     n -= 128;
     __m256_LOAD_MEMEQ(0);
     __m256_LOAD_MEMEQ(1);
@@ -427,17 +441,20 @@ rte_memeq_generic(const ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_meq15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 256 bytes
    */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     return rte_meq32(dst, src);
   }
-  if (n <= 32) {
+  if (n <= 32) 
+  {
     ret = rte_meq16(dst, src);
     if (!ret) return ret;
     if (__rte_constant(n) && n == 16)
@@ -445,14 +462,17 @@ rte_memeq_generic(const ng_uint8_t *dst,
     if (!ret) return ret;
     return rte_meq16(dst - 16 + n, src - 16 + n);
   }
-  if (n <= 64) {
+  if (n <= 64) 
+  {
     ret = rte_meq32(dst, src);
     if (!ret) return ret;
     ret = rte_meq32(dst - 32 + n, src - 32 + n);
     return ret;
   }
-  if (n <= 256) {
-    if (n >= 128) {
+  if (n <= 256) 
+  {
+    if (n >= 128) 
+    {
       n -= 128;
       ret = rte_meq128(dst, src);
       if (!ret) return ret;
@@ -460,22 +480,26 @@ rte_memeq_generic(const ng_uint8_t *dst,
       dst += 128;
     }
 COPY_BLOCK_128_BACK31:
-    if (n >= 64) {
+    if (n >= 64) 
+    {
       n -= 64;
       ret = rte_meq64(dst, src);
       if (!ret) return ret;
       src += 64;
       dst += 64;
     }
-    if (n > 32) {
+    if (n > 32) 
+    {
       ret = rte_meq32(dst, src);
       if (!ret) return ret;
       ret = rte_meq32(dst - 32 + n, src - 32 + n);
       return ret;
     }
-    if (n > 0) {
+    if (n > 0) 
+    {
       return rte_meq32(dst - 32 + n, src - 32 + n);
     }
+    
     return 1;
   }
 
@@ -483,7 +507,8 @@ COPY_BLOCK_128_BACK31:
    * Make store aligned when copy size exceeds 256 bytes
    */
   dstofss = (ng_uintptr_t)dst & 0x1F;
-  if (dstofss > 0) {
+  if (dstofss > 0) 
+  {
     dstofss = 32 - dstofss;
     n -= dstofss;
     ret = rte_meq32(dst, src);
@@ -498,7 +523,7 @@ COPY_BLOCK_128_BACK31:
   ret = rte_meq128blocks(dst, src, n);
   if (!ret) return ret;
   bits = n;
-  n = n & 127;
+  n &= 127;
   bits -= n;
   src += bits;
   dst += bits;
@@ -578,29 +603,29 @@ COPY_BLOCK_128_BACK31:
     dst += 128;                                                                         \
   }                                                                                     \
   tmp = len;                                                                            \
-    len = ((len - 16 + offset) & 127) + 16 - offset;                                    \
+  len = ((len - 16 + offset) & 127) + 16 - offset;                                      \
+  tmp -= len;                                                                           \
+  src += tmp;                                                                           \
+  dst += tmp;                                                                           \
+  if (len >= 32 + 16 - offset) {                                                        \
+    while (len >= 32 + 16 - offset) {                                                   \
+      len -= 32;                                                                        \
+      xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0));        \
+      xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 16));       \
+      xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 32));       \
+      ymm0 = _mm_loadu_si128((__m128i *)(void *)((ng_uint8_t *)dst + 0));               \
+      ymm1 = _mm_loadu_si128((__m128i *)(void *)((ng_uint8_t *)dst + 16));              \
+      MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm0, xmm1, xmm0, offset);                          \
+      MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm1, xmm2, xmm1, offset);                          \
+      src += 32;                                                                        \
+      dst += 32;                                                                        \
+    }                                                                                   \
+    tmp = len;                                                                          \
+    len = ((len - 16 + offset) & 31) + 16 - offset;                                     \
     tmp -= len;                                                                         \
     src += tmp;                                                                         \
     dst += tmp;                                                                         \
-    if (len >= 32 + 16 - offset) {                                                      \
-      while (len >= 32 + 16 - offset) {                                                 \
-        len -= 32;                                                                      \
-        xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0));      \
-        xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 16));     \
-        xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 32));     \
-        ymm0 = _mm_loadu_si128((__m128i *)(void *)((ng_uint8_t *)dst + 0));            \
-        ymm1 = _mm_loadu_si128((__m128i *)(void *)((ng_uint8_t *)dst + 16));           \
-        MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm0, xmm1, xmm0, offset);                        \
-        MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm1, xmm2, xmm1, offset);                        \
-        src += 32;                                                                      \
-        dst += 32;                                                                      \
-      }                                                                                 \
-      tmp = len;                                                                        \
-      len = ((len - 16 + offset) & 31) + 16 - offset;                                   \
-      tmp -= len;                                                                       \
-      src += tmp;                                                                       \
-      dst += tmp;                                                                       \
-    }                                                                                   \
+  }                                                                                     \
 }
 /**
  * Macro for copying unaligned block from one location to another,
@@ -615,8 +640,8 @@ COPY_BLOCK_128_BACK31:
  * - __m128i <xmm0> ~ <xmm8> used in MEQUNALIGNED_LEFT47_IMM must be pre-defined
  */
 #define MEQUNALIGNED_LEFT47(dst, src, len, offset)                   \
-{                                                      \
-    switch (offset) {                                                 \
+{                                                                    \
+    switch (offset) {                                                \
     case 0x01: MEQUNALIGNED_LEFT47_IMM(dst, src, n, 0x01); break;    \
     case 0x02: MEQUNALIGNED_LEFT47_IMM(dst, src, n, 0x02); break;    \
     case 0x03: MEQUNALIGNED_LEFT47_IMM(dst, src, n, 0x03); break;    \
@@ -632,8 +657,8 @@ COPY_BLOCK_128_BACK31:
     case 0x0D: MEQUNALIGNED_LEFT47_IMM(dst, src, n, 0x0D); break;    \
     case 0x0E: MEQUNALIGNED_LEFT47_IMM(dst, src, n, 0x0E); break;    \
     case 0x0F: MEQUNALIGNED_LEFT47_IMM(dst, src, n, 0x0F); break;    \
-    default:;                                                         \
-    }                                                                 \
+    default:;                                                        \
+    }                                                                \
 }
 
 static __rte_always_inline int
@@ -652,21 +677,24 @@ rte_memeq_generic(const ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_meq15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 512 bytes
    */
-  if (n <= 32) {
+  if (n <= 32) 
+  {
     ret = rte_meq16(dst, src);
     if (!ret) return ret;
     if (__rte_constant(n) && n == 16)
       return ret; /* avoid (harmless) duplicate copy */
     return rte_meq16(dst - 16 + n, src - 16 + n);
   }
-  if (n <= 64) {
+  if (n <= 64) 
+  {
     ret = rte_meq32(dst, src);
     if (!ret) return ret;
     if (n > 48)
@@ -676,11 +704,14 @@ rte_memeq_generic(const ng_uint8_t *dst,
     }
     return rte_meq16(dst - 16 + n, src - 16 + n);
   }
-  if (n <= 128) {
+  if (n <= 128) 
+  {
     goto COPY_BLOCK_128_BACK15;
   }
-  if (n <= 512) {
-    if (n >= 256) {
+  if (n <= 512) 
+  {
+    if (n >= 256) 
+    {
       n -= 256;
       ret = rte_meq128(dst, src);
       if (!ret) return ret;
@@ -690,7 +721,8 @@ rte_memeq_generic(const ng_uint8_t *dst,
       dst += 256;
     }
 COPY_BLOCK_255_BACK15:
-    if (n >= 128) {
+    if (n >= 128) 
+    {
       n -= 128;
       ret = rte_meq128(dst, src);
       if (!ret) return ret;
@@ -698,7 +730,8 @@ COPY_BLOCK_255_BACK15:
       dst += 128;
     }
 COPY_BLOCK_128_BACK15:
-    if (n >= 64) {
+    if (n >= 64) 
+    {
       n -= 64;
       ret = rte_meq64(dst, src);
       if (!ret) return ret;
@@ -706,21 +739,25 @@ COPY_BLOCK_128_BACK15:
       dst += 64;
     }
 COPY_BLOCK_64_BACK15:
-    if (n >= 32) {
+    if (n >= 32) 
+    {
       n -= 32;
       ret = rte_meq32(dst, src);
       if (!ret) return ret;
       src += 32;
       dst += 32;
     }
-    if (n > 16) {
+    if (n > 16) 
+    {
       ret = rte_meq16(dst, src);
       if (!ret) return ret;
       return rte_meq16(dst - 16 + n, src - 16 + n);
     }
-    if (n > 0) {
+    if (n > 0) 
+    {
       return rte_meq16(dst - 16 + n, src - 16 + n);
     }
+    
     return 1;
   }
 
@@ -731,7 +768,8 @@ COPY_BLOCK_64_BACK15:
    * backwards access.
    */
   dstofss = (ng_uintptr_t)dst & 0x0F;
-  if (dstofss > 0) {
+  if (dstofss > 0) 
+  {
     dstofss = 16 - dstofss + 16;
     n -= dstofss;
     ret = rte_meq32(dst, src);
@@ -744,11 +782,13 @@ COPY_BLOCK_64_BACK15:
   /**
    * For aligned copy
    */
-  if (srcofs == 0) {
+  if (srcofs == 0) 
+  {
     /**
      * Copy 256-byte blocks
      */
-    for (; n >= 256; n -= 256) {
+    for (; n >= 256; n -= 256) 
+    {
       ret = rte_meq256(dst, src);
       if (!ret) return ret;
       dst += 256;
@@ -781,15 +821,18 @@ rte_memeq_aligned(const ng_uint8_t *dst,
   int ret;
   
   /* Copy size < 16 bytes */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_meq15_or_less(dst, src, n);
   }
 
   /* Copy 16 <= size <= 32 bytes */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     return rte_meq32(dst, src);
   }
-  if (n <= 32) {
+  if (n <= 32) 
+  {
     ret = rte_meq16(dst, src);
     if (!ret) return ret;
     if (__rte_constant(n) && n == 16)
@@ -798,17 +841,20 @@ rte_memeq_aligned(const ng_uint8_t *dst,
   }
 
   /* Copy 32 < size <= 64 bytes */
-  if (__rte_constant(n) && n == 64) {
+  if (__rte_constant(n) && n == 64) 
+  {
     return rte_meq64(dst, src);
   }
-  if (n <= 64) {
+  if (n <= 64) 
+  {
     ret = rte_meq32(dst, src);
     if (!ret) return ret;
     return rte_meq32(dst - 32 + n, src - 32 + n);
   }
 
   /* Copy 64 bytes blocks */
-  for (; n > 64; n -= 64) {
+  for (; n > 64; n -= 64) 
+  {
     ret = rte_meq64(dst, src);
     if (!ret) return ret;
     dst += 64;

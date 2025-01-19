@@ -73,7 +73,8 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
     ng_uint16_t val;
   } __rte_packed __rte_may_alias;
 
-  if (n & 8) {
+  if (n & 8) 
+  {
     if (((const struct rte_uint64_alias *)dst)->val !=
       ((const struct rte_uint64_alias *)src)->val)
       return dst;
@@ -81,7 +82,8 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
     src += 8;
   }
 
-  if (n & 4) {
+  if (n & 4) 
+  {
     if (((const struct rte_uint32_alias *)dst)->val !=
       ((const struct rte_uint32_alias *)src)->val)
       return dst;
@@ -89,7 +91,8 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
     src += 4;
   }
 
-  if (n & 2) {
+  if (n & 2) 
+  {
     if (((const struct rte_uint16_alias *)dst)->val !=
       ((const struct rte_uint16_alias *)src)->val)
       return dst;
@@ -225,12 +228,13 @@ rte_cmp128blocks(const ng_uint8_t *dst,
   const void *md;
   __m512i zmm0, zmm1;
 
-  while (n >= 128) {
+  while (n >= 128) 
+  {
     n -= 128;
     __m512_LOAD_MEMCMP(0);
     __m512_LOAD_MEMCMP(1);
-    src = src + 128;
-    dst = dst + 128;
+    src += 128;
+    dst += 128;
   }
 
   return NULL;
@@ -247,7 +251,8 @@ rte_cmp512blocks(const ng_uint8_t *dst,
   const void *md;
   __m512i zmm0, zmm1;
 
-  while (n >= 512) {
+  while (n >= 512) 
+  {
     n -= 512;
     __m512_LOAD_MEMCMP(0);
     __m512_LOAD_MEMCMP(1);
@@ -257,8 +262,8 @@ rte_cmp512blocks(const ng_uint8_t *dst,
     __m512_LOAD_MEMCMP(5);
     __m512_LOAD_MEMCMP(6);
     __m512_LOAD_MEMCMP(7);
-    src = src + 512;
-    dst = dst + 512;
+    src += 512;
+    dst += 512;
   }
 
   return NULL;
@@ -275,18 +280,22 @@ rte_memcmp_generic(const ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_cmp15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 512 bytes
    */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     ret = rte_cmp32(dst, src);
     return ret;
   }
-  if (n <= 32) {
+  
+  if (n <= 32) 
+  {
     ret = rte_cmp16(dst, src);
     if (ret) return ret;
     if (__rte_constant(n) && n == 16)
@@ -294,40 +303,53 @@ rte_memcmp_generic(const ng_uint8_t *dst,
     ret = rte_cmp16(dst - 16 + n, src - 16 + n);
     return ret;
   }
-  if (__rte_constant(n) && n == 64) {
+  
+  if (__rte_constant(n) && n == 64) 
+  {
     ret = rte_cmp64(dst, src);
     return ret;
   }
-  if (n <= 64) {
+  
+  if (n <= 64) 
+  {
     ret = rte_cmp32(dst, src);
     if (ret) return ret;
     ret = rte_cmp32(dst - 32 + n, src - 32 + n);
     return ret;
   }
-  if (n <= 512) {
-    if (n >= 256) {
+  
+  if (n <= 512) 
+  {
+    if (n >= 256) 
+    {
       n -= 256;
       ret = rte_cmp256(dst, src);
       if (ret) return ret;
       src += 256;
       dst += 256;
     }
-    if (n >= 128) {
+    
+    if (n >= 128) 
+    {
       n -= 128;
       ret = rte_cmp128(dst, src);
       if (ret) return ret;
       src += 128;
       dst += 128;
     }
+    
 COPY_BLOCK_128_BACK63:
-    if (n > 64) {
+    if (n > 64) 
+    {
       ret = rte_cmp64(dst, src);
       if (ret) return ret;
       ret = rte_cmp64(dst - 64 + n, src - 64 + n);
       return ret;
     }
+
     if (n > 0)
       return rte_cmp64(dst - 64 + n, src - 64 + n);
+    
     return NULL;
   }
 
@@ -335,7 +357,8 @@ COPY_BLOCK_128_BACK63:
    * Make store aligned when copy size exceeds 512 bytes
    */
   dstofss = ((ng_uintptr_t)dst & 0x3F);
-  if (dstofss > 0) {
+  if (dstofss > 0) 
+  {
     dstofss = 64 - dstofss;
     n -= dstofss;
     ret = rte_cmp64(dst, src);
@@ -362,7 +385,8 @@ COPY_BLOCK_128_BACK63:
    * Use copy block function for better instruction order control,
    * which is important when load is unaligned.
    */
-  if (n >= 128) {
+  if (n >= 128) 
+  {
     ret = rte_cmp128blocks(dst, src, n);
     if (ret) return ret;
     bits = n;
@@ -413,7 +437,8 @@ rte_cmp128blocks(const ng_uint8_t *dst,
   const void *md;
   __m256i ymm0, ymm1;
 
-  while (n >= 128) {
+  while (n >= 128) 
+  {
     n -= 128;
     __m256_LOAD_MEMCMP(0);
     __m256_LOAD_MEMCMP(1);
@@ -437,17 +462,20 @@ rte_memcmp_generic(const ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_cmp15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 256 bytes
    */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     return rte_cmp32(dst, src);
   }
-  if (n <= 32) {
+  if (n <= 32) 
+  {
     ret = rte_cmp16(dst, src);
     if (ret) return ret;
     if (__rte_constant(n) && n == 16)
@@ -455,37 +483,48 @@ rte_memcmp_generic(const ng_uint8_t *dst,
     if (ret) return ret;
     return rte_cmp16(dst - 16 + n, src - 16 + n);
   }
-  if (n <= 64) {
+  if (n <= 64) 
+  {
     ret = rte_cmp32(dst, src);
     if (ret) return ret;
     ret = rte_cmp32(dst - 32 + n, src - 32 + n);
     return ret;
   }
-  if (n <= 256) {
-    if (n >= 128) {
+  
+  if (n <= 256) 
+  {
+    if (n >= 128) 
+    {
       n -= 128;
       ret = rte_cmp128(dst, src);
       if (ret) return ret;
       src += 128;
       dst += 128;
     }
+    
 COPY_BLOCK_128_BACK31:
-    if (n >= 64) {
+    if (n >= 64) 
+    {
       n -= 64;
       ret = rte_cmp64(dst, src);
       if (ret) return ret;
       src += 64;
       dst += 64;
     }
-    if (n > 32) {
+    
+    if (n > 32) 
+    {
       ret = rte_cmp32(dst, src);
       if (ret) return ret;
       ret = rte_cmp32(dst - 32 + n, src - 32 + n);
       return ret;
     }
-    if (n > 0) {
+    
+    if (n > 0) 
+    {
       return rte_cmp32(dst - 32 + n, src - 32 + n);
     }
+    
     return NULL;
   }
 
@@ -493,7 +532,8 @@ COPY_BLOCK_128_BACK31:
    * Make store aligned when copy size exceeds 256 bytes
    */
   dstofss = (ng_uintptr_t)dst & 0x1F;
-  if (dstofss > 0) {
+  if (dstofss > 0) 
+  {
     dstofss = 32 - dstofss;
     n -= dstofss;
     ret = rte_cmp32(dst, src);
@@ -540,76 +580,77 @@ COPY_BLOCK_128_BACK31:
  */
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
   #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0, xmm1, xmm0, offset, i) do { \
-      if (_mm_cmpeq_epi64_mask(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)!=0x3U)) return dst + (i << 4);        \
-    }while(0)
+    if (_mm_cmpeq_epi64_mask(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)!=0x3U)) return dst + (i << 4);        \
+  }while(0)
 #elif defined __SSE4_1__
   #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0,xmm1, xmm0, offset, i) do { \
-      mm = _mm_cmpeq_epi64(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)); \
-      if (_mm_movemask_epi8(mm)!=0xffffU) return return dst + i;    \
-    }while(0)
+    mm = _mm_cmpeq_epi64(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)); \
+    if (_mm_movemask_epi8(mm)!=0xffffU) return return dst + i;    \
+  }while(0)
 #elif defined __SSE2__
-#define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0,xmm1, xmm0, offset, i) do { \
-      mm = _mm_cmpeq_epi32(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)); \
-      if (_mm_movemask_epi8(mm)!=0xffffU) return return dst + i;    \
-    }while(0)
+  #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0,xmm1, xmm0, offset, i) do { \
+    mm = _mm_cmpeq_epi32(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)); \
+    if (_mm_movemask_epi8(mm)!=0xffffU) return return dst + i;    \
+  }while(0)
 #endif
-#define CMPUNALIGNED_LEFT47_IMM(dst, src, len, offset)                                                     \
-{                                                                                            \
-    ng_size_t tmp;                                                                                                \
-    while (len >= 128 + 16 - offset) {                                                                      \
-        len -= 128;                                                                                         \
-        xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0 * 16));                  \
-        xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 1 * 16));                  \
-        xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 2 * 16));                  \
-        xmm3 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 3 * 16));                  \
-        xmm4 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 4 * 16));                  \
-        xmm5 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 5 * 16));                  \
-        xmm6 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 6 * 16));                  \
-        xmm7 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 7 * 16));                  \
-        xmm8 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 8 * 16));                  \
-        ymm0 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 0 * 16));                  \
-        ymm1 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 1 * 16));                  \
-        ymm2 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 2 * 16));                  \
-        ymm3 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 3 * 16));                  \
-        ymm4 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 4 * 16));                  \
-        ymm5 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 5 * 16));                  \
-        ymm6 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 6 * 16));                  \
-        ymm7 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 7 * 16));                  \
-        CMPUNALIGNED_LEFT47_IMM_CMP(ymm0, xmm1, xmm0, offset, 0); \
-        CMPUNALIGNED_LEFT47_IMM_CMP(ymm1, xmm2, xmm1, offset, 16); \
-        CMPUNALIGNED_LEFT47_IMM_CMP(ymm2, xmm3, xmm2, offset, 32); \
-        CMPUNALIGNED_LEFT47_IMM_CMP(ymm3, xmm4, xmm3, offset, 48); \
-        CMPUNALIGNED_LEFT47_IMM_CMP(ymm4, xmm5, xmm4, offset, 64); \
-        CMPUNALIGNED_LEFT47_IMM_CMP(ymm5, xmm6, xmm5, offset, 80); \
-        CMPUNALIGNED_LEFT47_IMM_CMP(ymm6, xmm7, xmm6, offset, 96); \
-        CMPUNALIGNED_LEFT47_IMM_CMP(ymm7, xmm8, xmm7, offset, 112); \
-        src += 128;                                                                   \
-        dst += 128;                                                                         \
-    }                                                                                                       \
-    tmp = len;                                                                                              \
-    len = ((len - 16 + offset) & 127) + 16 - offset;                                                        \
-    tmp -= len;                                                                                             \
-    src += tmp;                                                                       \
-    dst += tmp;                                                                             \
-    if (len >= 32 + 16 - offset) {                                                                          \
-        while (len >= 32 + 16 - offset) {                                                                   \
-            len -= 32;                                                                                      \
-            xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0 * 16));              \
-            xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 1 * 16));              \
-            xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 2 * 16));              \
-            ymm0 = _mm_loadu_si128((__m128i *)(void *)(dst + 0 * 16));                  \
-            ymm1 = _mm_loadu_si128((__m128i *)(void *)(dst + 1 * 16));                  \
-            CMPUNALIGNED_LEFT47_IMM_CMP(ymm0, xmm1, xmm0, offset, 0); \
-            CMPUNALIGNED_LEFT47_IMM_CMP(ymm1, xmm2, xmm1, offset, 16); \
-            src += 32;                                                                \
-            dst += 32;                                                                      \
-        }                                                                                                   \
-        tmp = len;                                                                                          \
-        len = ((len - 16 + offset) & 31) + 16 - offset;                                                     \
-        tmp -= len;                                                                                         \
-        src += tmp;                                                                   \
-        dst += tmp;                                                                         \
-    }                                                                                                       \
+
+#define CMPUNALIGNED_LEFT47_IMM(dst, src, len, offset)                                                 \
+{                                                                                                      \
+  ng_size_t tmp;                                                                                       \
+  while (len >= 128 + 16 - offset) {                                                                   \
+    len -= 128;                                                                                        \
+    xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0 * 16));                    \
+    xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 1 * 16));                    \
+    xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 2 * 16));                    \
+    xmm3 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 3 * 16));                    \
+    xmm4 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 4 * 16));                    \
+    xmm5 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 5 * 16));                    \
+    xmm6 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 6 * 16));                    \
+    xmm7 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 7 * 16));                    \
+    xmm8 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 8 * 16));                    \
+    ymm0 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 0 * 16));                             \
+    ymm1 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 1 * 16));                             \
+    ymm2 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 2 * 16));                             \
+    ymm3 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 3 * 16));                             \
+    ymm4 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 4 * 16));                             \
+    ymm5 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 5 * 16));                             \
+    ymm6 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 6 * 16));                             \
+    ymm7 = _mm_loadu_si128((const __m128i *)(const void *)(dst + 7 * 16));                             \
+    CMPUNALIGNED_LEFT47_IMM_CMP(ymm0, xmm1, xmm0, offset, 0);                                          \
+    CMPUNALIGNED_LEFT47_IMM_CMP(ymm1, xmm2, xmm1, offset, 16);                                         \
+    CMPUNALIGNED_LEFT47_IMM_CMP(ymm2, xmm3, xmm2, offset, 32);                                         \
+    CMPUNALIGNED_LEFT47_IMM_CMP(ymm3, xmm4, xmm3, offset, 48);                                         \
+    CMPUNALIGNED_LEFT47_IMM_CMP(ymm4, xmm5, xmm4, offset, 64);                                         \
+    CMPUNALIGNED_LEFT47_IMM_CMP(ymm5, xmm6, xmm5, offset, 80);                                         \
+    CMPUNALIGNED_LEFT47_IMM_CMP(ymm6, xmm7, xmm6, offset, 96);                                         \
+    CMPUNALIGNED_LEFT47_IMM_CMP(ymm7, xmm8, xmm7, offset, 112);                                        \
+    src += 128;                                                                                        \
+    dst += 128;                                                                                        \
+  }                                                                                                    \
+  tmp = len;                                                                                           \
+  len = ((len - 16 + offset) & 127) + 16 - offset;                                                     \
+  tmp -= len;                                                                                          \
+  src += tmp;                                                                                          \
+  dst += tmp;                                                                                          \
+  if (len >= 32 + 16 - offset) {                                                                       \
+    while (len >= 32 + 16 - offset) {                                                                  \
+      len -= 32;                                                                                       \
+      xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0 * 16));                  \
+      xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 1 * 16));                  \
+      xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 2 * 16));                  \
+      ymm0 = _mm_loadu_si128((__m128i *)(void *)(dst + 0 * 16));                                       \
+      ymm1 = _mm_loadu_si128((__m128i *)(void *)(dst + 1 * 16));                                       \
+      CMPUNALIGNED_LEFT47_IMM_CMP(ymm0, xmm1, xmm0, offset, 0);                                        \
+      CMPUNALIGNED_LEFT47_IMM_CMP(ymm1, xmm2, xmm1, offset, 16);                                       \
+      src += 32;                                                                                       \
+      dst += 32;                                                                                       \
+    }                                                                                                  \
+    tmp = len;                                                                                         \
+    len = ((len - 16 + offset) & 31) + 16 - offset;                                                    \
+    tmp -= len;                                                                                        \
+    src += tmp;                                                                                        \
+    dst += tmp;                                                                                        \
+  }                                                                                                    \
 }
 
 /**
@@ -625,8 +666,8 @@ COPY_BLOCK_128_BACK31:
  * - __m128i <xmm0> ~ <xmm8> used in CMPUNALIGNED_LEFT47_IMM must be pre-defined
  */
 #define CMPUNALIGNED_LEFT47(dst, src, len, offset)                   \
-{                                                      \
-    switch (offset) {                                                 \
+{                                                                    \
+    switch (offset) {                                                \
     case 0x01: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x01); break;    \
     case 0x02: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x02); break;    \
     case 0x03: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x03); break;    \
@@ -642,8 +683,8 @@ COPY_BLOCK_128_BACK31:
     case 0x0D: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0D); break;    \
     case 0x0E: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0E); break;    \
     case 0x0F: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0F); break;    \
-    default:;                                                         \
-    }                                                                 \
+    default:;                                                        \
+    }                                                                \
 }
 
 static __rte_always_inline const ng_uint8_t *
@@ -660,21 +701,25 @@ rte_memcmp_generic(const ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_cmp15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 512 bytes
    */
-  if (n <= 32) {
+  if (n <= 32) 
+  {
     ret = rte_cmp16(dst, src);
     if (ret) return ret;
     if (__rte_constant(n) && n == 16)
       return ret; /* avoid (harmless) duplicate copy */
     return rte_cmp16(dst - 16 + n, src - 16 + n);
   }
-  if (n <= 64) {
+  
+  if (n <= 64) 
+  {
     ret = rte_cmp32(dst, src);
     if (ret) return ret;
     if (n > 48)
@@ -684,11 +729,16 @@ rte_memcmp_generic(const ng_uint8_t *dst,
     }
     return rte_cmp16(dst - 16 + n, src - 16 + n);
   }
-  if (n <= 128) {
+  
+  if (n <= 128) 
+  {
     goto COPY_BLOCK_128_BACK15;
   }
-  if (n <= 512) {
-    if (n >= 256) {
+  
+  if (n <= 512) 
+  {
+    if (n >= 256) 
+    {
       n -= 256;
       ret = rte_cmp128(dst, src);
       if (ret) return ret;
@@ -697,38 +747,49 @@ rte_memcmp_generic(const ng_uint8_t *dst,
       src += 256;
       dst += 256;
     }
+    
 COPY_BLOCK_255_BACK15:
-    if (n >= 128) {
+    if (n >= 128) 
+    {
       n -= 128;
       ret = rte_cmp128(dst, src);
       if (ret) return ret;
       src += 128;
       dst += 128;
     }
+    
 COPY_BLOCK_128_BACK15:
-    if (n >= 64) {
+    if (n >= 64) 
+    {
       n -= 64;
       ret = rte_cmp64(dst, src);
       if (ret) return ret;
       src += 64;
       dst += 64;
     }
+    
 COPY_BLOCK_64_BACK15:
-    if (n >= 32) {
+    if (n >= 32) 
+    {
       n -= 32;
       ret = rte_cmp32(dst, src);
       if (ret) return ret;
       src += 32;
       dst += 32;
     }
-    if (n > 16) {
+    
+    if (n > 16) 
+    {
       ret = rte_cmp16(dst, src);
       if (ret) return ret;
       return rte_cmp16(dst - 16 + n, src - 16 + n);
     }
-    if (n > 0) {
+    
+    if (n > 0) 
+    {
       return rte_cmp16(dst - 16 + n, src - 16 + n);
     }
+    
     return NULL;
   }
 
@@ -739,7 +800,8 @@ COPY_BLOCK_64_BACK15:
    * backwards access.
    */
   dstofss = (ng_uintptr_t)dst & 0x0F;
-  if (dstofss > 0) {
+  if (dstofss > 0) 
+  {
     dstofss = 16 - dstofss + 16;
     n -= dstofss;
     ret = rte_cmp32(dst, src);
@@ -752,11 +814,13 @@ COPY_BLOCK_64_BACK15:
   /**
    * For aligned copy
    */
-  if (srcofs == 0) {
+  if (srcofs == 0) 
+  {
     /**
      * Copy 256-byte blocks
      */
-    for (; n >= 256; n -= 256) {
+    for (; n >= 256; n -= 256) 
+    {
       ret = rte_cmp256(dst, src);
       if (ret) return ret;
       dst += 256;
@@ -789,15 +853,18 @@ rte_memcmp_aligned(const ng_uint8_t *dst,
   const void *ret;
 
   /* Copy size < 16 bytes */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_cmp15_or_less(dst, src, n);
   }
 
   /* Copy 16 <= size <= 32 bytes */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     return rte_cmp32(dst, src);
   }
-  if (n <= 32) {
+  if (n <= 32) 
+  {
     ret = rte_cmp16(dst, src);
     if (ret) return ret;
     if (__rte_constant(n) && n == 16)
@@ -806,17 +873,20 @@ rte_memcmp_aligned(const ng_uint8_t *dst,
   }
 
   /* Copy 32 < size <= 64 bytes */
-  if (__rte_constant(n) && n == 64) {
+  if (__rte_constant(n) && n == 64) 
+  {
     return rte_cmp64(dst, src);
   }
-  if (n <= 64) {
+  if (n <= 64) 
+  {
     ret = rte_cmp32(dst, src);
     if (ret) return ret;
     return rte_cmp32(dst - 32 + n, src - 32 + n);
   }
 
   /* Copy 64 bytes blocks */
-  for (; n > 64; n -= 64) {
+  for (; n > 64; n -= 64) 
+  {
     ret = rte_cmp64(dst, src);
     if (ret) return ret;
     dst += 64;
