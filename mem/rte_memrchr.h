@@ -221,7 +221,7 @@ rte_memrchr256(const ng_uint8_t *dst, const ng_uint8_t *src)
 
 #define __m512_LOAD_MEMRCHR(i) do {                         \
   zmm1 = _mm512_loadu_si512((const void *)dst - (i << 6));  \
-  zmm2 = _mm512_cmpeq_epi8(*((const __m512i *)src), zmm1); \
+  zmm2 = _mm512_cmpeq_epi8(*((const __m512i *)src), zmm1);  \
   zmm0 = _mm512_cmpeq_epi8(memrchr_const__C.A512,zmm2);     \
   uint64_t mask = _mm512_movemask_epi8(zmm0);               \
   if (mask) {                                               \
@@ -412,7 +412,7 @@ COPY_BLOCK_128_BACK63:
 
 #define __m256_LOAD_MEMRCHR(dst) do {                       \
   ymm1 = _mm256_loadu_si256((const void *)dst - 32);        \
-  ymm2 = _mm256_cmpeq_epi8(*((const __m256i *)src), ymm1); \
+  ymm2 = _mm256_cmpeq_epi8(*((const __m256i *)src), ymm1);  \
   ymm0 = _mm256_cmpeq_epi8(memrchr_const__C.A256, ymm2);    \
   mask = _mm256_movemask_epi8(ymm0);                        \
   if (mask) {                                               \
