@@ -165,7 +165,6 @@ rte_cmp64(const ng_uint8_t *dst, const ng_uint8_t *src)
 {
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
   __m512i zmm0,zmm1;
-
   zmm0 = _mm512_loadu_si512((const void *)src);
   zmm1 = _mm512_loadu_si512((const void *)dst);
   return _mm512_cmpeq_epi64_mask(zmm0, zmm1) == 0xffU ? NULL : dst;
@@ -211,10 +210,10 @@ rte_cmp256(const ng_uint8_t *dst, const ng_uint8_t *src)
 
 #define ALIGNMENT_MASK 0x3F
 
-#define __m512_LOAD_MEMCMP(i) do {\
-  zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6))); \
-  md = dst + (i << 6); zmm1 = _mm512_loadu_si512((const void *)md); \
-  if (_mm512_cmpeq_epi64_mask(zmm0, zmm1)!=0xffU) return md; \
+#define __m512_LOAD_MEMCMP(i) do {                                         \
+  zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6)));              \
+  md = dst + (i << 6); zmm1 = _mm512_loadu_si512((const void *)md);        \
+  if (_mm512_cmpeq_epi64_mask(zmm0, zmm1)!=0xffU) return md;               \
 }while(0)
 
 /**
@@ -411,18 +410,18 @@ COPY_BLOCK_128_BACK63:
 #define ALIGNMENT_MASK 0x1F
 
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-#define __m256_LOAD_MEMCMP(i) do {\
-  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5))); \
-  md = dst + (i << 5); ymm1 = _mm256_loadu_si256((const void *)md); \
-  if (_mm256_cmpeq_epi64_mask(ymm2)!=0xfU) return md; \
+#define __m256_LOAD_MEMCMP(i) do {                                         \
+  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5)));               \
+  md = dst + (i << 5); ymm1 = _mm256_loadu_si256((const void *)md);        \
+  if (_mm256_cmpeq_epi64_mask(ymm2)!=0xfU) return md;                      \
 }while(0)
 #else
-#define __m256_LOAD_MEMCMP(i) do {\
-  __m256i ymm2;\
-  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5))); \
-  md = dst + (i << 5); ymm1 = _mm256_loadu_si256((const void *)md); \
-  ymm2 = _mm256_cmpeq_epi64(ymm0, ymm1); \
-  if (_mm256_movemask_epi8(ymm2)!=-1) return md; \
+#define __m256_LOAD_MEMCMP(i) do {                                         \
+  __m256i ymm2;                                                            \
+  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5)));               \
+  md = dst + (i << 5); ymm1 = _mm256_loadu_si256((const void *)md);        \
+  ymm2 = _mm256_cmpeq_epi64(ymm0, ymm1);                                   \
+  if (_mm256_movemask_epi8(ymm2)!=-1) return md;                           \
 }while(0)
 #endif
 
@@ -474,6 +473,7 @@ rte_memcmp_generic(const ng_uint8_t *dst,
   {
     return rte_cmp32(dst, src);
   }
+  
   if (n <= 32) 
   {
     ret = rte_cmp16(dst, src);
@@ -483,6 +483,7 @@ rte_memcmp_generic(const ng_uint8_t *dst,
     if (ret) return ret;
     return rte_cmp16(dst - 16 + n, src - 16 + n);
   }
+  
   if (n <= 64) 
   {
     ret = rte_cmp32(dst, src);
@@ -579,18 +580,19 @@ COPY_BLOCK_128_BACK31:
  * - __m128i <xmm0> ~ <xmm8> must be pre-defined
  */
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-  #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0, xmm1, xmm0, offset, i) do { \
-    if (_mm_cmpeq_epi64_mask(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)!=0x3U)) return dst + (i << 4);        \
+  #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0, xmm1, xmm0, offset, i) do {                                \
+    if (_mm_cmpeq_epi64_mask(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)!=0x3U))                         \
+      return dst + (i << 4);                                                                           \
   }while(0)
 #elif defined __SSE4_1__
-  #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0,xmm1, xmm0, offset, i) do { \
-    mm = _mm_cmpeq_epi64(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)); \
-    if (_mm_movemask_epi8(mm)!=0xffffU) return return dst + i;    \
+  #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0,xmm1, xmm0, offset, i) do {                                 \
+    mm = _mm_cmpeq_epi64(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset));                                   \
+    if (_mm_movemask_epi8(mm)!=0xffffU) return return dst + i;                                         \
   }while(0)
 #elif defined __SSE2__
-  #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0,xmm1, xmm0, offset, i) do { \
-    mm = _mm_cmpeq_epi32(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)); \
-    if (_mm_movemask_epi8(mm)!=0xffffU) return return dst + i;    \
+  #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0,xmm1, xmm0, offset, i) do {                                 \
+    mm = _mm_cmpeq_epi32(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset));                                   \
+    if (_mm_movemask_epi8(mm)!=0xffffU) return return dst + i;                                         \
   }while(0)
 #endif
 
@@ -665,26 +667,26 @@ COPY_BLOCK_128_BACK31:
  * - <dst>, <src>, <len> must be variables
  * - __m128i <xmm0> ~ <xmm8> used in CMPUNALIGNED_LEFT47_IMM must be pre-defined
  */
-#define CMPUNALIGNED_LEFT47(dst, src, len, offset)                   \
-{                                                                    \
-    switch (offset) {                                                \
-    case 0x01: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x01); break;    \
-    case 0x02: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x02); break;    \
-    case 0x03: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x03); break;    \
-    case 0x04: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x04); break;    \
-    case 0x05: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x05); break;    \
-    case 0x06: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x06); break;    \
-    case 0x07: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x07); break;    \
-    case 0x08: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x08); break;    \
-    case 0x09: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x09); break;    \
-    case 0x0A: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0A); break;    \
-    case 0x0B: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0B); break;    \
-    case 0x0C: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0C); break;    \
-    case 0x0D: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0D); break;    \
-    case 0x0E: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0E); break;    \
-    case 0x0F: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0F); break;    \
-    default:;                                                        \
-    }                                                                \
+#define CMPUNALIGNED_LEFT47(dst, src, len, offset)                         \
+{                                                                          \
+  switch (offset) {                                                        \
+    case 0x01: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x01); break;          \
+    case 0x02: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x02); break;          \
+    case 0x03: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x03); break;          \
+    case 0x04: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x04); break;          \
+    case 0x05: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x05); break;          \
+    case 0x06: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x06); break;          \
+    case 0x07: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x07); break;          \
+    case 0x08: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x08); break;          \
+    case 0x09: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x09); break;          \
+    case 0x0A: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0A); break;          \
+    case 0x0B: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0B); break;          \
+    case 0x0C: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0C); break;          \
+    case 0x0D: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0D); break;          \
+    case 0x0E: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0E); break;          \
+    case 0x0F: CMPUNALIGNED_LEFT47_IMM(dst, src, n, 0x0F); break;          \
+    default:;                                                              \
+  }                                                                        \
 }
 
 static __rte_always_inline const ng_uint8_t *
@@ -863,6 +865,7 @@ rte_memcmp_aligned(const ng_uint8_t *dst,
   {
     return rte_cmp32(dst, src);
   }
+  
   if (n <= 32) 
   {
     ret = rte_cmp16(dst, src);
@@ -877,6 +880,7 @@ rte_memcmp_aligned(const ng_uint8_t *dst,
   {
     return rte_cmp64(dst, src);
   }
+  
   if (n <= 64) 
   {
     ret = rte_cmp32(dst, src);
@@ -896,6 +900,7 @@ rte_memcmp_aligned(const ng_uint8_t *dst,
   /* Copy whatever left */
   return rte_cmp64(dst - 64 + n, src - 64 + n);
 }
+
 static __rte_always_inline int
 rte_memcmp8(const ng_uint8_t *d, 
   const ng_uint8_t *s, const ng_uint8_t *e)
@@ -909,6 +914,7 @@ rte_memcmp8(const ng_uint8_t *d,
   RTE_ASSERT(1);
   return 0;
 }
+
 static __rte_always_inline int
 rte_memcmp(const void *dst, const void *src, ng_size_t n)
 {
@@ -932,6 +938,7 @@ rte_memcmp(const void *dst, const void *src, ng_size_t n)
     d += 8;
     s += 8;
   }
+  
   while (e - d >= 4)
   {
     if (*(const ng_uint32_t *)d != *(const ng_uint32_t *)s)
@@ -939,6 +946,7 @@ rte_memcmp(const void *dst, const void *src, ng_size_t n)
     d += 4;
     s += 4;
   }
+  
   while (e - d >= 2)
   {
     if (*(const ng_uint16_t *)d != *(const ng_uint16_t *)s)
@@ -946,6 +954,7 @@ rte_memcmp(const void *dst, const void *src, ng_size_t n)
     d += 2;
     s += 2;
   }
+  
   if (e - d == 1)
   {
     n = *d - *s;

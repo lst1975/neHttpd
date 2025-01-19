@@ -214,11 +214,11 @@ rte_strieq256(const ng_uint8_t *dst, const ng_uint8_t *src)
 
 #define ALIGNMENT_MASK 0x3F
 
-#define __m512_LOAD_STRIEQ(i) do {\
-  zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6))); \
-  zmm1 = _mm512_loadu_si512((const void *)(dst + (i << 6))); \
-  zmm2 = _mm512_xor_si512(zmm0,zmm1); \
-  zmm3 = _mm512_or_si512(zmm2, strieq_const__C.A512); \
+#define __m512_LOAD_STRIEQ(i) do {                                         \
+  zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6)));               \
+  zmm1 = _mm512_loadu_si512((const void *)(dst + (i << 6)));               \
+  zmm2 = _mm512_xor_si512(zmm0,zmm1);                                      \
+  zmm3 = _mm512_or_si512(zmm2, strieq_const__C.A512);                      \
   if (_mm512_cmpeq_epi64_mask(zmm3, strieq_const__C.A512)!=0xff) return 0; \
 }while(0)
 
@@ -434,21 +434,21 @@ COPY_BLOCK_128_BACK63:
 #define ALIGNMENT_MASK 0x1F
 
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-#define __m256_LOAD_STRIEQ(i) do {\
-  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5))); \
-  ymm1 = _mm256_loadu_si256((const void *)(dst + (i << 5))); \
-  ymm2 = _mm256_xor_si256(ymm0,ymm1); \
-  ymm3 = _mm256_or_si256(ymm2, strieq_const__C.A256); \
+#define __m256_LOAD_STRIEQ(i) do {                                       \
+  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5)));             \
+  ymm1 = _mm256_loadu_si256((const void *)(dst + (i << 5)));             \
+  ymm2 = _mm256_xor_si256(ymm0,ymm1);                                    \
+  ymm3 = _mm256_or_si256(ymm2, strieq_const__C.A256);                    \
   if (_mm256_cmpeq_epi64_mask(ymm3,strieq_const__C.A256)!=0xf) return 0; \
 }while(0)
 #else
-#define __m256_LOAD_STRIEQ(i) do {\
-  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5))); \
-  ymm1 = _mm256_loadu_si256((const void *)(dst + (i << 5))); \
-  ymm2 = _mm256_xor_si256(ymm0,ymm1); \
-  ymm3 = _mm256_or_si256(ymm2, strieq_const__C.A256); \
-  __m256i ymm4 = _mm256_cmpeq_epi64(ymm3, strieq_const__C.A256); \
-  if (_mm256_movemask_epi8(ymm4)!=-1) return 0; \
+#define __m256_LOAD_STRIEQ(i) do {                                       \
+  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5)));             \
+  ymm1 = _mm256_loadu_si256((const void *)(dst + (i << 5)));             \
+  ymm2 = _mm256_xor_si256(ymm0,ymm1);                                    \
+  ymm3 = _mm256_or_si256(ymm2, strieq_const__C.A256);                    \
+  __m256i ymm4 = _mm256_cmpeq_epi64(ymm3, strieq_const__C.A256);         \
+  if (_mm256_movemask_epi8(ymm4)!=-1) return 0;                          \
 }while(0)
 #endif
 

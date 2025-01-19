@@ -73,27 +73,33 @@ rte_meq15_or_less(const ng_uint8_t *dst,
     ng_uint16_t val;
   } __rte_packed __rte_may_alias;
 
-  if (n & 8) {
+  if (n & 8) 
+  {
     if (((const struct rte_uint64_alias *)dst)->val !=
       ((const struct rte_uint64_alias *)src)->val)
       return 0;
     dst += 8;
     src += 8;
   }
-  if (n & 4) {
+  
+  if (n & 4) 
+  {
     if (((const struct rte_uint32_alias *)dst)->val !=
       ((const struct rte_uint32_alias *)src)->val)
       return 0;
     dst += 4;
     src += 4;
   }
-  if (n & 2) {
+  
+  if (n & 2) 
+  {
     if (((const struct rte_uint16_alias *)dst)->val !=
       ((const struct rte_uint16_alias *)src)->val)
       return 0;
     dst += 2;
     src += 2;
   }
+  
   if (n & 1)
     return *dst == *src;
   
@@ -202,10 +208,10 @@ rte_meq256(const ng_uint8_t *dst, const ng_uint8_t *src)
 
 #define ALIGNMENT_MASK 0x3F
 
-#define __m512_LOAD_MEMEQ(i) do {\
-  zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6))); \
-  zmm1 = _mm512_loadu_si512((const void *)(dst + (i << 6))); \
-  if (_mm512_cmpeq_epi64_mask(zmm0, zmm1)!=0xff) return 0; \
+#define __m512_LOAD_MEMEQ(i) do {                             \
+  zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6)));  \
+  zmm1 = _mm512_loadu_si512((const void *)(dst + (i << 6)));  \
+  if (_mm512_cmpeq_epi64_mask(zmm0, zmm1)!=0xff) return 0;    \
 }while(0)
 
 /**
@@ -218,7 +224,8 @@ rte_meq128blocks(const ng_uint8_t *dst,
 {
   __m512i zmm0, zmm1;
 
-  while (n >= 128) {
+  while (n >= 128) 
+  {
     n -= 128;
     __m512_LOAD_MEMEQ(0);
     __m512_LOAD_MEMEQ(1);
@@ -239,7 +246,8 @@ rte_meq512blocks(const ng_uint8_t *dst,
 {
   __m512i zmm0, zmm1;
 
-  while (n >= 512) {
+  while (n >= 512) 
+  {
     n -= 512;
     __m512_LOAD_MEMEQ(0);
     __m512_LOAD_MEMEQ(1);
@@ -280,6 +288,7 @@ rte_memeq_generic(const ng_uint8_t *dst,
     ret = rte_meq32(dst, src);
     return ret;
   }
+  
   if (n <= 32) 
   {
     ret = rte_meq16(dst, src);
@@ -289,11 +298,13 @@ rte_memeq_generic(const ng_uint8_t *dst,
     ret = rte_meq16(dst - 16 + n, src - 16 + n);
     return ret;
   }
+  
   if (__rte_constant(n) && n == 64) 
   {
     ret = rte_meq64(dst, src);
     return ret;
   }
+  
   if (n <= 64) 
   {
     ret = rte_meq32(dst, src);
@@ -312,6 +323,7 @@ rte_memeq_generic(const ng_uint8_t *dst,
       src += 256;
       dst += 256;
     }
+    
     if (n >= 128) 
     {
       n -= 128;
@@ -320,6 +332,7 @@ rte_memeq_generic(const ng_uint8_t *dst,
       src += 128;
       dst += 128;
     }
+    
 COPY_BLOCK_128_BACK63:
     if (n > 64) 
     {
@@ -328,6 +341,7 @@ COPY_BLOCK_128_BACK63:
       ret = rte_meq64(dst - 64 + n, src - 64 + n);
       return ret;
     }
+    
     if (n > 0)
       return rte_meq64(dst - 64 + n, src - 64 + n);
     
@@ -366,7 +380,8 @@ COPY_BLOCK_128_BACK63:
    * Use copy block function for better instruction order control,
    * which is important when load is unaligned.
    */
-  if (n >= 128) {
+  if (n >= 128) 
+  {
     ret = rte_meq128blocks(dst, src, n);
     if (!ret) return ret;
     bits = n;
@@ -391,18 +406,18 @@ COPY_BLOCK_128_BACK63:
 #define ALIGNMENT_MASK 0x1F
 
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-#define __m256_LOAD_MEMEQ(i) do {\
-  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5))); \
-  ymm1 = _mm256_loadu_si256((const void *)(dst + (i << 5))); \
-  if (_mm256_cmpeq_epi64_mask(ymm0,ymm1)!=0xf) return 0; \
+#define __m256_LOAD_MEMEQ(i) do {                             \
+  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5)));  \
+  ymm1 = _mm256_loadu_si256((const void *)(dst + (i << 5)));  \
+  if (_mm256_cmpeq_epi64_mask(ymm0,ymm1)!=0xf) return 0;      \
 }while(0)
 #else
-#define __m256_LOAD_MEMEQ(i) do {\
-  __m256i ymm2;\
-  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5))); \
-  ymm1 = _mm256_loadu_si256((const void *)(dst + (i << 5))); \
-  ymm2 = _mm256_cmpeq_epi64(ymm0, ymm1); \
-  if (_mm256_movemask_epi8(ymm2)!=-1) return 0; \
+#define __m256_LOAD_MEMEQ(i) do {                             \
+  __m256i ymm2;                                               \
+  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5)));  \
+  ymm1 = _mm256_loadu_si256((const void *)(dst + (i << 5)));  \
+  ymm2 = _mm256_cmpeq_epi64(ymm0, ymm1);                      \
+  if (_mm256_movemask_epi8(ymm2)!=-1) return 0;               \
 }while(0)
 #endif
 
@@ -453,6 +468,7 @@ rte_memeq_generic(const ng_uint8_t *dst,
   {
     return rte_meq32(dst, src);
   }
+  
   if (n <= 32) 
   {
     ret = rte_meq16(dst, src);
@@ -462,6 +478,7 @@ rte_memeq_generic(const ng_uint8_t *dst,
     if (!ret) return ret;
     return rte_meq16(dst - 16 + n, src - 16 + n);
   }
+  
   if (n <= 64) 
   {
     ret = rte_meq32(dst, src);
@@ -469,6 +486,7 @@ rte_memeq_generic(const ng_uint8_t *dst,
     ret = rte_meq32(dst - 32 + n, src - 32 + n);
     return ret;
   }
+  
   if (n <= 256) 
   {
     if (n >= 128) 
@@ -488,6 +506,7 @@ COPY_BLOCK_128_BACK31:
       src += 64;
       dst += 64;
     }
+    
     if (n > 32) 
     {
       ret = rte_meq32(dst, src);
@@ -495,6 +514,7 @@ COPY_BLOCK_128_BACK31:
       ret = rte_meq32(dst - 32 + n, src - 32 + n);
       return ret;
     }
+    
     if (n > 0) 
     {
       return rte_meq32(dst - 32 + n, src - 32 + n);
@@ -554,18 +574,18 @@ COPY_BLOCK_128_BACK31:
  * - __m128i <xmm0> ~ <xmm8> must be pre-defined
  */
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-  #define MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm0,xmm1, xmm0, offset) do { \
-    if (_mm_cmpeq_epi64_mask(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)!=0x3)) return 0;        \
+  #define MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm0,xmm1, xmm0, offset) do {                   \
+    if (_mm_cmpeq_epi64_mask(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)!=0x3)) return 0; \
   }while(0)
 #elif defined __SSE4_1__
-  #define MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm0,xmm1, xmm0, offset) do { \
-    mm = _mm_cmpeq_epi64(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)); \
-    if (_mm_movemask_epi8(mm)!=0xffff) return 0;        \
+  #define MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm0,xmm1, xmm0, offset) do {                   \
+    mm = _mm_cmpeq_epi64(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset));                    \
+    if (_mm_movemask_epi8(mm)!=0xffff) return 0;                                        \
   }while(0)
 #else
-#define MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm0,xmm1, xmm0, offset) do { \
-    mm = _mm_cmpeq_epi32(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)); \
-    if (_mm_movemask_epi8(mm)!=0xffff) return 0;        \
+#define MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm0,xmm1, xmm0, offset) do {                     \
+    mm = _mm_cmpeq_epi32(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset));                    \
+    if (_mm_movemask_epi8(mm)!=0xffff) return 0;                                        \
   }while(0)
 #endif
 
@@ -613,8 +633,8 @@ COPY_BLOCK_128_BACK31:
       xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0));        \
       xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 16));       \
       xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 32));       \
-      ymm0 = _mm_loadu_si128((__m128i *)(void *)((ng_uint8_t *)dst + 0));               \
-      ymm1 = _mm_loadu_si128((__m128i *)(void *)((ng_uint8_t *)dst + 16));              \
+      ymm0 = _mm_loadu_si128((__m128i *)(void *)(dst + 0));                             \
+      ymm1 = _mm_loadu_si128((__m128i *)(void *)(dst + 16));                            \
       MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm0, xmm1, xmm0, offset);                          \
       MEQUNALIGNED_LEFT47_IMM_CMPEQ(ymm1, xmm2, xmm1, offset);                          \
       src += 32;                                                                        \
@@ -693,6 +713,7 @@ rte_memeq_generic(const ng_uint8_t *dst,
       return ret; /* avoid (harmless) duplicate copy */
     return rte_meq16(dst - 16 + n, src - 16 + n);
   }
+  
   if (n <= 64) 
   {
     ret = rte_meq32(dst, src);
@@ -704,10 +725,12 @@ rte_memeq_generic(const ng_uint8_t *dst,
     }
     return rte_meq16(dst - 16 + n, src - 16 + n);
   }
+  
   if (n <= 128) 
   {
     goto COPY_BLOCK_128_BACK15;
   }
+  
   if (n <= 512) 
   {
     if (n >= 256) 
@@ -720,6 +743,7 @@ rte_memeq_generic(const ng_uint8_t *dst,
       src += 256;
       dst += 256;
     }
+    
 COPY_BLOCK_255_BACK15:
     if (n >= 128) 
     {
@@ -729,6 +753,7 @@ COPY_BLOCK_255_BACK15:
       src += 128;
       dst += 128;
     }
+    
 COPY_BLOCK_128_BACK15:
     if (n >= 64) 
     {
@@ -738,6 +763,7 @@ COPY_BLOCK_128_BACK15:
       src += 64;
       dst += 64;
     }
+    
 COPY_BLOCK_64_BACK15:
     if (n >= 32) 
     {
@@ -747,12 +773,14 @@ COPY_BLOCK_64_BACK15:
       src += 32;
       dst += 32;
     }
+    
     if (n > 16) 
     {
       ret = rte_meq16(dst, src);
       if (!ret) return ret;
       return rte_meq16(dst - 16 + n, src - 16 + n);
     }
+    
     if (n > 0) 
     {
       return rte_meq16(dst - 16 + n, src - 16 + n);
@@ -831,6 +859,7 @@ rte_memeq_aligned(const ng_uint8_t *dst,
   {
     return rte_meq32(dst, src);
   }
+  
   if (n <= 32) 
   {
     ret = rte_meq16(dst, src);
@@ -845,6 +874,7 @@ rte_memeq_aligned(const ng_uint8_t *dst,
   {
     return rte_meq64(dst, src);
   }
+  
   if (n <= 64) 
   {
     ret = rte_meq32(dst, src);

@@ -73,23 +73,30 @@ rte_set15_or_less(ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
   } __rte_packed __rte_may_alias;
 
   void *ret = dst;
-  if (n & 8) {
+  if (n & 8) 
+  {
     ((struct rte_uint64_alias *)dst)->val =
       ((const struct rte_uint64_alias *)src)->val;
     dst += 8;
   }
-  if (n & 4) {
+  
+  if (n & 4) 
+  {
     ((struct rte_uint32_alias *)dst)->val =
       ((const struct rte_uint32_alias *)src)->val;
     dst += 4;
   }
-  if (n & 2) {
+  
+  if (n & 2) 
+  {
     ((struct rte_uint16_alias *)dst)->val =
       ((const struct rte_uint16_alias *)src)->val;
     dst += 2;
   }
+  
   if (n & 1)
     *dst = *src;
+  
   return ret;
 }
 
@@ -172,7 +179,7 @@ rte_set128blocks(ng_uint8_t *dst, const __m512i src, ng_size_t n)
 {
   while (n >= 128) 
   {
-    n -= 128;
+    n   -= 128;
     _mm512_storeu_si512((void *)(dst + 0 * 64), src);
     _mm512_storeu_si512((void *)(dst + 1 * 64), src);
     dst += 128;
@@ -188,7 +195,7 @@ rte_set512blocks(ng_uint8_t *dst, const __m512i src, ng_size_t n)
 {
   while (n >= 512) 
   {
-    n -= 512;
+    n   -= 512;
     _mm512_storeu_si512((void *)(dst + 0 * 64), src);
     _mm512_storeu_si512((void *)(dst + 1 * 64), src);
     _mm512_storeu_si512((void *)(dst + 2 * 64), src);
@@ -227,6 +234,7 @@ rte_memset_generic(ng_uint8_t *dst, ng_uint8_t x, ng_size_t n)
     rte_set32(dst, src);
     return ret;
   }
+  
   if (n <= 32) 
   {
     rte_set16(dst, src);
@@ -235,11 +243,13 @@ rte_memset_generic(ng_uint8_t *dst, ng_uint8_t x, ng_size_t n)
     rte_set16((ng_uint8_t *)dst - 16 + n, src);
     return ret;
   }
+  
   if (__rte_constant(n) && n == 64) 
   {
     rte_set64(dst, src);
     return ret;
   }
+  
   if (n <= 64) 
   {
     rte_set32(dst, src);
@@ -255,12 +265,14 @@ rte_memset_generic(ng_uint8_t *dst, ng_uint8_t x, ng_size_t n)
       rte_set256(dst, src);
       dst += 256;
     }
+    
     if (n >= 128) 
     {
       n -= 128;
       rte_set128(dst, src);
       dst += 128;
     }
+    
 COPY_BLOCK_128_BACK63:
     if (n > 64) 
     {
@@ -268,8 +280,10 @@ COPY_BLOCK_128_BACK63:
       rte_set64(dst - 64 + n, src);
       return ret;
     }
+    
     if (n > 0)
       rte_set64(dst - 64 + n, src);
+
     return ret;
   }
 
@@ -331,8 +345,9 @@ COPY_BLOCK_128_BACK63:
 static __rte_always_inline void
 rte_set128blocks(ng_uint8_t *dst, const __m256i zmm0, ng_size_t n)
 {
-  while (n >= 128) {
-    n -= 128;
+  while (n >= 128) 
+  {
+    n   -= 128;
     _mm256_storeu_si256((__m256i *)(void *)(dst + 0 * 32), zmm0);
     _mm256_storeu_si256((__m256i *)(void *)(dst + 1 * 32), zmm0);
     _mm256_storeu_si256((__m256i *)(void *)(dst + 2 * 32), zmm0);
@@ -354,7 +369,8 @@ rte_memset_generic(ng_uint8_t *dst, ng_uint8_t x, ng_size_t n)
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_set15_or_less(dst, src, n);
   }
 
@@ -411,6 +427,7 @@ COPY_BLOCK_128_BACK31:
     {
       rte_set32(dst - 32 + n,src);
     }
+    
     return ret;
   }
 
@@ -450,81 +467,83 @@ COPY_BLOCK_128_BACK31:
 #define ALIGNMENT_MASK 0x0F
 
 /**
- * Macro for copying unaligned block from one location to another with constant load offset,
- * 47 bytes leftover maximum,
- * locations should not overlap.
+ * Macro for copying unaligned block from one location to another with constant 
+ *   load offset, 47 bytes leftover maximum, locations should not overlap.
+ *
  * Requirements:
  * - Store is aligned
  * - Load offset is <offset>, which must be immediate value within [1, 15]
- * - For <src>, make sure <offset> bit backwards & <16 - offset> bit forwards are available for loading
+ * - For <src>, make sure <offset> bit backwards & <16 - offset> bit forwards 
+ *   are available for loading
  * - <dst>, <src>, <len> must be variables
  * - __m128i <xmm0> ~ <xmm8> must be pre-defined
  */
-#define SETUNALIGNED_LEFT47_IMM(dst, xmm0, len, offset)                              \
-{                                                                                    \
-  ng_size_t tmp;                                                                     \
-  while (len >= 128 + 16 - offset) {                                                 \
-    len -= 128;                                                                      \
-    _mm_storeu_si128((__m128i *)(void *)(dst + 0 * 16), xmm0);                       \
-    _mm_storeu_si128((__m128i *)(void *)(dst + 1 * 16), xmm0);                       \
-    _mm_storeu_si128((__m128i *)(void *)(dst + 2 * 16), xmm0);                       \
-    _mm_storeu_si128((__m128i *)(void *)(dst + 3 * 16), xmm0);                       \
-    _mm_storeu_si128((__m128i *)(void *)(dst + 4 * 16), xmm0);                       \
-    _mm_storeu_si128((__m128i *)(void *)(dst + 5 * 16), xmm0);                       \
-    _mm_storeu_si128((__m128i *)(void *)(dst + 6 * 16), xmm0);                       \
-    _mm_storeu_si128((__m128i *)(void *)(dst + 7 * 16), xmm0);                       \
-    dst = (ng_uint8_t *)dst + 128;                                                    \
-  }                                                                                   \
-  tmp = len;                                                                          \
-  len = ((len - 16 + offset) & 127) + 16 - offset;                                    \
-  tmp -= len;                                                                         \
-  dst += tmp;                                                                         \
-  if (len >= 32 + 16 - offset) {                                                      \
-    while (len >= 32 + 16 - offset) {                                                 \
-      len -= 32;                                                                      \
-      _mm_storeu_si128((__m128i *)(void *)(dst + 0 * 16), xmm0);                      \
-      _mm_storeu_si128((__m128i *)(void *)(dst + 1 * 16), xmm0);                      \
-      dst += 32;                                                                      \
-    }                                                                                 \
-    tmp = len;                                                                        \
-    len = ((len - 16 + offset) & 31) + 16 - offset;                                   \
-    tmp -= len;                                                                       \
-    dst += tmp;                                                                       \
-  }                                                                                   \
+#define SETUNALIGNED_LEFT47_IMM(dst, xmm0, len, offset)                   \
+{                                                                         \
+  ng_size_t tmp;                                                          \
+  while (len >= 128 + 16 - offset) {                                      \
+    len -= 128;                                                           \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 0 * 16), xmm0);            \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 1 * 16), xmm0);            \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 2 * 16), xmm0);            \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 3 * 16), xmm0);            \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 4 * 16), xmm0);            \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 5 * 16), xmm0);            \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 6 * 16), xmm0);            \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 7 * 16), xmm0);            \
+    dst = (ng_uint8_t *)dst + 128;                                        \
+  }                                                                       \
+  tmp = len;                                                              \
+  len = ((len - 16 + offset) & 127) + 16 - offset;                        \
+  tmp -= len;                                                             \
+  dst += tmp;                                                             \
+  if (len >= 32 + 16 - offset) {                                          \
+    while (len >= 32 + 16 - offset) {                                     \
+      len -= 32;                                                          \
+      _mm_storeu_si128((__m128i *)(void *)(dst + 0 * 16), xmm0);          \
+      _mm_storeu_si128((__m128i *)(void *)(dst + 1 * 16), xmm0);          \
+      dst += 32;                                                          \
+    }                                                                     \
+    tmp = len;                                                            \
+    len = ((len - 16 + offset) & 31) + 16 - offset;                       \
+    tmp -= len;                                                           \
+    dst += tmp;                                                           \
+  }                                                                       \
 }
 
 /**
  * Macro for copying unaligned block from one location to another,
- * 47 bytes leftover maximum,
- * locations should not overlap.
- * Use switch here because the aligning instruction requires immediate value for shift count.
+ *   47 bytes leftover maximum, locations should not overlap.
+ * Use switch here because the aligning instruction requires immediate value for 
+ *   shift count.
  * Requirements:
  * - Store is aligned
  * - Load offset is <offset>, which must be within [1, 15]
- * - For <src>, make sure <offset> bit backwards & <16 - offset> bit forwards are available for loading
+ * - For <src>, make sure <offset> bit backwards & <16 - offset> bit forwards are 
+ *   available for loading
  * - <dst>, <src>, <len> must be variables
  * - __m128i <xmm0> ~ <xmm8> used in SETUNALIGNED_LEFT47_IMM must be pre-defined
  */
-#define SETUNALIGNED_LEFT47(dst, src, len, offset)                   \
-{                                                                    \
-    switch (offset) {                                                \
-    case 0x01: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x01); break;    \
-    case 0x02: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x02); break;    \
-    case 0x03: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x03); break;    \
-    case 0x04: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x04); break;    \
-    case 0x05: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x05); break;    \
-    case 0x06: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x06); break;    \
-    case 0x07: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x07); break;    \
-    case 0x08: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x08); break;    \
-    case 0x09: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x09); break;    \
-    case 0x0A: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0A); break;    \
-    case 0x0B: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0B); break;    \
-    case 0x0C: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0C); break;    \
-    case 0x0D: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0D); break;    \
-    case 0x0E: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0E); break;    \
-    case 0x0F: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0F); break;    \
-    default:;                                                        \
-    }                                                                \
+#define SETUNALIGNED_LEFT47(dst, src, len, offset)                        \
+{                                                                         \
+  switch (offset) {                                                       \
+  case 0x01: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x01); break;           \
+  case 0x02: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x02); break;           \
+  case 0x03: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x03); break;           \
+  case 0x04: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x04); break;           \
+  case 0x05: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x05); break;           \
+  case 0x06: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x06); break;           \
+  case 0x07: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x07); break;           \
+  case 0x08: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x08); break;           \
+  case 0x09: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x09); break;           \
+  case 0x0A: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0A); break;           \
+  case 0x0B: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0B); break;           \
+  case 0x0C: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0C); break;           \
+  case 0x0D: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0D); break;           \
+  case 0x0E: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0E); break;           \
+  case 0x0F: SETUNALIGNED_LEFT47_IMM(dst, src, n, 0x0F); break;           \
+  default:;                                                               \
+  }                                                                       \
 }
 
 static __rte_always_inline ng_uint8_t *
@@ -621,10 +640,9 @@ COPY_BLOCK_64_BACK15:
   }
 
   /**
-   * Make store aligned when copy size exceeds 512 bytes,
-   * and make sure the first 15 bytes are copied, because
-   * unaligned copy functions require up to 15 bytes
-   * backwards access.
+   * Make store aligned when copy size exceeds 512 bytes, and make sure the 
+   * first 15 bytes are copied, because unaligned copy functions require up 
+   * to 15 bytes backwards access.
    */
   dstofss = (ng_uintptr_t)dst & 0x0F;
   if (dstofss > 0) 
@@ -674,12 +692,12 @@ rte_memset_aligned(ng_uint8_t *dst, int x, ng_size_t n)
 {
   ng_uint8_t *ret = dst;
 
-  __m128i mm04[4]={
-      _mm_set1_epi8(x),
-      _mm_set1_epi8(x),
-      _mm_set1_epi8(x),
-      _mm_set1_epi8(x),
-    };
+  __m128i mm04[4] = {
+    _mm_set1_epi8(x),
+    _mm_set1_epi8(x),
+    _mm_set1_epi8(x),
+    _mm_set1_epi8(x),
+  };
   const ng_uint8_t *src = (const ng_uint8_t *)mm04;
   
   /* Copy size < 16 bytes */
@@ -694,6 +712,7 @@ rte_memset_aligned(ng_uint8_t *dst, int x, ng_size_t n)
     rte_set32(dst, src);
     return ret;
   }
+  
   if (n <= 32) 
   {
     rte_set16(dst, src);
@@ -710,6 +729,7 @@ rte_memset_aligned(ng_uint8_t *dst, int x, ng_size_t n)
     rte_set64(dst, src);
     return ret;
   }
+  
   if (n <= 64) 
   {
     rte_set32(dst, src);

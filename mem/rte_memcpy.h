@@ -73,26 +73,33 @@ rte_mov15_or_less(ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
   } __rte_packed __rte_may_alias;
 
   void *ret = dst;
-  if (n & 8) {
+  if (n & 8) 
+  {
     ((struct rte_uint64_alias *)dst)->val =
       ((const struct rte_uint64_alias *)src)->val;
     src += 8;
     dst += 8;
   }
-  if (n & 4) {
+
+  if (n & 4) 
+  {
     ((struct rte_uint32_alias *)dst)->val =
       ((const struct rte_uint32_alias *)src)->val;
     src += 4;
     dst += 4;
   }
-  if (n & 2) {
+  
+  if (n & 2) 
+  {
     ((struct rte_uint16_alias *)dst)->val =
       ((const struct rte_uint16_alias *)src)->val;
     src += 2;
     dst += 2;
   }
+  
   if (n & 1)
     *dst = *src;
+
   return ret;
 }
 
@@ -118,7 +125,6 @@ rte_mov32(ng_uint8_t *dst, const ng_uint8_t *src)
 {
 #if defined RTE_MEMCPY_AVX
   __m256i ymm0;
-
   ymm0 = _mm256_loadu_si256((const __m256i *)(const void *)src);
   _mm256_storeu_si256((__m256i *)(void *)dst, ymm0);
 #else /* SSE implementation */
@@ -136,7 +142,6 @@ rte_mov64(ng_uint8_t *dst, const ng_uint8_t *src)
 {
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
   __m512i zmm0;
-
   zmm0 = _mm512_loadu_si512((const void *)src);
   _mm512_storeu_si512((void *)dst, zmm0);
 #else /* AVX2, AVX & SSE implementation */
@@ -184,7 +189,8 @@ rte_mov128blocks(ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
 {
   __m512i zmm0, zmm1;
 
-  while (n >= 128) {
+  while (n >= 128) 
+  {
     zmm0 = _mm512_loadu_si512((const void *)(src + 0 * 64));
     n -= 128;
     zmm1 = _mm512_loadu_si512((const void *)(src + 1 * 64));
@@ -204,7 +210,8 @@ rte_mov512blocks(ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
 {
   __m512i zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7;
 
-  while (n >= 512) {
+  while (n >= 512) 
+  {
     zmm0 = _mm512_loadu_si512((const void *)(src + 0 * 64));
     n -= 512;
     zmm1 = _mm512_loadu_si512((const void *)(src + 1 * 64));
@@ -238,54 +245,71 @@ rte_memcpy_generic(ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_mov15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 512 bytes
    */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     rte_mov32(dst, src);
     return ret;
   }
-  if (n <= 32) {
+
+  if (n <= 32) 
+  {
     rte_mov16(dst, src);
     if (__rte_constant(n) && n == 16)
       return ret; /* avoid (harmless) duplicate copy */
     rte_mov16(dst - 16 + n, src - 16 + n);
     return ret;
   }
-  if (__rte_constant(n) && n == 64) {
+
+  if (__rte_constant(n) && n == 64) 
+  {
     rte_mov64(dst, src);
     return ret;
   }
-  if (n <= 64) {
+
+  if (n <= 64) 
+  {
     rte_mov32(dst, src);
     rte_mov32(dst - 32 + n, src - 32 + n);
     return ret;
   }
-  if (n <= 512) {
-    if (n >= 256) {
+
+  if (n <= 512) 
+  {
+    if (n >= 256) 
+    {
       n -= 256;
       rte_mov256(dst, src);
       src += 256;
       dst += 256;
     }
-    if (n >= 128) {
+    
+    if (n >= 128) 
+    {
       n -= 128;
       rte_mov128(dst, src);
       src += 128;
       dst += 128;
     }
+    
 COPY_BLOCK_128_BACK63:
-    if (n > 64) {
+    if (n > 64) 
+    {
       rte_mov64(dst, src);
       rte_mov64(dst - 64 + n, src - 64 + n);
       return ret;
     }
+    
     if (n > 0)
       rte_mov64(dst - 64 + n, src - 64 + n);
+    
     return ret;
   }
 
@@ -439,6 +463,7 @@ COPY_BLOCK_128_BACK31:
     {
       rte_mov32(dst - 32 + n, src - 32 + n);
     }
+    
     return ret;
   }
 
@@ -490,53 +515,53 @@ COPY_BLOCK_128_BACK31:
  * - <dst>, <src>, <len> must be variables
  * - __m128i <xmm0> ~ <xmm8> must be pre-defined
  */
-#define MOVEUNALIGNED_LEFT47_IMM(dst, src, len, offset)                                                  \
-{                                                                                                        \
-    ng_size_t tmp;                                                                                       \
-    while (len >= 128 + 16 - offset) {                                                                   \
-        xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0 * 16));                  \
-        len -= 128;                                                                                      \
-        xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 1 * 16));                  \
-        xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 2 * 16));                  \
-        xmm3 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 3 * 16));                  \
-        xmm4 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 4 * 16));                  \
-        xmm5 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 5 * 16));                  \
-        xmm6 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 6 * 16));                  \
-        xmm7 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 7 * 16));                  \
-        xmm8 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 8 * 16));                  \
-        src += 128;                                                                                      \
-        _mm_storeu_si128((__m128i *)(void *)(dst + 0 * 16), _mm_alignr_epi8(xmm1, xmm0, offset));        \
-        _mm_storeu_si128((__m128i *)(void *)(dst + 1 * 16), _mm_alignr_epi8(xmm2, xmm1, offset));        \
-        _mm_storeu_si128((__m128i *)(void *)(dst + 2 * 16), _mm_alignr_epi8(xmm3, xmm2, offset));        \
-        _mm_storeu_si128((__m128i *)(void *)(dst + 3 * 16), _mm_alignr_epi8(xmm4, xmm3, offset));        \
-        _mm_storeu_si128((__m128i *)(void *)(dst + 4 * 16), _mm_alignr_epi8(xmm5, xmm4, offset));        \
-        _mm_storeu_si128((__m128i *)(void *)(dst + 5 * 16), _mm_alignr_epi8(xmm6, xmm5, offset));        \
-        _mm_storeu_si128((__m128i *)(void *)(dst + 6 * 16), _mm_alignr_epi8(xmm7, xmm6, offset));        \
-        _mm_storeu_si128((__m128i *)(void *)(dst + 7 * 16), _mm_alignr_epi8(xmm8, xmm7, offset));        \
-        dst += 128;                                                                                      \
-    }                                                                                                    \
-    tmp = len;                                                                                           \
-    len = ((len - 16 + offset) & 127) + 16 - offset;                                                     \
-    tmp -= len;                                                                                          \
-    src += tmp;                                                                                          \
-    dst += tmp;                                                                                          \
-    if (len >= 32 + 16 - offset) {                                                                       \
-        while (len >= 32 + 16 - offset) {                                                                \
-            xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0 * 16));              \
-            len -= 32;                                                                                   \
-            xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 1 * 16));              \
-            xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 2 * 16));              \
-            src += 32;                                                                                   \
-            _mm_storeu_si128((__m128i *)(void *)(dst + 0 * 16), _mm_alignr_epi8(xmm1, xmm0, offset));    \
-            _mm_storeu_si128((__m128i *)(void *)(dst + 1 * 16), _mm_alignr_epi8(xmm2, xmm1, offset));    \
-            dst += 32;                                                                                   \
-        }                                                                                                \
-        tmp = len;                                                                                       \
-        len = ((len - 16 + offset) & 31) + 16 - offset;                                                  \
-        tmp -= len;                                                                                      \
-        src += tmp;                                                                                      \
-        dst += tmp;                                                                                      \
-    }                                                                                                    \
+#define MOVEUNALIGNED_LEFT47_IMM(dst, src, len, offset)                                              \
+{                                                                                                    \
+  ng_size_t tmp;                                                                                     \
+  while (len >= 128 + 16 - offset) {                                                                 \
+    xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0 * 16));                  \
+    len -= 128;                                                                                      \
+    xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 1 * 16));                  \
+    xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 2 * 16));                  \
+    xmm3 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 3 * 16));                  \
+    xmm4 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 4 * 16));                  \
+    xmm5 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 5 * 16));                  \
+    xmm6 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 6 * 16));                  \
+    xmm7 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 7 * 16));                  \
+    xmm8 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 8 * 16));                  \
+    src += 128;                                                                                      \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 0 * 16), _mm_alignr_epi8(xmm1, xmm0, offset));        \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 1 * 16), _mm_alignr_epi8(xmm2, xmm1, offset));        \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 2 * 16), _mm_alignr_epi8(xmm3, xmm2, offset));        \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 3 * 16), _mm_alignr_epi8(xmm4, xmm3, offset));        \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 4 * 16), _mm_alignr_epi8(xmm5, xmm4, offset));        \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 5 * 16), _mm_alignr_epi8(xmm6, xmm5, offset));        \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 6 * 16), _mm_alignr_epi8(xmm7, xmm6, offset));        \
+    _mm_storeu_si128((__m128i *)(void *)(dst + 7 * 16), _mm_alignr_epi8(xmm8, xmm7, offset));        \
+    dst += 128;                                                                                      \
+  }                                                                                                  \
+  tmp = len;                                                                                         \
+  len = ((len - 16 + offset) & 127) + 16 - offset;                                                   \
+  tmp -= len;                                                                                        \
+  src += tmp;                                                                                        \
+  dst += tmp;                                                                                        \
+  if (len >= 32 + 16 - offset) {                                                                     \
+    while (len >= 32 + 16 - offset) {                                                                \
+      xmm0 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 0 * 16));                \
+      len -= 32;                                                                                     \
+      xmm1 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 1 * 16));                \
+      xmm2 = _mm_loadu_si128((const __m128i *)(const void *)(src - offset + 2 * 16));                \
+      src += 32;                                                                                     \
+      _mm_storeu_si128((__m128i *)(void *)(dst + 0 * 16), _mm_alignr_epi8(xmm1, xmm0, offset));      \
+      _mm_storeu_si128((__m128i *)(void *)(dst + 1 * 16), _mm_alignr_epi8(xmm2, xmm1, offset));      \
+      dst += 32;                                                                                     \
+    }                                                                                                \
+    tmp = len;                                                                                       \
+    len = ((len - 16 + offset) & 31) + 16 - offset;                                                  \
+    tmp -= len;                                                                                      \
+    src += tmp;                                                                                      \
+    dst += tmp;                                                                                      \
+  }                                                                                                  \
 }
 
 /**
@@ -553,24 +578,24 @@ COPY_BLOCK_128_BACK31:
  */
 #define MOVEUNALIGNED_LEFT47(dst, src, len, offset)                   \
 {                                                                     \
-    switch (offset) {                                                 \
-    case 0x01: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x01); break;    \
-    case 0x02: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x02); break;    \
-    case 0x03: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x03); break;    \
-    case 0x04: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x04); break;    \
-    case 0x05: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x05); break;    \
-    case 0x06: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x06); break;    \
-    case 0x07: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x07); break;    \
-    case 0x08: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x08); break;    \
-    case 0x09: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x09); break;    \
-    case 0x0A: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0A); break;    \
-    case 0x0B: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0B); break;    \
-    case 0x0C: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0C); break;    \
-    case 0x0D: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0D); break;    \
-    case 0x0E: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0E); break;    \
-    case 0x0F: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0F); break;    \
-    default:;                                                         \
-    }                                                                 \
+  switch (offset) {                                                   \
+  case 0x01: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x01); break;      \
+  case 0x02: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x02); break;      \
+  case 0x03: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x03); break;      \
+  case 0x04: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x04); break;      \
+  case 0x05: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x05); break;      \
+  case 0x06: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x06); break;      \
+  case 0x07: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x07); break;      \
+  case 0x08: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x08); break;      \
+  case 0x09: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x09); break;      \
+  case 0x0A: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0A); break;      \
+  case 0x0B: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0B); break;      \
+  case 0x0C: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0C); break;      \
+  case 0x0D: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0D); break;      \
+  case 0x0E: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0E); break;      \
+  case 0x0F: MOVEUNALIGNED_LEFT47_IMM(dst, src, n, 0x0F); break;      \
+  default:;                                                           \
+  }                                                                   \
 }
 
 static __rte_always_inline ng_uint8_t *
@@ -585,67 +610,87 @@ rte_memcpy_generic(ng_uint8_t *dst,
   /**
    * Copy less than 16 bytes
    */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_mov15_or_less(dst, src, n);
   }
 
   /**
    * Fast way when copy size doesn't exceed 512 bytes
    */
-  if (n <= 32) {
+  if (n <= 32) 
+  {
     rte_mov16(dst, src);
     if (__rte_constant(n) && n == 16)
       return ret; /* avoid (harmless) duplicate copy */
     rte_mov16(dst - 16 + n, src - 16 + n);
     return ret;
   }
-  if (n <= 64) {
+  
+  if (n <= 64) 
+  {
     rte_mov32(dst, src);
     if (n > 48)
       rte_mov16(dst + 32, src + 32);
     rte_mov16(dst - 16 + n, src - 16 + n);
     return ret;
   }
-  if (n <= 128) {
+  
+  if (n <= 128) 
+  {
     goto COPY_BLOCK_128_BACK15;
   }
-  if (n <= 512) {
-    if (n >= 256) {
+  
+  if (n <= 512) 
+  {
+    if (n >= 256) 
+    {
       n -= 256;
       rte_mov128(dst, src);
       rte_mov128(dst + 128, src + 128);
       src += 256;
       dst += 256;
     }
+    
 COPY_BLOCK_255_BACK15:
-    if (n >= 128) {
+    if (n >= 128) 
+    {
       n -= 128;
       rte_mov128(dst, src);
       src += 128;
       dst += 128;
     }
+    
 COPY_BLOCK_128_BACK15:
-    if (n >= 64) {
+    if (n >= 64) 
+    {
       n -= 64;
       rte_mov64(dst, src);
       src += 64;
       dst += 64;
     }
+    
 COPY_BLOCK_64_BACK15:
-    if (n >= 32) {
+    if (n >= 32) 
+    {
       n -= 32;
       rte_mov32(dst, src);
       src += 32;
       dst += 32;
     }
-    if (n > 16) {
+    
+    if (n > 16) 
+    {
       rte_mov16(dst, src);
       rte_mov16(dst - 16 + n, src - 16 + n);
       return ret;
     }
-    if (n > 0) {
+    
+    if (n > 0) 
+    {
       rte_mov16(dst - 16 + n, src - 16 + n);
     }
+    
     return ret;
   }
 
@@ -656,7 +701,8 @@ COPY_BLOCK_64_BACK15:
    * backwards access.
    */
   dstofss = (ng_uintptr_t)dst & 0x0F;
-  if (dstofss > 0) {
+  if (dstofss > 0) 
+  {
     dstofss = 16 - dstofss + 16;
     n -= dstofss;
     rte_mov32(dst, src);
@@ -668,11 +714,13 @@ COPY_BLOCK_64_BACK15:
   /**
    * For aligned copy
    */
-  if (srcofs == 0) {
+  if (srcofs == 0) 
+  {
     /**
      * Copy 256-byte blocks
      */
-    for (; n >= 256; n -= 256) {
+    for (; n >= 256; n -= 256) 
+    {
       rte_mov256(dst, src);
       dst += 256;
       src += 256;
@@ -704,16 +752,20 @@ rte_memcpy_aligned(ng_uint8_t *dst,
   void *ret = dst;
 
   /* Copy size < 16 bytes */
-  if (n < 16) {
+  if (n < 16) 
+  {
     return rte_mov15_or_less(dst, src, n);
   }
 
   /* Copy 16 <= size <= 32 bytes */
-  if (__rte_constant(n) && n == 32) {
+  if (__rte_constant(n) && n == 32) 
+  {
     rte_mov32(dst, src);
     return ret;
   }
-  if (n <= 32) {
+  
+  if (n <= 32) 
+  {
     rte_mov16(dst, src);
     if (__rte_constant(n) && n == 16)
       return ret; /* avoid (harmless) duplicate copy */
@@ -723,11 +775,14 @@ rte_memcpy_aligned(ng_uint8_t *dst,
   }
 
   /* Copy 32 < size <= 64 bytes */
-  if (__rte_constant(n) && n == 64) {
+  if (__rte_constant(n) && n == 64) 
+  {
     rte_mov64(dst, src);
     return ret;
   }
-  if (n <= 64) {
+  
+  if (n <= 64) 
+  {
     rte_mov32(dst, src);
     rte_mov32(dst - 32 + n, src - 32 + n);
 
@@ -735,7 +790,8 @@ rte_memcpy_aligned(ng_uint8_t *dst,
   }
 
   /* Copy 64 bytes blocks */
-  for (; n > 64; n -= 64) {
+  for (; n > 64; n -= 64) 
+  {
     rte_mov64(dst, src);
     dst += 64;
     src += 64;

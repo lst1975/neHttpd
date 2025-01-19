@@ -219,15 +219,15 @@ rte_memrchr256(const ng_uint8_t *dst, const ng_uint8_t *src)
 
 #define ALIGNMENT_MASK 0x3F
 
-#define __m512_LOAD_MEMRCHR(i) do {                         \
-  zmm1 = _mm512_loadu_si512((const void *)dst - (i << 6));  \
-  zmm2 = _mm512_cmpeq_epi8(*((const __m512i *)src), zmm1);  \
-  zmm0 = _mm512_cmpeq_epi8(memrchr_const__C.A512,zmm2);     \
-  uint64_t mask = _mm512_movemask_epi8(zmm0);               \
-  if (mask) {                                               \
-    int clz = __builtin_clzll(mask);                        \
-    return dst - clz - 1;                                   \
-  }                                                         \
+#define __m512_LOAD_MEMRCHR(i) do {                               \
+  zmm1 = _mm512_loadu_si512((const void *)dst - (i << 6));        \
+  zmm2 = _mm512_cmpeq_epi8(*((const __m512i *)src), zmm1);        \
+  zmm0 = _mm512_cmpeq_epi8(memrchr_const__C.A512,zmm2);           \
+  uint64_t mask = _mm512_movemask_epi8(zmm0);                     \
+  if (mask) {                                                     \
+    int clz = __builtin_clzll(mask);                              \
+    return dst - clz - 1;                                         \
+  }                                                               \
 }while(0)
 
 /**
@@ -410,15 +410,15 @@ COPY_BLOCK_128_BACK63:
 
 #define ALIGNMENT_MASK 0x1F
 
-#define __m256_LOAD_MEMRCHR(dst) do {                       \
-  ymm1 = _mm256_loadu_si256((const void *)dst - 32);        \
-  ymm2 = _mm256_cmpeq_epi8(*((const __m256i *)src), ymm1);  \
-  ymm0 = _mm256_cmpeq_epi8(memrchr_const__C.A256, ymm2);    \
-  mask = _mm256_movemask_epi8(ymm0);                        \
-  if (mask) {                                               \
-    int clz = __builtin_clz(mask);                          \
-    return dst - clz - 1;                                   \
-  }                                                         \
+#define __m256_LOAD_MEMRCHR(dst) do {                             \
+  ymm1 = _mm256_loadu_si256((const void *)dst - 32);              \
+  ymm2 = _mm256_cmpeq_epi8(*((const __m256i *)src), ymm1);        \
+  ymm0 = _mm256_cmpeq_epi8(memrchr_const__C.A256, ymm2);          \
+  mask = _mm256_movemask_epi8(ymm0);                              \
+  if (mask) {                                                     \
+    int clz = __builtin_clz(mask);                                \
+    return dst - clz - 1;                                         \
+  }                                                               \
 }while(0)
 
 /**
@@ -426,7 +426,8 @@ COPY_BLOCK_128_BACK63:
  * locations should not overlap.
  */
 static __rte_always_inline const ng_uint8_t *
-rte_memrchr128blocks(const ng_uint8_t *dst, const ng_uint8_t *src, ng_size_t n)
+rte_memrchr128blocks(const ng_uint8_t *dst, 
+  const ng_uint8_t *src, ng_size_t n)
 {
   __m256i ymm0, ymm1, ymm2;
   ng_uint32_t mask;
