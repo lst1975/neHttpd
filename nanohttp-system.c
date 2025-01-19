@@ -993,7 +993,7 @@ static void
 __os_specific_status(void *log)
 {
 #if defined(RTE_ENV_LINUX)
-  log_info("OS: %s", ng_os_info.ng_os_version);
+  log_info("%s", ng_os_info.ng_os_version);
 #endif
 }
 
