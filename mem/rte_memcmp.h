@@ -229,7 +229,7 @@ rte_cmp256(const ng_uint8_t *dst, const ng_uint8_t *src)
 #define ALIGNMENT_MASK 0x3F
 
 #define __m512_LOAD_MEMCMP(i) do {                                         \
-  zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6)));              \
+  zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6)));               \
   md = dst + (i << 6); zmm1 = _mm512_loadu_si512((const void *)md);        \
   zmm0 = _mm512_cmpeq_epi8(zmm0, zmm1);                                    \
   mask = _mm512_movemask_epi8(zmm0);                                       \
