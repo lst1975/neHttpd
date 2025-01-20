@@ -79,12 +79,11 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
       ((const struct rte_uint64_alias *)src)->val)
     {
       ng_uint32_t mask;
-      __m128i xmm0,xmm1,xmm2,xmm3;
+      __m128i xmm0,xmm1,xmm2;
       xmm1 = _mm_set1_epi64(*(__m64 *)dst);
       xmm2 = _mm_set1_epi64(*(__m64 *)src);
       xmm0 = _mm_cmpeq_epi8(xmm2, xmm1);
-      xmm3 = _mm_set1_epi8(0xff);
-      xmm0 = _mm_cmpeq_epi8(xmm3, xmm0);
+      xmm0 = _mm_cmpeq_epi8(mem_const__ff_C.A128, xmm0);
       mask = _mm_movemask_epi8(xmm0);
       return dst + __builtin_ctz(~mask);
     }
@@ -98,12 +97,11 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
       ((const struct rte_uint32_alias *)src)->val)
     {
       ng_uint32_t mask;
-      __m128i xmm0,xmm1,xmm2,xmm3;
+      __m128i xmm0,xmm1,xmm2;
       xmm1 = _mm_set1_epi32(*(int *)dst);
       xmm2 = _mm_set1_epi32(*(int *)src);
       xmm0 = _mm_cmpeq_epi8(xmm2, xmm1);
-      xmm3 = _mm_set1_epi8(0xff);
-      xmm0 = _mm_cmpeq_epi8(xmm3, xmm0);
+      xmm0 = _mm_cmpeq_epi8(mem_const__ff_C.A128, xmm0);
       mask = _mm_movemask_epi8(xmm0);
       return dst + __builtin_ctz(~mask);
     }
@@ -229,12 +227,12 @@ rte_cmp256(const ng_uint8_t *dst, const ng_uint8_t *src)
 #define ALIGNMENT_MASK 0x3F
 
 #define __m512_LOAD_MEMCMP(i) do {                                         \
-  zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6)));               \
+  zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6)));              \
   md = dst + (i << 6); zmm1 = _mm512_loadu_si512((const void *)md);        \
   zmm0 = _mm512_cmpeq_epi8(zmm0, zmm1);                                    \
   mask = _mm512_movemask_epi8(zmm0);                                       \
   if (mask!=0xffffffffffffffffULL) return md + __builtin_ctzll(~mask);     \
-}while(0)
+} while(0)
 
 /**
  * Copy 128-byte blocks from one location to another,
@@ -432,8 +430,9 @@ COPY_BLOCK_128_BACK63:
 
 #define __m256_LOAD_MEMCMP(i) do {                                         \
   __m256i ymm2;                                                            \
-  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5)));               \
-  md = dst + (i << 5); ymm1 = _mm256_loadu_si256((const void *)md);        \
+  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5)));              \
+  md = dst + (i << 5);                                                     \
+  ymm1 = _mm256_loadu_si256((const void *)md);                             \
   ymm2 = _mm256_cmpeq_epi8(ymm0, ymm1);                                    \
   mask = _mm256_movemask_epi8(ymm2);                                       \
   if (mask!=0xffffffffU) return md + __builtin_ctz(~mask);                 \

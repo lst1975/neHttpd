@@ -9,8 +9,7 @@
 #include "rte_strieq.h"
 
 struct strieq_const strieq_const__C;
-struct memchr_const memchr_const__C;
-struct memrchr_const memrchr_const__C;
+struct mem_const_ff mem_const__ff_C;
 
 /*
    A        Z
@@ -30,20 +29,12 @@ RTE_INIT(strcasecmp_init_const)
 	strieq_const__C.A512 = _mm512_set1_epi8(0b00100000);
 #endif
 
-	memchr_const__C.A128 = _mm_set1_epi8(0xff);
-#ifdef RTE_MEMCHR_AVX  
-	memchr_const__C.A256 = _mm256_set1_epi8(0xff);
+	mem_const__ff_C.A128 = _mm_set1_epi8(0xff);
+#if defined __AVX2__  
+	mem_const__ff_C.A256 = _mm256_set1_epi8(0xff);
 #endif
-#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-	memchr_const__C.A512 = _mm512_set1_epi8(0xff);
-#endif
-
-	memrchr_const__C.A128 = _mm_set1_epi8(0xff);
-#ifdef RTE_MEMCHR_AVX  
-	memrchr_const__C.A256 = _mm256_set1_epi8(0xff);
-#endif
-#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-	memrchr_const__C.A512 = _mm512_set1_epi8(0xff);
+#if defined __AVX512F__
+	mem_const__ff_C.A512 = _mm512_set1_epi8(0xff);
 #endif
 }
 

@@ -1002,6 +1002,18 @@ rte_strieq(const void *dst, const void *src, ng_size_t n)
 
 #endif
 
+struct __rte_cache_aligned mem_const_ff{
+  __m128i A128;
+#if defined __AVX2__  
+  __m256i A256;
+#endif
+#if defined __AVX512F__
+  __m512i A512;
+#endif
+};
+
+extern struct mem_const_ff mem_const__ff_C;
+
 extern int memchr_test(void);
 extern int memrchr_test(void);
 
