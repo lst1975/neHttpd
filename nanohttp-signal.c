@@ -83,7 +83,7 @@ static DWORD _httpd_terminate_signal = CTRL_C_EVENT;
 static BOOL WINAPI
 _httpd_term(DWORD sig)
 {
-  log_debug("Got signal %d", sig);
+  log_debug("Got signal %d.", sig);
 
   if (sig == SIGSEGV)
   {
@@ -108,7 +108,7 @@ static sigset_t thrsigset;
 static void
 _httpd_term(int sig)
 {
-  log_debug("Got signal %d", sig);
+  log_debug("Got signal %d.", sig);
 
   if (sig == SIGSEGV)
   {
@@ -139,8 +139,7 @@ httpd_pthread_sigmask(void)
 static void
 _httpd_register_signal_handler(SIGNAL_T sig)
 {
-  log_verbose("registering termination signal handler (SIGNAL:%d)",
-               sig);
+  log_verbose("registering termination signal handler (SIGNAL:%d).", sig);
 #ifdef WIN32
   if (SetConsoleCtrlHandler((PHANDLER_ROUTINE) _httpd_term, TRUE) == FALSE)
   {

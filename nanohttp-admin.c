@@ -180,9 +180,12 @@ _httpd_admin_list_statistics(httpd_conn_s *conn,
   hservice_t *service;
   int n;
   
-  log_verbose("Client requested statistics for \"%s\"", service_name);
+  log_verbose("Client requested statistics for \"%.*s\".", 
+    service_name_len, service_name);
 
-  ng_snprintf(buffer, sizeof(buffer), "Listing statistics for service <b>%s</b>", service_name);
+  ng_snprintf(buffer, sizeof(buffer), 
+    "Listing statistics for service <b>%.*s</b>", 
+    service_name_len, service_name);
   _httpd_admin_send_title(conn, buffer);
 
   if (!service_name 

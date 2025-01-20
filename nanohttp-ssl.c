@@ -178,14 +178,14 @@ _hssl_cert_verify_callback(int prev_ok, X509_STORE_CTX * ctx)
         return 1;
     }
 */
-  log_verbose("Cert depth = %d", X509_STORE_CTX_get_error_depth(ctx));
+  log_verbose("Cert depth = %d.", X509_STORE_CTX_get_error_depth(ctx));
   if (X509_STORE_CTX_get_error_depth(ctx) == 0)
   {
     return _hssl_verify_cert(X509_STORE_CTX_get_current_cert(ctx));
   }
   else
   {
-    log_verbose("Cert ok (prev)");
+    log_verbose("Cert ok (prev).");
     return prev_ok;
   }
 }
@@ -362,7 +362,7 @@ _hssl_library_init(void)
 
   if (!initialized)
   {
-    log_verbose("Initializing library");
+    log_verbose("Initializing library.");
 
     SSL_library_init();
 
@@ -380,34 +380,34 @@ _hssl_library_init(void)
 static herror_t
 _hssl_server_context_init(void)
 {
-  log_verbose("enabled=%i, certificate=%p", _hssl_enabled, _hssl_certificate);
+  log_verbose("enabled=%i, certificate=%p.", _hssl_enabled, _hssl_certificate);
 
   if (!_hssl_enabled || !_hssl_certificate)
     return H_OK;
 
   if (!(_hssl_context = SSL_CTX_new(SSLv23_method())))
   {
-    log_error("Cannot create SSL context");
+    log_error("Cannot create SSL context.");
     return herror_new("_hssl_server_context_init", HSSL_ERROR_CONTEXT,
-                      "Unable to create SSL context");
+                      "Unable to create SSL context.");
   }
 
   if (!(SSL_CTX_use_certificate_file(_hssl_context, _hssl_certificate, SSL_FILETYPE_PEM)))
   {
-    log_error("Cannot read certificate file: \"%s\"", _hssl_certificate);
+    log_error("Cannot read certificate file: \"%s\".", _hssl_certificate);
     SSL_CTX_free(_hssl_context);
     return herror_new("_hssl_server_context_init", HSSL_ERROR_CERTIFICATE,
-                      "Unable to use SSL certificate \"%s\"", _hssl_certificate);
+                      "Unable to use SSL certificate \"%s\".", _hssl_certificate);
   }
 
   SSL_CTX_set_default_passwd_cb(_hssl_context, _hssl_password_callback);
 
   if (!(SSL_CTX_use_PrivateKey_file(_hssl_context, _hssl_certificate, SSL_FILETYPE_PEM)))
   {
-    log_error("Cannot read key file: \"%s\"", _hssl_certificate);
+    log_error("Cannot read key file: \"%s\".", _hssl_certificate);
     SSL_CTX_free(_hssl_context);
     return herror_new("_hssl_server_context_init", HSSL_ERROR_PEM,
-                      "Unable to use private key");
+                      "Unable to use private key.");
   }
 
   if (_hssl_ca_list != NULL && *_hssl_ca_list != '\0')
@@ -415,18 +415,18 @@ _hssl_server_context_init(void)
     if (!(SSL_CTX_load_verify_locations(_hssl_context, _hssl_ca_list, NULL)))
     {
       SSL_CTX_free(_hssl_context);
-      log_error("Cannot read CA list: \"%s\"", _hssl_ca_list);
+      log_error("Cannot read CA list: \"%s\".", _hssl_ca_list);
       return herror_new("_hssl_server_context_init", HSSL_ERROR_CA_LIST,
-                        "Unable to read certification authorities \"%s\"");
+                        "Unable to read certification authorities \"%s\".");
     }
 
     SSL_CTX_set_client_CA_list(_hssl_context, SSL_load_client_CA_file(_hssl_ca_list));
-    log_verbose("Certification authority contacted");
+    log_verbose("Certification authority contacted.");
   }
 
   SSL_CTX_set_verify(_hssl_context, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE,
                      _hssl_cert_verify_callback);
-  log_verbose("Certificate verification callback registered");
+  log_verbose("Certificate verification callback registered.");
 
   SSL_CTX_set_mode(_hssl_context, SSL_MODE_AUTO_RETRY);
 
@@ -456,11 +456,11 @@ hssl_module_init(int argc, char **argv)
   if (_hssl_enabled)
   {
     _hssl_library_init();
-    log_verbose("SSL enabled");
+    log_verbose("SSL enabled.");
   }
   else
   {
-    log_verbose("SSL _not_ enabled");
+    log_verbose("SSL _not_ enabled.");
   }
 
   return _hssl_server_context_init();
@@ -505,20 +505,20 @@ hssl_client_ssl(hsocket_s *sock)
   SSL *ssl;
   int ret;
 
-  log_verbose("Starting SSL client initialization");
+  log_verbose("Starting SSL client initialization.");
 
   _hssl_library_init();
 
   if (!(ctx = SSL_CTX_new(SSLv23_method())))
   {
-    log_error("SSL_CTX_new failed (ctx == %p)", ctx);
-    return herror_new("hssl_client_ssl", HSSL_ERROR_CONTEXT, "Cannot create SSL client context");
+    log_error("SSL_CTX_new failed (ctx == %p).", ctx);
+    return herror_new("hssl_client_ssl", HSSL_ERROR_CONTEXT, "Cannot create SSL client context.");
   }
 
   if (!(ssl = SSL_new(ctx)))
   {
-    log_error("Cannot create new SSL object");
-    return herror_new("hssl_client_ssl", HSSL_ERROR_CLIENT, "SSL_new failed");
+    log_error("Cannot create new SSL object.");
+    return herror_new("hssl_client_ssl", HSSL_ERROR_CLIENT, "SSL_new failed.");
   }
 
   SSL_set_fd(ssl, sock->sock);
@@ -527,10 +527,10 @@ hssl_client_ssl(hsocket_s *sock)
   {
     herror_t err;
 
-    log_error("SSL connect error (%s)", _hssl_get_error(ssl, -1));
+    log_error("SSL connect error (%s).", _hssl_get_error(ssl, -1));
     err =
       herror_new("hssl_client_ssl", HSSL_ERROR_CONNECT,
-                 "SSL_connect failed (%s)", _hssl_get_error(ssl, ret));
+                 "SSL_connect failed (%s).", _hssl_get_error(ssl, ret));
     SSL_free(ssl);
     return err;
   }
@@ -544,7 +544,7 @@ hssl_client_ssl(hsocket_s *sock)
      did not verify"); SSL_free(ssl); return herror_new("hssl_client_ssl",
      HSSL_ERROR_CERTIFICATE, "Verfiy certificate failed"); } */
 
-  log_verbose("SSL client initialization completed");
+  log_verbose("SSL client initialization completed.");
 
   sock->ssl = ssl;
 
@@ -567,13 +567,13 @@ hssl_server_ssl(hsocket_s *sock)
   if (!_hssl_enabled)
     return H_OK;
 
-  log_verbose("Starting SSL initialization for socket %d", sock->sock);
+  log_verbose("Starting SSL initialization for socket %d.", sock->sock);
 
   if (!(ssl = SSL_new(_hssl_context)))
   {
-    log_warn("SSL_new failed");
+    log_warn("SSL_new failed.");
     return herror_new("hssl_server_ssl", HSSL_ERROR_SERVER,
-                      "Cannot create SSL object");
+                      "Cannot create SSL object.");
   }
   /* SSL_set_fd(ssl, sock->sock); */
 
@@ -581,7 +581,7 @@ hssl_server_ssl(hsocket_s *sock)
 
   if (sbio == NULL)
   {
-    log_error("BIO_new_socket failed");
+    log_error("BIO_new_socket failed.");
     return NULL;
   }
   /* BIO_set_callback(sbio, hssl_bio_cb); */
@@ -592,10 +592,10 @@ hssl_server_ssl(hsocket_s *sock)
   {
     herror_t err;
 
-    log_error("SSL_accept failed (%s)", _hssl_get_error(ssl, ret));
+    log_error("SSL_accept failed (%s).", _hssl_get_error(ssl, ret));
 
     err = herror_new("hssl_server_ssl", HSSL_ERROR_SERVER, 
-      "SSL_accept failed (%s)", _hssl_get_error(ssl, ret));
+      "SSL_accept failed (%s).", _hssl_get_error(ssl, ret));
     SSL_free(ssl);
 
     return err;
@@ -624,19 +624,19 @@ hssl_read(hsocket_s *sock, char *buf, ng_size_t len, ng_size_t * received)
 {
   int count;
 
-/* log_verbose("sock->sock=%d sock->ssl=%p, len=%li", sock->sock, sock->ssl, len); */
+/* log_verbose("sock->sock=%d sock->ssl=%p, len=%li.", sock->sock, sock->ssl, len); */
 
   if (sock->ssl)
   {
     if ((count = SSL_read(sock->ssl, buf, len)) < 1)
       return herror_new("hssl_read", HSOCKET_ERROR_RECEIVE,
-                        "SSL_read failed (%s)", _hssl_get_error(sock->ssl, count));
+                        "SSL_read failed (%s).", _hssl_get_error(sock->ssl, count));
   }
   else
   {
     if ((count = hsocket_select_recv(sock->sock, buf, len)) == -1)
       return herror_new("hssl_read", HSOCKET_ERROR_RECEIVE,
-                        "recv failed (%s)", os_strerror(ng_socket_errno));
+                        "recv failed (%s).", os_strerror(ng_socket_errno));
   }
   *received = count;
 
@@ -655,13 +655,13 @@ hssl_write(hsocket_s *sock, const char *buf, ng_size_t len, ng_size_t *sent)
   {
     if ((count = SSL_write(sock->ssl, buf, len)) == -1)
       return herror_new("hssl_write", HSOCKET_ERROR_SEND,
-                        "SSL_write failed (%s)", _hssl_get_error(sock->ssl,
+                        "SSL_write failed (%s).", _hssl_get_error(sock->ssl,
                                                                  count));
   }
   else
   {
     if ((count = send(sock->sock, buf, len, 0)) == -1)
-      return herror_new("hssl_write", HSOCKET_ERROR_SEND, "send failed (%s)",
+      return herror_new("hssl_write", HSOCKET_ERROR_SEND, "send failed (%s).",
                         os_strerror(ng_socket_errno));
   }
   *sent = count;

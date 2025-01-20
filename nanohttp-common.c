@@ -98,7 +98,7 @@ hpairnode_new(const ng_block_s *key, const ng_block_s *val,
 {
   hpair_s *pair;
 
-  log_verbose("new pair ('%pS','%pS')", key, val);
+  log_verbose("new pair ('%pS','%pS').", key, val);
 
   pair = (hpair_s *)ng_malloc(sizeof(hpair_s));
   if (pair == NULL)
@@ -199,7 +199,7 @@ hpairnode_dump(const hpair_s *pair)
     log_verbose("(NULL)[]");
     return;
   }
-  log_verbose("%pS: %pS", &pair->key, &pair->val);
+  log_verbose("%pS: %pS.", &pair->key, &pair->val);
 
   return;
 }
@@ -253,7 +253,7 @@ hpairnode_get_ignore_case(ng_list_head_s *head,
 {
   if (key == NULL || !len)
   {
-    log_error("key is NULL");
+    log_error("key is NULL.");
     return NULL;
   }
 
@@ -276,7 +276,7 @@ hpairnode_get(ng_list_head_s *head, const ng_block_s *key)
 {
   if (key == NULL)
   {
-    log_error("key is NULL");
+    log_error("key is NULL.");
     return NULL;
   }
 
@@ -337,7 +337,7 @@ hpairnode_add_header_list(ng_list_head_s *header,
   {
     if (0 > hpairnode_add_header(header, &p->key, &p->val))
     {
-      log_fatal("hpairnode_add_header_list failed");
+      log_fatal("hpairnode_add_header_list failed.");
       return -1;
     }
   }
@@ -402,7 +402,7 @@ hpairnode_set_header_list(ng_list_head_s *dst, const ng_list_head_s *src)
   {
     if (0 > hpairnode_set_header(dst, &p->key, &p->val))
     {
-      log_fatal("hpairnode_add_header_list failed");
+      log_fatal("hpairnode_add_header_list failed.");
       return -1;
     }
   }
@@ -431,7 +431,7 @@ content_type_print(content_type_s *ct)
   {
     hpair_s *pair;
     log_verbose(" ++++++ Parsed Content-Type :");
-    log_verbose(" Content-Type : %s", ct->type);
+    log_verbose(" Content-Type : %pS", &ct->type);
     ng_list_for_each_entry(pair,hpair_s,&ct->params,link)
     {
       log_verbose("    %pS = %pS", &pair->key, &pair->val);

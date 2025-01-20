@@ -391,7 +391,7 @@ _httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn,
   }
 
   ssl = conn->url.protocol == NG_PROTOCOL_HTTPS ? 1 : 0;
-  log_verbose("ssl = %i (%i %i)", ssl, conn->url.protocol, NG_PROTOCOL_HTTPS);
+  log_verbose("ssl = %i (%i %i).", ssl, conn->url.protocol, NG_PROTOCOL_HTTPS);
 
   /* Open connection */
   status = hsocket_open(conn->sock, conn->url.host.cptr, conn->url.port, ssl);

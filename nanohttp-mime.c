@@ -1147,7 +1147,7 @@ mime_add_content_type_header(ng_list_head_s *header,
     log_fatal("Failed to malloc temp buffer.");
     status = herror_new("httpc_mime_begin", 
                       GENERAL_ERROR_MALLOC,
-                      "Can malloc \"%d\" (%s)", 
+                      "Can malloc \"%d\" (%s).", 
                       tsize, 
                       os_strerror(ng_errno));
     goto clean0;

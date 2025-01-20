@@ -180,7 +180,7 @@ ng_url_dump(const ng_url_s *url)
 {
   if (!url)
   {
-    log_error("parameter url is NULL");
+    log_error("parameter url is NULL.");
     return;
   }
 
@@ -335,7 +335,7 @@ __ng_url_parse(ng_url_s *url, const char *urlstr, int urllen)
   {
     if (!__isValidUrlToken[(int)(ng_uint8_t)urlstr[i]])
     {
-      log_error("bad url character");
+      log_error("bad url character.");
       return URL_ERROR_CHARACTER;
     }
   }
@@ -344,7 +344,7 @@ __ng_url_parse(ng_url_s *url, const char *urlstr, int urllen)
   p = ng_strstr(urlstr, "://");
   if (p == NULL)
   {
-    log_error("no host");
+    log_error("no host.");
     return URL_ERROR_NO_HOST;
   }
   /* find protocol */

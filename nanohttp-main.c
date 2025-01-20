@@ -85,12 +85,12 @@ simple_authenticator(hrequest_s *req, const ng_block_s *user,
   const ng_block_s *password)
 {
   httpd_user_t *auth_user;
-  log_debug("logging in user=\"%.*s\" password=\"%.*s\"\n", 
+  log_debug("logging in user=\"%.*s\" password=\"%.*s\".", 
     user->len, user->cptr, password->len, password->cptr);
 
   auth_user = nanohttp_users_match(user->buf, user->len, password->buf, password->len);
   if (auth_user == NULL) {
-    log_error("authenticate failed\n");
+    log_error("authenticate failed.");
     return 0;
   }
 
@@ -120,7 +120,7 @@ default_service(httpd_conn_s *conn, hrequest_s *req)
   }
   else
   {
-    ng_snprintf(buf, sizeof buf, "Resource \"%pS\" not found", &req->path);
+    ng_snprintf(buf, sizeof buf, "Resource \"%pS\" not found.", &req->path);
     httpd_send_not_found(conn, buf);
   }
   return;
@@ -326,7 +326,7 @@ secure_service(httpd_conn_s *conn, hrequest_s *req)
   r = httpd_send_header(conn, HTTP_RESPONSE_CODE_200_OK);
   if (r == H_OK)
   {
-    log_info("secure_service received, redirect to index.html");
+    log_info("secure_service received, redirect to index.html.");
     do {
       r = http_output_stream_write(conn->out, 
                 (const unsigned char *)__nanohttp_index_html_body, 
@@ -512,23 +512,23 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
       goto finished;
     }
     
-    log_debug("try to decode %pS\n", data);
+    log_debug("try to decode %pS.", data);
     
     /* decode_url malloced new data */
     if (0 > decode_url(&in, data->val.ptr, data->val.len))
     {
-      log_error("Failed to parse query");
+      log_error("Failed to parse query.");
       goto finished;
     }
     
-    log_debug("decoded query is : %.*s", in.len, in.cptr);
+    log_debug("decoded query is : %.*s.", in.len, in.cptr);
 
     len = B64_DECLEN(in.len) + 1;
     query = (unsigned char *)ng_malloc(len);
     if (query == NULL)
     {
       ng_free(in.ptr);
-      log_error("Failed to ng_malloc key");
+      log_error("Failed to ng_malloc key.");
       goto finished;
     }
     
@@ -538,27 +538,27 @@ data_service(httpd_conn_s *conn, hrequest_s *req)
       if (len < 0)
       {
         ng_free(in.ptr);
-        log_error("b64Decode failed");
+        log_error("b64Decode failed.");
         goto finished;
       }
 #else      
       len = base64_decode_string(in.ptr, query);
 #endif
       ng_free(in.ptr);
-      log_debug("decoded query is : %s", query);
+      log_debug("decoded query is : %s.", query);
     }
 
     result = json_parse(&pair, (const char *)query, len);
     if (result != JSONSuccess)
     {
-      log_error("Failed to parse json");
+      log_error("Failed to parse json.");
       goto finished;
     }
 
     p = json_find_bykey(pair, "id", 2);
     if (p == NULL || p->jsonType != JSONNumber)
     {
-      log_error("Bad id in json");
+      log_error("Bad id in json.");
       goto finished;
     }
     id = (int)p->vint;

@@ -1021,8 +1021,8 @@ __test_decode_url(const char *output, int outlen,
     return;
   }
   log_verbose("test decode_url OK.");
-  log_verbose("%.*s", b.len, b.ptr);
-  ng_free(b.ptr);
+  log_verbose("%pS.", &b);
+  ng_free_data_block(&b);
 }
 
 static void test_decode_url1(void)

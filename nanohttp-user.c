@@ -93,7 +93,7 @@ void nanohttp_users_free(void)
     ng_free(entry);
   }
 
-  log_info("[OK]: nanohttp_users_free");
+  log_info("[OK]: nanohttp_users_free.");
 }
 
 static const httpd_user_t *__superuser=NULL;
@@ -164,13 +164,13 @@ int nanohttp_users_init(void)
   b->len = nanohttp_file_size(__USER_FILE, sizeof(__USER_FILE)-1);
   if (b->len == 0)
   {
-    log_verbose("failed to get file size");
+    log_verbose("failed to get file size.");
     goto clean0;
   }
   tmp.data = b->data = ng_malloc(b->len);
   if (b->data == NULL)
   {
-    log_verbose("failed to malloc file size");
+    log_verbose("failed to malloc file size.");
     goto clean0;
   }
   tmp.len = 0;
@@ -184,7 +184,7 @@ int nanohttp_users_init(void)
     goto clean1;
   }
   
-  log_debug("%.*s\n", (int)b->len, b->data);
+  log_debug("%pS.", &b->b);
 
   result = json_parse(&pair, (const char *)b->data, b->len);
   if (result != JSONSuccess)

@@ -249,7 +249,7 @@ void http_memcache_free(void)
       http_mentry_s *e;
       e = ng_list_first_entry(list,http_mentry_s,link);
       ng_list_del(&e->link);
-      log_fatal("file:%s, line:%d", file_base_name(e->file), e->line);
+      log_fatal("file:%s, line:%d.", file_base_name(e->file), e->line);
       os_free(e);
     }
   }
@@ -297,9 +297,9 @@ void *__http_malloc(ng_size_t size
   if (p == NULL)
   {
 #if __NHTTP_MEM_DEBUG  
-    log_fatal("Malloc failed, file:%s, line:%d", file_base_name(file), line);
+    log_fatal("Malloc failed, file:%s, line:%d.", file_base_name(file), line);
 #else
-    log_fatal("Malloc failed");
+    log_fatal("Malloc failed.");
 #endif
     return NULL;
   }

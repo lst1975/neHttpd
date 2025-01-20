@@ -206,7 +206,7 @@ _http_input_stream_chunked_read_chunk_size(http_input_stream_s *stream)
     if (err != H_OK)
     {
       herror_log(err);
-      log_error("hsocket_recv failed, %d:%s", herror_code(err), herror_func(err));
+      log_error("hsocket_recv failed, %d:%s.", herror_code(err), herror_func(err));
       stream->err = err;
       return -1;
     }
@@ -224,7 +224,7 @@ _http_input_stream_chunked_read_chunk_size(http_input_stream_s *stream)
       {
         stream->err = herror_new("_http_input_stream_chunked_read_chunk_size",
                                  STREAM_ERROR_WRONG_CHUNK_SIZE,
-                                 "Wrong chunk-size: %.*s", i, chunk);
+                                 "Wrong chunk-size: %.*s.", i, chunk);
         return -1;
       }
       /* 
@@ -236,7 +236,7 @@ _http_input_stream_chunked_read_chunk_size(http_input_stream_s *stream)
     {
       stream->err =
         herror_new("_http_input_stream_chunked_read_chunk_size",
-                   STREAM_ERROR_NO_CHUNK_SIZE, "reached max line == %d", i);
+                   STREAM_ERROR_NO_CHUNK_SIZE, "reached max line == %d.", i);
       return -1;
     }
     else
@@ -246,7 +246,7 @@ _http_input_stream_chunked_read_chunk_size(http_input_stream_s *stream)
   /* this should never happen */
   stream->err =
     herror_new("_http_input_stream_chunked_read_chunk_size",
-               STREAM_ERROR_NO_CHUNK_SIZE, "reached max line == %d", i);
+               STREAM_ERROR_NO_CHUNK_SIZE, "reached max line == %d.", i);
   return -1;
 }
 
@@ -285,7 +285,7 @@ _http_input_stream_chunked_read(http_input_stream_s *stream,
         {
           stream->err = herror_new("_http_input_stream_chunked_read",
                                    STREAM_ERROR_WRONG_CHUNK_SIZE,
-                                   "Wrong chunk-size");
+                                   "Wrong chunk-size.");
           return -1;
         }
       }
@@ -386,7 +386,7 @@ _http_input_stream_file_read(http_input_stream_s *stream,
   if (len< 0)
   {
     stream->err = herror_new("_http_input_stream_file_read",
-                    FILE_ERROR_READ, "fread() returned -1");
+                    FILE_ERROR_READ, "fread() returned -1.");
     return -1;
   }
 
@@ -405,7 +405,7 @@ http_input_stream_new(hsocket_s *sock, ng_list_head_s *header,
   if (!(result = (http_input_stream_s *) 
     ng_malloc(sizeof(http_input_stream_s))))
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
     return NULL;
   }
 
@@ -421,7 +421,7 @@ http_input_stream_new(hsocket_s *sock, ng_list_head_s *header,
   if (_http_stream_has_content_length(header))
   {
     hpair_s *cl;
-    log_verbose("Stream transfer with 'Content-length'");
+    log_verbose("Stream transfer with 'Content-length'.");
     cl = hpairnode_get_ignore_case(header, __HDR_BUF(HEADER_CONTENT_LENGTH));
     assert(cl != NULL);
     result->content_length = ng_atoi(cl->val.cptr, cl->val.len);
@@ -433,7 +433,7 @@ http_input_stream_new(hsocket_s *sock, ng_list_head_s *header,
   /* Check if Chunked */
   else if (_http_stream_is_chunked(header))
   {
-    log_verbose("Stream transfer with 'chunked'");
+    log_verbose("Stream transfer with 'chunked'.");
     result->type           = HTTP_TRANSFER_CHUNKED;
     result->chunk_size     = -1;
     result->received       = -1;
@@ -443,7 +443,7 @@ http_input_stream_new(hsocket_s *sock, ng_list_head_s *header,
   /* Assume connection close */
   else
   {
-    log_verbose("Stream transfer with 'Connection: close'");
+    log_verbose("Stream transfer with 'Connection: close'.");
     result->type              = HTTP_TRANSFER_CONNECTION_CLOSE;
     result->connection_closed = 0;
     result->received          = 0;
@@ -469,7 +469,7 @@ http_input_stream_new_from_file(const char *filename,
   fd = nanohttp_file_open_for_read(filename, len);
   if (fd == NULL) {
 
-    log_error("fopen failed (%s)", os_strerror(ng_errno));
+    log_error("fopen failed (%s).", os_strerror(ng_errno));
     goto clean0;
   }
 
@@ -478,7 +478,7 @@ http_input_stream_new_from_file(const char *filename,
       ng_malloc(sizeof(http_input_stream_s));
   if (result == NULL) 
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
     goto clean1;
   }
 
@@ -491,7 +491,7 @@ http_input_stream_new_from_file(const char *filename,
   result->filename.data = ng_strdup_size(filename, len);
   if (result->filename.data == NULL)
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
     goto clean2;
   }
   result->filename.len = len;
@@ -554,7 +554,7 @@ http_output_stream_new(hsocket_s *sock, ng_list_head_s *header)
   result = (http_output_stream_s *)ng_malloc(sizeof(*result));
   if (result == NULL)
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
     return NULL;
   }
 
@@ -568,7 +568,7 @@ http_output_stream_new(hsocket_s *sock, ng_list_head_s *header)
   if (_http_stream_has_content_length(header))
   {
     hpair_s *cl;
-    log_verbose("Stream transfer with 'Content-length'");
+    log_verbose("Stream transfer with 'Content-length'.");
     cl = hpairnode_get_ignore_case(header, 
       __HDR_BUF(HEADER_CONTENT_LENGTH));
     assert(cl != NULL);
@@ -578,13 +578,13 @@ http_output_stream_new(hsocket_s *sock, ng_list_head_s *header)
   /* Check if Chunked */
   else if (_http_stream_is_chunked(header))
   {
-    log_verbose("Stream transfer with 'chunked'");
+    log_verbose("Stream transfer with 'chunked'.");
     result->type = HTTP_TRANSFER_CHUNKED;
   }
   /* Assume connection close */
   else
   {
-    log_verbose("Stream transfer with 'Connection: close'");
+    log_verbose("Stream transfer with 'Connection: close'.");
     result->type = HTTP_TRANSFER_CONNECTION_CLOSE;
   }
 

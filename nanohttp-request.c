@@ -207,7 +207,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
 
       if (req->method > HTTP_REQUEST_METHOD_GET)
       {
-        log_error("Not supported request method (%.*s)", 
+        log_error("Not supported request method (%.*s).", 
           key_len, key);
         goto clean1;
       }
@@ -218,7 +218,8 @@ _hrequest_parse_header(char *data, ng_size_t len)
       /* save version */
       if (key == NULL)
       {
-        log_error("Not supported http version (%.*s)", key_len, key);
+        log_error("Not supported http version (%.*s).", 
+          key_len, key);
         goto clean1;
       }
 
@@ -234,7 +235,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
       }
       if (req->version == -1)
       {
-        log_error("Not supported http version (%.*s)", 
+        log_error("Not supported http version (%.*s).", 
           t - key - 1, key + 1);
         goto clean1;
       }
@@ -250,7 +251,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
       req->path.len = opt_key == NULL ? key-result : opt_key - result;
       if (req->path.len >= REQUEST_MAX_PATH_SIZE - 1)
       {
-        log_error("Request path length is too large (%d), MAX:", 
+        log_error("Request path length is too large (%d), MAX:(%d).", 
           req->path.len, REQUEST_MAX_PATH_SIZE);
         goto clean1;
       }
@@ -258,7 +259,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
       if (req->path.buf == NULL)
       {
         req->path.len = 0;
-        log_error("Failed to malloc buffer for path (%s)", 
+        log_error("Failed to malloc buffer for path (%s).", 
           os_strerror(ng_errno));
         goto clean1;
       }
@@ -291,7 +292,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
           /* create option pair */
           if (!(tmppair = (hpair_s *)ng_malloc(sizeof(hpair_s))))
           {
-            log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+            log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
             goto clean1;
           }
 
@@ -313,7 +314,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
           tmppair = hpairnode_new(&k, &v, &req->query);
           if (tmppair == NULL)
           {
-            log_error("hpairnode_new failed (%s)", os_strerror(ng_errno));
+            log_error("hpairnode_new failed (%s).", os_strerror(ng_errno));
             goto clean1;
           }
         }

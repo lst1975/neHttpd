@@ -148,9 +148,9 @@ __ng_gettimeofday(void *__tp)
 void ng_print_cpufreq(const char *n, double hz) 
 {
   if (hz > 999.0)
-    log_info("%s: %.2f GHz", n, hz / 1000.0); 
+    log_info("%s: %.2f GHz.", n, hz / 1000.0); 
   else
-    log_info("%s: %.2f MHz", n, hz); 
+    log_info("%s: %.2f MHz.", n, hz); 
 }
 
 int ng_local_strncasecmp(const char *s1, const char *s2, ng_size_t n) 

@@ -271,7 +271,7 @@ read_header:                   /* for errorcode: 100 (continue) */
   res = _hresponse_parse_header(buffer, hdrlen);
   if (res == NULL)
   {
-    log_error("Header parse error");
+    log_error("Header parse error.");
     status = herror_new("hresponse_new_from_socket",
                       GENERAL_HEADER_PARSE_ERROR,
                       "Can not parse response header");

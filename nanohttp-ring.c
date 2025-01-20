@@ -460,7 +460,7 @@ ng_thread_pool_create(int count, ng_thread_routine_f (*get_routine)(int))
 
   p = (ng_thread_pool_s *)ng_malloc(sizeof(*p)+count*sizeof(pthread_t));
   if (p == NULL) {
-    log_fatal("failed to ng_malloc ng_thread_pool_s"__LN);
+    log_fatal("failed to ng_malloc ng_thread_pool_s."__LN);
     goto cleanup0;
   }
   p->count = count;
@@ -473,7 +473,7 @@ ng_thread_pool_create(int count, ng_thread_routine_f (*get_routine)(int))
     int ret = pthread_create(&p->pool[p->alive], NULL,
       get_routine(p->alive), p);
     if (ret != 0) {
-      log_fatal("pthread_create failed"__LN);
+      log_fatal("pthread_create failed."__LN);
       goto cleanup1;
     }
   }
@@ -628,14 +628,14 @@ static void __test_ring(void)
 
   if (0 > ng_singlerw_ring_init(&__ring, 1024))
   {
-    log_fatal("ng_singlerw_ring_init failed"__LN);
+    log_fatal("ng_singlerw_ring_init failed."__LN);
     goto cleanup0;
   }
 
   __test_rte_ring = rte_ring_create(CONST_STR_ARG("ring_test"), 1024, 0);
   if (__test_rte_ring == NULL)
   {
-    log_fatal("ng_singlerw_ring_init failed"__LN);
+    log_fatal("ng_singlerw_ring_init failed."__LN);
     goto cleanup1;
   }
 
@@ -644,63 +644,63 @@ static void __test_ring(void)
   ret = pthread_create((pthread_t *)&t1, NULL,
     thread_start_1, NULL);
   if (ret != 0) {
-    log_fatal("pthread_create failed"__LN);
+    log_fatal("pthread_create failed."__LN);
     goto cleanup2;
   }
   
   ret = pthread_create((pthread_t *)&t2, NULL,
     thread_start_2, NULL);
   if (ret != 0) {
-    log_fatal("pthread_create failed"__LN);
+    log_fatal("pthread_create failed."__LN);
     goto cleanup3;
   }
   
   ret = pthread_create((pthread_t *)&t3, NULL,
     thread_start_reader, NULL);
   if (ret != 0) {
-    log_fatal("pthread_create failed"__LN);
+    log_fatal("pthread_create failed."__LN);
     goto cleanup4;
   }
   
   ret = pthread_create((pthread_t *)&t4, NULL,
     thread_start_reader, NULL);
   if (ret != 0) {
-    log_fatal("pthread_create failed"__LN);
+    log_fatal("pthread_create failed."__LN);
     goto cleanup5;
   }
   
   ret = pthread_create((pthread_t *)&t5, NULL,
     thread_start_writer, NULL);
   if (ret != 0) {
-    log_fatal("pthread_create failed"__LN);
+    log_fatal("pthread_create failed."__LN);
     goto cleanup6;
   }
   
   ret = pthread_create((pthread_t *)&t6, NULL,
     thread_start_writer, NULL);
   if (ret != 0) {
-    log_fatal("pthread_create failed"__LN);
+    log_fatal("pthread_create failed."__LN);
     goto cleanup7;
   }
   
   ret = pthread_create((pthread_t *)&t7, NULL,
     thread_start_reader_burst, NULL);
   if (ret != 0) {
-    log_fatal("pthread_create failed"__LN);
+    log_fatal("pthread_create failed."__LN);
     goto cleanup8;
   }
   
   ret = pthread_create((pthread_t *)&t8, NULL,
     thread_start_writer_burst, NULL);
   if (ret != 0) {
-    log_fatal("pthread_create failed"__LN);
+    log_fatal("pthread_create failed."__LN);
     goto cleanup9;
   }
 
   test_thread_pool = ng_thread_pool_create(24, __pool_get_routine);
   if (test_thread_pool == NULL)
   {
-    log_fatal("pthread_pool_create failed"__LN);
+    log_fatal("pthread_pool_create failed."__LN);
     goto cleanup10;
   }
   
@@ -769,8 +769,8 @@ void test_ring(void)
   void *data;
   NG_U32 count;
 
-  log_info("'d': dump"__LN);
-  log_info("'s': exit\n"__LN);
+  log_info("'d': dump."__LN);
+  log_info("'s': exit."__LN);
 
   ng_atomic_set(&malloc_count, 0);
   ng_atomic_set(&__running, 0);
@@ -795,11 +795,11 @@ void test_ring(void)
   count = ng_atomic_read(&malloc_count);
   if (count)
   {
-    log_error("memory leaked: %u"__LN, count);
+    log_error("memory leaked: %u."__LN, count);
   }
   else
   {
-    log_error("memory malloced: %u"__LN, count);
+    log_error("memory malloced: %u."__LN, count);
   }
   
   ng_singlerw_ring_free(&__ring);

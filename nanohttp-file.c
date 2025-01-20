@@ -94,36 +94,36 @@ nanohttp_dir_init(const char *pfile)
   
   if (pfile == NULL)
   {
-    log_error("pfile is NULL");
+    log_error("pfile is NULL.");
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_INVAL,
-                      "Parameter pfile is NULL");
+                      "Parameter pfile is NULL.");
   }
   
   char *d = ng_malloc(_nanoConfig_PATH_MAX);
   if (d == NULL)
   {
-    log_error("hsocket_dir_init failed");
+    log_error("hsocket_dir_init failed.");
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_MALLOC,
-                      "Unable to malloc tempary buffer");
+                      "Unable to malloc tempary buffer.");
   }
 
   const char *pwd = ng_get_pwd(d, _nanoConfig_PATH_MAX);
   if (pwd == NULL)  
   {
     ng_free(d);
-    log_error("hsocket_dir_init failed");
+    log_error("hsocket_dir_init failed.");
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_SYSTEM,
-                      "Unable to execute getcwd");
+                      "Unable to execute getcwd.");
   }
   
-  log_debug("Current path: %s", pwd);
+  log_debug("Current path: %s.", pwd);
   char *p = ng_memrchr(pwd, __PATH_DLIM, ng_strlen(pwd));
   if (p == NULL)
   {
     ng_free(d);
-    log_error("bad parameter pfile: %s", pfile);
+    log_error("bad parameter pfile: %s.", pfile);
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_INVAL,
-                      "bad parameter pfile: %s", pfile);
+                      "bad parameter pfile: %s.", pfile);
   }
 
   plen = p - pwd + 1;
@@ -133,7 +133,7 @@ nanohttp_dir_init(const char *pfile)
 
   ng_urlorpath_dlim_convert(d, plen, '\\', '/');
   
-  log_info("[OK]");
+  log_info("[OK]: nanohttp_dir_init.");
   return H_OK;
 }
 #else
@@ -155,36 +155,36 @@ nanohttp_dir_init(const char *pfile)
 {
   if (pfile == NULL)
   {
-    log_error("pfile is NULL");
+    log_error("pfile is NULL.");
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_INVAL,
-                      "Parameter pfile is NULL");
+                      "Parameter pfile is NULL.");
   }
   
   char *d = ng_malloc(_nanoConfig_PATH_MAX);
   if (d == NULL)
   {
-    log_error("hsocket_dir_init failed");
+    log_error("hsocket_dir_init failed.");
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_MALLOC,
-                      "Unable to malloc tempary buffer");
+                      "Unable to malloc tempary buffer.");
   }
   const char *pwd = ng_get_pwd(d, _nanoConfig_PATH_MAX);
   if (pwd == NULL)  
   {
     ng_free(d);
-    log_error("hsocket_dir_init failed");
+    log_error("hsocket_dir_init failed.");
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_SYSTEM,
-                      "Unable to execute getcwd");
+                      "Unable to execute getcwd.");
   }
 
-  log_debug("Current path: %s", pwd);
+  log_debug("Current path: %s.", pwd);
   const char *p = ng_memrchr(pfile, __PATH_DLIM, ng_strlen(pfile));
   if (p == NULL)
   {
-    log_debug("################: %s", pwd);
+    log_debug("################: %s.", pwd);
     ng_free(d);
-    log_error("bad parameter pfile: %s", pfile);
+    log_error("bad parameter pfile: %s.", pfile);
     return herror_new("nanohttp_dir_init", GENERAL_ERROR_INVAL,
-                      "bad parameter pfile: %s", pfile);
+                      "bad parameter pfile: %s.", pfile);
   }
 
   ng_size_t plen = strlen(pwd);
@@ -202,9 +202,9 @@ nanohttp_dir_init(const char *pfile)
     if (flen + plen + 1 >= _nanoConfig_PATH_MAX)
     {
       ng_free(d);
-      log_error("dir length is too large: %u", flen + plen + 1);
+      log_error("dir length is too large: %u.", flen + plen + 1);
       return herror_new("nanohttp_dir_init", GENERAL_ERROR_INVAL,
-                        "dir length is too large: %u", flen + plen + 1);
+                        "dir length is too large: %u.", flen + plen + 1);
     }
 
     d[plen++]=__PATH_DLIM;
@@ -272,7 +272,7 @@ nanohttp_file_get_path(const char *file, int flen)
     return NULL;
   }
   
-  log_debug("Get path: %pS", &url);
+  log_debug("Get path: %pS.", &url);
 
   return path;
 }
@@ -317,7 +317,7 @@ herror_t nanohttp_file_read_all(const char *file,
   if (fptr == NULL)
   {
     status = herror_new("nanohttp_file_read_all", FILE_ERROR_OPEN, 
-      "Failed to open file %s.", file);
+      "Failed to open file %.*s.", len, file);
     goto clean0;
   }
 
@@ -359,7 +359,7 @@ nanohttp_file_read_callback(void *file, rwfile_f cb, void *arg)
     if (n < 0)
     {
       status = herror_new("nanohttp_file_read", FILE_ERROR_READ, 
-        "Failed to read file %s.", file);
+        "Failed to read file %p.", file);
       goto clean0;
     }
 
@@ -447,12 +447,12 @@ ng_size_t nanohttp_file_size(const char *file, int len)
   
   fd = open(fpath, O_RDONLY);
   if (fd < 0) {
-    log_debug("Failed to open file: %s", fpath);
+    log_debug("Failed to open file: %.*s.", len, fpath);
     goto error0;
   }
 
   if (fstat(fd, &fileStat) < 0) {
-    log_debug("Failed to fstat file: %s", fpath);
+    log_debug("Failed to fstat file: %.*s.", len, fpath);
     goto error1;
   }
 

@@ -237,7 +237,7 @@ __os_socket_init_once(void *log)
   if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) 
   {
     int err = WSAGetLastError();
-    log_fatal("WSAStartup() failed. (%d:%s)", err, os_strerror(err));
+    log_fatal("WSAStartup() failed. (%d:%s).", err, os_strerror(err));
     goto clean0;
   }
   
@@ -251,12 +251,12 @@ __os_socket_init_once(void *log)
     /* Tell the user that we could not find a usable */
     /* WinSock DLL.                                  */
     int err = WSAGetLastError();
-    log_fatal("Could not find a usable version of Winsock.dll. (%d:%s)", 
+    log_fatal("Could not find a usable version of Winsock.dll. (%d:%s).", 
       err, os_strerror(err));
     goto clean1;
   }
     
-  log_info("The Winsock 2.2 dll was found okay");  
+  log_info("The Winsock 2.2 dll was found okay.");  
   
   return ng_ERR_NONE;
   
@@ -518,7 +518,7 @@ __os_sys_status(void *log)
     if (GetVersionEx((OSVERSIONINFO *) &osvi) == 0) 
     {
       int err = WSAGetLastError();
-      log_fatal("GetVersionEx() failed. (%d:%s)", 
+      log_fatal("GetVersionEx() failed. (%d:%s).", 
           err, os_strerror(err));
       return;
     }
@@ -825,7 +825,7 @@ __os_get_tzoffset(void)
   int totalOffsetMinutes = (offsetHours * 60) + offsetMinutes;
 
   // Print the timezone offset
-  log_debug("Local timezone offset from GMT: %02d:%02d\n", offsetHours, offsetMinutes);
+  log_debug("Local timezone offset from GMT: %02d:%02d.", offsetHours, offsetMinutes);
 
   return totalOffsetMinutes*60;
 }
@@ -1061,7 +1061,7 @@ __os_sys_init(void *log)
 
   ng_os_info.ngx_max_sockets = (ng_int_t) rlmt.rlim_cur;
 
-  log_info("getrlimit(RLIMIT_NOFILE): %u:%u",
+  log_info("getrlimit(RLIMIT_NOFILE): %u:%u.",
                 rlmt.rlim_cur, rlmt.rlim_max);
 
   return ng_ERR_NONE;
@@ -1085,7 +1085,7 @@ __os_get_tzoffset(void)
   long timezone_offset = local_time->tm_gmtoff;
 
   // Convert to hours and minutes
-  log_debug("Local timezone offset from GMT: %02d:%02d\n", 
+  log_debug("Local timezone offset from GMT: %02d:%02d.", 
       timezone_offset / 3600, (timezone_offset % 3600) / 60);
   return timezone_offset;
 }

@@ -199,7 +199,7 @@ int nanohttpd_is_running(void)
 }
 void nanohttpd_stop_running(void)
 {
-  log_debug("nanohttpd_stop_running");
+  log_debug("nanohttpd_stop_running.");
   _httpd_run = 0;
 }
 
@@ -236,7 +236,7 @@ int httpd_create_mutex(void *mutex)
   err = pthread_mutex_init((MUTEXT_T *)mutex, NULL);
 #endif
   if (err)
-    log_error("httpd_create_mutex failed");
+    log_error("httpd_create_mutex failed.");
   return err;
 }
 void httpd_destroy_mutex(void *mutex)
@@ -338,7 +338,7 @@ void httpd_thread_cancel(conndata_t *conn)
 
   httpd_thread_init(conn);
 
-  log_debug("CloseHandle: %s", conn->name);
+  log_debug("CloseHandle: %s.", conn->name);
 }
 
 int
@@ -584,12 +584,12 @@ _httpd_connection_slots_free(void)
     }
   }
 
-  log_info("Number of active connection thread is (%d)", 
+  log_info("Number of active connection thread is (%d).", 
     httpd_get_conncount());
 
   while ((count = httpd_get_conncount()) > 0)
   {
-    log_warn("Number of active connection thread is (%d)", count);
+    log_warn("Number of active connection thread is (%d).", count);
     ng_os_usleep(1000);
   }
 
@@ -604,7 +604,7 @@ _httpd_connection_slots_free(void)
   _httpd_connection_ring = NULL;
 #endif
 
-  log_info("[OK]: _httpd_connection_slots_free");
+  log_info("[OK]: _httpd_connection_slots_free.");
   return;
 }
 
@@ -712,7 +712,7 @@ httpd_init(int argc, char **argv)
     return status;
   }
 
-  log_verbose("socket bind to port '%d'", _httpd_port);
+  log_verbose("socket bind to port '%d'.", _httpd_port);
 
   return H_OK;
 }
@@ -726,7 +726,7 @@ httpd_register_secure(const char *context, int context_len,
 
   if (!(service = (hservice_t *)ng_malloc(sizeof(hservice_t)+context_len+1)))
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
     return herror_new("httpd_register_secure", 0, 
       "ng_malloc failed (%s)", os_strerror(ng_errno));
   }
@@ -750,7 +750,8 @@ httpd_register_secure(const char *context, int context_len,
   ng_memcpy(service->context, context, context_len+1);
   service->context_len = context_len;
 
-  log_verbose("register service (%p) for \"%s\"", service, context);
+  log_verbose("register service (%p) for \"%.*s\".", 
+    service, context_len, context);
   if (_httpd_services_head == NULL)
   {
     _httpd_services_head = _httpd_services_tail = service;
@@ -830,7 +831,8 @@ hservice_free(hservice_t *service)
   if (!service)
     return;
 
-  log_verbose("unregister service \"%s\"", service->context);
+  log_verbose("unregister service \"%.*s\".", 
+    service->context_len, service->context);
   ng_free(service);
 
   return;
@@ -993,7 +995,7 @@ httpd_send_header(httpd_conn_s *res, int code)
   res->out = http_output_stream_new(res->sock, &res->header);
   if (res->out == NULL)
   {
-    log_fatal("Failed to malloc http_output_stream");
+    log_fatal("Failed to malloc http_output_stream.");
     status = herror_new("httpd_send_header", GENERAL_ERROR,
                       "Failed to malloc http_output_stream!");
     goto clean1;
@@ -1089,11 +1091,11 @@ httpd_send_unauthorized(httpd_conn_s *conn, const char *realm)
   r = httpd_send_header(conn, HTTP_RESPONSE_CODE_401_Unauthorized);
   if (r != H_OK)
   {
-    log_debug("httpd_send_header failed (5s).", herror_message(r));
+    log_debug("httpd_send_header failed (%s).", herror_message(r));
     return r;
   }
   
-  log_info("secure_service received, redirect to login.html");
+  log_info("secure_service received, redirect to login.html.");
 
   do {
     r = http_output_stream_write_buffer(conn->out, 
@@ -1173,7 +1175,7 @@ httpd_new(hsocket_s *sock)
 
   if (!(conn = (httpd_conn_s *) ng_malloc(sizeof(httpd_conn_s))))
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
     return NULL;
   }
   conn->sock = sock;
@@ -1211,7 +1213,7 @@ _httpd_decode_authorization(int *tmplen,
   len = B64_DECLEN(inlen);
   if (!(tmp = (unsigned char *)ng_malloc(len)))
   {
-    log_error("ng_alloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_alloc failed (%s).", os_strerror(ng_errno));
     return NULL;
   }
   value = ng_memchr(_value, ' ', inlen);
@@ -1223,7 +1225,7 @@ _httpd_decode_authorization(int *tmplen,
   }
   value++;
   value_len = inlen - (value - _value);
-  log_verbose("Authorization (base64) = \"%.*s\"", value_len, value);
+  log_verbose("Authorization (base64) = \"%.*s\".", value_len, value);
 
 #if __configUseStreamBase64
   len = b64Decode_with_len(value, value_len, (char *)tmp, len);
@@ -1237,7 +1239,7 @@ _httpd_decode_authorization(int *tmplen,
     return NULL;
   }
 
-  log_verbose("Authorization (ascii) = \"%.*s\"", len, tmp);
+  log_verbose("Authorization (ascii) = \"%.*s\".", len, tmp);
 
   *tmplen = len;
   tmp2 = (unsigned char *)ng_memchr((char *)tmp, ':', len);
@@ -1276,7 +1278,7 @@ _httpd_authenticate_request(hrequest_s *req, httpd_auth_f auth)
     __HDR_BUF(HEADER_AUTHORIZATION));
   if (authorization_pair == NULL)
   {
-    log_debug("\"%pS\" header not set", &__HDR_BUF__(HEADER_AUTHORIZATION));
+    log_debug("\"%pS\" header not set.", &__HDR_BUF__(HEADER_AUTHORIZATION));
     return 0;
   }
 
@@ -1284,14 +1286,14 @@ _httpd_authenticate_request(hrequest_s *req, httpd_auth_f auth)
     authorization_pair->val.len, &user, &pass);
   if (tmp == NULL)
   {
-    log_error("httpd_base64_decode_failed");
+    log_error("httpd_base64_decode_failed.");
     return 0;
   }
 
   if ((ret = auth(req, &user, &pass)))
-    log_debug("Access granted for user=\"%pS\"", &user);
+    log_debug("Access granted for user=\"%pS\".", &user);
   else
-    log_info("Authentication failed for user=\"%pS\"", &user);
+    log_info("Authentication failed for user=\"%pS\".", &user);
 
   ng_bzero(tmp, tmplen);
   ng_free(tmp);
@@ -1383,7 +1385,7 @@ httpd_session_main(void *data)
 
       if ((service = httpd_find_service(req->path.cptr, req->path.len)))
       {
-        log_debug("service '%s' for '%pS'(%s) found", 
+        log_debug("service '%s' for '%pS'(%s) found.", 
                 service->context, &req->path, service->name);
 
       	if (service->status == NHTTPD_SERVICE_UP)
@@ -1410,14 +1412,14 @@ httpd_session_main(void *data)
 
               if (rconn->out && rconn->out->type == HTTP_TRANSFER_CONNECTION_CLOSE)
               {
-                log_verbose("Connection close requested");
+                log_verbose("Connection close requested.");
                 done = 1;
               }
             }
             else
             {
               ng_snprintf(buffer, sizeof(buffer), 
-                "service '%pS' is not registered properly (service function is NULL)", &req->path);
+                "service '%pS' is not registered properly (service function is NULL).", &req->path);
               log_warn("%s", buffer);
               httpd_send_not_implemented(rconn, buffer);
             }
@@ -1430,14 +1432,14 @@ httpd_session_main(void *data)
         }
         else
         {
-          ng_snprintf(buffer, sizeof(buffer), "service for '%pS' is disabled", &req->path);
+          ng_snprintf(buffer, sizeof(buffer), "service for '%pS' is disabled.", &req->path);
           log_warn("%s", buffer);
           httpd_send_internal_error(rconn, buffer);
         }
       }
       else
       {
-        ng_snprintf(buffer, sizeof(buffer), "no service for '%pS' found", &req->path);
+        ng_snprintf(buffer, sizeof(buffer), "no service for '%pS' found.", &req->path);
         log_warn("%s", buffer);
       	httpd_send_not_implemented(rconn, buffer);
         done = 1;
@@ -1450,7 +1452,7 @@ httpd_session_main(void *data)
   _httpd_release_finished_conn(conn);
 
   ng_date_print();
-  log_debug("Connection used is: %d", httpd_get_conncount());
+  log_debug("Connection used is: %d.", httpd_get_conncount());
   
 #ifdef WIN32
   ExitThread(0);
@@ -1560,7 +1562,8 @@ _httpd_start_thread(conndata_t *conn)
   conn->tid = CreateThread(NULL, 65535, httpd_session_main, conn, 0, NULL);
   if (conn->tid == NULL)
   {
-    log_error("CreateThread failed (%d:%s)", os_strerror(ng_errno));
+    err = ng_errno;
+    log_error("CreateThread failed (%d:%s).", err, os_strerror(err));
     err = -1;
   }
   log_debug("###########Create Thread Handle=%p.", conn->tid);
@@ -1573,7 +1576,8 @@ _httpd_start_thread(conndata_t *conn)
   if ((err =
        pthread_create(&(conn->tid), &(conn->attr), httpd_session_main, conn)))
   {
-    log_error("pthread_create failed (%s)", os_strerror(ng_errno));
+    err = ng_errno;
+    log_error("pthread_create failed (%d:%s).", err, os_strerror(err));
     err = -1;
   }
 #endif
@@ -1611,7 +1615,7 @@ __httpd_run(hsocket_s *sock, const char *name)
   struct epoll_event event;
   ng_uint64_t start = ng_get_time();
   
-  log_verbose("starting run routine: %s", name);
+  log_verbose("starting run routine: %s.", name);
 
   if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
@@ -1674,11 +1678,11 @@ __httpd_run(hsocket_s *sock, const char *name)
         n = ng_socket_errno;
         if (_hsocket_should_again(n))
         {
-          log_info("Socket %d epoll_wait INTR: (%d:%s)", 
+          log_info("Socket %d epoll_wait INTR: (%d:%s).", 
             sock->ep, n, os_strerror(n));
           continue;
         }
-        log_fatal("Socket %d epoll_wait error: (%d:%s)", 
+        log_fatal("Socket %d epoll_wait error: (%d:%s).", 
           sock->ep, n, os_strerror(n));
         _httpd_release_finished_conn(conn);
         return -1;
@@ -1694,16 +1698,17 @@ __httpd_run(hsocket_s *sock, const char *name)
         /* no nothing */
         if ((event.events & EPOLLIN) && event.data.fd == sock->sock)
           break;
-        
-        log_fatal("Socket %d unknown error: (%s)", 
-          sock->ep, os_strerror(ng_socket_errno));
+        n = ng_socket_errno;
+        log_fatal("Socket %d unknown error: (%d:%s).", 
+          sock->ep, n, os_strerror(n));
         _httpd_release_finished_conn(conn);
         return -1;
       }
       else
       {
-        log_fatal("Socket %d unknown error: (%s)", 
-          sock->ep, os_strerror(ng_socket_errno));
+        n = ng_socket_errno;
+        log_fatal("Socket %d unknown error: (%d:%s).", 
+          sock->ep, n, os_strerror(n));
         _httpd_release_finished_conn(conn);
         return -1;
       }
@@ -1742,7 +1747,7 @@ __httpd_run(hsocket_s *sock, const char *name)
   WSAPOLLFD event = { 0 };
   ng_uint64_t start = ng_get_time();
   
-  log_verbose("starting run routine: %s", name);
+  log_verbose("starting run routine: %s.", name);
 
   if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
@@ -1792,11 +1797,11 @@ __httpd_run(hsocket_s *sock, const char *name)
         n = ng_socket_errno;
         if (_hsocket_should_again(n))
         {
-          log_info("Socket %d epoll_wait INTR: (%d:%s)", 
+          log_info("Socket %d epoll_wait INTR: (%d:%s).", 
             sock->sock, n, os_strerror(n));
           continue;
         }
-        log_fatal("Socket %d epoll_wait error: (%d:%s)", 
+        log_fatal("Socket %d epoll_wait error: (%d:%s).", 
           sock->sock, n, os_strerror(n));
         _httpd_release_finished_conn(conn);
         return -1;
@@ -1813,14 +1818,14 @@ __httpd_run(hsocket_s *sock, const char *name)
         if (event.revents & POLLIN)
           break;
         
-        log_fatal("Socket %d unknown error: (%s)", 
+        log_fatal("Socket %d unknown error: (%s).", 
           sock->sock, os_strerror(ng_socket_errno));
         _httpd_release_finished_conn(conn);
         return -1;
       }
       else
       {
-        log_fatal("Socket %d unknown error: (%s)", 
+        log_fatal("Socket %d unknown error: (%s).", 
           sock->sock, os_strerror(ng_socket_errno));
         _httpd_release_finished_conn(conn);
         return -1;
@@ -1867,7 +1872,7 @@ __httpd_run(hsocket_s *sock, const char *name)
   fd_set fds;
   ng_uint64_t start = ng_get_time();
 
-  log_verbose("starting run routine: %s", name);
+  log_verbose("starting run routine: %s.", name);
 
   if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
   {
@@ -1921,12 +1926,12 @@ __httpd_run(hsocket_s *sock, const char *name)
         /* got a signal? */
         if (_hsocket_should_again(ng_socket_errno))
         {
-          log_warn("Socket %d select INTR. (%d:%s)", 
+          log_warn("Socket %d select INTR. (%d:%s).", 
             sock->sock, n, os_strerror(n));
           continue;
         }
 
-        log_error("Socket %d select error. (%d:%s)", 
+        log_error("Socket %d select error. (%d:%s).", 
           sock->sock, n, os_strerror(n));
         _httpd_release_finished_conn(conn);
         return -1;
@@ -1938,14 +1943,14 @@ __httpd_run(hsocket_s *sock, const char *name)
           break;
         }
         n = ng_socket_errno;
-        log_verbose("Socket %d select error. (%d:%s)", 
+        log_verbose("Socket %d select error. (%d:%s).", 
           sock->sock, n, os_strerror(n));
         _httpd_release_finished_conn(conn);
         return -1;
       }
       else
       {
-        log_verbose("Socket %d select error. (%d:%s)", 
+        log_verbose("Socket %d select error. (%d:%s).", 
           sock->sock, n, os_strerror(n));
         _httpd_release_finished_conn(conn);
         return -1;
@@ -2010,7 +2015,7 @@ int httpd_create_cond(COND_T *cond)
   if (cond->handle == NULL)
   {
     err = -1;
-    log_error("httpd_create_mutex failed: (%s)", os_strerror(ng_errno));
+    log_error("httpd_create_mutex failed: (%s).", os_strerror(ng_errno));
     goto clean0;
   }
 #else
@@ -2018,13 +2023,13 @@ int httpd_create_cond(COND_T *cond)
   if (err)
   {
     err = -1;
-    log_error("httpd_create_mutex failed: (%s)", os_strerror(ng_errno));
+    log_error("httpd_create_mutex failed: (%s).", os_strerror(ng_errno));
     goto clean0;
   }
   if (pthread_cond_init(&cond->handle, NULL))
   {
     err = -1;
-    log_error("pthread_cond_init failed: %d", os_strerror(ng_errno));
+    log_error("pthread_cond_init failed: (%s).", os_strerror(ng_errno));
     goto clean1;
   }
 #endif
@@ -2138,7 +2143,7 @@ __start_thread(conndata_t *conn, HTTP_THREAD_EXEFUNC_T exefunc)
   if (conn->tid == NULL)
   {
     err = GetLastError();
-    log_error("pthread_create failed (%d:%s)", err, os_strerror(err));
+    log_error("pthread_create failed (%d:%s).", err, os_strerror(err));
   }
 #else
   pthread_attr_init(&conn->attr);
@@ -2146,7 +2151,7 @@ __start_thread(conndata_t *conn, HTTP_THREAD_EXEFUNC_T exefunc)
   if (err)
   {
     err = ng_errno;
-    log_error("pthread_create failed (%d:%s)", err, os_strerror(err));
+    log_error("pthread_create failed (%d:%s).", err, os_strerror(err));
   }
 #endif
 
@@ -2201,7 +2206,7 @@ herror_t httpd_run(void)
  
   if (httpd_create_cond(&main_cond) < 0)
   {
-    log_error("httpd_create_cond failed");
+    log_error("httpd_create_cond failed.");
     status = herror_new("httpd_run",  THREAD_BEGIN_ERROR,
                              "Failed to create condition!");
     goto clean0;
@@ -2320,7 +2325,7 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
     *received = 0;
     if (!(postdata = (unsigned char *)ng_malloc(1)))
     {
-      log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+      log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
       return NULL;
     }
     postdata[0] = '\0';
@@ -2328,7 +2333,7 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
   }
   if (!(postdata = (unsigned char *) ng_malloc(content_length + 1)))
   {
-    log_error("ng_malloc failed (%)", os_strerror(ng_errno));
+    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
     return NULL;
   }
 
