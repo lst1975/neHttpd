@@ -112,7 +112,8 @@ rte_strieq15_or_less(const ng_uint8_t *dst,
     c2 = ng_tolower(c2);
     if (c1 != c2)
       break;
-  } while (--len);
+  } 
+  while (--len);
   
   return (int)c1 == (int)c2;
 }
