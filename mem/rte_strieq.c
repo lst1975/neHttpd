@@ -50,7 +50,7 @@ int memchr_test(void)
     const char *p = ng_memchr(t.cptr,t.cptr[i],t.len);
     if (p-t.cptr!=i)
     {
-      log_error("memchr_test failed");
+      log_error("memchr_test failed.");
       return -i;
     }
   }
@@ -73,7 +73,7 @@ int memrchr_test(void)
     p = ng_memrchr(t.cptr,t.cptr[i],t.len);
     if (p-t.cptr!=i)
     {
-      log_error("memrchr_test failed");
+      log_error("memrchr_test failed.");
       return -1;
     }
   }
@@ -85,7 +85,7 @@ int memrchr_test(void)
     p = memrchr_wrap(t.cptr, '/', t.len);
     if (p - t.cptr != 1)
     {
-      log_error("memrchr_test failed");
+      log_error("memrchr_test failed.");
       return -1;
     }
   }
