@@ -22,10 +22,10 @@ struct mem_const_ff mem_const__ff_C;
 RTE_INIT(strcasecmp_init_const)
 {
 	strieq_const__C.A128 = _mm_set1_epi8(0b00100000);
-#ifdef RTE_MESTRIEQ_AVX  
+#if defined __AVX2__  
 	strieq_const__C.A256 = _mm256_set1_epi8(0b00100000);
 #endif
-#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
+#if defined __AVX512F__
 	strieq_const__C.A512 = _mm512_set1_epi8(0b00100000);
 #endif
 
