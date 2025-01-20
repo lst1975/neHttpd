@@ -420,12 +420,12 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #if defined(__AVX__) || defined(__AVX2__) || defined(__AVX512F__)
 #include <immintrin.h>  // For AVX2 intrinsics
 #include "mem/rte_memcpy.h"
-#include "mem/rte_memcmp.h"
 #include "mem/rte_memset.h"
 #include "mem/rte_memeq.h"
+#include "mem/rte_strieq.h"
+#include "mem/rte_memcmp.h"
 #include "mem/rte_memchr.h"
 #include "mem/rte_memrchr.h"
-#include "mem/rte_strieq.h"
 #else
 #define ng_memeq (d,s,l)    (!memcmp(d,s,l))
 #define ng_memcpy(d,s,l)    ( memcpy(d,s,l))
