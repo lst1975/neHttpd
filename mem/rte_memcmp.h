@@ -77,7 +77,17 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
   {
     if (((const struct rte_uint64_alias *)dst)->val !=
       ((const struct rte_uint64_alias *)src)->val)
-      return dst;
+    {
+      ng_uint32_t mask;
+      __m128i xmm0,xmm1,xmm2,xmm3;
+      xmm1 = _mm_set1_epi64(*(__m64 *)dst);
+      xmm2 = _mm_set1_epi64(*(__m64 *)src);
+      xmm0 = _mm_cmpeq_epi8(xmm2, xmm1);
+      xmm3 = _mm_set1_epi8(0xff);
+      xmm0 = _mm_cmpeq_epi8(xmm3, xmm0);
+      mask = _mm_movemask_epi8(xmm0);
+      return dst + __builtin_ctz(~mask);
+    }
     dst += 8;
     src += 8;
   }
@@ -86,7 +96,17 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
   {
     if (((const struct rte_uint32_alias *)dst)->val !=
       ((const struct rte_uint32_alias *)src)->val)
-      return dst;
+    {
+      ng_uint32_t mask;
+      __m128i xmm0,xmm1,xmm2,xmm3;
+      xmm1 = _mm_set1_epi32(*(int *)dst);
+      xmm2 = _mm_set1_epi32(*(int *)src);
+      xmm0 = _mm_cmpeq_epi8(xmm2, xmm1);
+      xmm3 = _mm_set1_epi8(0xff);
+      xmm0 = _mm_cmpeq_epi8(xmm3, xmm0);
+      mask = _mm_movemask_epi8(xmm0);
+      return dst + __builtin_ctz(~mask);
+    }
     dst += 4;
     src += 4;
   }
@@ -95,7 +115,12 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
   {
     if (((const struct rte_uint16_alias *)dst)->val !=
       ((const struct rte_uint16_alias *)src)->val)
-      return dst;
+    {
+      if (dst[0] != src[0])
+        return dst;
+      else
+        return dst + 1;
+    }
     dst += 2;
     src += 2;
   }
@@ -114,21 +139,13 @@ rte_cmp15_or_less(const ng_uint8_t *dst,
 static __rte_always_inline const ng_uint8_t *
 rte_cmp16(const ng_uint8_t *dst, const ng_uint8_t *src)
 {
-  __m128i xmm0,xmm1;
+  ng_uint32_t mask;
+  __m128i xmm0,xmm1,xmm2;
   xmm0 = _mm_loadu_si128((const __m128i *)(const void *)src);
   xmm1 = _mm_loadu_si128((const __m128i *)(const void *)dst);
-#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-  return _mm_cmpeq_epi64_mask(xmm0,xmm1) == 0x3U ? NULL : dst;
-#else
-#if defined __SSE4_1__
-  __m128i xmm2 = _mm_cmpeq_epi64(xmm0, xmm1);
-#elif defined __SSE2__
-  __m128i xmm2 = _mm_cmpeq_epi32(xmm0, xmm1);
-#else
-  __m128i xmm2 = _mm_cmpeq_epi8(xmm0, xmm1);
-#endif
-  return _mm_movemask_epi8(xmm2) == 0xffffU ? NULL : dst;
-#endif
+  xmm2 = _mm_cmpeq_epi8(xmm0, xmm1);
+  mask = _mm_movemask_epi8(xmm2);
+  return mask == 0xffffU ? NULL : dst + __builtin_ctz(~mask);
 }
 
 /**
@@ -139,15 +156,13 @@ static __rte_always_inline const ng_uint8_t *
 rte_cmp32(const ng_uint8_t *dst, const ng_uint8_t *src)
 {
 #if defined RTE_MEMCMP_AVX
-  __m256i ymm0,ymm1;
+  ng_uint32_t mask;
+  __m256i ymm0,ymm1,ymm2;
   ymm0 = _mm256_loadu_si256((const __m256i *)(const void *)src);
   ymm1 = _mm256_loadu_si256((const __m256i *)(const void *)dst);
-#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-  return _mm256_cmpeq_epi64_mask(ymm0,ymm1) == 0xfU ? NULL : dst;
-#else
-  __m256i ymm2 = _mm256_cmpeq_epi64(ymm0,ymm1);
-  return _mm256_movemask_epi8(ymm2) == -1 ? NULL : dst;
-#endif
+  ymm2 = _mm256_cmpeq_epi8(ymm0, ymm1);
+  mask = _mm256_movemask_epi8(ymm2);
+  return mask == 0xffffffffU ? NULL : dst + __builtin_ctz(~mask);
 #else /* SSE implementation */
   const void *ret;
   ret = rte_cmp16(dst + 0 * 16, src + 0 * 16);
@@ -164,10 +179,13 @@ static __rte_always_inline const ng_uint8_t *
 rte_cmp64(const ng_uint8_t *dst, const ng_uint8_t *src)
 {
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-  __m512i zmm0,zmm1;
+  ng_uint64_t mask;
+  __m512i zmm0,zmm1,zmm2;
   zmm0 = _mm512_loadu_si512((const void *)src);
   zmm1 = _mm512_loadu_si512((const void *)dst);
-  return _mm512_cmpeq_epi64_mask(zmm0, zmm1) == 0xffU ? NULL : dst;
+  zmm2 = _mm512_cmpeq_epi8(zmm0, zmm1);
+  mask = _mm512_movemask_epi8(zmm2);
+  return mask == 0xffffffffffffffffU ? NULL : dst + __builtin_ctzll(~mask);
 #else /* AVX2, AVX & SSE implementation */
   const void *ret;
   ret = rte_cmp32(dst + 0 * 32, src + 0 * 32);
@@ -213,7 +231,9 @@ rte_cmp256(const ng_uint8_t *dst, const ng_uint8_t *src)
 #define __m512_LOAD_MEMCMP(i) do {                                         \
   zmm0 = _mm512_loadu_si512((const void *)(src + (i << 6)));              \
   md = dst + (i << 6); zmm1 = _mm512_loadu_si512((const void *)md);        \
-  if (_mm512_cmpeq_epi64_mask(zmm0, zmm1)!=0xffU) return md;               \
+  zmm0 = _mm512_cmpeq_epi8(zmm0, zmm1);                                    \
+  mask = _mm512_movemask_epi8(zmm0);                                       \
+  if (mask!=0xffffffffffffffffULL) return md + __builtin_ctzll(~mask);     \
 }while(0)
 
 /**
@@ -248,6 +268,7 @@ rte_cmp512blocks(const ng_uint8_t *dst,
   const ng_uint8_t *src, ng_size_t n)
 {
   const void *md;
+  ng_uint64_t mask;
   __m512i zmm0, zmm1;
 
   while (n >= 512) 
@@ -409,21 +430,14 @@ COPY_BLOCK_128_BACK63:
 
 #define ALIGNMENT_MASK 0x1F
 
-#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-#define __m256_LOAD_MEMCMP(i) do {                                         \
-  ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5)));               \
-  md = dst + (i << 5); ymm1 = _mm256_loadu_si256((const void *)md);        \
-  if (_mm256_cmpeq_epi64_mask(ymm2)!=0xfU) return md;                      \
-}while(0)
-#else
 #define __m256_LOAD_MEMCMP(i) do {                                         \
   __m256i ymm2;                                                            \
   ymm0 = _mm256_loadu_si256((const void *)(src + (i << 5)));               \
   md = dst + (i << 5); ymm1 = _mm256_loadu_si256((const void *)md);        \
-  ymm2 = _mm256_cmpeq_epi64(ymm0, ymm1);                                   \
-  if (_mm256_movemask_epi8(ymm2)!=-1) return md;                           \
+  ymm2 = _mm256_cmpeq_epi8(ymm0, ymm1);                                    \
+  mask = _mm256_movemask_epi8(ymm2);                                       \
+  if (mask!=0xffffffffU) return md + __builtin_ctz(~mask);                 \
 }while(0)
-#endif
 
 /**
  * Copy 128-byte blocks from one location to another,
@@ -434,6 +448,7 @@ rte_cmp128blocks(const ng_uint8_t *dst,
   const ng_uint8_t *src, ng_size_t n)
 {
   const void *md;
+  ng_uint32_t mask;
   __m256i ymm0, ymm1;
 
   while (n >= 128) 
@@ -579,25 +594,15 @@ COPY_BLOCK_128_BACK31:
  * - <dst>, <src>, <len> must be variables
  * - __m128i <xmm0> ~ <xmm8> must be pre-defined
  */
-#if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
-  #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0, xmm1, xmm0, offset, i) do {                                \
-    if (_mm_cmpeq_epi64_mask(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset)!=0x3U))                         \
-      return dst + (i << 4);                                                                           \
-  }while(0)
-#elif defined __SSE4_1__
-  #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0,xmm1, xmm0, offset, i) do {                                 \
-    mm = _mm_cmpeq_epi64(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset));                                   \
-    if (_mm_movemask_epi8(mm)!=0xffffU) return return dst + i;                                         \
-  }while(0)
-#elif defined __SSE2__
-  #define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0,xmm1, xmm0, offset, i) do {                                 \
-    mm = _mm_cmpeq_epi32(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset));                                   \
-    if (_mm_movemask_epi8(mm)!=0xffffU) return return dst + i;                                         \
-  }while(0)
-#endif
+#define CMPUNALIGNED_LEFT47_IMM_CMP(ymm0,xmm1, xmm0, offset, i) do {                                   \
+  mm = _mm_cmpeq_epi8(ymm0, _mm_alignr_epi8(xmm1, xmm0, offset));                                      \
+  mask = _mm_movemask_epi8(mm);                                                                        \
+  if (mask != 0xffffU) return return dst + i + __builtin_ctz(~mask);                                   \
+}while(0)
 
 #define CMPUNALIGNED_LEFT47_IMM(dst, src, len, offset)                                                 \
 {                                                                                                      \
+  ng_uint32_t mask;                                                                                    \
   ng_size_t tmp;                                                                                       \
   while (len >= 128 + 16 - offset) {                                                                   \
     len -= 128;                                                                                        \
@@ -918,7 +923,7 @@ rte_memcmp8(const ng_uint8_t *d,
 static __rte_always_inline int
 rte_memcmp(const void *dst, const void *src, ng_size_t n)
 {
-  const ng_uint8_t *ret, *d, *s, *e;
+  const ng_uint8_t *ret, *s;
   if (!(((ng_uintptr_t)dst | (ng_uintptr_t)src) & ALIGNMENT_MASK))
     ret = rte_memcmp_aligned(dst, src, n);
   else
@@ -926,44 +931,10 @@ rte_memcmp(const void *dst, const void *src, ng_size_t n)
 
   if (ret == NULL)
     return 0;
-
-  d = ret;
-  e = (const ng_uint8_t *)dst + n;
-  n = d - (const ng_uint8_t *)dst;
+  
+  n = ret - (const ng_uint8_t *)dst;
   s = (const ng_uint8_t *)src + n;
-  while (e - d >= 8)
-  {
-    if (*(const ng_uint64_t *)d != *(const ng_uint64_t *)s)
-      return rte_memcmp8(d,s,e);
-    d += 8;
-    s += 8;
-  }
-  
-  while (e - d >= 4)
-  {
-    if (*(const ng_uint32_t *)d != *(const ng_uint32_t *)s)
-      return rte_memcmp8(d,s,e);
-    d += 4;
-    s += 4;
-  }
-  
-  while (e - d >= 2)
-  {
-    if (*(const ng_uint16_t *)d != *(const ng_uint16_t *)s)
-      return rte_memcmp8(d,s,e);
-    d += 2;
-    s += 2;
-  }
-  
-  if (e - d == 1)
-  {
-    n = *d - *s;
-    RTE_ASSERT(n==0);
-    return n;
-  }
-    
-  RTE_ASSERT(1);
-  return 0;
+  return (int)*ret - (int)*s; 
 }
 
 #undef ALIGNMENT_MASK
