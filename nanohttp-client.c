@@ -121,19 +121,19 @@ httpc_conn_s *httpc_new(void)
  
   if (!(res = (httpc_conn_s *) ng_malloc(sizeof(httpc_conn_s))))
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     goto clean0;
   }
 
   if (!(res->sock = (hsocket_s *)ng_malloc(sizeof(hsocket_s))))
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     goto clean1;
   }
 
   if (ng_url_init(&res->url) < 0)
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     goto clean2;
   }
 
@@ -349,9 +349,9 @@ _httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn,
     log_fatal("Failed to malloc temp buffer.");
     status = herror_new("httpc_mime_begin", 
                       GENERAL_ERROR_MALLOC,
-                      "Can malloc \"%d\" (%s)", 
+                      "Can malloc \"%d\" %m.", 
                       ___BUFSZ, 
-                      os_strerror(ng_errno));
+                      ng_errno);
     goto clean0;
   }
   
