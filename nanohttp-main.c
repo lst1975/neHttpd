@@ -1060,13 +1060,13 @@ static int json_test(void)
   //printf("\n\n");
 
   char buf[1024];
-  int m = json_cal_length(p,0,"  ");
+  int m = json_cal_length(p,0,"  ",2);
   printf("%d=====\n\n",m);
   json_tostr(p,buf,sizeof(buf),0,"  ",2);
   printf("%lu=====\n\n",ng_strlen(buf));
   printf("%s\n\n",buf);
 
-  int n = json_cal_length(p,-1,"  ");
+  int n = json_cal_length(p,-1,"  ",2);
   printf("%d=====\n\n",n);
   json_tostr(p,buf,sizeof(buf),-1,"  ",2);
   printf("%lu=====\n\n",ng_strlen(buf));

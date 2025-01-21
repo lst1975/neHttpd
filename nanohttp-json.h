@@ -378,7 +378,8 @@ int
 json_cal_length(
   JSONPair_s *pair, 
   int depth, 
-  const char *pad
+  const char *pad, 
+  int pad_length
 );
 
 JSONStatus_e 

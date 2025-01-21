@@ -99,10 +99,9 @@ typedef u32 NG_U32;
 #define NG_ATOMIC_T(x) atomic_t
 #define __rte_atomic atomic_t
 #else
-#include <assert.h>
 #define __rte_atomic
 #define NG_ATOMIC_T(x) x
-#define ng_assert(x) assert(x)
+#define ng_assert(x) NG_ASSERT(x)
 #define ng_srw_malloc(x) ng_malloc(x)
 #define ng_srw_free(x) ng_free(x)
 typedef ng_uint32_t NG_U32;
@@ -191,9 +190,6 @@ ng_singlerw_ring_dump(ng_singlerw_ring_s *ring)
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
 typedef ng_uint64_t unaligned_uint64_t __rte_aligned(1);
 #define RTE_CACHE_GUARD_LINES 1
-#ifndef RTE_ASSERT
-#define RTE_ASSERT(x) ng_assert(x)
-#endif
 
 static __rte_always_inline void
 rte_wait_until_equal_32(volatile ng_uint32_t *addr, ng_uint32_t expected,

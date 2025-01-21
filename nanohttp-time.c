@@ -769,16 +769,6 @@ static const char *week_name[] =
   {
     "Sun,", "Mon,", "Tue,", "Wed,", "Thu,", "Fri,", "Sat,"
   };
-static const char *min_sec_hour_day_name[] = 
-  {
-    " 00 "," 01 "," 02 "," 03 "," 04 "," 05 "," 06 "," 07 "," 08 ",
-    " 09 "," 10 "," 11 "," 12 "," 13 "," 14 "," 15 "," 16 "," 17 ",
-    " 18 "," 19 "," 20 "," 21 "," 22 "," 23 "," 24 "," 25 "," 26 ",
-    " 27 "," 28 "," 29 "," 30 "," 31 "," 32 "," 33 "," 34 "," 35 ",
-    " 36 "," 37 "," 38 "," 39 "," 40 "," 41 "," 42 "," 43 "," 44 ",
-    " 45 "," 46 "," 47 "," 48 "," 49 "," 50 "," 51 "," 52 "," 53 ",
-    " 54 "," 55 "," 56 "," 57 "," 58 "," 59 "," 60 "
-  };
 
 /* "Date: %a, %d %b %Y %H:%M:%S GMT\r\n" 
  *  Date: Wed, 08 Jan 2025 05:42:00 GMT
@@ -961,6 +951,26 @@ ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
   return 0;
 }
 
+static const char *min_sec_hour_day_name_u32[] = 
+  {
+    " 00 "," 01 "," 02 "," 03 "," 04 "," 05 "," 06 "," 07 "," 08 ",
+    " 09 "," 10 "," 11 "," 12 "," 13 "," 14 "," 15 "," 16 "," 17 ",
+    " 18 "," 19 "," 20 "," 21 "," 22 "," 23 "," 24 "," 25 "," 26 ",
+    " 27 "," 28 "," 29 "," 30 "," 31 "," 32 "," 33 "," 34 "," 35 ",
+    " 36 "," 37 "," 38 "," 39 "," 40 "," 41 "," 42 "," 43 "," 44 ",
+    " 45 "," 46 "," 47 "," 48 "," 49 "," 50 "," 51 "," 52 "," 53 ",
+    " 54 "," 55 "," 56 "," 57 "," 58 "," 59 "," 60 "
+  };
+static const char *min_sec_hour_day_name_u16[] = 
+  {
+    "00: ","01: ","02: ","03: ","04: ","05: ","06: ","07: ","08: ",
+    "09: ","10: ","11: ","12: ","13: ","14: ","15: ","16: ","17: ",
+    "18: ","19: ","20: ","21: ","22: ","23: ","24: ","25: ","26: ",
+    "27: ","28: ","29: ","30: ","31: ","32: ","33: ","34: ","35: ",
+    "36: ","37: ","38: ","39: ","40: ","41: ","42: ","43: ","44: ",
+    "45: ","46: ","47: ","48: ","49: ","50: ","51: ","52: ","53: ",
+    "54: ","55: ","56: ","57: ","58: ","59: ","60: "
+  };
 static int __raw_ng_http_tm(ng_rtc_time_s *tm, char *buf, int len, int isHttp, 
   const char *tz)
 {
@@ -973,20 +983,18 @@ static int __raw_ng_http_tm(ng_rtc_time_s *tm, char *buf, int len, int isHttp,
   }
   *(ng_uint32_t*)p = *(const ng_uint32_t*)week_name[tm->tm_wday];
   p += 4;
-  *(ng_uint32_t*)p = *(const ng_uint32_t*)min_sec_hour_day_name[tm->tm_mday];
+  *(ng_uint32_t*)p = *(const ng_uint32_t*)min_sec_hour_day_name_u32[tm->tm_mday];
   p += 4;
   *(ng_uint32_t*)p = *(const ng_uint32_t*)month_name[tm->tm_mon];
   p += 4;
   *(ng_uint32_t*)p = *(const ng_uint32_t*)year_name[tm->tm_year - 70];
   p[4] = ' ';
   p += 5;
-  *(ng_uint16_t*)p = *(const ng_uint32_t*)(min_sec_hour_day_name[tm->tm_hour]+1);
-  p[2] = ':';
+  *(ng_uint32_t*)p = *(const ng_uint32_t*)(min_sec_hour_day_name_u16[tm->tm_hour]);
   p += 3;
-  *(ng_uint16_t*)p = *(const ng_uint32_t*)(min_sec_hour_day_name[tm->tm_min]+1);
-  p[2] = ':';
+  *(ng_uint32_t*)p = *(const ng_uint32_t*)(min_sec_hour_day_name_u16[tm->tm_min]);
   p += 3;
-  *(ng_uint16_t*)p = *(const ng_uint32_t*)(min_sec_hour_day_name[tm->tm_sec]+1);
+  *(ng_uint16_t*)p = *(const ng_uint16_t*)(min_sec_hour_day_name_u16[tm->tm_sec]);
   p += 2;
   if (tz == NULL) 
     tz = ng_os_info.tz;

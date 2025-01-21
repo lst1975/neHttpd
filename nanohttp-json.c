@@ -2109,8 +2109,9 @@ static char const *character_escape[] = {
 	"\\u00f8", "\\u00f9", "\\u00fa", "\\u00fb", "\\u00fc", "\\u00fd", "\\u00fe", "\\u00ff", /* f8-ff */
 };
 
-static int __json_pad_print(JSON_PRINTER_f printer, 
-  ng_buffer_s *b, int depth, const char *pad, int pad_length)
+static int 
+__json_pad_print(JSON_PRINTER_f printer, ng_buffer_s *b, 
+  int depth, const char *pad, int pad_length)
 {
   int k=0;
   
@@ -2174,7 +2175,8 @@ __json_print(JSON_PRINTER_f printer, ng_buffer_s *b,
 
           for (int i=0;i<pair->val.len;i++)
           {
-            n = printer(b, "%s", character_escape[(int)pair->val.cptr[i]]);
+            n = printer(b, "%s", 
+              character_escape[(int)pair->val.cptr[i]]);
             if (n < 0) return n;
             k += n;
           }
@@ -2298,7 +2300,8 @@ __json_print(JSON_PRINTER_f printer, ng_buffer_s *b,
   return k;
 }
 
-JSONStatus_e json_print(JSONPair_s *pair, int depth, 
+JSONStatus_e 
+json_print(JSONPair_s *pair, int depth, 
   const char *pad, int pad_length)
 {
   int n;
@@ -2334,7 +2337,8 @@ json_printer_buffer(ng_buffer_s *b, const char *fmt, ...)
   return n;
 }
 
-int json_tostr(JSONPair_s *pair, char *buf, ng_size_t length, 
+int 
+json_tostr(JSONPair_s *pair, char *buf, ng_size_t length, 
   int depth, const char *pad, int pad_length)
 {
   int k=0;
@@ -2364,8 +2368,10 @@ int json_tostr(JSONPair_s *pair, char *buf, ng_size_t length,
   return k;
 }
 
-int json_to_printer(JSON_PRINTER_f printer, ng_buffer_s *b, 
-  JSONPair_s *pair, int depth, const char *pad, int pad_length)
+int 
+json_to_printer(JSON_PRINTER_f printer, 
+  ng_buffer_s *b, JSONPair_s *pair, int depth, 
+  const char *pad, int pad_length)
 {
   int n, k=0;
 
@@ -2392,8 +2398,9 @@ int json_to_printer(JSON_PRINTER_f printer, ng_buffer_s *b,
   return k;
 }
 
-static int __json_pad_length(int depth, 
-  const char *pad, int padLen)
+static int 
+__json_pad_length(int depth, const char *pad, 
+  int padLen)
 {
   if (depth == -1)
     return 0;
@@ -2401,8 +2408,9 @@ static int __json_pad_length(int depth,
   return depth * padLen;
 }
 
-static int __json_cal_length(JSONPair_s *pair, 
-  int depth, const char *pad, int padLen)
+static int 
+__json_cal_length(JSONPair_s *pair, int depth, 
+  const char *pad, int padLen)
 {
   int n = 0;
   char temp[256];
@@ -2420,28 +2428,36 @@ static int __json_cal_length(JSONPair_s *pair,
       default:
       case JSONInvalid:
         goto clean0;
+        
       case JSONString:
         n += 2 + pair->val.len;
         break;
+        
       case JSONNumber:
         if (pair->isDouble)
         {
-          n += ng_snprintf(temp, sizeof temp, "%lf", pair->vdouble);
+          n += ng_snprintf(temp, sizeof temp, 
+            "%lf", pair->vdouble);
         }
         else
         {
-          n += ng_snprintf(temp, sizeof temp, "%lld", pair->vint);
+          n += ng_snprintf(temp, sizeof temp, 
+            "%lld", pair->vint);
         }
         break;
+        
       case JSONTrue:
         n += 4;
         break;
+        
       case JSONFalse:
         n += 5;
         break;
+        
       case JSONNull:
         n += 4;
         break;
+        
       case JSONArray:
         n += 1;
         if (depth != -1)
@@ -2457,6 +2473,7 @@ static int __json_cal_length(JSONPair_s *pair,
         n += __json_pad_length(depth , pad, padLen);
         n += 1;
         break;
+        
       case JSONObject:
         n += 1;
         if (depth != -1)
@@ -2490,10 +2507,11 @@ clean0:
   return n;
 }
 
-int json_cal_length(JSONPair_s *pair, int depth, const char *pad)
+int 
+json_cal_length(JSONPair_s *pair, int depth, 
+  const char *pad, int padLen)
 {
   int n = 0;
-  int len = ng_strlen(pad);
   
   n += 1;
   if (depth != -1)
@@ -2501,13 +2519,15 @@ int json_cal_length(JSONPair_s *pair, int depth, const char *pad)
     n += 1;
   }
   
-  n += __json_cal_length(pair, depth != -1 ? depth+1 : -1, pad, len);
+  n += __json_cal_length(pair, 
+    depth != -1 ? depth+1 : -1, pad, padLen);
 
   n += 1;
   return n;
 }
 
-JSONPair_s *json_find_bykey(JSONPair_s *pair, const char *key, 
+JSONPair_s *
+json_find_bykey(JSONPair_s *pair, const char *key, 
   ng_size_t length)
 {
   while (pair != NULL)
@@ -2520,7 +2540,8 @@ JSONPair_s *json_find_bykey(JSONPair_s *pair, const char *key,
   return NULL;
 }
 
-JSONPair_s *json_find_bykey_head(JSONPair_s *pair, const char *key, 
+JSONPair_s *
+json_find_bykey_head(JSONPair_s *pair, const char *key, 
   ng_size_t length)
 {
   while (pair != NULL)
@@ -2533,14 +2554,17 @@ JSONPair_s *json_find_bykey_head(JSONPair_s *pair, const char *key,
   return NULL;
 }
 
-JSONPair_s *json_find_bykey_head_tail(JSONPair_s *pair, const char *key, 
-  ng_size_t headLen, const char *tailKey, ng_size_t tailKeyLen)
+JSONPair_s *
+json_find_bykey_head_tail(JSONPair_s *pair, 
+  const char *key, ng_size_t headLen, const char *tailKey, 
+  ng_size_t tailKeyLen)
 {
   while (pair != NULL)
   {
     if (pair->key.len >= headLen + tailKeyLen
       && !ng_memcmp(pair->key.cptr, key, headLen)
-      && !ng_memcmp(pair->key.cptr+pair->key.len-tailKeyLen, tailKey, tailKeyLen))
+      && !ng_memcmp(pair->key.cptr+pair->key.len-tailKeyLen, 
+            tailKey, tailKeyLen))
     {
       return pair;
     }
@@ -2549,15 +2573,18 @@ JSONPair_s *json_find_bykey_head_tail(JSONPair_s *pair, const char *key,
   return NULL;
 }
 
-JSONPair_s *json_find_bykey_head_offset(JSONPair_s *pair, const char *key, 
-  ng_size_t headLen, ng_size_t startOffset, const char *startKey, ng_size_t startKeyLen)
+JSONPair_s *
+json_find_bykey_head_offset(JSONPair_s *pair, 
+  const char *key, ng_size_t headLen, ng_size_t startOffset, 
+  const char *startKey, ng_size_t startKeyLen)
 {
   while (pair != NULL)
   {
     if (pair->key.len >= headLen + startKeyLen
       && pair->key.len >= startOffset + startKeyLen
       && !ng_memcmp(pair->key.cptr, key, headLen)
-      && !ng_memcmp(pair->key.cptr+startOffset, startKey, startKeyLen))
+      && !ng_memcmp(pair->key.cptr+startOffset, 
+            startKey, startKeyLen))
     {
       return pair;
     }
