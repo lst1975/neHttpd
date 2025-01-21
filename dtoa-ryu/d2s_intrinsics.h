@@ -17,8 +17,6 @@
 #ifndef RYU_D2S_INTRINSICS_H
 #define RYU_D2S_INTRINSICS_H
 
-#include <assert.h>
-
 // Defines RYU_32_BIT_PLATFORM if applicable.
 #include "common.h"
 
@@ -54,7 +52,7 @@ static inline ng_uint64_t shiftright128(const ng_uint64_t lo, const ng_uint64_t 
   // the larger shift range (TODO: what is the actual range?).
   // Check this here in case a future change requires larger shift
   // values. In this case this function needs to be adjusted.
-  assert(dist < 64);
+  NG_ASSERT(dist < 64);
   return __shiftright128(lo, hi, (unsigned char) dist);
 }
 
@@ -92,8 +90,8 @@ static inline ng_uint64_t umul128(const ng_uint64_t a, const ng_uint64_t b, ng_u
 
 static inline ng_uint64_t shiftright128(const ng_uint64_t lo, const ng_uint64_t hi, const ng_uint32_t dist) {
   // We don't need to handle the case dist >= 64 here (see above).
-  assert(dist < 64);
-  assert(dist > 0);
+  NG_ASSERT(dist < 64);
+  NG_ASSERT(dist > 0);
   return (hi << (64 - dist)) | (lo >> dist);
 }
 
@@ -192,7 +190,7 @@ static inline ng_uint32_t pow5Factor(ng_uint64_t value) {
   const ng_uint64_t n_div_5 = 3689348814741910323u;  // #{ n | n = 0 (mod 2^64) } = 2^64 / 5
   ng_uint32_t count = 0;
   for (;;) {
-    assert(value != 0);
+    NG_ASSERT(value != 0);
     value *= m_inv_5;
     if (value > n_div_5)
       break;
@@ -209,8 +207,8 @@ static inline ng_bool_t multipleOfPowerOf5(const ng_uint64_t value, const ng_uin
 
 // Returns true if value is divisible by 2^p.
 static inline ng_bool_t multipleOfPowerOf2(const ng_uint64_t value, const ng_uint32_t p) {
-  assert(value != 0);
-  assert(p < 64);
+  NG_ASSERT(value != 0);
+  NG_ASSERT(p < 64);
   // __builtin_ctzll doesn't appear to be faster here.
   return (value & ((1ull << p) - 1)) == 0;
 }

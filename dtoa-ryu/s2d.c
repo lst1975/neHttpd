@@ -17,13 +17,9 @@
 
 #include "ryu_parse.h"
 
-#include <assert.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-
 #ifdef RYU_DEBUG
 #include <stdio.h>
+#include <nanohttp-logging.h>
 #endif
 
 #include "common.h"
@@ -87,11 +83,11 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   int eIndex = len;
   ng_uint64_t m10 = 0;
   ng_int32_t e10 = 0;
-  bool signedM = false;
-  bool signedE = false;
+  ng_bool_t signedM = ng_FALSE;
+  ng_bool_t signedE = ng_FALSE;
   int i = 0;
   if (buffer[i] == '-') {
-    signedM = true;
+    signedM = ng_TRUE;
     i++;
   }
   for (; i < len; i++) {
@@ -149,10 +145,10 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   }
 
 #ifdef RYU_DEBUG
-  printf("Input=%s\n", buffer);
-  printf("m10digits = %d\n", m10digits);
-  printf("e10digits = %d\n", e10digits);
-  printf("m10 * 10^e10 = %" PRIu64 " * 10^%d\n", m10, e10);
+  log_debug("Input=%s", buffer);
+  log_debug("m10digits = %d", m10digits);
+  log_debug("e10digits = %d", e10digits);
+  log_debug("m10 * 10^e10 = %" PRIu64 " * 10^%d", m10, e10);
 #endif
 
   if ((m10digits + e10 <= -324) || (m10 == 0)) {
@@ -163,7 +159,8 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   }
   if (m10digits + e10 >= 310) {
     // Number is larger than 1e+309, which should be rounded to +/-Infinity.
-    ng_uint64_t ieee = (((ng_uint64_t) signedM) << (DOUBLE_EXPONENT_BITS + DOUBLE_MANTISSA_BITS)) | (0x7ffull << DOUBLE_MANTISSA_BITS);
+    ng_uint64_t ieee = (((ng_uint64_t) signedM) << (DOUBLE_EXPONENT_BITS + DOUBLE_MANTISSA_BITS)) 
+      | (0x7ffull << DOUBLE_MANTISSA_BITS);
     *result = int64Bits2Double(ieee);
     return SUCCESS;
   }
@@ -172,7 +169,7 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   // was exact (trailingZeros).
   ng_int32_t e2;
   ng_uint64_t m2;
-  bool trailingZeros;
+  ng_bool_t trailingZeros;
   if (e10 >= 0) {
     // The length of m * 10^e in bits is:
     //   log2(m10 * 10^e10) = log2(m10) + e10 log2(10) = log2(m10) + e10 + e10 * log2(5)
@@ -188,13 +185,13 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
     // We now compute [m10 * 10^e10 / 2^e2] = [m10 * 5^e10 / 2^(e2-e10)].
     // To that end, we use the DOUBLE_POW5_SPLIT table.
     int j = e2 - e10 - ceil_log2pow5(e10) + DOUBLE_POW5_BITCOUNT;
-    assert(j >= 0);
+    NG_ASSERT(j >= 0);
 #if defined(RYU_OPTIMIZE_SIZE)
     ng_uint64_t pow5[2];
     double_computePow5(e10, pow5);
     m2 = mulShift64(m10, pow5, j);
 #else
-    assert(e10 < DOUBLE_POW5_TABLE_SIZE);
+    NG_ASSERT(e10 < DOUBLE_POW5_TABLE_SIZE);
     m2 = mulShift64(m10, DOUBLE_POW5_SPLIT[e10], j);
 #endif
     // We also compute if the result is exact, i.e.,
@@ -211,14 +208,14 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
     double_computeInvPow5(-e10, pow5);
     m2 = mulShift64(m10, pow5, j);
 #else
-    assert(-e10 < DOUBLE_POW5_INV_TABLE_SIZE);
+    NG_ASSERT(-e10 < DOUBLE_POW5_INV_TABLE_SIZE);
     m2 = mulShift64(m10, DOUBLE_POW5_INV_SPLIT[-e10], j);
 #endif
     trailingZeros = multipleOfPowerOf5(m10, -e10);
   }
 
 #ifdef RYU_DEBUG
-  printf("m2 * 2^e2 = %" PRIu64 " * 2^%d\n", m2, e2);
+  log_debug("m2 * 2^e2 = %" PRIu64 " * 2^%d", m2, e2);
 #endif
 
   // Compute the final IEEE exponent.
@@ -235,10 +232,10 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   // the final IEEE exponent into account, so we need to reverse the bias and also special-case
   // the value 0.
   ng_int32_t shift = (ieee_e2 == 0 ? 1 : ieee_e2) - e2 - DOUBLE_EXPONENT_BIAS - DOUBLE_MANTISSA_BITS;
-  assert(shift >= 0);
+  NG_ASSERT(shift >= 0);
 #ifdef RYU_DEBUG
-  printf("ieee_e2 = %d\n", ieee_e2);
-  printf("shift = %d\n", shift);
+  log_debug("ieee_e2 = %d", ieee_e2);
+  log_debug("shift = %d", shift);
 #endif
   
   // We need to round up if the exact value is more than 0.5 above the value we computed. That's
@@ -248,14 +245,14 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
   // We need to update trailingZeros given that we have the exact output exponent ieee_e2 now.
   trailingZeros &= (m2 & ((1ull << (shift - 1)) - 1)) == 0;
   ng_uint64_t lastRemovedBit = (m2 >> (shift - 1)) & 1;
-  bool roundUp = (lastRemovedBit != 0) && (!trailingZeros || (((m2 >> shift) & 1) != 0));
+  ng_bool_t roundUp = (lastRemovedBit != 0) && (!trailingZeros || (((m2 >> shift) & 1) != 0));
 
 #ifdef RYU_DEBUG
-  printf("roundUp = %d\n", roundUp);
-  printf("ieee_m2 = %" PRIu64 "\n", (m2 >> shift) + roundUp);
+  log_debug("roundUp = %d", roundUp);
+  log_debug("ieee_m2 = %" PRIu64 "", (m2 >> shift) + roundUp);
 #endif
   ng_uint64_t ieee_m2 = (m2 >> shift) + roundUp;
-  assert(ieee_m2 <= (1ull << (DOUBLE_MANTISSA_BITS + 1)));
+  NG_ASSERT(ieee_m2 <= (1ull << (DOUBLE_MANTISSA_BITS + 1)));
   ieee_m2 &= (1ull << DOUBLE_MANTISSA_BITS) - 1;
   if (ieee_m2 == 0 && roundUp) {
     // Due to how the IEEE represents +/-Infinity, we don't need to check for overflow here.
@@ -268,5 +265,5 @@ enum Status s2d_n(const char * buffer, const int len, double * result) {
 }
 
 enum Status s2d(const char *buffer, double *result) {
-  return s2d_n(buffer, strlen(buffer), result);
+  return s2d_n(buffer, ng_strlen(buffer), result);
 }

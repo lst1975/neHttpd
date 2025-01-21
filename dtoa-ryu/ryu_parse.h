@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+#undef RYU_DEBUG
+
 // This is an experimental implementation of parsing strings to 64-bit floats
 // using a Ryu-like algorithm. At this time, it only support up to 17 non-zero
 // digits in the input, and also does not support all formats. Use at your own

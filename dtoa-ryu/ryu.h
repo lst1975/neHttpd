@@ -27,8 +27,8 @@ extern "C" {
 
 #define RYU_NaN      "NaN"
 #define RYU_Infinity "Infinity"
-#define RYU_nan "nan"
-#define RYU_snan "snan"
+#define RYU_nan      "nan"
+#define RYU_snan     "snan"
 
 static __ng_inline__ void D2X_memcpy_Infinity(char *b) 
 {

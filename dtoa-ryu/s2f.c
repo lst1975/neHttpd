@@ -17,13 +17,9 @@
 
 #include "ryu_parse.h"
 
-#include <assert.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-
 #ifdef RYU_DEBUG
 #include <stdio.h>
+#include <nanohttp-logging.h>
 #endif
 
 #include "common.h"
@@ -81,11 +77,11 @@ enum Status s2f_n(const char * buffer, const int len, float * result) {
   int eIndex = len;
   ng_uint32_t m10 = 0;
   ng_int32_t e10 = 0;
-  bool signedM = false;
-  bool signedE = false;
+  ng_bool_t signedM = ng_FALSE;
+  ng_bool_t signedE = ng_FALSE;
   int i = 0;
   if (buffer[i] == '-') {
-    signedM = true;
+    signedM = ng_TRUE;
     i++;
   }
   for (; i < len; i++) {
@@ -143,10 +139,10 @@ enum Status s2f_n(const char * buffer, const int len, float * result) {
   }
 
 #ifdef RYU_DEBUG
-  printf("Input=%s\n", buffer);
-  printf("m10digits = %d\n", m10digits);
-  printf("e10digits = %d\n", e10digits);
-  printf("m10 * 10^e10 = %u * 10^%d\n", m10, e10);
+  log_debug("Input=%s", buffer);
+  log_debug("m10digits = %d", m10digits);
+  log_debug("e10digits = %d", e10digits);
+  log_debug("m10 * 10^e10 = %u * 10^%d", m10, e10);
 #endif
 
   if ((m10digits + e10 <= -46) || (m10 == 0)) {
@@ -166,7 +162,7 @@ enum Status s2f_n(const char * buffer, const int len, float * result) {
   // was exact (trailingZeros).
   ng_int32_t e2;
   ng_uint32_t m2;
-  bool trailingZeros;
+  ng_bool_t trailingZeros;
   if (e10 >= 0) {
     // The length of m * 10^e in bits is:
     //   log2(m10 * 10^e10) = log2(m10) + e10 log2(10) = log2(m10) + e10 + e10 * log2(5)
@@ -182,7 +178,7 @@ enum Status s2f_n(const char * buffer, const int len, float * result) {
     // We now compute [m10 * 10^e10 / 2^e2] = [m10 * 5^e10 / 2^(e2-e10)].
     // To that end, we use the FLOAT_POW5_SPLIT table.
     int j = e2 - e10 - ceil_log2pow5(e10) + FLOAT_POW5_BITCOUNT;
-    assert(j >= 0);
+    NG_ASSERT(j >= 0);
     m2 = mulPow5divPow2(m10, e10, j);
 
     // We also compute if the result is exact, i.e.,
@@ -212,7 +208,7 @@ enum Status s2f_n(const char * buffer, const int len, float * result) {
   }
 
 #ifdef RYU_DEBUG
-  printf("m2 * 2^e2 = %u * 2^%d\n", m2, e2);
+  log_debug("m2 * 2^e2 = %u * 2^%d", m2, e2);
 #endif
 
   // Compute the final IEEE exponent.
@@ -229,10 +225,10 @@ enum Status s2f_n(const char * buffer, const int len, float * result) {
   // the final IEEE exponent into account, so we need to reverse the bias and also special-case
   // the value 0.
   ng_int32_t shift = (ieee_e2 == 0 ? 1 : ieee_e2) - e2 - FLOAT_EXPONENT_BIAS - FLOAT_MANTISSA_BITS;
-  assert(shift >= 0);
+  NG_ASSERT(shift >= 0);
 #ifdef RYU_DEBUG
-  printf("ieee_e2 = %d\n", ieee_e2);
-  printf("shift = %d\n", shift);
+  log_debug("ieee_e2 = %d", ieee_e2);
+  log_debug("shift   = %d", shift);
 #endif
 
   // We need to round up if the exact value is more than 0.5 above the value we computed. That's
@@ -242,14 +238,14 @@ enum Status s2f_n(const char * buffer, const int len, float * result) {
   // We need to update trailingZeros given that we have the exact output exponent ieee_e2 now.
   trailingZeros &= (m2 & ((1u << (shift - 1)) - 1)) == 0;
   ng_uint32_t lastRemovedBit = (m2 >> (shift - 1)) & 1;
-  bool roundUp = (lastRemovedBit != 0) && (!trailingZeros || (((m2 >> shift) & 1) != 0));
+  ng_bool_t roundUp = (lastRemovedBit != 0) && (!trailingZeros || (((m2 >> shift) & 1) != 0));
 
 #ifdef RYU_DEBUG
-  printf("roundUp = %d\n", roundUp);
-  printf("ieee_m2 = %u\n", (m2 >> shift) + roundUp);
+  log_debug("roundUp = %d", roundUp);
+  log_debug("ieee_m2 = %u", (m2 >> shift) + roundUp);
 #endif
   ng_uint32_t ieee_m2 = (m2 >> shift) + roundUp;
-  assert(ieee_m2 <= (1u << (FLOAT_MANTISSA_BITS + 1)));
+  NG_ASSERT(ieee_m2 <= (1u << (FLOAT_MANTISSA_BITS + 1)));
   ieee_m2 &= (1u << FLOAT_MANTISSA_BITS) - 1;
   if (ieee_m2 == 0 && roundUp) {
     // Rounding up may overflow the mantissa.
@@ -257,11 +253,12 @@ enum Status s2f_n(const char * buffer, const int len, float * result) {
     // Due to how the IEEE represents +/-Infinity, we don't need to check for overflow here.
     ieee_e2++;
   }
-  ng_uint32_t ieee = (((((ng_uint32_t) signedM) << FLOAT_EXPONENT_BITS) | (ng_uint32_t)ieee_e2) << FLOAT_MANTISSA_BITS) | ieee_m2;
+  ng_uint32_t ieee = (((((ng_uint32_t) signedM) << FLOAT_EXPONENT_BITS) 
+    | (ng_uint32_t)ieee_e2) << FLOAT_MANTISSA_BITS) | ieee_m2;
   *result = int32Bits2Float(ieee);
   return SUCCESS;
 }
 
 enum Status s2f(const char * buffer, float * result) {
-  return s2f_n(buffer, strlen(buffer), result);
+  return s2f_n(buffer, ng_strlen(buffer), result);
 }

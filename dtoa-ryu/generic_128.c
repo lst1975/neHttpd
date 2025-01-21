@@ -21,18 +21,15 @@
 #include "ryu.h"
 #include "ryu_generic_128.h"
 
-#include <assert.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "generic_128.h"
 
 #ifdef RYU_DEBUG
+#define UINT128_STR_LEN_MAX 40
 #include <stdio.h>
-static char* s(uint128_t v) {
+#include <nanohttp-logging.h>
+
+static char* __s(uint128_t v, char *b) {
   int len = decimalLength(v);
-  char* b = (char*) malloc((len + 1) * sizeof(char));
   for (int i = 0; i < len; i++) {
     const ng_uint32_t c = (ng_uint32_t) (v % 10);
     v /= 10;
@@ -41,6 +38,7 @@ static char* s(uint128_t v) {
   b[len] = 0;
   return b;
 }
+#define s(v) __s(v,ub__)
 #endif
 
 #define ONE ((uint128_t) 1)
@@ -57,7 +55,7 @@ static char* s(uint128_t v) {
 
 struct floating_decimal_128 float_to_fd128(float f) {
   ng_uint32_t bits = *(ng_uint32_t *)&f;
-  return generic_binary_to_decimal(bits, FLOAT_MANTISSA_BITS, FLOAT_EXPONENT_BITS, false);
+  return generic_binary_to_decimal(bits, FLOAT_MANTISSA_BITS, FLOAT_EXPONENT_BITS, ng_FALSE);
 }
 
 #define DOUBLE_MANTISSA_BITS 52
@@ -65,7 +63,7 @@ struct floating_decimal_128 float_to_fd128(float f) {
 
 struct floating_decimal_128 double_to_fd128(double d) {
   ng_uint64_t bits = *(ng_uint64_t *)&d;
-  return generic_binary_to_decimal(bits, DOUBLE_MANTISSA_BITS, DOUBLE_EXPONENT_BITS, false);
+  return generic_binary_to_decimal(bits, DOUBLE_MANTISSA_BITS, DOUBLE_EXPONENT_BITS, ng_FALSE);
 }
 
 #define LONG_DOUBLE_MANTISSA_BITS 64
@@ -92,11 +90,12 @@ struct floating_decimal_128 long_double_to_fd128(long double d) {
 struct floating_decimal_128 generic_binary_to_decimal(
     const uint128_t bits, const ng_uint32_t mantissaBits, const ng_uint32_t exponentBits, const bool explicitLeadingBit) {
 #ifdef RYU_DEBUG
-  printf("IN=");
+  char ub__[UINT128_STR_LEN_MAX+1];
+  log_print("IN=");
   for (ng_int32_t bit = 127; bit >= 0; --bit) {
-    printf("%u", (ng_uint32_t) ((bits >> bit) & 1));
+    log_print("%u", (ng_uint32_t) ((bits >> bit) & 1));
   }
-  printf("\n");
+  log_print("\n");
 #endif
 
   const ng_uint32_t bias = (1u << (exponentBits - 1)) - 1;
@@ -143,7 +142,7 @@ struct floating_decimal_128 generic_binary_to_decimal(
   const bool acceptBounds = even;
 
 #ifdef RYU_DEBUG
-  printf("-> %s %s * 2^%d\n", ieeeSign ? "-" : "+", s(m2), e2 + 2);
+  log_debug("-> %s %s * 2^%d", ieeeSign ? "-" : "+", s(m2), e2 + 2);
 #endif
 
   // Step 2: Determine the interval of legal decimal representations.
@@ -156,8 +155,8 @@ struct floating_decimal_128 generic_binary_to_decimal(
   // Step 3: Convert to a decimal power base using 128-bit arithmetic.
   uint128_t vr, vp, vm;
   ng_int32_t e10;
-  bool vmIsTrailingZeros = false;
-  bool vrIsTrailingZeros = false;
+  ng_bool_t vmIsTrailingZeros = ng_FALSE;
+  ng_bool_t vrIsTrailingZeros = ng_FALSE;
   if (e2 >= 0) {
     // I tried special-casing q == 0, but there was no effect on performance.
     // This expression is slightly faster than max(0, log10Pow2(e2) - 1).
@@ -171,8 +170,10 @@ struct floating_decimal_128 generic_binary_to_decimal(
     vp = mulShift(4 * m2 + 2, pow5, i);
     vm = mulShift(4 * m2 - 1 - mmShift, pow5, i);
 #ifdef RYU_DEBUG
-    printf("%s * 2^%d / 10^%d\n", s(mv), e2, q);
-    printf("V+=%s\nV =%s\nV-=%s\n", s(vp), s(vr), s(vm));
+    log_debug("%s * 2^%d / 10^%d", s(mv), e2, q);
+    log_debug("V+=%s", s(vp));
+    log_debug("V =%s", s(vr));
+    log_debug("V-=%s", s(vm));
 #endif
     // floor(log_5(2^128)) = 55, this is very conservative
     if (q <= 55) {
@@ -202,9 +203,11 @@ struct floating_decimal_128 generic_binary_to_decimal(
     vp = mulShift(4 * m2 + 2, pow5, j);
     vm = mulShift(4 * m2 - 1 - mmShift, pow5, j);
 #ifdef RYU_DEBUG
-    printf("%s * 5^%d / 10^%d\n", s(mv), -e2, q);
-    printf("%d %d %d %d\n", q, i, k, j);
-    printf("V+=%s\nV =%s\nV-=%s\n", s(vp), s(vr), s(vm));
+    log_debug("%s * 5^%d / 10^%d", s(mv), -e2, q);
+    log_debug("%d %d %d %d", q, i, k, j);
+    log_debug("V+=%s", s(vp));
+    log_debug("V =%s", s(vr));
+    log_debug("V-=%s", s(vm));
 #endif
     if (q <= 1) {
       // {vr,vp,vm} is trailing zeros if {mv,mp,mm} has at least q trailing 0 bits.
@@ -225,15 +228,17 @@ struct floating_decimal_128 generic_binary_to_decimal(
       // We also need to make sure that the left shift does not overflow.
       vrIsTrailingZeros = multipleOfPowerOf2(mv, q - 1);
 #ifdef RYU_DEBUG
-      printf("vr is trailing zeros=%s\n", vrIsTrailingZeros ? "true" : "false");
+      log_debug("vr is trailing zeros=%s", vrIsTrailingZeros ? "true" : "false");
 #endif
     }
   }
 #ifdef RYU_DEBUG
-  printf("e10=%d\n", e10);
-  printf("V+=%s\nV =%s\nV-=%s\n", s(vp), s(vr), s(vm));
-  printf("vm is trailing zeros=%s\n", vmIsTrailingZeros ? "true" : "false");
-  printf("vr is trailing zeros=%s\n", vrIsTrailingZeros ? "true" : "false");
+  log_debug("e10=%d", e10);
+  log_debug("V+=%s", s(vp));
+  log_debug("V =%s", s(vr));
+  log_debug("V-=%s", s(vm));
+  log_debug("vm is trailing zeros=%s", vmIsTrailingZeros ? "true" : "false");
+  log_debug("vr is trailing zeros=%s", vrIsTrailingZeros ? "true" : "false");
 #endif
 
   // Step 4: Find the shortest decimal representation in the interval of legal representations.
@@ -251,8 +256,10 @@ struct floating_decimal_128 generic_binary_to_decimal(
     ++removed;
   }
 #ifdef RYU_DEBUG
-  printf("V+=%s\nV =%s\nV-=%s\n", s(vp), s(vr), s(vm));
-  printf("d-10=%s\n", vmIsTrailingZeros ? "true" : "false");
+  log_debug("V+=%s", s(vp));
+  log_debug("V =%s", s(vr));
+  log_debug("V-=%s", s(vm));
+  log_debug("d-10=%s", vmIsTrailingZeros ? "true" : "false");
 #endif
   if (vmIsTrailingZeros) {
     while (vm % 10 == 0) {
@@ -265,8 +272,8 @@ struct floating_decimal_128 generic_binary_to_decimal(
     }
   }
 #ifdef RYU_DEBUG
-  printf("%s %d\n", s(vr), lastRemovedDigit);
-  printf("vr is trailing zeros=%s\n", vrIsTrailingZeros ? "true" : "false");
+  log_debug("%s %d", s(vr), lastRemovedDigit);
+  log_debug("vr is trailing zeros=%s", vrIsTrailingZeros ? "true" : "false");
 #endif
   if (vrIsTrailingZeros && (lastRemovedDigit == 5) && (vr % 2 == 0)) {
     // Round even if the exact numbers is .....50..0.
@@ -278,9 +285,11 @@ struct floating_decimal_128 generic_binary_to_decimal(
   const ng_int32_t exp = e10 + removed;
 
 #ifdef RYU_DEBUG
-  printf("V+=%s\nV =%s\nV-=%s\n", s(vp), s(vr), s(vm));
-  printf("O=%s\n", s(output));
-  printf("EXP=%d\n", exp);
+  log_debug("V+=%s", s(vp));
+  log_debug("V =%s", s(vr));
+  log_debug("V-=%s", s(vp));
+  log_debug("O=%s", s(output));
+  log_debug("EXP=%d", exp);
 #endif
 
   struct floating_decimal_128 fd;
@@ -303,6 +312,10 @@ static inline int copy_special_str(char * const result, const struct floating_de
 }
 
 int generic_to_chars(const struct floating_decimal_128 v, char* const result) {
+#ifdef RYU_DEBUG
+  char ub__[UINT128_STR_LEN_MAX+1];
+#endif
+
   if (v.exponent == FD128_EXCEPTIONAL_EXPONENT) {
     return copy_special_str(result, v);
   }
@@ -317,9 +330,9 @@ int generic_to_chars(const struct floating_decimal_128 v, char* const result) {
   const ng_uint32_t olength = decimalLength(output);
 
 #ifdef RYU_DEBUG
-  printf("DIGITS=%s\n", s(v.mantissa));
-  printf("OLEN=%u\n", olength);
-  printf("EXP=%u\n", v.exponent + olength);
+  log_debug("DIGITS=%s", s(v.mantissa));
+  log_debug("OLEN=%u", olength);
+  log_debug("EXP=%u", v.exponent + olength);
 #endif
 
   for (ng_uint32_t i = 0; i < olength - 1; ++i) {

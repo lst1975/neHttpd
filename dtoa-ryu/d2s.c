@@ -29,10 +29,7 @@
 
 #include "ryu.h"
 
-#include <assert.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "common.h"
 #include "digit_table.h"
@@ -47,6 +44,10 @@
 
 #include <nanohttp-itoa.h>
 
+#ifdef RYU_DEBUG
+#include <nanohttp-logging.h>
+#endif
+
 #define DOUBLE_MANTISSA_BITS 52
 #define DOUBLE_EXPONENT_BITS 11
 #define DOUBLE_BIAS 1023
@@ -57,7 +58,7 @@ static inline ng_uint32_t decimalLength17(const ng_uint64_t v) {
   // The average output length is 16.38 digits, so we check high-to-low.
   // Function precondition: v is not an 18, 19, or 20-digit number.
   // (17 digits are sufficient for round-tripping.)
-  assert(v < 100000000000000000L);
+  NG_ASSERT(v < 100000000000000000L);
   if (v >= 10000000000000000L) { return 17; }
   if (v >= 1000000000000000L) { return 16; }
   if (v >= 100000000000000L) { return 15; }
@@ -101,7 +102,7 @@ static inline floating_decimal_64 d2d(const ng_uint64_t ieeeMantissa, const ng_u
   const ng_bool_t acceptBounds = even;
 
 #ifdef RYU_DEBUG
-  printf("-> %" PRIu64 " * 2^%d\n", m2, e2 + 2);
+  log_debug("-> %" PRIu64 " * 2^%d", m2, e2 + 2);
 #endif
 
   // Step 2: Determine the interval of valid decimal representations.
@@ -132,8 +133,10 @@ static inline floating_decimal_64 d2d(const ng_uint64_t ieeeMantissa, const ng_u
     vr = mulShiftAll64(m2, DOUBLE_POW5_INV_SPLIT[q], i, &vp, &vm, mmShift);
 #endif
 #ifdef RYU_DEBUG
-    printf("%" PRIu64 " * 2^%d / 10^%u\n", mv, e2, q);
-    printf("V+=%" PRIu64 "\nV =%" PRIu64 "\nV-=%" PRIu64 "\n", vp, vr, vm);
+    log_debug("%" PRIu64 " * 2^%d / 10^%u", mv, e2, q);
+    log_debug("V+=%" PRIu64, vp);
+    log_debug("V =%" PRIu64, vr);
+    log_debug("V-=%" PRIu64, vm);
 #endif
     if (q <= 21) {
       // This should use q <= 22, but I think 21 is also safe. Smaller values
@@ -167,9 +170,11 @@ static inline floating_decimal_64 d2d(const ng_uint64_t ieeeMantissa, const ng_u
     vr = mulShiftAll64(m2, DOUBLE_POW5_SPLIT[i], j, &vp, &vm, mmShift);
 #endif
 #ifdef RYU_DEBUG
-    printf("%" PRIu64 " * 5^%d / 10^%u\n", mv, -e2, q);
-    printf("%u %d %d %d\n", q, i, k, j);
-    printf("V+=%" PRIu64 "\nV =%" PRIu64 "\nV-=%" PRIu64 "\n", vp, vr, vm);
+    log_debug("%" PRIu64 " * 5^%d / 10^%u", mv, -e2, q);
+    log_debug("%u %d %d %d", q, i, k, j);
+    log_debug("V+=%" PRIu64, vp);
+    log_debug("V =%" PRIu64, vr);
+    log_debug("V-=%" PRIu64, vm);
 #endif
     if (q <= 1) {
       // {vr,vp,vm} is trailing zeros if {mv,mp,mm} has at least q trailing 0 bits.
@@ -189,15 +194,17 @@ static inline floating_decimal_64 d2d(const ng_uint64_t ieeeMantissa, const ng_u
       // <=> p2(mv) >= q (because -e2 >= q)
       vrIsTrailingZeros = multipleOfPowerOf2(mv, q);
 #ifdef RYU_DEBUG
-      printf("vr is trailing zeros=%s\n", vrIsTrailingZeros ? "true" : "false");
+      log_debug("vr is trailing zeros=%s", vrIsTrailingZeros ? "true" : "false");
 #endif
     }
   }
 #ifdef RYU_DEBUG
-  printf("e10=%d\n", e10);
-  printf("V+=%" PRIu64 "\nV =%" PRIu64 "\nV-=%" PRIu64 "\n", vp, vr, vm);
-  printf("vm is trailing zeros=%s\n", vmIsTrailingZeros ? "true" : "false");
-  printf("vr is trailing zeros=%s\n", vrIsTrailingZeros ? "true" : "false");
+  log_debug("e10=%d", e10);
+  log_debug("V+=%" PRIu64, vp);
+  log_debug("V =%" PRIu64, vr);
+  log_debug("V-=%" PRIu64, vm);
+  log_debug("vm is trailing zeros=%s", vmIsTrailingZeros ? "true" : "false");
+  log_debug("vr is trailing zeros=%s", vrIsTrailingZeros ? "true" : "false");
 #endif
 
   // Step 4: Find the shortest decimal representation in the interval of valid representations.
@@ -225,8 +232,10 @@ static inline floating_decimal_64 d2d(const ng_uint64_t ieeeMantissa, const ng_u
       ++removed;
     }
 #ifdef RYU_DEBUG
-    printf("V+=%" PRIu64 "\nV =%" PRIu64 "\nV-=%" PRIu64 "\n", vp, vr, vm);
-    printf("d-10=%s\n", vmIsTrailingZeros ? "true" : "false");
+    log_debug("V+=%" PRIu64, vp);
+    log_debug("V =%" PRIu64, vr);
+    log_debug("V-=%" PRIu64, vm);
+    log_debug("d-10=%s", vmIsTrailingZeros ? "true" : "false");
 #endif
     if (vmIsTrailingZeros) {
       for (;;) {
@@ -247,8 +256,8 @@ static inline floating_decimal_64 d2d(const ng_uint64_t ieeeMantissa, const ng_u
       }
     }
 #ifdef RYU_DEBUG
-    printf("%" PRIu64 " %d\n", vr, lastRemovedDigit);
-    printf("vr is trailing zeros=%s\n", vrIsTrailingZeros ? "true" : "false");
+    log_debug("%" PRIu64 " %d", vr, lastRemovedDigit);
+    log_debug("vr is trailing zeros=%s", vrIsTrailingZeros ? "true" : "false");
 #endif
     if (vrIsTrailingZeros && lastRemovedDigit == 5 && vr % 2 == 0) {
       // Round even if the exact number is .....50..0.
@@ -289,8 +298,8 @@ static inline floating_decimal_64 d2d(const ng_uint64_t ieeeMantissa, const ng_u
       ++removed;
     }
 #ifdef RYU_DEBUG
-    printf("%" PRIu64 " roundUp=%s\n", vr, roundUp ? "true" : "false");
-    printf("vr is trailing zeros=%s\n", vrIsTrailingZeros ? "true" : "false");
+    log_debug("%" PRIu64 " roundUp=%s", vr, roundUp ? "true" : "false");
+    log_debug("vr is trailing zeros=%s", vrIsTrailingZeros ? "true" : "false");
 #endif
     // We need to take vr + 1 if vr is outside bounds or we need to round up.
     output = vr + (vr == vm || roundUp);
@@ -298,9 +307,11 @@ static inline floating_decimal_64 d2d(const ng_uint64_t ieeeMantissa, const ng_u
   const ng_int32_t exp = e10 + removed;
 
 #ifdef RYU_DEBUG
-  printf("V+=%" PRIu64 "\nV =%" PRIu64 "\nV-=%" PRIu64 "\n", vp, vr, vm);
-  printf("O=%" PRIu64 "\n", output);
-  printf("EXP=%d\n", exp);
+  log_debug("V+=%" PRIu64, vp);
+  log_debug("V =%" PRIu64, vr);
+  log_debug("V-=%" PRIu64, vm);
+  log_debug("O=%" PRIu64 "", output);
+  log_debug("EXP=%d", exp);
 #endif
 
   floating_decimal_64 fd;
@@ -323,9 +334,9 @@ d2s_to_chars(const floating_decimal_64 v, const ng_bool_t sign,
   const ng_uint32_t olength = decimalLength17(output);
 
 #ifdef RYU_DEBUG
-  printf("DIGITS=%" PRIu64 "\n", v.mantissa);
-  printf("OLEN=%u\n", olength);
-  printf("EXP=%u\n", v.exponent + olength);
+  log_debug("DIGITS=%" PRIu64 "", v.mantissa);
+  log_debug("OLEN=%u", olength);
+  log_debug("EXP=%u", v.exponent + olength);
 #endif
 
   // Print the decimal digits.
@@ -486,11 +497,11 @@ int __d2s_buffered_n(double f, char *result, int result_len, int *decimal_point)
   const ng_uint64_t bits = double_to_bits(f);
 
 #ifdef RYU_DEBUG
-  printf("IN=");
+  log_print("IN=");
   for (ng_int32_t bit = 63; bit >= 0; --bit) {
-    printf("%d", (int) ((bits >> bit) & 1));
+    log_print("%d", (int) ((bits >> bit) & 1));
   }
-  printf("\n");
+  log_print("\n");
 #endif
 
   // Decode bits into sign, mantissa, and exponent.
@@ -534,7 +545,7 @@ void d2s_buffered(double f, char* result) {
 }
 
 char* d2s(double f) {
-  char* const result = (char*) malloc(25);
+  char* const result = (char*) ng_malloc(25);
   d2s_buffered(f, result);
   return result;
 }

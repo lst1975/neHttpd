@@ -17,8 +17,6 @@
 #ifndef RYU_GENERIC128_H
 #define RYU_GENERIC128_H
 
-#include <assert.h>
-
 typedef __uint128_t uint128_t;
 
 #define FLOAT_128_POW5_INV_BITCOUNT 249
@@ -360,15 +358,15 @@ static const ng_uint64_t POW5_INV_ERRORS[154] = {
 
 // Returns e == 0 ? 1 : ceil(log_2(5^e)); requires 0 <= e <= 32768.
 static inline ng_uint32_t pow5bits(const ng_int32_t e) {
-  assert(e >= 0);
-  assert(e <= 1 << 15);
+  NG_ASSERT(e >= 0);
+  NG_ASSERT(e <= 1 << 15);
   return (ng_uint32_t) (((e * 163391164108059ull) >> 46) + 1);
 }
 
 static inline void mul_128_256_shift(
     const ng_uint64_t* const a, const ng_uint64_t* const b, const ng_uint32_t shift, const ng_uint32_t corr, ng_uint64_t* const result) {
-  assert(shift > 0);
-  assert(shift < 256);
+  NG_ASSERT(shift > 0);
+  NG_ASSERT(shift < 256);
   const uint128_t b00 = ((uint128_t) a[0]) * b[0]; // 0
   const uint128_t b01 = ((uint128_t) a[0]) * b[1]; // 64
   const uint128_t b02 = ((uint128_t) a[0]) * b[2]; // 128
@@ -478,7 +476,7 @@ static inline bool multipleOfPowerOf2(const uint128_t value, const ng_uint32_t p
 }
 
 static inline uint128_t mulShift(const uint128_t m, const ng_uint64_t* const mul, const ng_int32_t j) {
-  assert(j > 128);
+  NG_ASSERT(j > 128);
   ng_uint64_t a[2];
   a[0] = (ng_uint64_t) m;
   a[1] = (ng_uint64_t) (m >> 64);
@@ -502,16 +500,16 @@ static inline ng_uint32_t decimalLength(const uint128_t v) {
 // Returns floor(log_10(2^e)).
 static inline ng_uint32_t log10Pow2(const ng_int32_t e) {
   // The first value this approximation fails for is 2^1651 which is just greater than 10^297.
-  assert(e >= 0);
-  assert(e <= 1 << 15);
+  NG_ASSERT(e >= 0);
+  NG_ASSERT(e <= 1 << 15);
   return (ng_uint32_t) ((((ng_uint64_t) e) * 169464822037455ull) >> 49);
 }
 
 // Returns floor(log_10(5^e)).
 static inline ng_uint32_t log10Pow5(const ng_int32_t e) {
   // The first value this approximation fails for is 5^2621 which is just greater than 10^1832.
-  assert(e >= 0);
-  assert(e <= 1 << 15);
+  NG_ASSERT(e >= 0);
+  NG_ASSERT(e <= 1 << 15);
   return (ng_uint32_t) ((((ng_uint64_t) e) * 196742565691928ull) >> 48);
 }
 

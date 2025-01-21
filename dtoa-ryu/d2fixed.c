@@ -25,19 +25,19 @@
 
 #include "ryu.h"
 
-#include <assert.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
 
 #ifdef RYU_DEBUG
 #include <stdio.h>
+#include <nanohttp-logging.h>
 #endif
 
 #include "common.h"
 #include "digit_table.h"
 #include "d2fixed_full_table.h"
 #include "d2s_intrinsics.h"
+
+#include <nanohttp-mem.h>
 
 #define DOUBLE_MANTISSA_BITS 52
 #define DOUBLE_EXPONENT_BITS 11
@@ -103,11 +103,11 @@ static inline ng_uint32_t mulShift_mod1e9(const ng_uint64_t m, const ng_uint64_t
   const uint128_t b2 = ((uint128_t) m) * mul[2]; // 128
 #ifdef RYU_DEBUG
   if (j < 128 || j > 180) {
-    printf("%d\n", j);
+    log_debug("%d", j);
   }
 #endif
-  assert(j >= 128);
-  assert(j <= 180);
+  NG_ASSERT(j >= 128);
+  NG_ASSERT(j <= 180);
   // j: [128, 256)
   const uint128_t mid = b1 + (ng_uint64_t) (b0 >> 64); // 64
   const uint128_t s1 = b2 + (ng_uint64_t) (mid >> 64); // 128
@@ -165,11 +165,11 @@ static inline ng_uint32_t mulShift_mod1e9(const ng_uint64_t m, const ng_uint64_t
   const ng_uint64_t s1high = high2 + c2;       // 192
 #ifdef RYU_DEBUG
   if (j < 128 || j > 180) {
-    printf("%d\n", j);
+    log_debug("%d", j);
   }
 #endif
-  assert(j >= 128);
-  assert(j <= 180);
+  NG_ASSERT(j >= 128);
+  NG_ASSERT(j <= 180);
 #if defined(HAS_64_BIT_INTRINSICS)
   const ng_uint32_t dist = (ng_uint32_t) (j - 128); // dist: [0, 52]
   const ng_uint64_t shiftedhigh = s1high >> dist;
@@ -197,7 +197,7 @@ static inline ng_uint32_t mulShift_mod1e9(const ng_uint64_t m, const ng_uint64_t
 #define D2F_ng_memcpy(a,b,n) (*(ng_uint16_t *)(a) = *(const ng_uint16_t *)(b))
 static inline void append_n_digits(const ng_uint32_t olength, ng_uint32_t digits, char* const result) {
 #ifdef RYU_DEBUG
-  printf("DIGITS=%u\n", digits);
+  log_debug("DIGITS=%u", digits);
 #endif
 
   ng_uint32_t i = 0;
@@ -234,7 +234,7 @@ static inline void append_n_digits(const ng_uint32_t olength, ng_uint32_t digits
 // e.g., by passing `olength` as `decimalLength9(digits)`.
 static inline void append_d_digits(const ng_uint32_t olength, ng_uint32_t digits, char* const result) {
 #ifdef RYU_DEBUG
-  printf("DIGITS=%u\n", digits);
+  log_debug("DIGITS=%u", digits);
 #endif
 
   ng_uint32_t i = 0;
@@ -272,7 +272,7 @@ static inline void append_d_digits(const ng_uint32_t olength, ng_uint32_t digits
 // If `digits` contains additional digits, then those are silently ignored.
 static inline void append_c_digits(const ng_uint32_t count, ng_uint32_t digits, char* const result) {
 #ifdef RYU_DEBUG
-  printf("DIGITS=%u\n", digits);
+  log_debug("DIGITS=%u", digits);
 #endif
   // Copy pairs of digits from DIGIT_TABLE.
   ng_uint32_t i = 0;
@@ -292,7 +292,7 @@ static inline void append_c_digits(const ng_uint32_t count, ng_uint32_t digits, 
 // If `digits` contains additional digits, then those are silently ignored.
 static inline void append_nine_digits(ng_uint32_t digits, char* const result) {
 #ifdef RYU_DEBUG
-  printf("DIGITS=%u\n", digits);
+  log_debug("DIGITS=%u", digits);
 #endif
   if (digits == 0) {
     ng_memset(result, '0', 9);
@@ -366,11 +366,11 @@ static inline int copy_special_str_printf(char* const result, const bool sign, c
 int d2fixed_buffered_n(double d, ng_uint32_t precision, char* result) {
   const ng_uint64_t bits = double_to_bits(d);
 #ifdef RYU_DEBUG
-  printf("IN=");
+  log_print("IN=");
   for (ng_int32_t bit = 63; bit >= 0; --bit) {
-    printf("%d", (int) ((bits >> bit) & 1));
+    log_print("%d", (int) ((bits >> bit) & 1));
   }
-  printf("\n");
+  log_print("\n");
 #endif
 
   // Decode bits into sign, mantissa, and exponent.
@@ -407,11 +407,11 @@ int d2fixed_buffered_n(double d, ng_uint32_t precision, char* result) {
   }
 
 #ifdef RYU_DEBUG
-  printf("-> %" PRIu64 " * 2^%d\n", m2, e2);
+  log_debug("-> %" PRIu64 " * 2^%d", m2, e2);
 #endif
 
   int index = 0;
-  bool nonzero = false;
+  ng_bool_t nonzero = ng_FALSE;
   if (ieeeSign) {
     result[index++] = '-';
   }
@@ -420,8 +420,8 @@ int d2fixed_buffered_n(double d, ng_uint32_t precision, char* result) {
     const ng_uint32_t p10bits = pow10BitsForIndex(idx);
     const ng_int32_t len = (ng_int32_t) lengthForIndex(idx);
 #ifdef RYU_DEBUG
-    printf("idx=%u\n", idx);
-    printf("len=%d\n", len);
+    log_debug("idx=%u", idx);
+    log_debug("len=%d", len);
 #endif
     for (ng_int32_t i = len - 1; i >= 0; --i) {
       const ng_uint32_t j = p10bits - e2;
@@ -446,12 +446,12 @@ int d2fixed_buffered_n(double d, ng_uint32_t precision, char* result) {
     result[index++] = '.';
   }
 #ifdef RYU_DEBUG
-  printf("e2=%d\n", e2);
+  log_debug("e2=%d", e2);
 #endif
   if (e2 < 0) {
     const ng_int32_t idx = -e2 / 16;
 #ifdef RYU_DEBUG
-    printf("idx=%d\n", idx);
+    log_debug("idx=%d", idx);
 #endif
     const ng_uint32_t blocks = precision / 9 + 1;
     // 0 = don't round up; 1 = round up unconditionally; 2 = round up if odd.
@@ -481,7 +481,7 @@ int d2fixed_buffered_n(double d, ng_uint32_t precision, char* result) {
       // a slightly faster code path in mulShift_mod1e9. Instead, we can just increase the multipliers.
       ng_uint32_t digits = mulShift_mod1e9(m2 << 8, POW10_SPLIT_2[p], j + 8);
 #ifdef RYU_DEBUG
-      printf("digits=%u\n", digits);
+      log_debug("digits=%u", digits);
 #endif
       if (i < blocks - 1) {
         append_nine_digits(digits, result + index);
@@ -494,7 +494,7 @@ int d2fixed_buffered_n(double d, ng_uint32_t precision, char* result) {
           digits /= 10;
         }
 #ifdef RYU_DEBUG
-        printf("lastDigit=%u\n", lastDigit);
+        log_debug("lastDigit=%u", lastDigit);
 #endif
         if (lastDigit != 5) {
           roundUp = lastDigit > 5;
@@ -505,8 +505,8 @@ int d2fixed_buffered_n(double d, ng_uint32_t precision, char* result) {
             || (requiredTwos < 60 && multipleOfPowerOf2(m2, (ng_uint32_t) requiredTwos));
           roundUp = trailingZeros ? 2 : 1;
 #ifdef RYU_DEBUG
-          printf("requiredTwos=%d\n", requiredTwos);
-          printf("trailingZeros=%s\n", trailingZeros ? "true" : "false");
+          log_debug("requiredTwos=%d", requiredTwos);
+          log_debug("trailingZeros=%s", trailingZeros ? "true" : "false");
 #endif
         }
         if (maximum > 0) {
@@ -517,7 +517,7 @@ int d2fixed_buffered_n(double d, ng_uint32_t precision, char* result) {
       }
     }
 #ifdef RYU_DEBUG
-    printf("roundUp=%d\n", roundUp);
+    log_debug("roundUp=%d", roundUp);
 #endif
     if (roundUp != 0) {
       int roundIndex = index;
@@ -563,7 +563,7 @@ void d2fixed_buffered(double d, ng_uint32_t precision, char* result) {
 }
 
 char* d2fixed(double d, ng_uint32_t precision) {
-  char* const buffer = (char*)malloc(2000);
+  char* const buffer = (char*)ng_malloc(2000);
   const int index = d2fixed_buffered_n(d, precision, buffer);
   buffer[index] = '\0';
   return buffer;
@@ -574,11 +574,11 @@ char* d2fixed(double d, ng_uint32_t precision) {
 int d2exp_buffered_n(double d, ng_uint32_t precision, char* result) {
   const ng_uint64_t bits = double_to_bits(d);
 #ifdef RYU_DEBUG
-  printf("IN=");
+  log_print("IN=");
   for (ng_int32_t bit = 63; bit >= 0; --bit) {
-    printf("%d", (int) ((bits >> bit) & 1));
+    log_print("%d", (int) ((bits >> bit) & 1));
   }
-  printf("\n");
+  log_print("\n");
 #endif
 
   // Decode bits into sign, mantissa, and exponent.
@@ -617,7 +617,7 @@ int d2exp_buffered_n(double d, ng_uint32_t precision, char* result) {
   }
 
 #ifdef RYU_DEBUG
-  printf("-> %" PRIu64 " * 2^%d\n", m2, e2);
+  log_debug("-> %" PRIu64 " * 2^%d", m2, e2);
 #endif
 
   const bool printDecimalPoint = precision > 0;
@@ -635,8 +635,8 @@ int d2exp_buffered_n(double d, ng_uint32_t precision, char* result) {
     const ng_uint32_t p10bits = pow10BitsForIndex(idx);
     const ng_int32_t len = (ng_int32_t) lengthForIndex(idx);
 #ifdef RYU_DEBUG
-    printf("idx=%u\n", idx);
-    printf("len=%d\n", len);
+    log_debug("idx=%u", idx);
+    log_debug("len=%d", len);
 #endif
     for (ng_int32_t i = len - 1; i >= 0; --i) {
       const ng_uint32_t j = p10bits - e2;
@@ -672,7 +672,7 @@ int d2exp_buffered_n(double d, ng_uint32_t precision, char* result) {
   if (e2 < 0 && availableDigits == 0) {
     const ng_int32_t idx = -e2 / 16;
 #ifdef RYU_DEBUG
-    printf("idx=%d, e2=%d, min=%d\n", idx, e2, MIN_BLOCK_2[idx]);
+    log_debug("idx=%d, e2=%d, min=%d", idx, e2, MIN_BLOCK_2[idx]);
 #endif
     for (ng_int32_t i = MIN_BLOCK_2[idx]; i < 200; ++i) {
       const ng_int32_t j = ADDITIONAL_BITS_2 + (-e2 - 16 * idx);
@@ -681,8 +681,9 @@ int d2exp_buffered_n(double d, ng_uint32_t precision, char* result) {
       // a slightly faster code path in mulShift_mod1e9. Instead, we can just increase the multipliers.
       digits = (p >= POW10_OFFSET_2[idx + 1]) ? 0 : mulShift_mod1e9(m2 << 8, POW10_SPLIT_2[p], j + 8);
 #ifdef RYU_DEBUG
-      printf("exact=%" PRIu64 " * (%" PRIu64 " + %" PRIu64 " << 64) >> %d\n", m2, POW10_SPLIT_2[p][0], POW10_SPLIT_2[p][1], j);
-      printf("digits=%u\n", digits);
+      log_debug("exact=%" PRIu64 " * (%" PRIu64 " + %" PRIu64 " << 64) >> %d", 
+        m2, POW10_SPLIT_2[p][0], POW10_SPLIT_2[p][1], j);
+      log_debug("digits=%u", digits);
 #endif
       if (printedDigits != 0) {
         if (printedDigits + 9 > precision) {
@@ -712,9 +713,9 @@ int d2exp_buffered_n(double d, ng_uint32_t precision, char* result) {
 
   const ng_uint32_t maximum = precision - printedDigits;
 #ifdef RYU_DEBUG
-  printf("availableDigits=%u\n", availableDigits);
-  printf("digits=%u\n", digits);
-  printf("maximum=%u\n", maximum);
+  log_debug("availableDigits=%u", availableDigits);
+  log_debug("digits=%u", digits);
+  log_debug("maximum=%u", maximum);
 #endif
   if (availableDigits == 0) {
     digits = 0;
@@ -727,7 +728,7 @@ int d2exp_buffered_n(double d, ng_uint32_t precision, char* result) {
     }
   }
 #ifdef RYU_DEBUG
-  printf("lastDigit=%u\n", lastDigit);
+  log_debug("lastDigit=%u", lastDigit);
 #endif
   // 0 = don't round up; 1 = round up unconditionally; 2 = round up if odd.
   int roundUp = 0;
@@ -746,8 +747,8 @@ int d2exp_buffered_n(double d, ng_uint32_t precision, char* result) {
     }
     roundUp = trailingZeros ? 2 : 1;
 #ifdef RYU_DEBUG
-    printf("requiredTwos=%d\n", requiredTwos);
-    printf("trailingZeros=%s\n", trailingZeros ? "true" : "false");
+    log_debug("requiredTwos=%d", requiredTwos);
+    log_debug("trailingZeros=%s", trailingZeros ? "true" : "false");
 #endif
   }
   if (printedDigits != 0) {
@@ -766,7 +767,7 @@ int d2exp_buffered_n(double d, ng_uint32_t precision, char* result) {
     }
   }
 #ifdef RYU_DEBUG
-  printf("roundUp=%d\n", roundUp);
+  log_debug("roundUp=%d", roundUp);
 #endif
   if (roundUp != 0) {
     int roundIndex = index;
@@ -822,7 +823,7 @@ void d2exp_buffered(double d, ng_uint32_t precision, char* result) {
 }
 
 char* d2exp(double d, ng_uint32_t precision) {
-  char* const buffer = (char*)malloc(2000);
+  char* const buffer = (char*)ng_malloc(2000);
   const int index = d2exp_buffered_n(d, precision, buffer);
   buffer[index] = '\0';
   return buffer;

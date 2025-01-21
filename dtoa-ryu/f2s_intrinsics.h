@@ -38,7 +38,7 @@
 static inline ng_uint32_t pow5factor_32(ng_uint32_t value) {
   ng_uint32_t count = 0;
   for (;;) {
-    assert(value != 0);
+    NG_ASSERT(value != 0);
     const ng_uint32_t q = value / 5;
     const ng_uint32_t r = value % 5;
     if (r != 0) {
@@ -64,7 +64,7 @@ static inline ng_bool_t multipleOfPowerOf2_32(const ng_uint32_t value, const ng_
 // It seems to be slightly faster to avoid uint128_t here, although the
 // generated code for uint128_t looks slightly nicer.
 static inline ng_uint32_t mulShift32(const ng_uint32_t m, const ng_uint64_t factor, const ng_int32_t shift) {
-  assert(shift > 32);
+  NG_ASSERT(shift > 32);
 
   // The casts here help MSVC to avoid calls to the __allmul library
   // function.
@@ -92,7 +92,7 @@ static inline ng_uint32_t mulShift32(const ng_uint32_t m, const ng_uint64_t fact
 #else // RYU_32_BIT_PLATFORM
   const ng_uint64_t sum = (bits0 >> 32) + bits1;
   const ng_uint64_t shiftedSum = sum >> (shift - 32);
-  assert(shiftedSum <= NG_UINT32_MAX);
+  NG_ASSERT(shiftedSum <= NG_UINT32_MAX);
   return (ng_uint32_t) shiftedSum;
 #endif // RYU_32_BIT_PLATFORM
 }
