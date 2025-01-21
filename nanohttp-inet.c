@@ -140,26 +140,35 @@ ng_inet_pton4(const char *src, int len, ng_uint8_t *dst)
   saw_digit = 0;
   octets = 0;
   *(tp = tmp) = 0;
-  while ((end == NULL || src < end) && (ch = *src++) != '\0') {
-    if (__ng_isdigit(ch)){
+  while ((end == NULL || src < end) && (ch = *src++) != '\0') 
+  {
+    if (__ng_isdigit(ch))
+    {
       ng_uint32_t _new = *tp * 10 + ch - '0';
 
       if (_new > 255)
         return ng_FALSE;
-      if (! saw_digit) {
+      if (! saw_digit) 
+      {
         if (++octets > 4)
           return ng_FALSE;
         saw_digit = 1;
       }
       *tp = _new;
-    } else if (ch == '.' && saw_digit) {
+    } 
+    else if (ch == '.' && saw_digit) 
+    {
       if (octets == 4)
         return ng_FALSE;
       *++tp = 0;
       saw_digit = 0;
-    } else
+    } 
+    else
+    {
       return ng_FALSE;
+    }
   }
+  
   if (octets < 4)
     return ng_FALSE;
 
@@ -201,9 +210,11 @@ ng_inet_pton6(const char *src, int len, ng_uint8_t *dst)
   curtok = src;
   saw_xdigit = count_xdigit = 0;
   val = 0;
-  while ((end == NULL || src < end) && (ch = *src++) != '\0') {
+  while ((end == NULL || src < end) && (ch = *src++) != '\0') 
+  {
     int x = xdigits[ch];
-    if (x != 0xFF) {
+    if (x != 0xFF) 
+    {
       if (count_xdigit >= 4)
         return ng_FALSE;
       val <<= 4;
@@ -214,18 +225,24 @@ ng_inet_pton6(const char *src, int len, ng_uint8_t *dst)
       count_xdigit++;
       continue;
     }
-    if (ch == ':') {
+    if (ch == ':') 
+    {
       curtok = src;
-      if (!saw_xdigit) {
+      if (!saw_xdigit) 
+      {
         if (colonp)
           return ng_FALSE;
         colonp = tp;
         continue;
-      } else if (*src == '\0') {
+      } 
+      else if (*src == '\0') 
+      {
         return ng_FALSE;
       }
+      
       if (tp + NG_INT16SZ > endp)
         return ng_FALSE;
+
       *tp++ = (ng_uint8_t) (val >> 8) & 0xff;
       *tp++ = (ng_uint8_t) val & 0xff;
       saw_xdigit = 0;
@@ -233,22 +250,29 @@ ng_inet_pton6(const char *src, int len, ng_uint8_t *dst)
       val = 0;
       continue;
     }
+    
     if (ch == '.' && ((tp + NG_INADDRSZ) <= endp) &&
-        ng_inet_pton4(curtok, len ? end - curtok : 0, tp) > 0) {
+        ng_inet_pton4(curtok, len ? end - curtok : 0, tp) > 0) 
+    {
       tp += NG_INADDRSZ;
       saw_xdigit = 0;
       count_xdigit = 0;
       break;  /* '\0' was seen by inet_pton4(). */
     }
+    
     return ng_FALSE;
   }
-  if (saw_xdigit) {
+  
+  if (saw_xdigit) 
+  {
     if (tp + NG_INT16SZ > endp)
       return (0);
     *tp++ = (ng_uint8_t) (val >> 8) & 0xff;
     *tp++ = (ng_uint8_t) val & 0xff;
   }
-  if (colonp != NULL) {
+  
+  if (colonp != NULL) 
+  {
     /*
      * Since some memmove()'s erroneously fail to handle
      * overlapping regions, we'll do the shift by hand.
@@ -258,12 +282,14 @@ ng_inet_pton6(const char *src, int len, ng_uint8_t *dst)
 
     if (tp == endp)
       return ng_FALSE;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++) 
+    {
       endp[- i] = colonp[n - i];
       colonp[n - i] = 0;
     }
     tp = endp;
   }
+  
   if (tp != endp)
     return (0);
   ng_memcpy(dst, tmp, NG_IN6ADDRSZ);
@@ -323,7 +349,8 @@ ng_inet_ntop4(const char *src, char *dst, ng_size_t size)
 	ng_size_t l;
   char *p = tmp;
   
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 4; i++) 
+  {
     /* hold each IP quad in normal order */
     const ng_block_s *b = &__ng_uint8_string[(ng_uint8_t)src[i]];
     for (int x=0;x<b->len;x++)
@@ -372,24 +399,32 @@ ng_inet_ntop6(const char *src, char *dst, ng_size_t size)
 		words[i / 2] |= (src[i] << ((1 - (i % 2)) << 3));
 	best.base = -1;
 	cur.base = -1;
-	for (i = 0; i < (NG_IN6ADDRSZ / NG_INT16SZ); i++) {
-		if (words[i] == 0) {
+	for (i = 0; i < (NG_IN6ADDRSZ / NG_INT16SZ); i++) 
+  {
+		if (words[i] == 0) 
+    {
 			if (cur.base == -1)
 				cur.base = i, cur.len = 1;
 			else
 				cur.len++;
-		} else {
-			if (cur.base != -1) {
+		}
+    else 
+    {
+			if (cur.base != -1) 
+      {
 				if (best.base == -1 || cur.len > best.len)
 					best = cur;
 				cur.base = -1;
 			}
 		}
 	}
-	if (cur.base != -1) {
+  
+	if (cur.base != -1) 
+  {
 		if (best.base == -1 || cur.len > best.len)
 			best = cur;
 	}
+  
 	if (best.base != -1 && best.len < 2)
 		best.base = -1;
 
@@ -398,32 +433,40 @@ ng_inet_ntop6(const char *src, char *dst, ng_size_t size)
 	 */
 	tp = tmp;
 	ep = tmp + sizeof(tmp);
-	for (i = 0; i < (NG_IN6ADDRSZ / NG_INT16SZ) && tp < ep; i++) {
+	for (i = 0; i < (NG_IN6ADDRSZ / NG_INT16SZ) && tp < ep; i++) 
+  {
 		/* Are we inside the best run of 0x00's? */
 		if (best.base != -1 && i >= best.base &&
-		    i < (best.base + best.len)) {
-			if (i == best.base) {
+		    i < (best.base + best.len)) 
+		{
+			if (i == best.base) 
+      {
 				if (tp + 1 >= ep)
           return 0;
 				*tp++ = ':';
 			}
 			continue;
 		}
-		/* Are we following an initial run of 0x00s or any real hex? */
-		if (i != 0) {
+
+    /* Are we following an initial run of 0x00s or any real hex? */
+		if (i != 0) 
+    {
 			if (tp + 1 >= ep)
 				return 0;
 			*tp++ = ':';
 		}
-		/* Is this address an encapsulated IPv4? */
+
+    /* Is this address an encapsulated IPv4? */
 		if (i == 6 && best.base == 0 &&
-		    (best.len == 6 || (best.len == 5 && words[5] == 0xffff))) {
+		    (best.len == 6 || (best.len == 5 && words[5] == 0xffff))) 
+		{
 		  int n = ng_inet_ntop4(src+12, tp, (ng_size_t)(ep - tp));
 			if (!n)
 				return 0;
 			tp += n;
 			break;
 		}
+    
 		advance = ng_u32toh(words[i], tp, ep - tp, 0, 0);
 		if (advance <= 0 || advance >= ep - tp)
 			return 0;
@@ -431,7 +474,8 @@ ng_inet_ntop6(const char *src, char *dst, ng_size_t size)
 	}
   
 	/* Was it a trailing run of 0x00's? */
-	if (best.base != -1 && (best.base + best.len) == (NG_IN6ADDRSZ / NG_INT16SZ)) {
+	if (best.base != -1 && (best.base + best.len) == (NG_IN6ADDRSZ / NG_INT16SZ)) 
+  {
 		if (tp + 1 >= ep)
       return 0;
 		*tp++ = ':';
@@ -442,7 +486,8 @@ ng_inet_ntop6(const char *src, char *dst, ng_size_t size)
 	/*
 	 * Check for overflow, copy, and we're done.
 	 */
-	if ((ng_size_t)(tp - tmp) > size) {
+	if ((ng_size_t)(tp - tmp) > size) 
+  {
     return 0;
 	}
   
