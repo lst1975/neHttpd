@@ -123,8 +123,7 @@ rte_delay_us_sleep(unsigned int us)
   timer = CreateWaitableTimer(NULL, TRUE, NULL);
   if (!timer) 
   {
-    int err = GetLastError();
-  	log_error("CreateWaitableTimer() failed. (%d:%s).", err, os_strerror(err));
+  	log_error("CreateWaitableTimer() failed. %m.", ng_errno);
   	ng_set_errno(ERROR_NOT_ENOUGH_MEMORY);
   	goto clean0;
   }
@@ -136,16 +135,14 @@ rte_delay_us_sleep(unsigned int us)
   due_time.QuadPart = -((ng_int64_t)us * 10);
   if (!SetWaitableTimer(timer, &due_time, 0, NULL, NULL, FALSE)) 
   {
-    int err = GetLastError();
-    log_error("SetWaitableTimer() failed. (%d:%s).", err, os_strerror(err));
+    log_error("SetWaitableTimer() failed. %m.", ng_errno);
     ng_set_errno(WSAEINVAL);
     goto clean1;
   }
   /* start wait for timer for us microseconds */
   if (WaitForSingleObject(timer, INFINITE) == WAIT_FAILED) 
   {
-    int err = GetLastError();
-  	log_error("WaitForSingleObject() failed. (%d:%s).", err, os_strerror(err));
+  	log_error("WaitForSingleObject() failed. %m.", ng_errno);
   	ng_set_errno(WSAEINVAL);
   	goto clean1;
   }
@@ -233,20 +230,20 @@ get_tsc_freq(void)
 	tmp = 0;
 
 	if (sysctlbyname("kern.timecounter.smp_tsc", &tmp, &sz, NULL, 0))
-		EAL_LOG(WARNING, "%s", os_strerror(ng_errno));
+		log_warn("get_tsc_freq: %m.", ng_errno);
 	else if (tmp != 1)
-		EAL_LOG(WARNING, "TSC is not safe to use in SMP mode");
+		log_warn("TSC is not safe to use in SMP mode");
 
 	tmp = 0;
 
 	if (sysctlbyname("kern.timecounter.invariant_tsc", &tmp, &sz, NULL, 0))
-		EAL_LOG(WARNING, "%s", os_strerror(ng_errno));
+		log_warn("get_tsc_freq: %m.", ng_errno);
 	else if (tmp != 1)
-		EAL_LOG(WARNING, "TSC is not invariant");
+		log_warn("TSC is not invariant.");
 
 	sz = sizeof(tsc_hz);
 	if (sysctlbyname("machdep.tsc_freq", &tsc_hz, &sz, NULL, 0)) {
-		EAL_LOG(WARNING, "%s", os_strerror(ng_errno));
+		log_warn("get_tsc_freq: %m.", ng_errno);
 		return 0;
 	}
 

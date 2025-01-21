@@ -133,11 +133,10 @@ _hsocket_sys_accept(hsocket_s *sock, hsocket_s *dest)
       &asize, NULL, (DWORD_PTR)NULL);
     if (dest->sock != INVALID_SOCKET)
       break;
-    int err = ng_socket_errno;
     if (!_hsocket_should_again(err))
     {
       return herror_new("hsocket_accept", HSOCKET_ERROR_ACCEPT, 
-        "Socket error (%d:%s)", err, os_strerror(errno));
+        "Socket error %m.", ng_socket_errno);
     }
   }
 
@@ -209,12 +208,13 @@ _hsocket_sys_accept(hsocket_s *sock, hsocket_s *dest)
     dest->sock = accept(sock->sock, (struct sockaddr *)&dest->addr, &len);
     if (dest->sock != HSOCKET_FREE)
       break;
+    
     err = ng_socket_errno;
     if (!_hsocket_should_again(err))
     {
-      log_warn("accept failed (%s)", os_strerror(err));
+      log_warn("accept failed %m.", err);
       return herror_new("hsocket_accept", HSOCKET_ERROR_ACCEPT, 
-        "Cannot accept network connection (%s)", os_strerror(err));
+        "Cannot accept network connection %m.", err);
     }
   }
   
@@ -310,8 +310,8 @@ hsocket_open(hsocket_s *dsock, const char *hostname, int port, int ssl)
 
   if ((dsock->sock = socket(AF_INET, SOCK_STREAM, 0)) <= 0)
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
-                      "Socket error (%s)", 
-                      os_strerror(ng_socket_errno));
+                      "Socket error %m.", 
+                      ng_socket_errno);
 
   // Set FD_CLOEXEC on the file descriptor
   status = hsocket_setexec(dsock->sock, HSOCKET_ERROR_CREATE);
@@ -334,8 +334,8 @@ hsocket_open(hsocket_s *dsock, const char *hostname, int port, int ssl)
   /* connect to the server */
   if (connect(dsock->sock, (struct sockaddr *) &address, sizeof(address)) != 0)
     return herror_new("hsocket_open", HSOCKET_ERROR_CONNECT, 
-                "Socket error (%s).", 
-                os_strerror(ng_socket_errno));
+                "Socket error %m.", 
+                ng_socket_errno);
 
   if (ssl)
   {
@@ -367,10 +367,10 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
   /* create socket */
   if ((sock.sock = socket(fam, SOCK_STREAM, 0)) == -1)
   {
-    int err = errno;
-    log_error("Cannot create socket (%d:%s).", err, os_strerror(err));
+    int err = ng_errno;
+    log_error("Cannot create socket %m.", err);
     return herror_new("hsocket_bind", HSOCKET_ERROR_CREATE,
-                      "Socket error (%d:%s).", err, os_strerror(err));
+                      "Socket error %m.", err);
   }
 
   // Set FD_CLOEXEC on the file descriptor
@@ -383,34 +383,32 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
   
   if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0)
   {
-    int err = errno;
-    log_error("Socket SOL_SOCKET SO_REUSEADDR (%d:%s).", 
-                      err, os_strerror(errno));
+    int err = ng_errno;
+    log_error("Socket SOL_SOCKET SO_REUSEADDR %m.", err);
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
-                      "Socket SOL_SOCKET SO_REUSEADDR (%d:%s).", 
-                      err, os_strerror(errno));
+                      "Socket SOL_SOCKET SO_REUSEADDR %m.", 
+                      err);
   }
 
 #if __NHTTP_LISTEN_DUAL_STACK && defined(IPV6_V6ONLY)
   if (setsockopt(sock.sock, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, sizeof(opt)) < 0) {
     int err = errno;
-    log_error("Socket IPPROTO_IPV6 IPV6_V6ONLY (%d:%s).", 
-                      err, os_strerror(errno));
+    log_error("Socket IPPROTO_IPV6 IPV6_V6ONLY %m.", err);
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
-                      "Socket IPPROTO_IPV6 IPV6_V6ONLY (%d:%s).", 
-                      err, os_strerror(errno));
+                      "Socket IPPROTO_IPV6 IPV6_V6ONLY %m.", 
+                      err);
   }
 #endif
 
 #ifdef SO_REUSEPORT  
   if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEPORT, (char *)&opt, sizeof(opt)) < 0)
   {
-    int err = errno;
-    log_error("Socket SOL_SOCKET SO_REUSEPORT (%d:%s).", 
-                      err, os_strerror(errno));
+    int err = ng_errno;
+    log_error("Socket SOL_SOCKET SO_REUSEPORT %m.", 
+                      err);
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
-                      "Socket SOL_SOCKET SO_REUSEPORT (%d:%s).", 
-                      err, os_strerror(errno));
+                      "Socket SOL_SOCKET SO_REUSEPORT %m.", 
+                      err);
   }
 #endif
 
@@ -437,9 +435,9 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
   if (bind(sock.sock, (struct sockaddr *)addr, dsock->salen) == -1)
   {
     int err = errno;
-    log_error("Cannot bind socket (%d:%s).", err, os_strerror(errno));
+    log_error("Cannot bind socket %m.", err);
     return herror_new("hsocket_bind", HSOCKET_ERROR_BIND, 
-              "Socket error (%d:%s).", err, os_strerror(errno));
+              "Socket error %m.", err);
   }
   
   dsock->sock = sock.sock;
@@ -454,7 +452,7 @@ hsocket_epoll_create(hsocket_s *dest)
   if (dest->ep == HSOCKET_FREE) 
   {
     return herror_new("hsocket_accept", HSOCKET_ERROR_INIT, 
-      "epoll_create1 (%s).", os_strerror(ng_socket_errno));
+      "epoll_create1 %m.", ng_socket_errno);
   }
   return H_OK;
 }
@@ -471,8 +469,8 @@ hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
     {
       log_verbose("epoll_ctl %d failed.", sock);
       return herror_new("__httpd_run", HSOCKET_ERROR_RECEIVE,
-                        "Cannot epoll_ctl on this socket (%s).", 
-                        os_strerror(ng_socket_errno));
+                        "Cannot epoll_ctl on this socket %m.", 
+                        ng_socket_errno);
     }
   }
 
@@ -539,9 +537,9 @@ hsocket_listen(hsocket_s *sock, int pend_max)
   if (listen(sock->sock, pend_max) == -1)
   {
     int err = ng_socket_errno;
-    log_error("listen failed (%s).", os_strerror(err));
+    log_error("listen failed %m.", err);
     return herror_new("hsocket_listen", HSOCKET_ERROR_LISTEN,
-                      "Cannot listen on this socket (%s).", os_strerror(err));
+                      "Cannot listen on this socket %m.", err);
   }
 
   return H_OK;
@@ -594,7 +592,7 @@ hsocket_send(hsocket_s *sock, const unsigned char *bytes, ng_size_t n)
     if ((size = send(sock->sock, (const char *)bytes + total, n, 0)) == -1)
     {
       status = herror_new("hsocket_send", HSOCKET_ERROR_SEND, 
-        "send failed (%s).", os_strerror(ng_socket_errno));
+        "send failed %m.", ng_socket_errno);
     }
 #endif
 
@@ -677,11 +675,11 @@ hsocket_select_recv(hsocket_s *sock, char *buf, ng_size_t len)
     int n = epoll_wait(sock->ep, &event, 1, _hsocket_timeout);
     if (n == -1)
     {
-      if (_hsocket_should_again(ng_socket_errno))
-        continue;
       n = ng_socket_errno;
-      log_verbose("Socket %d epoll_wait error. (%d:%s).", 
-        sock->sock, n, os_strerror(n));
+      if (_hsocket_should_again(n))
+        continue;
+      log_verbose("Socket %d epoll_wait error. %m.", 
+        sock->sock, n);
       return -1;
     }
     else if (n == 0)
@@ -700,9 +698,8 @@ hsocket_select_recv(hsocket_s *sock, char *buf, ng_size_t len)
       if ((event.events & EPOLLIN) 
           && event.data.fd == sock->sock)
         break;
-      n = ng_socket_errno;
-      log_verbose("Socket %d unknown error. (%d:%s).", 
-        sock->sock, n, os_strerror(n));
+      log_verbose("Socket %d unknown error. %m.", 
+        sock->sock, ng_socket_errno);
       return -1;
     }
   }
@@ -732,8 +729,7 @@ hsocket_select_recv(hsocket_s *sock, char *buf, ng_size_t len)
     ret = WSAPoll(&pfd, 1, _hsocket_timeout);
     if (ret == SOCKET_ERROR)
     {
-      ret = ng_socket_errno;
-      log_warn("WSAPoll failed. (%d:%s).", ret, os_strerror(ret));
+      log_warn("WSAPoll failed. %m.", ng_socket_errno);
       return -1;
     }
     else if (ret == 0)
@@ -758,9 +754,8 @@ hsocket_select_recv(hsocket_s *sock, char *buf, ng_size_t len)
     }
     else
     {
-      ret = ng_socket_errno;
-      log_error("WSAPoll %d, failed. (%d:%s).", sock->sock, 
-        ret, os_strerror(ret));
+      log_error("WSAPoll %d, failed. %m.", sock->sock, 
+        ng_socket_errno);
       return -1;
     }
   }
@@ -805,9 +800,8 @@ hsocket_select_recv(hsocket_s *sock, char *buf, ng_size_t len)
     {
       if (_hsocket_should_again(ng_socket_errno))
         continue;
-      n = ng_socket_errno;
-      log_warn("Socket %d select error. (%d:%s)", 
-        sock->sock, n, os_strerror(n));
+      log_warn("Socket %d select error. %m.", 
+        sock->sock, ng_socket_errno);
       return -1;
     }
   	else if (n == 1)
@@ -816,9 +810,8 @@ hsocket_select_recv(hsocket_s *sock, char *buf, ng_size_t len)
   	}
     else
     {
-      n = ng_socket_errno;
-      log_error("Socket %d select error. (%d:%s)", 
-        sock->sock, n, os_strerror(n));
+      log_error("Socket %d select error. %m.", 
+        sock->sock, ng_socket_errno);
       return -1;
     }
   }

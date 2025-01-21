@@ -636,7 +636,7 @@ hssl_read(hsocket_s *sock, char *buf, ng_size_t len, ng_size_t * received)
   {
     if ((count = hsocket_select_recv(sock->sock, buf, len)) == -1)
       return herror_new("hssl_read", HSOCKET_ERROR_RECEIVE,
-                        "recv failed (%s).", os_strerror(ng_socket_errno));
+                        "recv failed %m.", ng_socket_errno);
   }
   *received = count;
 
@@ -661,8 +661,8 @@ hssl_write(hsocket_s *sock, const char *buf, ng_size_t len, ng_size_t *sent)
   else
   {
     if ((count = send(sock->sock, buf, len, 0)) == -1)
-      return herror_new("hssl_write", HSOCKET_ERROR_SEND, "send failed (%s).",
-                        os_strerror(ng_socket_errno));
+      return herror_new("hssl_write", HSOCKET_ERROR_SEND, "send failed %m.",
+                        ng_socket_errno);
   }
   *sent = count;
 

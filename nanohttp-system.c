@@ -116,9 +116,8 @@ char *ng_get_pwd(char *path, ng_size_t len)
   // Get the current executable path
   if (!GetModuleFileName(NULL, path, len))
   {
-    int err = GetLastError();
-    log_error("GetModuleFileName failed. (%d:%s)", 
-      err, os_strerror(err));
+    log_error("GetModuleFileName failed. %m.", 
+      ng_errno);
     return NULL;
   }
 
@@ -236,8 +235,7 @@ __os_socket_init_once(void *log)
   /* init Winsock */
   if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) 
   {
-    int err = WSAGetLastError();
-    log_fatal("WSAStartup() failed. (%d:%s).", err, os_strerror(err));
+    log_fatal("WSAStartup() failed. %m.", ng_socket_errno);
     goto clean0;
   }
   
@@ -250,9 +248,8 @@ __os_socket_init_once(void *log)
   {
     /* Tell the user that we could not find a usable */
     /* WinSock DLL.                                  */
-    int err = WSAGetLastError();
-    log_fatal("Could not find a usable version of Winsock.dll. (%d:%s).", 
-      err, os_strerror(err));
+    log_fatal("Could not find a usable version of Winsock.dll. %m.", 
+      ng_socket_errno);
     goto clean1;
   }
     
@@ -517,9 +514,8 @@ __os_sys_status(void *log)
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
     if (GetVersionEx((OSVERSIONINFO *) &osvi) == 0) 
     {
-      int err = WSAGetLastError();
-      log_fatal("GetVersionEx() failed. (%d:%s).", 
-          err, os_strerror(err));
+      log_fatal("GetVersionEx() failed. %m.", 
+          ng_socket_errno);
       return;
     }
   }
@@ -686,8 +682,7 @@ __os_sys_init(void *log)
   s = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
   if (s == INVALID_SOCKET) 
   {
-    int err = WSAGetLastError();
-    log_fatal("WSASocketW failed. (%d:%s).", err, os_strerror(err));
+    log_fatal("WSASocketW failed. %m.", ng_socket_errno);
     status = ng_ERR_ESYSTEM;
     goto clean0;
   }
@@ -697,9 +692,8 @@ __os_sys_init(void *log)
               &ngx_acceptex, sizeof(LPFN_ACCEPTEX), 
               &bytes, NULL, NULL))
   {
-    int err = WSAGetLastError();
     log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-      "WSAID_ACCEPTEX) failed. (%d:%s).", err, os_strerror(err));
+      "WSAID_ACCEPTEX) failed. %m.", ng_socket_errno);
   }
 
   if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
@@ -707,9 +701,8 @@ __os_sys_init(void *log)
               &ngx_getacceptexsockaddrs, sizeof(LPFN_GETACCEPTEXSOCKADDRS),
               &bytes, NULL, NULL))
   {
-    int err = WSAGetLastError();
     log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-      "WSAID_GETACCEPTEXSOCKADDRS) failed. (%d:%s).", err, os_strerror(err));
+      "WSAID_GETACCEPTEXSOCKADDRS) failed. %m.", ng_socket_errno);
   }
 
   if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
@@ -717,9 +710,8 @@ __os_sys_init(void *log)
             &ngx_transmitfile, sizeof(LPFN_TRANSMITFILE), 
             &bytes, NULL, NULL))
   {
-    int err = WSAGetLastError();
     log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-      "WSAID_TRANSMITFILE) failed. (%d:%s).", err, os_strerror(err));
+      "WSAID_TRANSMITFILE) failed. %m.", ng_socket_errno);
   }
 
   if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
@@ -727,9 +719,8 @@ __os_sys_init(void *log)
             &ngx_transmitpackets, sizeof(LPFN_TRANSMITPACKETS), 
             &bytes, NULL, NULL))
   {
-    int err = WSAGetLastError();
     log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-      "WSAID_TRANSMITPACKETS) failed. (%d:%s).", err, os_strerror(err));
+      "WSAID_TRANSMITPACKETS) failed. %m.", ng_socket_errno);
   }
 
   if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
@@ -737,9 +728,8 @@ __os_sys_init(void *log)
             &ngx_connectex, sizeof(LPFN_CONNECTEX), 
             &bytes, NULL, NULL))
   {
-    int err = WSAGetLastError();
     log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-      "WSAID_CONNECTEX) failed. (%d:%s).", err, os_strerror(err));
+      "WSAID_CONNECTEX) failed. %m.", ng_socket_errno);
   }
 
   if (SOCKET_ERROR == WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, 
@@ -747,15 +737,13 @@ __os_sys_init(void *log)
             &ngx_disconnectex, sizeof(LPFN_DISCONNECTEX), 
             &bytes, NULL, NULL))
   {
-    int err = WSAGetLastError();
     log_warn("WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER, "
-      "WSAID_DISCONNECTEX) failed. (%d:%s).", err, os_strerror(err));
+      "WSAID_DISCONNECTEX) failed. %m.", ng_socket_errno);
   }
 
   if (closesocket(s) == SOCKET_ERROR) 
   {
-    int err = WSAGetLastError();
-    log_warn("closesocket failed. (%d:%s).", err, os_strerror(err));
+    log_warn("closesocket failed. %m.", ng_socket_errno);
   }
 
 clean0:
@@ -874,8 +862,7 @@ static ng_result_t __ng_get_freq(void *log, double *freq)
   
   file = fopen("/proc/cpuinfo", "r");
   if (file == NULL) {
-    int err = errno;
-    log_fatal("fopen failed. (%d:%s).", err, os_strerror(err));
+    log_fatal("fopen failed. %m.", ng_errno);
     return ng_ERR_ESYSTEM;
   }
   
@@ -898,8 +885,7 @@ static ng_result_t __ng_get_freq(void *log, double *freq)
   }
   else 
   {
-    int err = errno;
-    log_error("CPU Frequency not found. (%d:%s).", err, os_strerror(err));
+    log_error("CPU Frequency not found. %m.", ng_errno);
     return ng_ERR_ESYSTEM;
   }
 }
@@ -976,8 +962,7 @@ __os_specific_init(void *log)
   struct utsname  u;
 
   if (uname(&u) == -1) {
-    int err = errno;
-    log_warn("uname() failed. (%d:%s).", err, os_strerror(err));
+    log_warn("uname() failed. %m.", ng_errno);
     return ng_ERR_ESYSTEM;
   }
 
@@ -1053,9 +1038,8 @@ __os_sys_init(void *log)
 #endif
 
   if (getrlimit(RLIMIT_NOFILE, &rlmt) == -1) {
-    int err = errno;
-    log_error("getrlimit(RLIMIT_NOFILE) failed. (%d:%s).", 
-      err, os_strerror(err));
+    log_error("getrlimit(RLIMIT_NOFILE) failed. %m.", 
+      ng_errno);
     goto clean0;
   }
 
@@ -1356,15 +1340,13 @@ static void __ng_get_tzname(void)
     }
     else
     {
-      int err = GetLastError();
-      log_error("Error accessing the registry. (%d:%s)", err, os_strerror(err));
+      log_error("Error accessing the registry. %m.", ng_errno);
     }
     RegCloseKey(hKey);
   } 
   else
   {
-    int err = GetLastError();
-    log_error("Error accessing the registry. (%d:%s)", err, os_strerror(err));
+    log_error("Error accessing the registry. %m.", ng_errno);
   }
 }
 #else

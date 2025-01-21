@@ -103,7 +103,7 @@ static hrequest_s *hrequest_new(void)
   req = (hrequest_s *)ng_malloc(sizeof(*req));
   if (req == NULL)
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     goto clean0;
   }
 
@@ -259,8 +259,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
       if (req->path.buf == NULL)
       {
         req->path.len = 0;
-        log_error("Failed to malloc buffer for path (%s).", 
-          os_strerror(ng_errno));
+        log_error("Failed to malloc buffer for path %m.", ng_errno);
         goto clean1;
       }
 
@@ -292,7 +291,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
           /* create option pair */
           if (!(tmppair = (hpair_s *)ng_malloc(sizeof(hpair_s))))
           {
-            log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
+            log_error("ng_malloc failed %m.", ng_errno);
             goto clean1;
           }
 
@@ -314,7 +313,7 @@ _hrequest_parse_header(char *data, ng_size_t len)
           tmppair = hpairnode_new(&k, &v, &req->query);
           if (tmppair == NULL)
           {
-            log_error("hpairnode_new failed (%s).", os_strerror(ng_errno));
+            log_error("hpairnode_new failed %m.", ng_errno);
             goto clean1;
           }
         }

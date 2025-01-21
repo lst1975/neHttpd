@@ -726,9 +726,9 @@ httpd_register_secure(const char *context, int context_len,
 
   if (!(service = (hservice_t *)ng_malloc(sizeof(hservice_t)+context_len+1)))
   {
-    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     return herror_new("httpd_register_secure", 0, 
-      "ng_malloc failed (%s)", os_strerror(ng_errno));
+      "ng_malloc failed %m.", ng_errno);
   }
 
 #ifdef __NHTTP_INTERNAL
@@ -1175,7 +1175,7 @@ httpd_new(hsocket_s *sock)
 
   if (!(conn = (httpd_conn_s *) ng_malloc(sizeof(httpd_conn_s))))
   {
-    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     return NULL;
   }
   conn->sock = sock;
@@ -1213,7 +1213,7 @@ _httpd_decode_authorization(int *tmplen,
   len = B64_DECLEN(inlen);
   if (!(tmp = (unsigned char *)ng_malloc(len)))
   {
-    log_error("ng_alloc failed (%s).", os_strerror(ng_errno));
+    log_error("ng_alloc failed %m.", ng_errno);
     return NULL;
   }
   value = ng_memchr(_value, ' ', inlen);
@@ -1562,8 +1562,7 @@ _httpd_start_thread(conndata_t *conn)
   conn->tid = CreateThread(NULL, 65535, httpd_session_main, conn, 0, NULL);
   if (conn->tid == NULL)
   {
-    err = ng_errno;
-    log_error("CreateThread failed (%d:%s).", err, os_strerror(err));
+    log_error("CreateThread failed %m.", ng_errno);
     err = -1;
   }
   log_debug("###########Create Thread Handle=%p.", conn->tid);
@@ -1576,8 +1575,7 @@ _httpd_start_thread(conndata_t *conn)
   if ((err =
        pthread_create(&(conn->tid), &(conn->attr), httpd_session_main, conn)))
   {
-    err = ng_errno;
-    log_error("pthread_create failed (%d:%s).", err, os_strerror(err));
+    log_error("pthread_create failed %m.", ng_errno);
     err = -1;
   }
 #endif
@@ -1675,15 +1673,14 @@ __httpd_run(hsocket_s *sock, const char *name)
       else if (n == -1)
       {
         /* got a signal? */
-        n = ng_socket_errno;
         if (_hsocket_should_again(n))
         {
-          log_info("Socket %d epoll_wait INTR: (%d:%s).", 
-            sock->ep, n, os_strerror(n));
+          log_info("Socket %d epoll_wait INTR: %m.", 
+            sock->ep, ng_socket_errno);
           continue;
         }
-        log_fatal("Socket %d epoll_wait error: (%d:%s).", 
-          sock->ep, n, os_strerror(n));
+        log_fatal("Socket %d epoll_wait error: %m.", 
+          sock->ep, ng_socket_errno);
         _httpd_release_finished_conn(conn);
         return -1;
       }
@@ -1698,17 +1695,15 @@ __httpd_run(hsocket_s *sock, const char *name)
         /* no nothing */
         if ((event.events & EPOLLIN) && event.data.fd == sock->sock)
           break;
-        n = ng_socket_errno;
-        log_fatal("Socket %d unknown error: (%d:%s).", 
-          sock->ep, n, os_strerror(n));
+        log_fatal("Socket %d unknown error: %m.", 
+          sock->ep, ng_socket_errno);
         _httpd_release_finished_conn(conn);
         return -1;
       }
       else
       {
-        n = ng_socket_errno;
-        log_fatal("Socket %d unknown error: (%d:%s).", 
-          sock->ep, n, os_strerror(n));
+        log_fatal("Socket %d unknown error: %m.", 
+          sock->ep, ng_socket_errno);
         _httpd_release_finished_conn(conn);
         return -1;
       }
@@ -1794,15 +1789,14 @@ __httpd_run(hsocket_s *sock, const char *name)
       else if (n == -1)
       {
         /* got a signal? */
-        n = ng_socket_errno;
         if (_hsocket_should_again(n))
         {
-          log_info("Socket %d epoll_wait INTR: (%d:%s).", 
-            sock->sock, n, os_strerror(n));
+          log_info("Socket %d epoll_wait INTR: %m.", 
+            sock->sock, ng_socket_errno);
           continue;
         }
-        log_fatal("Socket %d epoll_wait error: (%d:%s).", 
-          sock->sock, n, os_strerror(n));
+        log_fatal("Socket %d epoll_wait error: %m.", 
+          sock->sock, ng_socket_errno);
         _httpd_release_finished_conn(conn);
         return -1;
       }
@@ -1818,15 +1812,15 @@ __httpd_run(hsocket_s *sock, const char *name)
         if (event.revents & POLLIN)
           break;
         
-        log_fatal("Socket %d unknown error: (%s).", 
-          sock->sock, os_strerror(ng_socket_errno));
+        log_fatal("Socket %d unknown error: %m.", 
+          sock->sock, ng_socket_errno);
         _httpd_release_finished_conn(conn);
         return -1;
       }
       else
       {
-        log_fatal("Socket %d unknown error: (%s).", 
-          sock->sock, os_strerror(ng_socket_errno));
+        log_fatal("Socket %d unknown error: %m.", 
+          sock->sock, ng_socket_errno);
         _httpd_release_finished_conn(conn);
         return -1;
       }
@@ -1921,18 +1915,16 @@ __httpd_run(hsocket_s *sock, const char *name)
       }
       else if (n == -1)
       {
-        n = ng_socket_errno;
-
         /* got a signal? */
         if (_hsocket_should_again(ng_socket_errno))
         {
-          log_warn("Socket %d select INTR. (%d:%s).", 
-            sock->sock, n, os_strerror(n));
+          log_warn("Socket %d select INTR. %m.", 
+            sock->sock, ng_socket_errno);
           continue;
         }
 
-        log_error("Socket %d select error. (%d:%s).", 
-          sock->sock, n, os_strerror(n));
+        log_error("Socket %d select error. %m.", 
+          sock->sock, ng_socket_errno);
         _httpd_release_finished_conn(conn);
         return -1;
       }
@@ -1942,16 +1934,15 @@ __httpd_run(hsocket_s *sock, const char *name)
         {
           break;
         }
-        n = ng_socket_errno;
-        log_verbose("Socket %d select error. (%d:%s).", 
-          sock->sock, n, os_strerror(n));
+        log_verbose("Socket %d select error. %m.", 
+          sock->sock, ng_socket_errno);
         _httpd_release_finished_conn(conn);
         return -1;
       }
       else
       {
-        log_verbose("Socket %d select error. (%d:%s).", 
-          sock->sock, n, os_strerror(n));
+        log_verbose("Socket %d select error. %m.", 
+          sock->sock, ng_socket_errno);
         _httpd_release_finished_conn(conn);
         return -1;
       }
@@ -2015,7 +2006,7 @@ int httpd_create_cond(COND_T *cond)
   if (cond->handle == NULL)
   {
     err = -1;
-    log_error("httpd_create_mutex failed: (%s).", os_strerror(ng_errno));
+    log_error("httpd_create_mutex failed: %m.", ng_errno);
     goto clean0;
   }
 #else
@@ -2023,13 +2014,13 @@ int httpd_create_cond(COND_T *cond)
   if (err)
   {
     err = -1;
-    log_error("httpd_create_mutex failed: (%s).", os_strerror(ng_errno));
+    log_error("httpd_create_mutex failed: %m.", ng_errno);
     goto clean0;
   }
   if (pthread_cond_init(&cond->handle, NULL))
   {
     err = -1;
-    log_error("pthread_cond_init failed: (%s).", os_strerror(ng_errno));
+    log_error("pthread_cond_init failed: %m.", ng_errno);
     goto clean1;
   }
 #endif
@@ -2143,7 +2134,7 @@ __start_thread(conndata_t *conn, HTTP_THREAD_EXEFUNC_T exefunc)
   if (conn->tid == NULL)
   {
     err = GetLastError();
-    log_error("pthread_create failed (%d:%s).", err, os_strerror(err));
+    log_error("pthread_create failed %m.", err);
   }
 #else
   pthread_attr_init(&conn->attr);
@@ -2151,7 +2142,7 @@ __start_thread(conndata_t *conn, HTTP_THREAD_EXEFUNC_T exefunc)
   if (err)
   {
     err = ng_errno;
-    log_error("pthread_create failed (%d:%s).", err, os_strerror(err));
+    log_error("pthread_create failed %m.", err);
   }
 #endif
 
@@ -2325,7 +2316,7 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
     *received = 0;
     if (!(postdata = (unsigned char *)ng_malloc(1)))
     {
-      log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
+      log_error("ng_malloc failed %m.", ng_errno);
       return NULL;
     }
     postdata[0] = '\0';
@@ -2333,7 +2324,7 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
   }
   if (!(postdata = (unsigned char *) ng_malloc(content_length + 1)))
   {
-    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     return NULL;
   }
 

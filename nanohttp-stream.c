@@ -405,7 +405,7 @@ http_input_stream_new(hsocket_s *sock, ng_list_head_s *header,
   if (!(result = (http_input_stream_s *) 
     ng_malloc(sizeof(http_input_stream_s))))
   {
-    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     return NULL;
   }
 
@@ -469,7 +469,7 @@ http_input_stream_new_from_file(const char *filename,
   fd = nanohttp_file_open_for_read(filename, len);
   if (fd == NULL) {
 
-    log_error("fopen failed (%s).", os_strerror(ng_errno));
+    log_error("fopen failed %m.", ng_errno);
     goto clean0;
   }
 
@@ -478,7 +478,7 @@ http_input_stream_new_from_file(const char *filename,
       ng_malloc(sizeof(http_input_stream_s));
   if (result == NULL) 
   {
-    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     goto clean1;
   }
 
@@ -491,7 +491,7 @@ http_input_stream_new_from_file(const char *filename,
   result->filename.data = ng_strdup_size(filename, len);
   if (result->filename.data == NULL)
   {
-    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     goto clean2;
   }
   result->filename.len = len;
@@ -554,7 +554,7 @@ http_output_stream_new(hsocket_s *sock, ng_list_head_s *header)
   result = (http_output_stream_s *)ng_malloc(sizeof(*result));
   if (result == NULL)
   {
-    log_error("ng_malloc failed (%s).", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     return NULL;
   }
 

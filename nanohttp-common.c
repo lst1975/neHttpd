@@ -447,7 +447,8 @@ content_type_print(content_type_s *ct)
    Content-Type: application/json; version=1.0
    Content-Type: multipart/form-data; boundary=---011000010111000001101001
    
-   Content-Type: multipart/related; boundary=\"the_boundary\"; type=\"application/json\"; start=\"json\"\r\n"
+   Content-Type: multipart/related; boundary=\"the_boundary\"; 
+                 type=\"application/json\"; start=\"json\"\r\n"
 */
 content_type_s *
 content_type_new(const char *content_type_str, int len)

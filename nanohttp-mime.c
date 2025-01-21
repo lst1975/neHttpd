@@ -1052,7 +1052,7 @@ attachments_new(ng_list_head_s *attachments_list)
   attachments = (mime_attachment_s *)ng_malloc(sizeof(mime_attachment_s));
   if (attachments == NULL)
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     return NULL;
   }
 
@@ -1147,9 +1147,9 @@ mime_add_content_type_header(ng_list_head_s *header,
     log_fatal("Failed to malloc temp buffer.");
     status = herror_new("httpc_mime_begin", 
                       GENERAL_ERROR_MALLOC,
-                      "Can malloc \"%d\" (%s).", 
+                      "Can malloc \"%d\" %m.", 
                       tsize, 
-                      os_strerror(ng_errno));
+                      ng_errno);
     goto clean0;
   }
   
@@ -1246,7 +1246,7 @@ mime_part_new(ng_list_head_s *part_list, const ng_block_s *params)
   part = (mime_part_s *)ng_malloc(sizeof(mime_part_s));
   if (part == NULL)
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     goto clean1;
   }
   part->content_disposition = NULL;

@@ -109,7 +109,7 @@ herror_new(const char *func, int errcode, const char *format, ...)
  
   if (!(impl = (herror_impl_t *) ng_malloc(sizeof(herror_impl_t))))
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     return NULL;
   }
 

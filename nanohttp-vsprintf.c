@@ -139,6 +139,8 @@
 #include "nanohttp-dtoa.h"
 #include "nanohttp-server.h"
 #include "nanohttp-file.h"
+#include "nanohttp-error.h"
+#include "nanohttp-system.h"
 
 #if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
 #pragma GCC diagnostic push
@@ -584,11 +586,11 @@ hexa(struct DATA *d, const ng_uint64_t n)
 
 /* %s strings */
 PRIVATE void
-strings(struct DATA *p, const char *tmp)
+__strings(struct DATA *p, const char *tmp, int len)
 {
   int i;
 
-  i = ng_strlen(tmp);
+  i = len;
   if (p->precision != NOT_FOUND) /* the smallest number */
     i = (i < p->precision ? i : p->precision);
   p->width -= i;
@@ -597,71 +599,11 @@ strings(struct DATA *p, const char *tmp)
   PAD_LEFT(p);
 }
 
-/* initialize the conversion specifiers */
+/* %s strings */
 PRIVATE void
-conv_flag(char * s, struct DATA * p)
+strings(struct DATA *p, const char *tmp)
 {
-  char number[MAX_FIELD/2];
-  int i;
-
-  /* reset the flags.  */
-  p->precision = p->width = NOT_FOUND;
-  p->star_w = p->star_p = NOT_FOUND;
-  p->square = p->space = NOT_FOUND;
-  p->a_long = p->justify = NOT_FOUND;
-  p->a_longlong = NOT_FOUND;
-  p->pad = ' ';
-
-  for(;s && *s ;s++)
-  {
-    switch (*s)
-    {
-      case ' ': 
-        p->space = FOUND; 
-        break;
-        
-      case '#': 
-        p->square = FOUND; 
-        break;
-        
-      case '*': 
-        if (p->width == NOT_FOUND)
-          p->width = p->star_w = FOUND;
-        else
-          p->precision = p->star_p = FOUND;
-        break;
-        
-      case '+': 
-        p->justify = RIGHT; 
-        break;
-        
-      case '-': 
-        p->justify = LEFT; 
-        break;
-        
-      case '.': 
-        if (p->width == NOT_FOUND)
-          p->width = 0;
-        break;
-        
-      case '0': 
-        p->pad = '0'; 
-        break;
-        
-      case '1': case '2': case '3':
-      case '4': case '5': case '6':
-      case '7': case '8': case '9':     /* gob all the digits */
-        for (i = 0; __ng_isdigit(*s); i++, s++)
-          if (i < MAX_FIELD/2 - 1)
-            number[i] = *s;
-        if (p->width == NOT_FOUND)
-          p->width = ng_atoi64(number, i, NULL);
-        else
-          p->precision = ng_atoi64(number, i, NULL);
-        s--;   /* went to far go back */
-        break;
-    }
-  }
+  __strings(p, tmp, ng_strlen(tmp));
 }
 
 static inline char *hex_byte_pack_upper(char *buf, ng_uint8_t byte)
@@ -1500,6 +1442,81 @@ char1(struct DATA *d, int c)
   PUT_CHAR(c, d);
 }
 
+PRIVATE void
+strerr(struct DATA *d, int n)
+{
+  char buf[1024];
+  int len = ng_snprintf(buf, sizeof buf, "(%d:%s)", n, os_strerror(n));
+  __strings(d, buf, len);
+}
+
+/* initialize the conversion specifiers */
+PRIVATE void
+conv_flag(char * s, struct DATA * p)
+{
+  char number[MAX_FIELD/2];
+  int i;
+
+  /* reset the flags.  */
+  p->precision = p->width = NOT_FOUND;
+  p->star_w = p->star_p = NOT_FOUND;
+  p->square = p->space = NOT_FOUND;
+  p->a_long = p->justify = NOT_FOUND;
+  p->a_longlong = NOT_FOUND;
+  p->pad = ' ';
+
+  for(;s && *s ;s++)
+  {
+    switch (*s)
+    {
+      case ' ': 
+        p->space = FOUND; 
+        break;
+        
+      case '#': 
+        p->square = FOUND; 
+        break;
+        
+      case '*': 
+        if (p->width == NOT_FOUND)
+          p->width = p->star_w = FOUND;
+        else
+          p->precision = p->star_p = FOUND;
+        break;
+        
+      case '+': 
+        p->justify = RIGHT; 
+        break;
+        
+      case '-': 
+        p->justify = LEFT; 
+        break;
+        
+      case '.': 
+        if (p->width == NOT_FOUND)
+          p->width = 0;
+        break;
+        
+      case '0': 
+        p->pad = '0'; 
+        break;
+        
+      case '1': case '2': case '3':
+      case '4': case '5': case '6':
+      case '7': case '8': case '9':     /* gob all the digits */
+        for (i = 0; __ng_isdigit(*s); i++, s++)
+          if (i < MAX_FIELD/2 - 1)
+            number[i] = *s;
+        if (p->width == NOT_FOUND)
+          p->width = ng_atoi64(number, i, NULL);
+        else
+          p->precision = ng_atoi64(number, i, NULL);
+        s--;   /* went to far go back */
+        break;
+    }
+  }
+}
+
 PRIVATE int
 __ng_vsnprintf_internal(struct DATA *data, va_list args)
 {
@@ -1579,6 +1596,7 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
             octal(data, nu);
             state = 0;
             break;
+          case 'h':
           case 'x':
           case 'X':  /* hexadecimal */
             STAR_ARGS(data);
@@ -1595,6 +1613,11 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
           case 'c': /* character */
             ch = va_arg(args, int);
             char1(data, ch);
+            state = 0;
+            break;
+          case 'm': /* character */
+            ch = va_arg(args, int);
+            strerr(data, ch);
             state = 0;
             break;
           case 's':  /* string */
@@ -1628,8 +1651,6 @@ __ng_vsnprintf_internal(struct DATA *data, va_list args)
               data->a_longlong = FOUND;
             else
               data->a_long = FOUND;
-            break;
-          case 'h':
             break;
           case '%':  /* nothing just % */
             char1(data, '%');

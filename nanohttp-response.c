@@ -102,7 +102,7 @@ _hresponse_new(void)
 
   if (!(res = (hresponse_t *) ng_malloc(sizeof(hresponse_t))))
   {
-    log_error("ng_malloc failed (%s)", os_strerror(ng_errno));
+    log_error("ng_malloc failed %m.", ng_errno);
     return NULL;
   }
 

@@ -145,7 +145,7 @@ hsocket_setexec(int sock, int err)
   int flags = fcntl(sock, F_GETFD);
   if (flags == -1 || fcntl(sock, F_SETFD, flags | FD_CLOEXEC) == -1) {
     return herror_new("hsocket_open", err,
-                      "fcntl error (%s).", os_strerror(ng_errno));
+                      "fcntl error %m.", ng_errno);
   }
   return H_OK;
 }
@@ -404,10 +404,9 @@ int nanohttp_file_delete(const char *file, int len)
 
   if (remove(fpath) != 0)
   {
-    int err = errno;
     ng_free(fpath);
-    log_error("Failed to remove file %s (%d:%s).", 
-      fpath, err, os_strerror(err));
+    log_error("Failed to remove file %s %m.", 
+      fpath, errno);
     return -1;
   }
 
