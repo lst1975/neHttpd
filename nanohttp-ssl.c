@@ -148,9 +148,9 @@
 
 #define CERT_SUBJECT	1
 
-static char *_hssl_certificate = NULL;
-static char *_hssl_certpass = NULL;
-static char *_hssl_ca_list = NULL;
+static ng_block_s _hssl_certificate = DECL_CONST_STR_NULL();
+static ng_block_s _hssl_certpass    = DECL_CONST_STR_NULL();
+static ng_block_s _hssl_ca_list     = DECL_CONST_STR_NULL();
 static SSL_CTX *_hssl_context = NULL;
 static int _hssl_enabled = 0;
 
@@ -237,19 +237,16 @@ _hssl_get_error(SSL * ssl, int ret)
 static int
 _hssl_password_callback(char *buf, int num, int rwflag, void *userdata)
 {
-  int ret;
+  int len;
 
-  if (!_hssl_certpass)
+  len = _hssl_certpass.len;
+  if (!len)
     return 0;
 
-  ret = strlen(_hssl_certpass);
-
-  if (num < ret + 1)
+  if (num < len + 1)
     return 0;
-
-  strcpy(buf, _hssl_certpass);
-
-  return ret;
+  ng_memcpy(buf, _hssl_certpass, len+1);
+  return len;
 }
 
 int
@@ -286,73 +283,82 @@ hssl_set_hssl_verify_cert(int func(X509 * cert))
   return;
 }
 
-void
+int
 hssl_set_certificate(const char *filename)
 {
-  if (_hssl_certificate)
-    ng_free(_hssl_certificate);
-
-  _hssl_certificate = ng_strdup(filename);
-
-  return;
+  ng_free_data_block(&_hssl_certificate);
+  _hssl_certificate.data = ng_strdup_len(filename, &_hssl_certificate.len);
+  if (_hssl_certificate.data == NULL)
+  {
+    log_error("hssl_set_certificate failed.");
+    return -1;
+  }
+  return 0;
 }
 
-void
+int
 hssl_set_certpass(const char *password)
 {
-  if (_hssl_certpass)
-    ng_free(_hssl_certpass);
-
-  _hssl_certpass = ng_strdup(password);
-
-  return;
+  ng_free_data_block(&_hssl_certpass);
+  _hssl_certpass.data = ng_strdup_len(password, &_hssl_certpass.len);
+  if (_hssl_certpass.data == NULL)
+  {
+    log_error("hssl_set_certpass failed.");
+    return -1;
+  }
+  return 0;
 }
 
-void
+int
 hssl_set_ca_list(const char *filename)
 {
-  if (_hssl_ca_list)
-    ng_free(_hssl_ca_list);
-
-  _hssl_ca_list = ng_strdup(filename);
-
-  return;
+  ng_free_data_block(&_hssl_ca_list);
+  _hssl_ca_list.data = ng_strdup_len(filename, &_hssl_ca_list.len);
+  if (_hssl_ca_list.data == NULL)
+  {
+    log_error("hssl_set_ca_list failed.");
+    return -1;
+  }
+  return 0;
 }
 
-void
+int
 hssl_enable(void)
 {
   _hssl_enabled = 1;
 
-  return;
+  return 0;
 }
 
-static void
+static int
 _hssl_parse_arguments(int argc, char **argv)
 {
-  int i;
+  int i, err = 0;
 
   for (i=1; i<argc; i++)
   {
     if (!ng_strcmp(argv[i - 1], NHTTP_ARG_CERT))
     {
-      hssl_set_certificate(argv[i]);
+      err = hssl_set_certificate(argv[i]);
     }
     else if (!ng_strcmp(argv[i - 1], NHTTP_ARG_CERTPASS))
     {
-      hssl_set_certpass(argv[i]);
+      err = hssl_set_certpass(argv[i]);
     }
     else if (!ng_strcmp(argv[i - 1], NHTTP_ARG_CA))
     {
-      hssl_set_ca_list(argv[i]);
+      err = hssl_set_ca_list(argv[i]);
     }
     else if (!ng_strcmp(argv[i - 1], NHTTPD_ARG_HTTPS))
     {
-      hssl_enable();
+      err = hssl_enable();
     }
+
+    if (err < 0) 
+      break;
   }
 
-  return;
+  return err;
 }
 
 static void
@@ -380,9 +386,9 @@ _hssl_library_init(void)
 static herror_t
 _hssl_server_context_init(void)
 {
-  log_verbose("enabled=%i, certificate=%p.", _hssl_enabled, _hssl_certificate);
+  log_verbose("enabled=%i, certificate=%pS.", _hssl_enabled, &_hssl_certificate);
 
-  if (!_hssl_enabled || !_hssl_certificate)
+  if (!_hssl_enabled || !_hssl_certificate.len)
     return H_OK;
 
   if (!(_hssl_context = SSL_CTX_new(SSLv23_method())))
@@ -392,35 +398,37 @@ _hssl_server_context_init(void)
                       "Unable to create SSL context.");
   }
 
-  if (!(SSL_CTX_use_certificate_file(_hssl_context, _hssl_certificate, SSL_FILETYPE_PEM)))
+  if (!(SSL_CTX_use_certificate_file(_hssl_context, _hssl_certificate.cptr, SSL_FILETYPE_PEM)))
   {
-    log_error("Cannot read certificate file: \"%s\".", _hssl_certificate);
+    log_error("Cannot read certificate file: \"%pS\".", &_hssl_certificate);
     SSL_CTX_free(_hssl_context);
     return herror_new("_hssl_server_context_init", HSSL_ERROR_CERTIFICATE,
-                      "Unable to use SSL certificate \"%s\".", _hssl_certificate);
+                      "Unable to use SSL certificate \"%pS\".", &_hssl_certificate);
   }
 
   SSL_CTX_set_default_passwd_cb(_hssl_context, _hssl_password_callback);
 
-  if (!(SSL_CTX_use_PrivateKey_file(_hssl_context, _hssl_certificate, SSL_FILETYPE_PEM)))
+  if (!(SSL_CTX_use_PrivateKey_file(_hssl_context, _hssl_certificate.cptr, SSL_FILETYPE_PEM)))
   {
-    log_error("Cannot read key file: \"%s\".", _hssl_certificate);
+    log_error("Cannot read key file: \"%pS\".", _hssl_certificate.cptr);
     SSL_CTX_free(_hssl_context);
     return herror_new("_hssl_server_context_init", HSSL_ERROR_PEM,
                       "Unable to use private key.");
   }
 
-  if (_hssl_ca_list != NULL && *_hssl_ca_list != '\0')
+  if (_hssl_ca_list.len)
   {
-    if (!(SSL_CTX_load_verify_locations(_hssl_context, _hssl_ca_list, NULL)))
+    if (!(SSL_CTX_load_verify_locations(_hssl_context, _hssl_ca_list.cptr, NULL)))
     {
       SSL_CTX_free(_hssl_context);
-      log_error("Cannot read CA list: \"%s\".", _hssl_ca_list);
+      log_error("Cannot read CA list: \"%pS\".", &_hssl_ca_list);
       return herror_new("_hssl_server_context_init", HSSL_ERROR_CA_LIST,
-                        "Unable to read certification authorities \"%s\".");
+                        "Unable to read certification authorities \"%pS\".", 
+                        &_hssl_ca_list);
     }
 
-    SSL_CTX_set_client_CA_list(_hssl_context, SSL_load_client_CA_file(_hssl_ca_list));
+    SSL_CTX_set_client_CA_list(_hssl_context, 
+      SSL_load_client_CA_file(_hssl_ca_list.cptr));
     log_verbose("Certification authority contacted.");
   }
 
@@ -451,7 +459,12 @@ _hssl_server_context_destroy(void)
 herror_t
 hssl_module_init(int argc, char **argv)
 {
-  _hssl_parse_arguments(argc, argv);
+  if (0 > _hssl_parse_arguments(argc, argv))
+  {
+    log_verbose("hssl_module_init failed.");
+    return herror_new("hssl_module_init", HSSL_ERROR_CONTEXT,
+                      "_hssl_parse_arguments failed.");
+  }
 
   if (_hssl_enabled)
   {
@@ -471,24 +484,9 @@ hssl_module_destroy(void)
 {
   _hssl_server_context_destroy();
 
-  if (_hssl_certpass)
-  {
-    ng_free(_hssl_certpass);
-    _hssl_certpass = NULL;
-  }
-
-  if (_hssl_ca_list)
-  {
-    ng_free(_hssl_ca_list);
-    _hssl_ca_list = NULL;
-  }
-
-  if (_hssl_certificate)
-  {
-    ng_free(_hssl_certificate);
-    _hssl_certificate = NULL;
-  }
-
+  ng_free_data_block(&_hssl_certpass);
+  ng_free_data_block(&_hssl_ca_list);
+  ng_free_data_block(&_hssl_certificate);
   return;
 }
 

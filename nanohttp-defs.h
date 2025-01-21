@@ -413,7 +413,7 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #define ng_vfprintf   __ng_vfprintf
 #define ng_strstr     strstr
 
-#define ng_strncpy(s1,s2,l) strncpy(s1,s2,l)
+#define ng_strlcpy(s1,s2,l) strlcpy(s1,s2,l)
 #define ng_strlen(s)        strlen(s)
 #define ng_strcmp(s1,s2)    strcmp(s1,s2)
 

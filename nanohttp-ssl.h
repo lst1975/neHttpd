@@ -348,7 +348,7 @@ hssl_set_certificate(const char *filename);
  *
  * @see hssl_set_certificate()
  */
-extern void 
+extern int 
 hssl_set_certpass(const char *password);
 
 /** This function sets the filename for a certification authority
