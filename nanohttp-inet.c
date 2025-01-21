@@ -298,24 +298,24 @@ ng_inet_pton6(const char *src, int len, ng_uint8_t *dst)
 
 /* char *
  * inet_ntop(af, src, dst, size)
- *	convert a network format address to presentation format.
+ *  convert a network format address to presentation format.
  * return:
- *	pointer to presentation format address (`dst'), or NULL (see errno).
+ *  pointer to presentation format address (`dst'), or NULL (see errno).
  * author:
- *	Paul Vixie, 1996.
+ *  Paul Vixie, 1996.
  */
 int
 ng_inet_ntop(int af, const char *src, char *dst, ng_size_t size)
 {
-	switch (af) {
+  switch (af) {
   case AF_INET:
-		return (ng_inet_ntop4(src, dst, (ng_size_t)size));
+    return (ng_inet_ntop4(src, dst, (ng_size_t)size));
   case AF_INET6:
-		return (ng_inet_ntop6(src, dst, (ng_size_t)size));
-	default:
-		return 0;
-	}
-	/* NOTREACHED */
+    return (ng_inet_ntop6(src, dst, (ng_size_t)size));
+  default:
+    return 0;
+  }
+  /* NOTREACHED */
 }
 
 int
@@ -328,25 +328,25 @@ ng_inet_ntop_su(void *__sa, char *dst, ng_size_t size)
     return ng_inet_ntop6((char *)&((struct sockaddr_in6 *)(__sa))->sin6_addr, dst, size);
   default:
     return 0;
-	}
+  }
 }
 
 /* const char *
  * inet_ntop4(src, dst, size)
- *	format an IPv4 address, more or less like inet_ntoa()
+ *  format an IPv4 address, more or less like inet_ntoa()
  * return:
- *	`dst' (as a const)
+ *  `dst' (as a const)
  * notes:
- *	(1) uses no statics
- *	(2) takes a u_char* not an in_addr as input
+ *  (1) uses no statics
+ *  (2) takes a u_char* not an in_addr as input
  * author:
- *	Paul Vixie, 1996.
+ *  Paul Vixie, 1996.
  */
 int
 ng_inet_ntop4(const char *src, char *dst, ng_size_t size)
 {
-	char tmp[sizeof "255.255.255.255"];
-	ng_size_t l;
+  char tmp[sizeof "255.255.255.255"];
+  ng_size_t l;
   char *p = tmp;
   
   for (int i = 0; i < 4; i++) 
@@ -360,139 +360,139 @@ ng_inet_ntop4(const char *src, char *dst, ng_size_t size)
   }
 
   l = RTE_MIN(p-tmp, size-1);
-	ng_memcpy(dst, tmp, l);
+  ng_memcpy(dst, tmp, l);
   tmp[l] = '\0';
-	return l;
+  return l;
 }
 
 /* const char *
  * inet_ntop6(src, dst, size)
- *	convert IPv6 binary address into presentation (printable) format
+ *  convert IPv6 binary address into presentation (printable) format
  * author:
- *	Paul Vixie, 1996.
+ *  Paul Vixie, 1996.
  */
 int
 ng_inet_ntop6(const char *src, char *dst, ng_size_t size)
 {
-	/*
-	 * Note that ng_int32_t and ng_int16_t need only be "at least" large enough
-	 * to contain a value of the specified size.  On some systems, like
-	 * Crays, there is no such thing as an integer variable with 16 bits.
-	 * Keep this in mind if you think this function should have been coded
-	 * to use pointer overlays.  All the world's not a VAX.
-	 * char	buf[sizeof("xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:255:255:255:255/128")];
-	 */
-	char tmp[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"];
-	char *tp, *ep;
-	struct { int base, len; } best, cur;
-	ng_uint32_t words[NG_IN6ADDRSZ / NG_INT16SZ];
-	int i;
-	int advance;
+  /*
+   * Note that ng_int32_t and ng_int16_t need only be "at least" large enough
+   * to contain a value of the specified size.  On some systems, like
+   * Crays, there is no such thing as an integer variable with 16 bits.
+   * Keep this in mind if you think this function should have been coded
+   * to use pointer overlays.  All the world's not a VAX.
+   * char  buf[sizeof("xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:255:255:255:255/128")];
+   */
+  char tmp[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"];
+  char *tp, *ep;
+  struct { int base, len; } best, cur;
+  ng_uint32_t words[NG_IN6ADDRSZ / NG_INT16SZ];
+  int i;
+  int advance;
 
-	/*
-	 * Preprocess:
-	 *	Copy the input (bytewise) array into a wordwise array.
-	 *	Find the longest run of 0x00's in src[] for :: shorthanding.
-	 */
-	ng_memset(words, '\0', sizeof words);
-	for (i = 0; i < NG_IN6ADDRSZ; i++)
-		words[i / 2] |= (src[i] << ((1 - (i % 2)) << 3));
-	best.base = -1;
-	cur.base = -1;
-	for (i = 0; i < (NG_IN6ADDRSZ / NG_INT16SZ); i++) 
+  /*
+   * Preprocess:
+   *  Copy the input (bytewise) array into a wordwise array.
+   *  Find the longest run of 0x00's in src[] for :: shorthanding.
+   */
+  ng_memset(words, '\0', sizeof words);
+  for (i = 0; i < NG_IN6ADDRSZ; i++)
+    words[i / 2] |= (src[i] << ((1 - (i % 2)) << 3));
+  best.base = -1;
+  cur.base = -1;
+  for (i = 0; i < (NG_IN6ADDRSZ / NG_INT16SZ); i++) 
   {
-		if (words[i] == 0) 
+    if (words[i] == 0) 
     {
-			if (cur.base == -1)
-				cur.base = i, cur.len = 1;
-			else
-				cur.len++;
-		}
+      if (cur.base == -1)
+        cur.base = i, cur.len = 1;
+      else
+        cur.len++;
+    }
     else 
     {
-			if (cur.base != -1) 
+      if (cur.base != -1) 
       {
-				if (best.base == -1 || cur.len > best.len)
-					best = cur;
-				cur.base = -1;
-			}
-		}
-	}
+        if (best.base == -1 || cur.len > best.len)
+          best = cur;
+        cur.base = -1;
+      }
+    }
+  }
   
-	if (cur.base != -1) 
+  if (cur.base != -1) 
   {
-		if (best.base == -1 || cur.len > best.len)
-			best = cur;
-	}
+    if (best.base == -1 || cur.len > best.len)
+      best = cur;
+  }
   
-	if (best.base != -1 && best.len < 2)
-		best.base = -1;
+  if (best.base != -1 && best.len < 2)
+    best.base = -1;
 
-	/*
-	 * Format the result.
-	 */
-	tp = tmp;
-	ep = tmp + sizeof(tmp);
-	for (i = 0; i < (NG_IN6ADDRSZ / NG_INT16SZ) && tp < ep; i++) 
+  /*
+   * Format the result.
+   */
+  tp = tmp;
+  ep = tmp + sizeof(tmp);
+  for (i = 0; i < (NG_IN6ADDRSZ / NG_INT16SZ) && tp < ep; i++) 
   {
-		/* Are we inside the best run of 0x00's? */
-		if (best.base != -1 && i >= best.base &&
-		    i < (best.base + best.len)) 
-		{
-			if (i == best.base) 
+    /* Are we inside the best run of 0x00's? */
+    if (best.base != -1 && i >= best.base &&
+        i < (best.base + best.len)) 
+    {
+      if (i == best.base) 
       {
-				if (tp + 1 >= ep)
+        if (tp + 1 >= ep)
           return 0;
-				*tp++ = ':';
-			}
-			continue;
-		}
+        *tp++ = ':';
+      }
+      continue;
+    }
 
     /* Are we following an initial run of 0x00s or any real hex? */
-		if (i != 0) 
+    if (i != 0) 
     {
-			if (tp + 1 >= ep)
-				return 0;
-			*tp++ = ':';
-		}
+      if (tp + 1 >= ep)
+        return 0;
+      *tp++ = ':';
+    }
 
     /* Is this address an encapsulated IPv4? */
-		if (i == 6 && best.base == 0 &&
-		    (best.len == 6 || (best.len == 5 && words[5] == 0xffff))) 
-		{
-		  int n = ng_inet_ntop4(src+12, tp, (ng_size_t)(ep - tp));
-			if (!n)
-				return 0;
-			tp += n;
-			break;
-		}
+    if (i == 6 && best.base == 0 &&
+        (best.len == 6 || (best.len == 5 && words[5] == 0xffff))) 
+    {
+      int n = ng_inet_ntop4(src+12, tp, (ng_size_t)(ep - tp));
+      if (!n)
+        return 0;
+      tp += n;
+      break;
+    }
     
-		advance = ng_u32toh(words[i], tp, ep - tp, 0, 0);
-		if (advance <= 0 || advance >= ep - tp)
-			return 0;
-		tp += advance;
-	}
-  
-	/* Was it a trailing run of 0x00's? */
-	if (best.base != -1 && (best.base + best.len) == (NG_IN6ADDRSZ / NG_INT16SZ)) 
-  {
-		if (tp + 1 >= ep)
+    advance = ng_u32toh(words[i], tp, ep - tp, 0, 0);
+    if (advance <= 0 || advance >= ep - tp)
       return 0;
-		*tp++ = ':';
-	}
-	if (tp + 1 >= ep)
+    tp += advance;
+  }
+  
+  /* Was it a trailing run of 0x00's? */
+  if (best.base != -1 && (best.base + best.len) == (NG_IN6ADDRSZ / NG_INT16SZ)) 
+  {
+    if (tp + 1 >= ep)
+      return 0;
+    *tp++ = ':';
+  }
+  if (tp + 1 >= ep)
     return 0;
 
-	/*
-	 * Check for overflow, copy, and we're done.
-	 */
-	if ((ng_size_t)(tp - tmp) > size) 
+  /*
+   * Check for overflow, copy, and we're done.
+   */
+  if ((ng_size_t)(tp - tmp) > size) 
   {
     return 0;
-	}
+  }
   
-	ng_memcpy(dst, tmp, tp - tmp);
-	return tp - tmp;
+  ng_memcpy(dst, tmp, tp - tmp);
+  return tp - tmp;
 }
 
 #if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
