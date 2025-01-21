@@ -129,14 +129,16 @@ _hsocket_sys_accept(hsocket_s *sock, hsocket_s *dest)
   
   while (1)
   {
+    int err;
     dest->sock = WSAAccept(sock->sock, (struct sockaddr *)&dest->addr, 
       &asize, NULL, (DWORD_PTR)NULL);
     if (dest->sock != INVALID_SOCKET)
       break;
+    err = ng_socket_errno;
     if (!_hsocket_should_again(err))
     {
       return herror_new("hsocket_accept", HSOCKET_ERROR_ACCEPT, 
-        "Socket error %m.", ng_socket_errno);
+        "Socket error %m.", err);
     }
   }
 
