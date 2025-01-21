@@ -153,7 +153,7 @@ ng_str_isdigit_s(const char *cptr, int len)
 static inline int 
 ng_str_isdigit(const char *cptr)
 {
-  return ng_str_isdigit_s(cptr, strlen(cptr));
+  return ng_str_isdigit_s(cptr, ng_strlen(cptr));
 }
 
 #ifdef __cplusplus

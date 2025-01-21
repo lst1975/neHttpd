@@ -164,7 +164,7 @@ ng_atoi(const char *str, ng_uint8_t len)
 {
   const char *end;
   if (len == 0)
-    len = strlen(str);
+    len = ng_strlen(str);
   return ng_atoi64(str, len, &end);
 }
 

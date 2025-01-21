@@ -73,6 +73,7 @@
 
 #include "nanohttp-logging.h"
 #include "nanohttp-system.h"
+#include "nanohttp-mem.h"
 
 extern void signal_handler_segfault(int sig);
 extern void nanohttpd_stop_running(void);
@@ -207,13 +208,13 @@ void signal_handler_segfault(int sig) {
   symbols = backtrace_symbols(buffer, num_frames);
   
   // Print the stack trace
-  ng_fprintf(stderr, "Error: signal %d:\n", sig);
+  log_error("signal %d:\n", sig);
   for (int i = 0; i < num_frames; i++) {
-      ng_fprintf(stderr, "%s\n", symbols[i]);
+      log_error("%s", symbols[i]);
   }
   
   // Free the allocated memory for symbols
-  free(symbols);
+  os_free(symbols);
   
   // Exit the program
   exit(1);

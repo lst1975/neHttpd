@@ -225,7 +225,7 @@ static inline void rte_prefetch_non_temporal(const volatile void *p)
 	rte_prefetch0(p);
 }
 /*/////////////////////////////////////////////////////////////////////////////////
-                                      ¿
+                                      Â¿
 /////////////////////////////////////////////////////////////////////////////////*/
 #else
 static inline void rte_prefetch0(const volatile void *p)

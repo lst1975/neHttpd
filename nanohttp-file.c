@@ -187,7 +187,7 @@ nanohttp_dir_init(const char *pfile)
                       "bad parameter pfile: %s.", pfile);
   }
 
-  ng_size_t plen = strlen(pwd);
+  ng_size_t plen = ng_strlen(pwd);
   ng_size_t flen = p + 1 - pfile;
   if (pfile[0] == __PATH_DLIM
     ||(flen >= plen 

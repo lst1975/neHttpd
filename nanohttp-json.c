@@ -136,7 +136,7 @@ static void skipSpace( const char * buf,
 {
   ng_size_t i = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   for( i = *start; i < max; i++ )
   {
@@ -194,7 +194,7 @@ static ng_bool_t shortestUTF8( ng_size_t length,
   ng_bool_t ret = ng_FALSE;
   ng_uint32_t min = 0U, max = 0U;
 
-  assert( ( length >= 2U ) && ( length <= 4U ) );
+  NG_ASSERT( ( length >= 2U ) && ( length <= 4U ) );
 
   switch( length )
   {
@@ -255,11 +255,11 @@ static ng_bool_t skipUTF8MultiByte( const char * buf,
   ng_uint32_t value = 0U;
   char_ c = { 0 };
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   i = *start;
-  assert( i < max );
-  assert( !isascii_( buf[ i ] ) );
+  NG_ASSERT( i < max );
+  NG_ASSERT( !isascii_( buf[ i ] ) );
 
   c.c = buf[ i ];
 
@@ -316,7 +316,7 @@ static ng_bool_t skipUTF8( const char * buf,
 {
   ng_bool_t ret = ng_FALSE;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   if( *start < max )
   {
@@ -393,8 +393,8 @@ static ng_bool_t skipOneHexEscape( const char * buf,
   ng_size_t i = 0U, end = 0U;
   ng_uint16_t value = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
-  assert( outValue != NULL );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( outValue != NULL );
 
   i = *start;
 #define HEX_ESCAPE_LENGTH  ( 6U )   /* e.g., \u1234 */
@@ -456,7 +456,7 @@ static ng_bool_t skipHexEscape( const char * buf,
   ng_size_t i = 0U;
   ng_uint16_t value = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   i = *start;
 
@@ -507,7 +507,7 @@ static ng_bool_t skipEscape( const char * buf,
   ng_bool_t ret = ng_FALSE;
   ng_size_t i = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   i = *start;
 
@@ -574,7 +574,7 @@ static ng_bool_t skipString( const char * buf,
   ng_bool_t ret = ng_FALSE;
   ng_size_t i = 0;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   i = *start;
 
@@ -638,7 +638,7 @@ static ng_bool_t strnEq( const char * a,
 {
   ng_size_t i = 0U;
 
-  assert( ( a != NULL ) && ( b != NULL ) );
+  NG_ASSERT( ( a != NULL ) && ( b != NULL ) );
 
   for( i = 0; i < n; i++ )
   {
@@ -671,8 +671,8 @@ static ng_bool_t skipLiteral( const char * buf,
 {
   ng_bool_t ret = ng_FALSE;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
-  assert( literal != NULL );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( literal != NULL );
 
   if( ( *start < max ) && ( length <= ( max - *start ) ) )
   {
@@ -751,7 +751,7 @@ static ng_bool_t skipDigits( const char * buf,
   ng_size_t i = 0U, saveStart = 0U;
   ng_int32_t value = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   saveStart = *start;
 
@@ -804,7 +804,7 @@ static void skipDecimals( const char * buf,
 {
   ng_size_t i = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   i = *start;
 
@@ -832,7 +832,7 @@ static void skipExponent( const char * buf,
 {
   ng_size_t i = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   i = *start;
 
@@ -869,7 +869,7 @@ static ng_bool_t skipNumber( const char * buf,
   ng_bool_t ret = ng_FALSE;
   ng_size_t i = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   i = *start;
 
@@ -965,7 +965,7 @@ static ng_bool_t skipSpaceAndComma( const char * buf,
   ng_bool_t ret = ng_FALSE;
   ng_size_t i = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   skipSpace( buf, start, max );
   i = *start;
@@ -1000,7 +1000,7 @@ static void skipArrayScalars( const char * buf,
 {
   ng_size_t i = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   i = *start;
 
@@ -1042,7 +1042,7 @@ static void skipObjectScalars( const char * buf,
   ng_size_t i = 0U;
   ng_bool_t comma = ng_FALSE;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   i = *start;
 
@@ -1097,7 +1097,7 @@ static void skipScalars( const char * buf,
              ng_size_t max,
              char mode )
 {
-  assert( isOpenBracket_( mode ) );
+  NG_ASSERT( isOpenBracket_( mode ) );
 
   skipSpace( buf, start, max );
 
@@ -1138,7 +1138,7 @@ static JSONStatus_e skipCollection( const char * buf,
   ng_int16_t depth = -1;
   ng_size_t i = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
 
   i = *start;
 
@@ -1283,8 +1283,8 @@ static ng_bool_t nextValue( const char * buf,
   ng_bool_t ret = ng_TRUE;
   ng_size_t i = 0U, valueStart = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
-  assert( ( value != NULL ) && ( valueLength != NULL ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( value != NULL ) && ( valueLength != NULL ) );
 
   i = *start;
   valueStart = i;
@@ -1340,9 +1340,9 @@ static ng_bool_t nextKeyValuePair( const char * buf,
   ng_bool_t ret = ng_TRUE;
   ng_size_t i = 0U, keyStart = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
-  assert( ( key != NULL ) && ( keyLength != NULL ) );
-  assert( ( value != NULL ) && ( valueLength != NULL ) );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( key != NULL ) && ( keyLength != NULL ) );
+  NG_ASSERT( ( value != NULL ) && ( valueLength != NULL ) );
 
   i = *start;
   keyStart = i;
@@ -1413,8 +1413,8 @@ static ng_bool_t objectSearch( const char * buf,
 
   ng_size_t i = 0U, key = 0U, keyLength = 0U, value = 0U, valueLength = 0U;
 
-  assert( ( buf != NULL ) && ( query != NULL ) );
-  assert( ( outValue != NULL ) && ( outValueLength != NULL ) );
+  NG_ASSERT( ( buf != NULL ) && ( query != NULL ) );
+  NG_ASSERT( ( outValue != NULL ) && ( outValueLength != NULL ) );
 
   skipSpace( buf, &i, max );
 
@@ -1480,8 +1480,8 @@ static ng_bool_t arraySearch( const char * buf,
   ng_size_t i = 0U, value = 0U, valueLength = 0U;
   ng_uint32_t currentIndex = 0U;
 
-  assert( buf != NULL );
-  assert( ( outValue != NULL ) && ( outValueLength != NULL ) );
+  NG_ASSERT( buf != NULL );
+  NG_ASSERT( ( outValue != NULL ) && ( outValueLength != NULL ) );
 
   skipSpace( buf, &i, max );
 
@@ -1548,8 +1548,8 @@ static ng_bool_t skipQueryPart( const char * buf,
   ng_bool_t ret = ng_FALSE;
   ng_size_t i = 0U;
 
-  assert( ( buf != NULL ) && ( start != NULL ) && ( outLength != NULL ) );
-  assert( max > 0U );
+  NG_ASSERT( ( buf != NULL ) && ( start != NULL ) && ( outLength != NULL ) );
+  NG_ASSERT( max > 0U );
 
   i = *start;
 
@@ -1597,9 +1597,9 @@ static JSONStatus_e multiSearch( const char * buf,
   JSONStatus_e ret = JSONSuccess;
   ng_size_t i = 0U, start = 0U, queryStart = 0U, value = 0U, length = max;
 
-  assert( ( buf != NULL ) && ( query != NULL ) );
-  assert( ( outValue != NULL ) && ( outValueLength != NULL ) );
-  assert( ( max > 0U ) && ( queryLength > 0U ) );
+  NG_ASSERT( ( buf != NULL ) && ( query != NULL ) );
+  NG_ASSERT( ( outValue != NULL ) && ( outValueLength != NULL ) );
+  NG_ASSERT( ( max > 0U ) && ( queryLength > 0U ) );
 
   while( i < queryLength )
   {
@@ -1811,10 +1811,10 @@ static JSONStatus_e iterate( const char * buf,
   JSONStatus_e ret = JSONNotFound;
   ng_bool_t found = ng_FALSE;
 
-  assert( ( buf != NULL ) && ( max > 0U ) );
-  assert( ( start != NULL ) && ( next != NULL ) );
-  assert( ( outKey != NULL ) && ( outKeyLength != NULL ) );
-  assert( ( outValue != NULL ) && ( outValueLength != NULL ) );
+  NG_ASSERT( ( buf != NULL ) && ( max > 0U ) );
+  NG_ASSERT( ( start != NULL ) && ( next != NULL ) );
+  NG_ASSERT( ( outKey != NULL ) && ( outKeyLength != NULL ) );
+  NG_ASSERT( ( outValue != NULL ) && ( outValueLength != NULL ) );
 
   if( *start < max )
   {
@@ -2110,7 +2110,7 @@ static char const *character_escape[] = {
 };
 
 static int __json_pad_print(JSON_PRINTER_f printer, 
-  ng_buffer_s *b, int depth, const char *pad)
+  ng_buffer_s *b, int depth, const char *pad, int pad_length)
 {
   int k=0;
   
@@ -2141,19 +2141,20 @@ int json_printer_default(ng_buffer_s *b, const char *fmt, ...)
 
 static int 
 __json_print(JSON_PRINTER_f printer, ng_buffer_s *b, 
-  JSONPair_s *pair, int depth, const char *pad)
+  JSONPair_s *pair, int depth, const char *pad, 
+  int pad_length)
 {
   ng_size_t n, k=0;
   
   while (pair != NULL)
   {
-    n = __json_pad_print(printer, b, depth,pad);
+    n = __json_pad_print(printer, b, depth, pad, pad_length);
     if (n < 0) return n;
     k += n;
 
     if (pair->key.len)
     {
-      n = printer(b, "\"%pS\":",&pair->key);
+      n = printer(b, "\"%pS\":", &pair->key);
       if (n < 0) return n;
       k += n;
     }
@@ -2173,7 +2174,7 @@ __json_print(JSON_PRINTER_f printer, ng_buffer_s *b,
 
           for (int i=0;i<pair->val.len;i++)
           {
-            n = printer(b,"%s",character_escape[(int)pair->val.cptr[i]]);
+            n = printer(b, "%s", character_escape[(int)pair->val.cptr[i]]);
             if (n < 0) return n;
             k += n;
           }
@@ -2193,13 +2194,13 @@ __json_print(JSON_PRINTER_f printer, ng_buffer_s *b,
       case JSONNumber:
         if (pair->isDouble)
         {
-          n = printer(b, "%lf",pair->vdouble);
+          n = printer(b, "%lf", pair->vdouble);
           if (n < 0) return n;
           k += n;
         }
         else
         {
-          n = printer(b, "%lld",pair->vint);
+          n = printer(b, "%lld", pair->vint);
           if (n < 0) return n;
           k += n;
         }
@@ -2236,11 +2237,12 @@ __json_print(JSON_PRINTER_f printer, ng_buffer_s *b,
         }
 
         n = __json_print(printer, b, pair->children, 
-          depth != -1 ? depth+1 : -1, pad);
+          depth != -1 ? depth+1 : -1, pad, pad_length);
         if (n < 0) return n;
         k += n;
         
-        n = __json_pad_print(printer, b, depth,pad);
+        n = __json_pad_print(printer, b, depth, 
+          pad, pad_length);
         if (n < 0) return n;
         k += n;
 
@@ -2262,11 +2264,12 @@ __json_print(JSON_PRINTER_f printer, ng_buffer_s *b,
         }
 
         n = __json_print(printer, b, pair->children, 
-          depth != -1 ? depth+1 : -1, pad);
+          depth != -1 ? depth+1 : -1, pad, pad_length);
         if (n < 0) return n;
         k += n;
         
-        n = __json_pad_print(printer, b, depth,pad);
+        n = __json_pad_print(printer, b, depth, 
+          pad, pad_length);
         if (n < 0) return n;
         k += n;
 
@@ -2295,7 +2298,8 @@ __json_print(JSON_PRINTER_f printer, ng_buffer_s *b,
   return k;
 }
 
-JSONStatus_e json_print(JSONPair_s *pair, int depth, const char *pad)
+JSONStatus_e json_print(JSONPair_s *pair, int depth, 
+  const char *pad, int pad_length)
 {
   int n;
   ng_buffer_s b;
@@ -2307,8 +2311,8 @@ JSONStatus_e json_print(JSONPair_s *pair, int depth, const char *pad)
     n = json_printer_default(&b, "%s", "\n");
     if (n < 0) return JSONPartial;
   }
-  n = __json_print(json_printer_default, &b,  
-    pair, depth != -1 ? depth+1 : -1, pad);
+  n = __json_print(json_printer_default, &b, pair, 
+    depth != -1 ? depth + 1 : -1, pad, pad_length);
   if (n < 0) return JSONPartial;
 
   n = json_printer_default(&b, "%s", "}");
@@ -2330,8 +2334,8 @@ json_printer_buffer(ng_buffer_s *b, const char *fmt, ...)
   return n;
 }
 
-int json_tostr(JSONPair_s *pair, char *buf,
-  ng_size_t length, int depth, const char *pad)
+int json_tostr(JSONPair_s *pair, char *buf, ng_size_t length, 
+  int depth, const char *pad, int pad_length)
 {
   int k=0;
   ng_buffer_s b = {.buf = buf, .len = length, .p = buf};
@@ -2348,8 +2352,8 @@ int json_tostr(JSONPair_s *pair, char *buf,
     k += n;
   }
 
-  n = __json_print(json_printer_buffer, &b, 
-        pair, depth != -1 ? depth+1 : -1, pad);
+  n = __json_print(json_printer_buffer, &b, pair, 
+    depth != -1 ? depth+1 : -1, pad, pad_length);
   if (n <= 0) return -1;
   k += n;
 
@@ -2361,7 +2365,7 @@ int json_tostr(JSONPair_s *pair, char *buf,
 }
 
 int json_to_printer(JSON_PRINTER_f printer, ng_buffer_s *b, 
-  JSONPair_s *pair, int depth, const char *pad)
+  JSONPair_s *pair, int depth, const char *pad, int pad_length)
 {
   int n, k=0;
 
@@ -2376,8 +2380,8 @@ int json_to_printer(JSON_PRINTER_f printer, ng_buffer_s *b,
     k += n;
   }
 
-  n = __json_print(printer, b,
-        pair, depth != -1 ? depth+1 : -1, pad);
+  n = __json_print(printer, b, pair, 
+    depth != -1 ? depth+1 : -1, pad, pad_length);
   if (n < 0) return -1;
   k += n;
 
@@ -2388,22 +2392,24 @@ int json_to_printer(JSON_PRINTER_f printer, ng_buffer_s *b,
   return k;
 }
 
-static int __json_pad_length(int depth, const char *pad)
+static int __json_pad_length(int depth, 
+  const char *pad, int padLen)
 {
   if (depth == -1)
     return 0;
 
-  return depth * strlen(pad);
+  return depth * padLen;
 }
 
-static int __json_cal_length(JSONPair_s *pair, int depth, const char *pad)
+static int __json_cal_length(JSONPair_s *pair, 
+  int depth, const char *pad, int padLen)
 {
   int n = 0;
   char temp[256];
   
   while (pair != NULL)
   {
-    n += __json_pad_length(depth,pad);
+    n += __json_pad_length(depth, pad, padLen);
     if (pair->key.len)
     {
       n += 3 + pair->key.len;
@@ -2424,7 +2430,7 @@ static int __json_cal_length(JSONPair_s *pair, int depth, const char *pad)
         }
         else
         {
-          n += ng_snprintf(temp, sizeof temp, "%lld",pair->vint);
+          n += ng_snprintf(temp, sizeof temp, "%lld", pair->vint);
         }
         break;
       case JSONTrue:
@@ -2443,11 +2449,12 @@ static int __json_cal_length(JSONPair_s *pair, int depth, const char *pad)
           n += 1;
         }
 
-        n += __json_cal_length(pair->children, depth != -1 ? depth+1 : -1, pad);
+        n += __json_cal_length(pair->children, 
+          depth != -1 ? depth+1 : -1, pad, padLen);
         if (n < 0)
           goto clean0;
         
-        n += __json_pad_length(depth,pad);
+        n += __json_pad_length(depth , pad, padLen);
         n += 1;
         break;
       case JSONObject:
@@ -2457,11 +2464,12 @@ static int __json_cal_length(JSONPair_s *pair, int depth, const char *pad)
           n += 1;
         }
 
-        n += __json_cal_length(pair->children, depth != -1 ? depth+1 : -1, pad);
+        n += __json_cal_length(pair->children, 
+          depth != -1 ? depth+1 : -1, pad, padLen);
         if (n < 0)
           goto clean0;
         
-        n += __json_pad_length(depth,pad);
+        n += __json_pad_length(depth, pad, padLen);
         n += 1;
         break;
     }
@@ -2485,14 +2493,15 @@ clean0:
 int json_cal_length(JSONPair_s *pair, int depth, const char *pad)
 {
   int n = 0;
-
+  int len = ng_strlen(pad);
+  
   n += 1;
   if (depth != -1)
   {
     n += 1;
   }
   
-  n += __json_cal_length(pair, depth != -1 ? depth+1 : -1, pad);
+  n += __json_cal_length(pair, depth != -1 ? depth+1 : -1, pad, len);
 
   n += 1;
   return n;

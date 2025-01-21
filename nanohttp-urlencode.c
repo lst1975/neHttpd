@@ -494,7 +494,7 @@ int encode_url(ng_buffer_s *b, const ng_uint8_t *input, int len)
   ng_uint8_t *encoded;
 
   if (!len) 
-    len = strlen((const char *)input);
+    len = ng_strlen((const char *)input);
   
   encoded = (ng_uint8_t*)ng_malloc(sizeof(ng_uint8_t) * len * 6);
   if (encoded == NULL)
@@ -532,7 +532,7 @@ int encode_url(ng_buffer_s *b, const ng_uint8_t *input, int len)
           break;
           
         default:
-          assert(0);
+          NG_ASSERT(0);
           break;
       }
     }
@@ -597,7 +597,7 @@ int decode_url(ng_buffer_s *b, const ng_uint8_t* input, int len)
   int in_cursor = 0;
   int out_cursor = 0;
 
-  if (!len) len = strlen((const char *)input);
+  if (!len) len = ng_strlen((const char *)input);
   b->ptr = decoded = (ng_uint8_t*)ng_malloc(sizeof(ng_uint8_t) * len);
   if (decoded == NULL)
   {

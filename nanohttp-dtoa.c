@@ -2269,8 +2269,10 @@ static const char *_EXPONENT_TABLE[400] = {
 *  There must be at least 16 bytes in the output buffer.
 *
 */
-static void format_exponent(char *buffer, ng_int32_t exponent, int is_uppercase)
+static int format_exponent(char *buffer, ng_int32_t exponent, int is_uppercase)
 {
+  char *b = buffer;
+
   rte_prefetch0(_EXPONENT_TABLE);
 
   *buffer++ = (is_uppercase ? 'E' : 'e');
@@ -2282,7 +2284,7 @@ static void format_exponent(char *buffer, ng_int32_t exponent, int is_uppercase)
   else
    *buffer++ = '+';
 
-  assert(exponent <= 324);
+  NG_ASSERT(exponent <= 324);
   
 #if 0
   char  tmp_buffer[12];
@@ -2300,12 +2302,22 @@ static void format_exponent(char *buffer, ng_int32_t exponent, int is_uppercase)
 #else
   *(ng_uint32_t *)buffer = *(const ng_uint32_t *)_EXPONENT_TABLE[exponent];
   if (buffer[2] == ' ') 
+  {
     buffer[2] = '\0';
+    return buffer - b + 2;
+  }
   else if (buffer[3] == ' ') 
+  {
     buffer[3] = '\0';
+    return buffer - b + 3;
+  }
+  else
+  {
+    NG_ASSERT(0);
+  }
 #endif  
 
-  return;
+  return buffer - b;
 }
 
 /**
@@ -2443,8 +2455,7 @@ int  dconvstr_ieee754_print(
     else
       ndigits = bcd_round( 1 + format_precision, decimal_mantissa, &exponent );
  
-    format_exponent( suffix, exponent, format_flags & DCONVSTR_FLAG_UPPERCASE );
-    suffix_width = ((int)( strlen( suffix ) ));
+    suffix_width = format_exponent( suffix, exponent, format_flags & DCONVSTR_FLAG_UPPERCASE );
   }
   else if( format_char == 'f' )
   {

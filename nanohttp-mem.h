@@ -100,7 +100,7 @@ static inline char *__http_strdup(const char *p
   if (p == NULL)
     return NULL;
 
-  ng_size_t len = strlen(p)+1;
+  ng_size_t len = ng_strlen(p)+1;
   void *np = __http_malloc(len
 #if __NHTTP_MEM_DEBUG  
       , file, line
@@ -142,7 +142,7 @@ static inline char *__http_strdup_len(const char *p, int *_len
   if (p == NULL)
     return NULL;
 
-  ng_size_t len = strlen(p)+1;
+  ng_size_t len = ng_strlen(p)+1;
   void *np = __http_malloc(len
 #if __NHTTP_MEM_DEBUG  
       , file, line

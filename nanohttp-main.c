@@ -1054,22 +1054,22 @@ static int json_test(void)
   JSONPair_s *p;
   result = json_parse(&p, buffer,bufferLength);
 
-  //json_print(p,0,"  ");
+  //json_print(p,0,"  ",2);
   //printf("\n\n");
-  //json_print(p,-1,"  ");
+  //json_print(p,-1,"  ",2);
   //printf("\n\n");
 
   char buf[1024];
   int m = json_cal_length(p,0,"  ");
   printf("%d=====\n\n",m);
-  json_tostr(p,buf,sizeof(buf),0,"  ");
-  printf("%lu=====\n\n",strlen(buf));
+  json_tostr(p,buf,sizeof(buf),0,"  ",2);
+  printf("%lu=====\n\n",ng_strlen(buf));
   printf("%s\n\n",buf);
 
   int n = json_cal_length(p,-1,"  ");
   printf("%d=====\n\n",n);
-  json_tostr(p,buf,sizeof(buf),-1,"  ");
-  printf("%lu=====\n\n",strlen(buf));
+  json_tostr(p,buf,sizeof(buf),-1,"  ",2);
+  printf("%lu=====\n\n",ng_strlen(buf));
   printf("%s\n\n",buf);
 
   json_pairs_free(p);

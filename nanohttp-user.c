@@ -524,7 +524,7 @@ __nanohttp_users2file(void)
     goto clean0;
   }
 
-  json_print(json,0,"  ");
+  json_print(json, 0, "  ", 2);
   
   fp = nanohttp_file_open_for_write(__USER_FILE, 
     sizeof(__USER_FILE)-1);
@@ -534,7 +534,7 @@ __nanohttp_users2file(void)
   }
 
   b.data = fp;
-  len = json_to_printer(json_printer_file, &b, json, 0, "  ");
+  len = json_to_printer(json_printer_file, &b, json, 0, "  ", 2);
   if (len <= 0)
   {
     goto clean2;

@@ -631,7 +631,7 @@ __send_snprintf_out(void *arg, const char *string, ng_size_t length)
 }
 
 /**
-  Writes 'strlen()' bytes of 'str' into stream.
+  Writes 'ng_strlen()' bytes of 'str' into stream.
   Returns socket error flags or H_OK.
 */
 herror_t

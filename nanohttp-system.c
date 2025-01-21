@@ -561,7 +561,7 @@ __os_sys_status(void *log)
      */
     osviex_stub = (ngx_osviex_stub_t *) &osvi.wServicePackMinor;
 
-    if (strlen(osvi.szCSDVersion))
+    if (ng_strlen(osvi.szCSDVersion))
       ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
         "OS: Windows %u build:%u, \"%s\", suite:%X, type:%u",
         ngx_win32_version, osvi.dwBuildNumber, osvi.szCSDVersion,
@@ -577,7 +577,7 @@ __os_sys_status(void *log)
     if (osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) 
     {
       /* Win9x build */
-      if (strlen(osvi.szCSDVersion))
+      if (ng_strlen(osvi.szCSDVersion))
         ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
             "OS: Windows %u build:%u.%u.%u, \"%s\"",
             ngx_win32_version,
@@ -601,7 +601,7 @@ __os_sys_status(void *log)
        * we do not currently support VER_PLATFORM_WIN32_CE
        * and we do not support VER_PLATFORM_WIN32s at all
        */
-      if (strlen(osvi.szCSDVersion))
+      if (ng_strlen(osvi.szCSDVersion))
         ng_snprintf(ng_os_info.ng_os_version, sizeof(ng_os_info.ng_os_version),
             "OS: Windows %u build:%u, \"%s\"",
             ngx_win32_version, osvi.dwBuildNumber,
@@ -829,6 +829,8 @@ __os_get_tzoffset(void)
 #endif
 #include <sys/resource.h>
 
+#include "dtoa-ryu/ryu_parse.h"
+
 #define BUFFER_SIZE 256
 
 const char *__os_strerror(int err)
@@ -857,20 +859,39 @@ static ng_result_t __ng_get_freq(void *log, double *freq)
   FILE *file;
   char buffer[BUFFER_SIZE];
   char *line;
-  char *search = "cpu MHz";
+  ng_block_s search = DECL_CONST_STR("cpu MHz");
   double cpu_freq = 0.0;
   
   file = fopen("/proc/cpuinfo", "r");
-  if (file == NULL) {
+  if (file == NULL) 
+  {
     log_fatal("fopen failed. %m.", ng_errno);
     return ng_ERR_ESYSTEM;
   }
   
-  while (fgets(buffer, sizeof(buffer), file) != NULL) {
-    if (strncmp(buffer, search, strlen(search)) == 0) {
-      line = strchr(buffer, ':');
-      if (line != NULL) {
-        cpu_freq = strtod(line + 1, NULL);
+  while (fgets(buffer, sizeof(buffer), file) != NULL) 
+  {
+    int len = ng_strlen(buffer);
+    if (ng_memcmp(buffer, search.cptr, RTE_MIN_T(len, search.len, int)) == 0) 
+    {
+      line = ng_memchr(buffer, ':', len);
+      if (line != NULL) 
+      {
+        const char *end;
+        do {
+          line++;
+        } while(__ng_isspace(*line));
+        
+        end = line;
+        while(__ng_isdigit(*end) || *end=='.') {
+          end++;
+        }
+
+        if (s2d_n(line, end-line, &cpu_freq) != SUCCESS)
+        {
+          log_fatal("s2d_n failed.");
+          return ng_ERR_ESYSTEM;
+        }
         break;
       }
     }
@@ -878,7 +899,8 @@ static ng_result_t __ng_get_freq(void *log, double *freq)
   
   fclose(file);
   
-  if (cpu_freq > 0.0) {
+  if (cpu_freq > 0.0) 
+  {
     ng_print_cpufreq("CPU Frequency", cpu_freq);
     *freq = cpu_freq * 1000000.0;
     return ng_ERR_NONE;
@@ -1127,7 +1149,7 @@ static ng_size_t CacheLineSize(void) {
 	SYSTEM_LOGICAL_PROCESSOR_INFORMATION * buffer = 0;
 
 	GetLogicalProcessorInformation(0, &bufferSize);
-	buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION *) malloc(bufferSize);
+	buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION *)os_malloc(bufferSize);
 	GetLogicalProcessorInformation(&buffer[0], &bufferSize);
 
 	for (i = 0; i != bufferSize / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION); ++i) {
@@ -1137,7 +1159,7 @@ static ng_size_t CacheLineSize(void) {
 		}
 	}
 
-	free(buffer);
+	os_free(buffer);
 	return lineSize;
 }
 

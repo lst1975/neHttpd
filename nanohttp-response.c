@@ -183,7 +183,6 @@ _hresponse_parse_header(const char *buffer, ng_size_t len)
     goto clean1;
   }
 
-  /*	res->desc = (char *) ng_malloc(strlen(str) + 1);*/
   res->desc_len = str - s1;
   res->desc = ng_strdup_size(str, res->desc_len);
   if (res->desc == NULL)

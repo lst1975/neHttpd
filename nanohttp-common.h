@@ -341,7 +341,7 @@ extern void test_content_type(void);
 static inline int SAFE_STRLEN(const char *x)
 {
   if (likely((x)!=NULL))
-    return strlen(x);
+    return ng_strlen(x);
   else
     return 0;
 }

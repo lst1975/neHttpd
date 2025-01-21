@@ -239,7 +239,7 @@ hpairnode_free_deep(ng_list_head_s *head)
   {
     hpair_s *pair;
     pair = ng_list_first_entry(head,hpair_s,link);
-    assert(pair != NULL);
+    NG_ASSERT(pair != NULL);
     ng_list_del(&pair->link);
     hpairnode_free(pair);
   }

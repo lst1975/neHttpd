@@ -90,8 +90,7 @@ typedef struct _mentry http_mentry_s;
 #ifdef __KERNEL__
 #define TSN_ASSERT(x) BUG_ON(!(x))
 #else
-#include <assert.h>
-#define TSN_ASSERT(x) assert(x)
+#define TSN_ASSERT(x) NG_ASSERT(x)
 #endif
 
 #define TSN_RESERVED_HEADROOM 128

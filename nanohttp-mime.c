@@ -1086,7 +1086,7 @@ attachments_free(mime_attachment_s *message)
   {
     mime_part_s *part;
     part = ng_list_first_entry(&message->parts,mime_part_s,link);
-    assert(part != NULL);
+    NG_ASSERT(part != NULL);
     ng_list_del(&part->link);
     mime_part_free(part);
   }

@@ -224,8 +224,6 @@ _hrequest_parse_header(char *data, ng_size_t len)
       }
 
       req->version = -1;
-      /* req->spec = (char *) ng_malloc(strlen(tmp2) + 1); 
-        strcpy(req->spec, tmp2); */
       if (t - key - 1 == 8)
       {
         if (*(ng_uint64_t *)(key + 1) == *(const ng_uint64_t *)"HTTP/1.0")
@@ -247,7 +245,6 @@ _hrequest_parse_header(char *data, ng_size_t len)
       opt_key = ng_memchr(result, '?', key-result);
 
       /* save path */
-      /* req->path = (char *) ng_malloc(strlen(key) + 1); */
       req->path.len = opt_key == NULL ? key-result : opt_key - result;
       if (req->path.len >= REQUEST_MAX_PATH_SIZE - 1)
       {

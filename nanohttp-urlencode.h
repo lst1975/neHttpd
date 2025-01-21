@@ -67,9 +67,6 @@
 extern "C" {
 #endif
 
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
 #include "nanohttp-common.h"
 
 int is_url_char_unreserved(ng_uint8_t c);

@@ -145,7 +145,7 @@ typedef enum
  *     result = JSON_Validate( buffer, bufferLength );
  *
  *     // JSON document is valid.
- *     assert( result == JSONSuccess );
+ *     NG_ASSERT( result == JSONSuccess );
  * @endcode
  */
 /* @[declare_json_validate] */
@@ -350,7 +350,8 @@ JSONStatus_e
 json_print(
   JSONPair_s *pair, 
   int depth, 
-  const char *pad
+  const char *pad, 
+  int pad_length
 );
 
 int 
@@ -359,7 +360,8 @@ json_to_printer(
   ng_buffer_s *b, 
   JSONPair_s *pair, 
   int depth, 
-  const char *pad
+  const char *pad, 
+  int pad_length
 );
 
 int 
@@ -368,7 +370,8 @@ json_tostr(
   char *buf, 
   ng_size_t length, 
   int depth, 
-  const char *pad
+  const char *pad, 
+  int pad_length
 );
 
 int 

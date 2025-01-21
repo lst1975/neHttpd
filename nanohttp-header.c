@@ -526,7 +526,7 @@ void http_header_parser_init(header_parser_s *p, int type)
       ng_block_init(&p->desc);
       break;
     default:
-      assert(0);
+      NG_ASSERT(0);
       break;
   }
 }

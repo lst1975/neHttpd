@@ -423,7 +423,7 @@ http_input_stream_new(hsocket_s *sock, ng_list_head_s *header,
     hpair_s *cl;
     log_verbose("Stream transfer with 'Content-length'.");
     cl = hpairnode_get_ignore_case(header, __HDR_BUF(HEADER_CONTENT_LENGTH));
-    assert(cl != NULL);
+    NG_ASSERT(cl != NULL);
     result->content_length = ng_atoi(cl->val.cptr, cl->val.len);
     result->received       = 0;
     result->type           = HTTP_TRANSFER_CONTENT_LENGTH;
@@ -571,7 +571,7 @@ http_output_stream_new(hsocket_s *sock, ng_list_head_s *header)
     log_verbose("Stream transfer with 'Content-length'.");
     cl = hpairnode_get_ignore_case(header, 
       __HDR_BUF(HEADER_CONTENT_LENGTH));
-    assert(cl != NULL);
+    NG_ASSERT(cl != NULL);
     result->content_length = ng_atoi(cl->val.cptr, cl->val.len);
     result->type = HTTP_TRANSFER_CONTENT_LENGTH;
   }
@@ -636,7 +636,7 @@ http_output_stream_write(http_output_stream_s *stream,
 }
 
 /**
-  Writes 'strlen()' bytes of 'str' into stream.
+  Writes 'ng_strlen()' bytes of 'str' into stream.
   Returns socket error flags or H_OK.
 */
 herror_t
@@ -661,7 +661,7 @@ __http_snprintf_out(void *arg, const char *string, ng_size_t length)
 }
 
 /**
-  Writes 'strlen()' bytes of 'str' into stream.
+  Writes 'ng_strlen()' bytes of 'str' into stream.
   Returns socket error flags or H_OK.
 */
 herror_t

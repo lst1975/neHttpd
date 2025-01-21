@@ -396,6 +396,16 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #define RTE_MAX_T(a, b, t) \
 	((t)(a) > (t)(b) ? (t)(a) : (t)(b))
 
+#define ng_snprintf   __ng_snprintf
+#define ng_vsnprintf  __ng_vsnprintf
+#define ng_fprintf    __ng_fprintf
+#define ng_vfprintf   __ng_vfprintf
+#define ng_strstr     strstr
+
+#define ng_strlcpy(s1,s2,l) strlcpy(s1,s2,l)
+#define ng_strlen(s)        strlen(s)
+#define ng_strcmp(s1,s2)    strcmp(s1,s2)
+
 #include "nanohttp-align.h"
 #include "nanohttp-endian.h"
 #include "nanohttp-cpu.h"
@@ -406,16 +416,6 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #include "nanohttp-lcore.h"
 #include "nanohttp-vsprintf.h"
 #include "nanohttp-ctype.h"
-
-#define ng_snprintf   __ng_snprintf
-#define ng_vsnprintf  __ng_vsnprintf
-#define ng_fprintf    __ng_fprintf
-#define ng_vfprintf   __ng_vfprintf
-#define ng_strstr     strstr
-
-#define ng_strlcpy(s1,s2,l) strlcpy(s1,s2,l)
-#define ng_strlen(s)        strlen(s)
-#define ng_strcmp(s1,s2)    strcmp(s1,s2)
 
 #if defined(__AVX__) || defined(__AVX2__) || defined(__AVX512F__)
 #include <immintrin.h>  // For AVX2 intrinsics
