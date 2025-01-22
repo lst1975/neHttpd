@@ -1589,7 +1589,9 @@ _httpd_start_thread(conndata_t *conn)
 #define __NHTTP_EPOLL_WAIT_TIMEOUT 1000
 #define __NHTTP_EPOLL_WAIT_LOG 5
 
-static void __httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep, ng_uint64_t rt)
+static void 
+__httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep, 
+  ng_uint64_t rt)
 {
   static rte_atomic64_t last_log = RTE_ATOMIC64_INIT(0);
   ng_uint64_t last_rt = rte_atomic64_read(&last_log);
@@ -1599,12 +1601,14 @@ static void __httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep, ng_uint64_t rt)
   if (ep != INVALID_SOCKET)
   {
     log_debug("Epoll [%lu:%lu]"
-      " wait timeout, running %"PRIu64" seconds fine ...", ep, sock, rt);
+      " wait timeout, running %"PRIu64" seconds fine ...", 
+      ep, sock, rt);
   }
   else
   {
     log_debug("Epoll [%lu]"
-      " wait timeout, running %"PRIu64" seconds fine ...", sock, rt);
+      " wait timeout, running %"PRIu64" seconds fine ...", 
+      sock, rt);
   }
 }
 
@@ -1618,7 +1622,8 @@ __httpd_run(hsocket_s *sock, const char *name)
   
   log_verbose("starting run routine: %s.", name);
 
-  if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
+  err = hsocket_listen(sock, _httpd_max_pending_connections);
+  if (err != H_OK)
   {
     herror_log(err);
     log_error("hsocket_listen failed.");
