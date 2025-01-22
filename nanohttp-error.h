@@ -140,17 +140,17 @@
 /** @defgroup NANOHTTP_THREAD_ERRORS Thread errors
  */
 /**@{*/
-#define THREAD_ERROR			    (1500        )
-#define THREAD_BEGIN_ERROR		(THREAD_ERROR)
+#define THREAD_ERROR			          (1500        )
+#define THREAD_BEGIN_ERROR		      (THREAD_ERROR)
 /**@}*/
 
 /** @defgroup NANOHTTP_FILE_ERRORS File errors
  */
 /**@{*/
-#define FILE_ERROR			      (8000           )
-#define FILE_ERROR_OPEN			  (FILE_ERROR + 10)
-#define FILE_ERROR_READ			  (FILE_ERROR + 20)
-#define FILE_ERROR_WRITE		  (FILE_ERROR + 30)
+#define FILE_ERROR			            (8000           )
+#define FILE_ERROR_OPEN			        (FILE_ERROR + 10)
+#define FILE_ERROR_READ			        (FILE_ERROR + 20)
+#define FILE_ERROR_WRITE		        (FILE_ERROR + 30)
 /**@}*/
 
 /**@}*/
