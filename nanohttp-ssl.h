@@ -298,24 +298,24 @@
  * Commandline argument to enabled SSL in the nanoHTTP server.
  *
  */
-#define NHTTPD_ARG_HTTPS	"-NHTTPS"
+#define NHTTPD_ARG_HTTPS  "-NHTTPS"
 
 /** @defgroup NANOHTTP_SSL_ERRORS SSL Errors
  * @ingroup NANOHTTP_ERRORS
  */
 /**@{*/
 
-#define HSSL_ERROR			1700
-#define HSSL_ERROR_CA_LIST		(HSSL_ERROR + 10)
-#define HSSL_ERROR_CONTEXT		(HSSL_ERROR + 20)
-#define HSSL_ERROR_CERTIFICATE		(HSSL_ERROR + 30)
-#define HSSL_ERROR_PEM			(HSSL_ERROR + 40)
-#define HSSL_ERROR_CLIENT		(HSSL_ERROR + 50)
-#define HSSL_ERROR_SERVER		(HSSL_ERROR + 60)
-#define HSSL_ERROR_CONNECT		(HSSL_ERROR + 70)
+#define HSSL_ERROR               1700
+#define HSSL_ERROR_CA_LIST      (HSSL_ERROR + 10)
+#define HSSL_ERROR_CONTEXT      (HSSL_ERROR + 20)
+#define HSSL_ERROR_CERTIFICATE  (HSSL_ERROR + 30)
+#define HSSL_ERROR_PEM          (HSSL_ERROR + 40)
+#define HSSL_ERROR_CLIENT       (HSSL_ERROR + 50)
+#define HSSL_ERROR_SERVER       (HSSL_ERROR + 60)
+#define HSSL_ERROR_CONNECT      (HSSL_ERROR + 70)
 
-#define HSSL_ERROR_SSLCLOSE		(HSSL_ERROR + 80)
-#define HSSL_ERROR_SSLCTX		(HSSL_ERROR + 90)
+#define HSSL_ERROR_SSLCLOSE     (HSSL_ERROR + 80)
+#define HSSL_ERROR_SSLCTX       (HSSL_ERROR + 90)
 
 /**@}*/
 
