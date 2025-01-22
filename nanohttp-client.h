@@ -267,9 +267,9 @@
 
 struct httpc_conn
 {
-  hsocket_s *sock;
-  ng_list_head_s header;
+  hsocket_s sock;
   ng_url_s url;
+  ng_list_head_s header;
   http_version_e version;
 
   int errcode;

@@ -109,7 +109,6 @@ void
 httpc_destroy(void)
 {
   hsocket_module_destroy();
-
   return;
 }
 
@@ -118,43 +117,36 @@ httpc_conn_s *httpc_new(void)
   static int counter = 10000;
   herror_t status;
   httpc_conn_s *res;
- 
-  if (!(res = (httpc_conn_s *) ng_malloc(sizeof(httpc_conn_s))))
+
+  res = (httpc_conn_s *)ng_malloc(sizeof(*res));
+  if (res == NULL)
   {
     log_error("ng_malloc failed %m.", ng_errno);
     goto clean0;
   }
 
-  if (!(res->sock = (hsocket_s *)ng_malloc(sizeof(hsocket_s))))
+  if (ng_url_init(&res->url) < 0)
   {
     log_error("ng_malloc failed %m.", ng_errno);
     goto clean1;
   }
 
-  if (ng_url_init(&res->url) < 0)
+  status = hsocket_init(&res->sock);
+  if (status != H_OK)
   {
-    log_error("ng_malloc failed %m.", ng_errno);
+    log_warn("hsocket_init failed (%s).", herror_message(status));
     goto clean2;
   }
 
-  if ((status = hsocket_init(res->sock)) != H_OK)
-  {
-    herror_log(status);
-    log_warn("hsocket_init failed.");
-    goto clean3;
-  }
-
   res->version = HTTP_VERSION_1_1;
-  res->out = NULL;
-  res->id = counter++;
+  res->out     = NULL;
+  res->id      = counter++;
   ng_INIT_LIST_HEAD(&res->header);
   
   return res;
 
-clean3:
-  ng_url_free(&res->url);
 clean2:
-  ng_free(res->sock);
+  ng_url_free(&res->url);
 clean1:
   ng_free(res);
 clean0:
@@ -175,11 +167,9 @@ httpc_free(httpc_conn_s * conn)
     conn->out = NULL;
   }
 
-  hsocket_free(conn->sock);
+  hsocket_free(&conn->sock);
   ng_url_free(&conn->url);
 
-  if (conn->sock)
-    ng_free(conn->sock);
   ng_free(conn);
 
   return;
@@ -191,7 +181,7 @@ httpc_close_free(httpc_conn_s * conn)
   if (conn == NULL)
     return;
 
-  hsocket_close(conn->sock);
+  hsocket_close(&conn->sock);
   httpc_free(conn);
 
   return;
@@ -279,14 +269,14 @@ httpc_send_header(httpc_conn_s *conn)
     if (walker->key.len && walker->val.len)
     {
       herror_t status;
-      status = hsocket_send_string(conn->sock, "%pS: %pS\r\n", 
+      status = hsocket_send_string(&conn->sock, "%pS: %pS\r\n", 
         &walker->key, &walker->val);
       if (status != H_OK)
         return status;
     }
   }
 
-  return hsocket_send(conn->sock, (const unsigned char *)"\r\n", 2);
+  return hsocket_send(&conn->sock, (const unsigned char *)"\r\n", 2);
 }
 
 /*--------------------------------------------------
@@ -394,11 +384,10 @@ _httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn,
   log_verbose("ssl = %i (%i %i).", ssl, conn->url.protocol, NG_PROTOCOL_HTTPS);
 
   /* Open connection */
-  status = hsocket_open(conn->sock, conn->url.host.cptr, conn->url.port, ssl);
+  status = hsocket_open(&conn->sock, conn->url.host.cptr, conn->url.port, ssl);
   if (status != H_OK)
   {
-    herror_log(status);
-    log_error("hsocket_open failed.");
+    log_error("hsocket_open failed (%s).", herror_message(status));
     goto clean1;
   }
 
@@ -421,11 +410,10 @@ _httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn,
   }
 
   log_verbose("Sending request...");
-  status = hsocket_send(conn->sock, (unsigned char *)buffer, len);
+  status = hsocket_send(&conn->sock, (unsigned char *)buffer, len);
   if (status != H_OK)
   {
-    herror_log(status);
-    log_error("Cannot send request.");
+    log_error("Cannot send request (%s).", herror_message(status));
     goto clean2;
   }
 
@@ -433,8 +421,7 @@ _httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn,
   status = httpc_send_header(conn);
   if (status != H_OK)
   {
-    herror_log(status);
-    log_error("Cannot send header.");
+    log_error("Cannot send header (%s).", herror_message(status));
     goto clean2;
   }
 
@@ -444,7 +431,7 @@ _httpc_talk_to_server(hreq_method_e method, httpc_conn_s *conn,
 #undef ___BUFSZ
   
 clean2:
-  hsocket_close(conn->sock);
+  hsocket_close(&conn->sock);
 clean1:
   ng_free(buffer);
 clean0:
@@ -452,21 +439,25 @@ clean0:
 }
 
 herror_t
-httpc_get(httpc_conn_s *conn, hresponse_t **out, const ng_block_s *urlstr)
+httpc_get(httpc_conn_s *conn, hresponse_t **out, 
+  const ng_block_s *urlstr)
 {
   herror_t status;
 
-  if ((status = _httpc_talk_to_server(HTTP_REQUEST_METHOD_GET, conn, urlstr)) != H_OK)
+  status = _httpc_talk_to_server(HTTP_REQUEST_METHOD_GET, 
+    conn, urlstr);
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("_httpc_talk_to_server failed.");
+    log_error("_httpc_talk_to_server failed (%s).", 
+      herror_message(status));
     return status;
   }
 
-  if ((status = hresponse_new_from_socket(conn->sock, out)) != H_OK)
+  status = hresponse_new_from_socket(&conn->sock, out);
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("hresponse_new_from_socket failed.");
+    log_error("hresponse_new_from_socket failed (%s).", 
+      herror_message(status));
     return status;
   }
 
@@ -478,14 +469,16 @@ httpc_post_begin(httpc_conn_s *conn, const ng_block_s *url)
 {
   herror_t status;
 
-  if ((status = _httpc_talk_to_server(HTTP_REQUEST_METHOD_POST, conn, url)) != H_OK)
+  status = _httpc_talk_to_server(HTTP_REQUEST_METHOD_POST, 
+    conn, url);
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("_httpc_talk_to_server failed.");
+    log_error("_httpc_talk_to_server failed (%s).", 
+      herror_message(status));
     return status;
   }
 
-  conn->out = http_output_stream_new(conn->sock, &conn->header);
+  conn->out = http_output_stream_new(&conn->sock, &conn->header);
   if (conn->out == NULL)
   {
     log_error("http_output_stream_new failed.");
@@ -507,11 +500,11 @@ httpc_post_end(httpc_conn_s *conn, hresponse_t **out)
 {
   herror_t status;
 
-  if ((status = http_output_stream_flush(conn->out)) != H_OK)
-    return status;
+  status = http_output_stream_flush(conn->out);
+  if (status != H_OK) return status;
 
-  if ((status = hresponse_new_from_socket(conn->sock, out)) != H_OK)
-    return status;
+  status = hresponse_new_from_socket(&conn->sock, out);
+  if (status != H_OK) return status;
 
   return H_OK;
 }

@@ -1123,14 +1123,16 @@ httpd_send_not_found(httpd_conn_s *conn, const char *msg)
 }
 
 herror_t
-httpd_send_internal_error(httpd_conn_s *conn, const char *msg)
+httpd_send_internal_error(httpd_conn_s *conn, 
+  const char *msg)
 {
   return _httpd_send_html_message(conn, 
     HTTP_RESPONSE_CODE_500_Internal_Server_Error, msg);
 }
 
 herror_t
-httpd_send_not_implemented(httpd_conn_s *conn, const char *msg)
+httpd_send_not_implemented(httpd_conn_s *conn, 
+  const char *msg)
 {
   return _httpd_send_html_message(conn, 
     HTTP_RESPONSE_CODE_501_Not_Implemented, msg);
@@ -1144,10 +1146,10 @@ _httpd_request_print(hrequest_s *req)
 
   log_verbose("++++++ Request +++++++++");
   log_verbose(" Method : %s",
-               (req->method == HTTP_REQUEST_METHOD_POST) ? "POST" : "GET");
+     (req->method == HTTP_REQUEST_METHOD_POST) ? "POST" : "GET");
   log_verbose(" Path   : %pS", &req->path);
   log_verbose(" Spec   : %s",
-               (req->version == HTTP_VERSION_1_0) ? "HTTP/1.0" : "HTTP/1.1");
+     (req->version == HTTP_VERSION_1_0) ? "HTTP/1.0" : "HTTP/1.1");
   log_verbose(" ++++++ Parsed Query string :");
 
   ng_list_for_each_entry(pair,hpair_s,&req->query,link)
@@ -1173,13 +1175,14 @@ httpd_new(hsocket_s *sock)
 {
   httpd_conn_s *conn;
 
-  if (!(conn = (httpd_conn_s *) ng_malloc(sizeof(httpd_conn_s))))
+  conn = (httpd_conn_s *) ng_malloc(sizeof(httpd_conn_s));
+  if (conn == NULL)
   {
     log_error("ng_malloc failed %m.", ng_errno);
     return NULL;
   }
   conn->sock = sock;
-  conn->out = NULL;
+  conn->out  = NULL;
   conn->content_type[0] = '\0';
   ng_INIT_LIST_HEAD(&conn->header);
 
