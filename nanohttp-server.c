@@ -729,10 +729,9 @@ httpd_init(int argc, char **argv)
 }
 
 static herror_t
-__httpd_register_secure(const char *context, 
-  int context_len, httpd_service_f func, httpd_auth_f auth, 
-  const char *service_name, int service_name_len, 
-  ng_bool_t is_default)
+__httpd_register_secure(const ng_block_s *context, 
+  httpd_service_f func, httpd_auth_f auth, 
+  const ng_block_s *service_name, ng_bool_t is_default)
 {
   hservice_t *service;
 
@@ -752,11 +751,11 @@ __httpd_register_secure(const char *context,
   stat_pthread_rwlock_init(&(service->statistics.lock), NULL);
 #endif
 
-  ng_block_set(&service->name, service_name, service_name_len);
-  ng_block_set(&service->context, context, context_len);
-  service->auth = auth;
-  service->func = func;
-  service->status = NHTTPD_SERVICE_UP;
+  service->name    = *service_name;
+  service->context = *context;
+  service->auth    = auth;
+  service->func    = func;
+  service->status  = NHTTPD_SERVICE_UP;
   
   log_verbose("register service (%p) for \"%pS\".", 
     service, &service->context);
@@ -769,37 +768,37 @@ __httpd_register_secure(const char *context,
 }
 
 herror_t
-httpd_register_secure(const char *context, int context_len,
-  httpd_service_f func, httpd_auth_f auth, const char *service_name,
-  int service_name_len)
+httpd_register_secure(const ng_block_s *context,
+  httpd_service_f func, httpd_auth_f auth, 
+  const ng_block_s *service_name)
 {
-  return __httpd_register_secure(context, context_len, func, 
-    auth, service_name, service_name_len, ng_FALSE);
+  return __httpd_register_secure(context, func, 
+    auth, service_name, ng_FALSE);
 }
 
 herror_t
-httpd_register(const char *context, int context_len, 
-  httpd_service_f service, const char *service_name, 
-  int service_name_len)
+httpd_register(const ng_block_s *context,
+  httpd_service_f service, const ng_block_s *service_name)
 {
-  return httpd_register_secure(context, context_len, service, 
-    NULL, service_name, service_name_len);
+  return httpd_register_secure(context, service, 
+    NULL, service_name);
+}
+
+static const ng_block_s __NH_SRV_CTX_DEFAULT = DECL_CONST_STR("DEFAULT");
+
+herror_t
+httpd_register_default_secure(const ng_block_s *context, 
+  httpd_service_f service, httpd_auth_f auth)
+{
+  return __httpd_register_secure(context, service, 
+    auth, &__NH_SRV_CTX_DEFAULT, ng_TRUE);
 }
 
 herror_t
-httpd_register_default_secure(const char *context, 
-  int context_len, httpd_service_f service, httpd_auth_f auth)
+httpd_register_default(const ng_block_s *context, 
+  httpd_service_f service)
 {
-  return __httpd_register_secure(context, context_len, service, 
-    auth, "DEFAULT", 7, ng_TRUE);
-}
-
-herror_t
-httpd_register_default(const char *context, 
-  int context_len, httpd_service_f service)
-{
-  return httpd_register_default_secure(context, 
-    context_len, service, NULL);
+  return httpd_register_default_secure(context, service, NULL);
 }
 
 short

@@ -375,34 +375,34 @@ extern herror_t httpd_run(void);
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_register(const char *context, 
-  int context_len, httpd_service_f service, const char *service_name, 
-  int service_name_len);
+extern herror_t httpd_register(const ng_block_s *context, 
+  httpd_service_f service, const ng_block_s *service_name);
 
 /** This function registers a service routing which is secured by
  * a password (HTTP basic authentication).
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_register_secure(const char *context, 
-  int context_len, httpd_service_f service, httpd_auth_f auth, 
-  const char *service_name, int service_name_len);
+extern herror_t httpd_register_secure(const ng_block_s *context, 
+  httpd_service_f service, httpd_auth_f auth, 
+  const ng_block_s *service_name);
 
 /** This function registers a service routing which is executed if
  * no matching service is found.
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_register_default(const char *context, 
-  int context_len, httpd_service_f service);
+extern herror_t httpd_register_default(const ng_block_s *context, 
+  httpd_service_f service);
 
 /** This function registers a serivce routing which is executed if
  * no matching service is found, it is protected by a password.
  *
  * @return H_OK on success.
  */
-extern herror_t httpd_register_default_secure(const char *context, 
-  int context_len, httpd_service_f service, httpd_auth_f auth);
+extern herror_t httpd_register_default_secure(
+  const ng_block_s *context, httpd_service_f service, 
+  httpd_auth_f auth);
 
 /** This function returns the port the service is listening on.
  *

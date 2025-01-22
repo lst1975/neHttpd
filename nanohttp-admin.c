@@ -442,17 +442,25 @@ _httpd_admin_entry(httpd_conn_s *conn, hrequest_s *req)
   }
 }
 
+static const ng_block_s __NH_SRV_PATH_ADMIN = DECL_CONST_STR(NHTTPD_ADMIN_CONTEXT);
+static const ng_block_s __NH_SRV_CTX_ADMIN  = DECL_CONST_STR("ADMIN");
+
 herror_t
 httpd_admin_init_args(int argc, char **argv)
 {
   int i;
-
   for (i=0; i<argc; i++)
   {
     if (!ng_strcmp(argv[i], NHTTPD_ARG_ENABLE_ADMIN))
     {
-      httpd_register(NHTTPD_ADMIN_CONTEXT, 
-        sizeof(NHTTPD_ADMIN_CONTEXT)-1, _httpd_admin_entry, "ADMIN", 5);
+      herror_t err;
+      err = httpd_register(&__NH_SRV_PATH_ADMIN, 
+        _httpd_admin_entry, &__NH_SRV_CTX_ADMIN);
+      if (err != H_OK)
+      {
+        log_error("httpd_register failed.");
+        return err;
+      }
       break;
     }
   }

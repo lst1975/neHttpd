@@ -1103,6 +1103,24 @@ void main_print_license(int daemonize)
     NG_VER_BUILD, ng_os_info.ng_os_version);
 }
 
+static const ng_block_s __NH_SRV_PATH_ROOT = DECL_CONST_STR("/");
+static const ng_block_s __NH_SRV_CTX_ROOT  = DECL_CONST_STR("ROOT");
+static const ng_block_s __NH_SRV_PATH_CONF = DECL_CONST_STR(_nanoConfig_HTTPD_FILE_SERVICE);
+static const ng_block_s __NH_SRV_CTX_FILE  = DECL_CONST_STR("FILE");
+static const ng_block_s __NH_SRV_PATH_SECU = DECL_CONST_STR("/secure");
+static const ng_block_s __NH_SRV_CTX_SECU  = DECL_CONST_STR("SECURE");
+static const ng_block_s __NH_SRV_PATH_HEAD = DECL_CONST_STR("/header");
+static const ng_block_s __NH_SRV_CTX_HEAD  = DECL_CONST_STR("HEAD");
+static const ng_block_s __NH_SRV_PATH_MIME = DECL_CONST_STR("/mime");
+static const ng_block_s __NH_SRV_CTX_MIME  = DECL_CONST_STR("MIME");
+static const ng_block_s __NH_SRV_PATH_UPLOAD = DECL_CONST_STR("/post/wia.bin");
+static const ng_block_s __NH_SRV_CTX_POST    = DECL_CONST_STR("POST");
+static const ng_block_s __NH_SRV_PATH_FAVOR  = DECL_CONST_STR("/favicon.ico");
+static const ng_block_s __NH_SRV_CTX_FAVOR   = DECL_CONST_STR("FAVICON");
+static const ng_block_s __NH_SRV_PATH_DATA   = DECL_CONST_STR(_nanoConfig_HTTPD_DATA_SERVICE);
+static const ng_block_s __NH_SRV_CTX_DATA    = DECL_CONST_STR("DATA");
+static const ng_block_s __NH_SRV_PATH_ERROR  = DECL_CONST_STR("/error");
+
 int
 main(int argc, char **argv)
 {
@@ -1176,67 +1194,80 @@ main(int argc, char **argv)
   test_decode_url();
   json_test();
 #endif
-    
-  if ((status = httpd_register_secure("/", 1, root_service, 
-    simple_authenticator, "ROOT", 4)) != H_OK)
+
+  status = httpd_register_secure(&__NH_SRV_PATH_ROOT, 
+    root_service, simple_authenticator, 
+    &__NH_SRV_CTX_ROOT);
+  if (status != H_OK)
   {
     log_stderr("Cannot register service.");
     goto error2;
   }
 
-  if ((status = httpd_register(_nanoConfig_HTTPD_FILE_SERVICE, 
-    sizeof(_nanoConfig_HTTPD_FILE_SERVICE)-1,
-    file_service, "FILE", 4)) != H_OK)
+  status = httpd_register(&__NH_SRV_PATH_CONF, 
+    file_service, &__NH_SRV_CTX_FILE);
+  if (status != H_OK)
   {
     log_stderr("Cannot register service.");
     goto error2;
   }
 
-  if ((status = httpd_register_secure("/secure", 7, secure_service, 
-    simple_authenticator, "SECURE", 6)) != H_OK)
+  status = httpd_register_secure(&__NH_SRV_PATH_SECU, 
+    secure_service, simple_authenticator, 
+    &__NH_SRV_CTX_SECU);
+  if (status != H_OK)
   {
     log_stderr("Cannot register secure service.");
     goto error2;
   }
 
-  if ((status = httpd_register_secure("/headers", 8, headers_service, 
-    simple_authenticator, "HEAD", 4)) != H_OK)
+  status = httpd_register_secure(&__NH_SRV_PATH_HEAD, 
+    headers_service, simple_authenticator, 
+    &__NH_SRV_CTX_HEAD);
+  if (status != H_OK)
   {
     log_stderr("Cannot register headers service.");
     goto error2;
   }
 
-  if ((status = httpd_register_secure("/mime", 5, mime_service, 
-    simple_authenticator, "MIME", 4)) != H_OK)
+  status = httpd_register_secure(&__NH_SRV_PATH_MIME, 
+    mime_service, simple_authenticator, 
+    &__NH_SRV_CTX_MIME);
+  if (status != H_OK)
   {
     log_stderr("Cannot register MIME service.");
     goto error2;
   }
 
-  if ((status = httpd_register_secure("/post/wia.bin", 13, post_service, 
-    simple_authenticator, "POST", 4)) != H_OK)
+  status = httpd_register_secure(&__NH_SRV_PATH_UPLOAD, 
+    post_service, simple_authenticator, 
+    &__NH_SRV_CTX_POST);
+  if (status != H_OK)
   {
     log_stderr("Cannot register POST service.");
     goto error2;
   }
 
-  if ((status = httpd_register("/favicon.ico", 12, root_service, 
-    "FAVICON", 7)) != H_OK)
+  status = httpd_register(&__NH_SRV_PATH_FAVOR, 
+    root_service, &__NH_SRV_CTX_FAVOR);
+  if (status != H_OK)
   {
     log_stderr("Cannot register default service.");
     goto error2;
   }
 
-  if ((status = httpd_register_secure(_nanoConfig_HTTPD_DATA_SERVICE, 
-    sizeof(_nanoConfig_HTTPD_DATA_SERVICE)-1,
-    data_service, simple_authenticator, "DATA", 4)) != H_OK)
+  status = httpd_register_secure(&__NH_SRV_PATH_DATA, 
+    data_service, simple_authenticator, 
+    &__NH_SRV_CTX_DATA);
+  if (status != H_OK)
   {
     log_stderr("Cannot register DATA service.");
     goto error2;
   }
 
-  if ((status = httpd_register_default_secure("/error", 6, default_service, 
-    simple_authenticator)) != H_OK)
+  status = httpd_register_default_secure(&__NH_SRV_PATH_ERROR, 
+    default_service, simple_authenticator);
+  if (status != H_OK)
   {
     log_stderr("Cannot register default service.");
     goto error2;
@@ -1246,11 +1277,14 @@ main(int argc, char **argv)
   ng_os_dump(NULL, NULL);
   main_print_license(daemonize);
 
-  log_print("neHTTPd is listening on PORT %d\n\n", httpd_get_port());
+  log_print("neHTTPd is listening on PORT %d\n\n", 
+    httpd_get_port());
 
-  if ((status = httpd_run()) != H_OK)
+  status = httpd_run();
+  if (status != H_OK)
   {
-    log_stderr("Cannot run httpd (%s)\n", herror_message(status));
+    log_stderr("Cannot run httpd (%s)\n", 
+      herror_message(status));
     goto error2;
   }
 
