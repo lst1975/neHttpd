@@ -235,7 +235,8 @@ _hssl_get_error(SSL * ssl, int ret)
 }
 
 static int
-_hssl_password_callback(char *buf, int num, int rwflag, void *userdata)
+_hssl_password_callback(char *buf, int num, 
+  int rwflag, void *userdata)
 {
   int len;
 
@@ -386,7 +387,8 @@ _hssl_library_init(void)
 static herror_t
 _hssl_server_context_init(void)
 {
-  log_verbose("enabled=%i, certificate=%pS.", _hssl_enabled, &_hssl_certificate);
+  log_verbose("enabled=%i, certificate=%pS.", 
+    _hssl_enabled, &_hssl_certificate);
 
   if (!_hssl_enabled || !_hssl_certificate.len)
     return H_OK;
@@ -394,37 +396,47 @@ _hssl_server_context_init(void)
   if (!(_hssl_context = SSL_CTX_new(SSLv23_method())))
   {
     log_error("Cannot create SSL context.");
-    return herror_new("_hssl_server_context_init", HSSL_ERROR_CONTEXT,
-                      "Unable to create SSL context.");
+    return herror_new("_hssl_server_context_init", 
+      HSSL_ERROR_CONTEXT, "Unable to create SSL context.");
   }
 
-  if (!(SSL_CTX_use_certificate_file(_hssl_context, _hssl_certificate.cptr, SSL_FILETYPE_PEM)))
+  if (!(SSL_CTX_use_certificate_file(_hssl_context, 
+    _hssl_certificate.cptr, SSL_FILETYPE_PEM)))
   {
-    log_error("Cannot read certificate file: \"%pS\".", &_hssl_certificate);
+    log_error("Cannot read certificate file: \"%pS\".", 
+        &_hssl_certificate);
     SSL_CTX_free(_hssl_context);
-    return herror_new("_hssl_server_context_init", HSSL_ERROR_CERTIFICATE,
-                      "Unable to use SSL certificate \"%pS\".", &_hssl_certificate);
+    return herror_new("_hssl_server_context_init", 
+        HSSL_ERROR_CERTIFICATE,
+        "Unable to use SSL certificate \"%pS\".", 
+        &_hssl_certificate);
   }
 
-  SSL_CTX_set_default_passwd_cb(_hssl_context, _hssl_password_callback);
+  SSL_CTX_set_default_passwd_cb(_hssl_context, 
+    _hssl_password_callback);
 
-  if (!(SSL_CTX_use_PrivateKey_file(_hssl_context, _hssl_certificate.cptr, SSL_FILETYPE_PEM)))
+  if (!(SSL_CTX_use_PrivateKey_file(_hssl_context, 
+    _hssl_certificate.cptr, SSL_FILETYPE_PEM)))
   {
-    log_error("Cannot read key file: \"%pS\".", _hssl_certificate.cptr);
+    log_error("Cannot read key file: \"%pS\".", 
+      _hssl_certificate.cptr);
     SSL_CTX_free(_hssl_context);
-    return herror_new("_hssl_server_context_init", HSSL_ERROR_PEM,
-                      "Unable to use private key.");
+    return herror_new("_hssl_server_context_init", 
+        HSSL_ERROR_PEM,
+        "Unable to use private key.");
   }
 
   if (_hssl_ca_list.len)
   {
-    if (!(SSL_CTX_load_verify_locations(_hssl_context, _hssl_ca_list.cptr, NULL)))
+    if (!(SSL_CTX_load_verify_locations(_hssl_context, 
+      _hssl_ca_list.cptr, NULL)))
     {
       SSL_CTX_free(_hssl_context);
       log_error("Cannot read CA list: \"%pS\".", &_hssl_ca_list);
-      return herror_new("_hssl_server_context_init", HSSL_ERROR_CA_LIST,
-                        "Unable to read certification authorities \"%pS\".", 
-                        &_hssl_ca_list);
+      return herror_new("_hssl_server_context_init", 
+        HSSL_ERROR_CA_LIST,
+        "Unable to read certification authorities \"%pS\".", 
+        &_hssl_ca_list);
     }
 
     SSL_CTX_set_client_CA_list(_hssl_context, 
@@ -432,8 +444,9 @@ _hssl_server_context_init(void)
     log_verbose("Certification authority contacted.");
   }
 
-  SSL_CTX_set_verify(_hssl_context, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE,
-                     _hssl_cert_verify_callback);
+  SSL_CTX_set_verify(_hssl_context, 
+    SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE,
+    _hssl_cert_verify_callback);
   log_verbose("Certificate verification callback registered.");
 
   SSL_CTX_set_mode(_hssl_context, SSL_MODE_AUTO_RETRY);
@@ -510,13 +523,15 @@ hssl_client_ssl(hsocket_s *sock)
   if (!(ctx = SSL_CTX_new(SSLv23_method())))
   {
     log_error("SSL_CTX_new failed (ctx == %p).", ctx);
-    return herror_new("hssl_client_ssl", HSSL_ERROR_CONTEXT, "Cannot create SSL client context.");
+    return herror_new("hssl_client_ssl", HSSL_ERROR_CONTEXT, 
+      "Cannot create SSL client context.");
   }
 
   if (!(ssl = SSL_new(ctx)))
   {
     log_error("Cannot create new SSL object.");
-    return herror_new("hssl_client_ssl", HSSL_ERROR_CLIENT, "SSL_new failed.");
+    return herror_new("hssl_client_ssl", HSSL_ERROR_CLIENT, 
+      "SSL_new failed.");
   }
 
   SSL_set_fd(ssl, sock->sock);
