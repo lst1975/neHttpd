@@ -114,7 +114,7 @@ static int _hsocket_timeout = 10000;
 static int _hsocket_timeout = 10;
 #endif
 
-extern int nanohttpd_is_running(void);
+extern ng_bool_t nanohttpd_is_running(void);
 
 #ifdef WIN32
 int _hsocket_should_again(int err)

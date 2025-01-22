@@ -135,33 +135,35 @@ static void
 _httpd_admin_list_services(httpd_conn_s *conn)
 {
   char buffer[1024];
+  ng_list_head_s *head;
   hservice_t *node;
 
   _httpd_admin_send_title(conn, "Available services");
 
   http_output_stream_write_string(conn->out, "<ul>");
-  for (node = httpd_get_services(); node; node = node->next)
+  head = httpd_get_services();
+  ng_list_for_each_entry(node,hservice_t,head,link)
   {
     switch (node->status)
     {
       case NHTTPD_SERVICE_DOWN:
         ng_snprintf(buffer, sizeof(buffer),
           "<li>"
-            "<a href=\"%s\">%s</a> "
-            "<a href=\"?" NHTTPD_ADMIN_QUERY_ACTIVATE_SERVICE "=%s\">[Activate]</a> "
-            "<a href=\"?" NHTTPD_ADMIN_QUERY_STATISTICS "=%s\">[Statistics]</a>"
+            "<a href=\"%pS\">%pS</a> "
+            "<a href=\"?" NHTTPD_ADMIN_QUERY_ACTIVATE_SERVICE "=%pS\">[Activate]</a> "
+            "<a href=\"?" NHTTPD_ADMIN_QUERY_STATISTICS "=%pS\">[Statistics]</a>"
           "</li>",
-          node->context, node->context, node->context, node->context);
+          &node->context, &node->context, &node->context, &node->context);
         break;
       case NHTTPD_SERVICE_UP:
       default:
         ng_snprintf(buffer, sizeof(buffer),
           "<li>"
-            "<a href=\"%s\">%s</a> "
-            "<a href=\"?" NHTTPD_ADMIN_QUERY_PASSIVATE_SERVICE "=%s\">[Passivate]</a> "
-            "<a href=\"?" NHTTPD_ADMIN_QUERY_STATISTICS "=%s\">[Statistics]</a> "
+            "<a href=\"%pS\">%pS</a> "
+            "<a href=\"?" NHTTPD_ADMIN_QUERY_PASSIVATE_SERVICE "=%pS\">[Passivate]</a> "
+            "<a href=\"?" NHTTPD_ADMIN_QUERY_STATISTICS "=%pS\">[Statistics]</a> "
           "</li>",
-          node->context, node->context, node->context, node->context);
+          &node->context, &node->context, &node->context, &node->context);
         break;
     }
     http_output_stream_write_string(conn->out, buffer);

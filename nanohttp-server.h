@@ -336,17 +336,15 @@ typedef struct service_statistics service_statistics_s;
  */
 typedef struct tag_hservice
 {
-  const char *name;                      /**< Path where service is connected */
-  char *context;                         /**< Path where service is connected */
-  int status;                            /**< Current status of this service */
-  httpd_service_f func;                    /**< Service function */
-  httpd_auth_f auth;                       /**< Authentication function */
-  struct tag_hservice *next;             /**< Next service in service list */
+  ng_block_s name;                  /**< Path where service is connected */
+  ng_block_s context;               /**< Path where service is connected */
+  int status;                       /**< Current status of this service */
+  httpd_service_f func;             /**< Service function */
+  httpd_auth_f auth;                /**< Authentication function */
+  ng_list_head_s link;              /**< Next service in service list */
 #ifdef __NHTTP_INTERNAL
-  service_statistics_s statistics; /**< Service statistics */
+  service_statistics_s statistics;  /**< Service statistics */
 #endif
-  int name_len;
-  int context_len;
 }
 hservice_t;
 
@@ -438,7 +436,7 @@ void httpd_destroy_mutex(void *mutex);
 int httpd_enter_mutex(void *mutex);
 void httpd_leave_mutex(void *mutex);
 
-extern hservice_t *httpd_get_services(void);
+extern ng_list_head_s *httpd_get_services(void);
 extern hservice_t *httpd_find_service(const char *name, int context_len);
 
 extern int httpd_enable_service(hservice_t *service);

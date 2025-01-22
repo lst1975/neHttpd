@@ -171,19 +171,16 @@ conndata_t;
  * nanohttpd internally globals
  *
  */
-static volatile int _httpd_run = 1;
-
-static hsocket_s _httpd_socket4 = {.sock = HSOCKET_FREE, .ssl = NULL};
-static hsocket_s _httpd_socket6 = {.sock = HSOCKET_FREE, .ssl = NULL};
-static int _httpd_port = _nanoConfig_HTTPD_PORT;
-static int _httpd_max_connections = _nanoConfig_HTTPD_MAX_CONNECTIONS;
-static int _httpd_max_pending_connections = _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS;
+static volatile int _httpd_run             = ng_TRUE;
+static hsocket_s _httpd_socket4            = {.sock = HSOCKET_FREE, .ssl = NULL};
+static hsocket_s _httpd_socket6            = {.sock = HSOCKET_FREE, .ssl = NULL};
+static int _httpd_port                     = _nanoConfig_HTTPD_PORT;
+static int _httpd_max_connections          = _nanoConfig_HTTPD_MAX_CONNECTIONS;
+static int _httpd_max_pending_connections  = _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS;
 
 static hservice_t *_httpd_services_default = NULL;
-static hservice_t *_httpd_services_head = NULL;
-static hservice_t *_httpd_services_tail = NULL;
-
-static conndata_t *_httpd_connection = NULL;
+static ng_list_head_s _httpd_services_head = NG_LIST_HEAD_INIT(_httpd_services_head);
+static conndata_t *_httpd_connection       = NULL;
 
 #define __HTTP_USE_CONN_RING 1
 
@@ -193,14 +190,14 @@ static void _httpd_release_finished_conn(conndata_t *conn);
 static ng_ring_s *_httpd_connection_ring = NULL;
 #endif
 
-int nanohttpd_is_running(void)
+ng_bool_t nanohttpd_is_running(void)
 {
   return _httpd_run;
 }
 void nanohttpd_stop_running(void)
 {
   log_debug("nanohttpd_stop_running.");
-  _httpd_run = 0;
+  _httpd_run = ng_FALSE;
 }
 
 #ifdef WIN32
@@ -717,14 +714,15 @@ httpd_init(int argc, char **argv)
   return H_OK;
 }
 
-herror_t
-httpd_register_secure(const char *context, int context_len,
+static herror_t
+__httpd_register_secure(const char *context, int context_len,
   httpd_service_f func, httpd_auth_f auth, const char *service_name,
-  int service_name_len)
+  int service_name_len, ng_bool_t is_default)
 {
   hservice_t *service;
 
-  if (!(service = (hservice_t *)ng_malloc(sizeof(hservice_t)+context_len+1)))
+  service = (hservice_t *)ng_malloc(sizeof(hservice_t));
+  if (service == NULL)
   {
     log_error("ng_malloc failed %m.", ng_errno);
     return herror_new("httpd_register_secure", 0, 
@@ -739,30 +737,29 @@ httpd_register_secure(const char *context, int context_len,
   stat_pthread_rwlock_init(&(service->statistics.lock), NULL);
 #endif
 
-  service->name = service_name;
-  service->name_len = service_name_len;
-  service->next = NULL;
+  ng_block_set(&service->name, service_name, service_name_len);
+  ng_block_set(&service->context, context, context_len);
   service->auth = auth;
   service->func = func;
   service->status = NHTTPD_SERVICE_UP;
   
-  service->context = (char *)(service+1);
-  ng_memcpy(service->context, context, context_len+1);
-  service->context_len = context_len;
+  log_verbose("register service (%p) for \"%pS\".", 
+    service, &service->context);
+  ng_list_add_tail(&service->link, &_httpd_services_head);
 
-  log_verbose("register service (%p) for \"%.*s\".", 
-    service, context_len, context);
-  if (_httpd_services_head == NULL)
-  {
-    _httpd_services_head = _httpd_services_tail = service;
-  }
-  else
-  {
-    _httpd_services_tail->next = service;
-    _httpd_services_tail = service;
-  }
-
+  if (is_default)
+    _httpd_services_default = service;
+    
   return H_OK;
+}
+
+herror_t
+httpd_register_secure(const char *context, int context_len,
+  httpd_service_f func, httpd_auth_f auth, const char *service_name,
+  int service_name_len)
+{
+  return __httpd_register_secure(context, context_len, func, 
+    auth, service_name, service_name_len, ng_FALSE);
 }
 
 herror_t
@@ -777,14 +774,8 @@ herror_t
 httpd_register_default_secure(const char *context, int context_len, 
   httpd_service_f service, httpd_auth_f auth)
 {
-  herror_t ret;
-
-  ret = httpd_register_secure(context, context_len, service, auth, "DEFAULT", 7);
-
-  /* XXX: this is broken, but working */
-  _httpd_services_default = _httpd_services_tail;
-
-  return ret;
+  return __httpd_register_secure(context, context_len, service, 
+    auth, "DEFAULT", 7, ng_TRUE);
 }
 
 herror_t
@@ -819,10 +810,10 @@ httpd_get_protocol(void)
   return hssl_enabled() ? "https" : "http";
 }
 
-hservice_t *
+ng_list_head_s *
 httpd_get_services(void)
 {
-  return _httpd_services_head;
+  return &_httpd_services_head;
 }
 
 static void
@@ -831,8 +822,7 @@ hservice_free(hservice_t *service)
   if (!service)
     return;
 
-  log_verbose("unregister service \"%.*s\".", 
-    service->context_len, service->context);
+  log_verbose("unregister service \"%pS\".", &service->context);
   ng_free(service);
 
   return;
@@ -841,14 +831,14 @@ hservice_free(hservice_t *service)
 static void
 _httpd_unregister_services(void)
 {
-  hservice_t *tmp, *cur;
-  
-  for (cur = _httpd_services_head; cur != NULL;)
+  while (!ng_list_empty(&_httpd_services_head))
   {
-    log_info("service %p:%p.", cur, cur->next);
-    tmp = cur->next;
-    hservice_free(cur);
-    cur = tmp;
+    hservice_t *tmp;
+    tmp = ng_list_first_entry(&_httpd_services_head, hservice_t, link);
+    NG_ASSERT(tmp != NULL);
+    log_info("service %p:%p.", tmp, ng_list_next_entry(tmp,hservice_t,link));
+    ng_list_del(&tmp->link);
+    hservice_free(tmp);
   }
   log_info("[OK]: _httpd_unregister_services.");
 }
@@ -877,18 +867,18 @@ hservice_t *
 httpd_find_service(const char *context, int context_len)
 {
   hservice_t *cur;
-
-  for (cur = _httpd_services_head; cur; cur = cur->next)
+  
+  ng_list_for_each_entry(cur, hservice_t, &_httpd_services_head, link)
   {
-    if (cur->name_len == 4 
-      &&  (*(ng_uint32_t*)cur->name == *(const ng_uint32_t*)"FILE"
-        || *(ng_uint32_t*)cur->name == *(const ng_uint32_t*)"DATA"))
+    if (cur->name.len == 4 
+      &&  (*(ng_uint32_t*)cur->name.cptr == *(const ng_uint32_t*)"FILE"
+        || *(ng_uint32_t*)cur->name.cptr == *(const ng_uint32_t*)"DATA"))
     {
-      if (!ng_memcmp(cur->context, context, cur->context_len))
+      if (!ng_memcmp(cur->context.cptr, context, cur->context.len))
         return cur;
     }
-    else if (cur->context_len == context_len
-        && !ng_memcmp(cur->context, context, context_len))
+    else if (cur->context.len == context_len
+        && !ng_memcmp(cur->context.cptr, context, context_len))
       return cur;
   }
 
@@ -911,7 +901,7 @@ httpd_send_header(httpd_conn_s *res, int code)
   {
     log_fatal("Failed to malloc tempary buffer");
     status = herror_new("httpd_send_header", GENERAL_ERROR,
-                      "Failed to malloc tempary buffer!");
+                  "Failed to malloc tempary buffer!");
     goto clean0;
   }
 
@@ -927,8 +917,8 @@ httpd_send_header(httpd_conn_s *res, int code)
   {
     log_warn("Tempary buffer size is too small: %d", __BUF_SZ);
     status = herror_new("httpd_send_header", GENERAL_ERROR,
-                      "Create HTTP header Date failed: buffer size %d", 
-                      BUF_REMAIN(&b));
+                  "Create HTTP header Date failed: buffer size %d", 
+                  BUF_REMAIN(&b));
     goto clean1;
   }
   BUF_GO(&b, n);
@@ -965,8 +955,8 @@ httpd_send_header(httpd_conn_s *res, int code)
     {
       log_warn("Tempary buffer size is too small: %d", __BUF_SZ);
       status = herror_new("httpd_send_header", GENERAL_ERROR,
-                        "Tempary buffer size is too small: %d", 
-                        __BUF_SZ);
+                  "Tempary buffer size is too small: %d", 
+                  __BUF_SZ);
       goto clean1;
     }
   }
@@ -981,8 +971,8 @@ httpd_send_header(httpd_conn_s *res, int code)
   {
     log_warn("Tempary buffer size is too small: %d", __BUF_SZ);
     status = herror_new("httpd_send_header", GENERAL_ERROR,
-                      "Tempary buffer size is too small: %d", 
-                      __BUF_SZ);
+                    "Tempary buffer size is too small: %d", 
+                    __BUF_SZ);
     goto clean1;
   }
 
@@ -1388,8 +1378,8 @@ httpd_session_main(void *data)
 
       if ((service = httpd_find_service(req->path.cptr, req->path.len)))
       {
-        log_debug("service '%s' for '%pS'(%s) found.", 
-                service->context, &req->path, service->name);
+        log_debug("service '%pS' for '%pS'(%pS) found.", 
+                &service->context, &req->path, &service->name);
 
       	if (service->status == NHTTPD_SERVICE_UP)
       	{
