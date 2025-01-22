@@ -888,11 +888,11 @@ httpd_find_service(const char *context, int context_len)
 herror_t
 httpd_send_header(httpd_conn_s *res, int code)
 {
+  int n;
   char *header;
   hpair_s *cur;
-  herror_t status = H_OK;
   ng_buffer_s b;
-  int n;
+  herror_t status = H_OK;
   
 #define __BUF_SZ 1024
 #define __BUF BUF_CUR_PTR(&b), BUF_REMAIN(&b)
