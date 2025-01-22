@@ -630,82 +630,96 @@ httpd_init(int argc, char **argv)
   if (http_log_init() < 0)
   {
     log_error("[FAIL]: Cannot init http_log.");
-    return herror_new("http_log_init",GENERAL_ERROR,"failed");
+    return herror_new("http_log_init",
+      GENERAL_ERROR, "failed");
   }
   
   if (http_memcache_init() < 0)
   {
     log_error("[FAIL]: Cannot init memcache.");
-    return herror_new("http_memcache_init",GENERAL_ERROR,"failed");
+    return herror_new("http_memcache_init",
+      GENERAL_ERROR, "failed");
   }
 
   if (ng_http_mime_type_init() != ng_ERR_NONE)
   {
     log_error("[FAIL]: ng_http_mime_type_init failed.");
-    return herror_new("ng_http_mime_type_init", GENERAL_ERROR,"failed");
+    return herror_new("ng_http_mime_type_init", 
+      GENERAL_ERROR, "failed");
   }
-  
-  if ((status = nanohttp_dir_init(argv[0])) != H_OK)
+
+  status = nanohttp_dir_init(argv[0]);
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("[FAIL]: nanohttp_dir_init failed.");
+    log_error("[FAIL]: nanohttp_dir_init failed. (%s)", 
+      herror_message(status));
     return status;
   } 
 
   if (nanohttp_users_init() < 0)
   {
     log_error("[FAIL]: Cannot init users.");
-    return herror_new("nanohttp_users_init",GENERAL_ERROR,"failed");
+    return herror_new("nanohttp_users_init",
+      GENERAL_ERROR, "failed");
   }
 
-  if ((status = hsocket_module_init(argc, argv)) != H_OK)
+  status = hsocket_module_init(argc, argv);
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("[FAIL]: hsocket_modeule_init failed.");
+    log_error("[FAIL]: hsocket_modeule_init failed. (%s)", 
+      herror_message(status));
     return status;
   } 
 
-  if ((status = _httpd_connection_slots_init()) != H_OK)
+  status = _httpd_connection_slots_init();
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("[FAIL]: hsocket_modeule_init failed.");
+    log_error("[FAIL]: hsocket_modeule_init failed. (%s)", 
+      herror_message(status));
     return status;
   } 
 
-  if ((status = _httpd_register_builtin_services(argc, argv)) != H_OK)
+  status = _httpd_register_builtin_services(argc, argv);
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("_httpd_register_builtin_services failed.");
+    log_error("_httpd_register_builtin_services failed. (%s)", 
+      herror_message(status));
     return status;
   }
 
-  if ((status = hsocket_init(&_httpd_socket4)) != H_OK)
+  status = hsocket_init(&_httpd_socket4);
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("[FAIL]: hsocket_init failed.");
+    log_error("[FAIL]: hsocket_init failed. (%s)", 
+      herror_message(status));
     return status;
   }
 
-  if ((status = hsocket_init(&_httpd_socket6)) != H_OK)
+  status = hsocket_init(&_httpd_socket6);
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("[FAIL]: hsocket_init failed.");
+    log_error("[FAIL]: hsocket_init failed. (%s)", 
+      herror_message(status));
     return status;
   }
 
 #if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
-  if ((status = hsocket_bind(AF_INET, &_httpd_socket4, _httpd_port)) != H_OK)
+  status = hsocket_bind(AF_INET, &_httpd_socket4, 
+    _httpd_port);
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("[FAIL]: hsocket_bind failed.");
+    log_error("[FAIL]: hsocket_bind failed. (%s)", 
+      herror_message(status));
     return status;
   }
 #endif
 
-  if ((status = hsocket_bind(AF_INET6, &_httpd_socket6, _httpd_port)) != H_OK)
+  status = hsocket_bind(AF_INET6, &_httpd_socket6, 
+      _httpd_port);
+  if (status != H_OK)
   {
-    herror_log(status);
-    log_error("[FAIL]: hsocket_bind failed.");
+    log_error("[FAIL]: hsocket_bind failed. (%s)", 
+      herror_message(status));
     return status;
   }
 
@@ -715,9 +729,10 @@ httpd_init(int argc, char **argv)
 }
 
 static herror_t
-__httpd_register_secure(const char *context, int context_len,
-  httpd_service_f func, httpd_auth_f auth, const char *service_name,
-  int service_name_len, ng_bool_t is_default)
+__httpd_register_secure(const char *context, 
+  int context_len, httpd_service_f func, httpd_auth_f auth, 
+  const char *service_name, int service_name_len, 
+  ng_bool_t is_default)
 {
   hservice_t *service;
 
@@ -763,25 +778,28 @@ httpd_register_secure(const char *context, int context_len,
 }
 
 herror_t
-httpd_register(const char *context, int context_len, httpd_service_f service, 
-  const char *service_name, int service_name_len)
+httpd_register(const char *context, int context_len, 
+  httpd_service_f service, const char *service_name, 
+  int service_name_len)
 {
   return httpd_register_secure(context, context_len, service, 
     NULL, service_name, service_name_len);
 }
 
 herror_t
-httpd_register_default_secure(const char *context, int context_len, 
-  httpd_service_f service, httpd_auth_f auth)
+httpd_register_default_secure(const char *context, 
+  int context_len, httpd_service_f service, httpd_auth_f auth)
 {
   return __httpd_register_secure(context, context_len, service, 
     auth, "DEFAULT", 7, ng_TRUE);
 }
 
 herror_t
-httpd_register_default(const char *context, int context_len, httpd_service_f service)
+httpd_register_default(const char *context, 
+  int context_len, httpd_service_f service)
 {
-  return httpd_register_default_secure(context, context_len, service, NULL);
+  return httpd_register_default_secure(context, 
+    context_len, service, NULL);
 }
 
 short
@@ -822,7 +840,8 @@ hservice_free(hservice_t *service)
   if (!service)
     return;
 
-  log_verbose("unregister service \"%pS\".", &service->context);
+  log_verbose("unregister service \"%pS\".", 
+    &service->context);
   ng_free(service);
 
   return;
@@ -834,9 +853,11 @@ _httpd_unregister_services(void)
   while (!ng_list_empty(&_httpd_services_head))
   {
     hservice_t *tmp;
-    tmp = ng_list_first_entry(&_httpd_services_head, hservice_t, link);
+    tmp = ng_list_first_entry(&_httpd_services_head, 
+      hservice_t, link);
     NG_ASSERT(tmp != NULL);
-    log_info("service %p:%p.", tmp, ng_list_next_entry(tmp,hservice_t,link));
+    log_info("service %p:%p.", tmp, 
+      ng_list_next_entry(tmp,hservice_t,link));
     ng_list_del(&tmp->link);
     hservice_free(tmp);
   }
