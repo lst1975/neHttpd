@@ -101,7 +101,7 @@
  *
  * @see NHTTPD_ADMIN_CONTEXT
  */
-#define NHTTPD_ARG_ENABLE_ADMIN			"-NHTTPDadmin"
+#define NHTTPD_ARG_ENABLE_ADMIN			           "-NHTTPDadmin"
 
 /**@}*/
 
@@ -114,7 +114,7 @@
  *
  * @see httpd_register
  */
-#define NHTTPD_ADMIN_CONTEXT			"/nhttp"
+#define NHTTPD_ADMIN_CONTEXT			              "/nhttp"
 
 /** Query parameter for services.
  *
@@ -123,7 +123,7 @@
    GET http://localhost:10000/nhttp?services=list
  @endverbatim
  */
-#define NHTTPD_ADMIN_QUERY_SERVICES		"services"
+#define NHTTPD_ADMIN_QUERY_SERVICES		          "services"
 
 #ifdef __NHTTP_INTERNAL
 /** Parameter to query service statistics.
@@ -133,7 +133,7 @@
    GET http://localhost:10000/nhttp?statistics=SERVICE_CONTEXT
  @endverbatim
  */
-#define NHTTPD_ADMIN_QUERY_STATISTICS		"statistics"
+#define NHTTPD_ADMIN_QUERY_STATISTICS		        "statistics"
 #endif
 
 /** Parameter to enable a server.
@@ -143,7 +143,7 @@
    GET http://localhost:10000/nhttp?activate=SERVICE_CONTEXT
  @endverbatim
  */
-#define NHTTPD_ADMIN_QUERY_ACTIVATE_SERVICE	"activate"
+#define NHTTPD_ADMIN_QUERY_ACTIVATE_SERVICE	    "activate"
 
 /** Parameter to disable a service.
  *
@@ -152,7 +152,7 @@
    GET http://localhost:10000/nhttp?passivate=SERVICE_CONTEXT
  @endverbatim
  */
-#define NHTTPD_ADMIN_QUERY_PASSIVATE_SERVICE	"passivate"
+#define NHTTPD_ADMIN_QUERY_PASSIVATE_SERVICE	  "passivate"
 
 /** Parameter to switch loglevels.
  *

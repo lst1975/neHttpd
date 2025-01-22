@@ -117,11 +117,11 @@
  * @ingroup NANOHTTP_ERRORS
  */
 /*@{*/
-#define STREAM_ERROR			1200
-#define STREAM_ERROR_INVALID_TYPE	(STREAM_ERROR + 1)
-#define STREAM_ERROR_SOCKET_ERROR	(STREAM_ERROR + 2)
-#define STREAM_ERROR_NO_CHUNK_SIZE	(STREAM_ERROR + 3)
-#define STREAM_ERROR_WRONG_CHUNK_SIZE	(STREAM_ERROR + 4)
+#define STREAM_ERROR			            (1200             )
+#define STREAM_ERROR_INVALID_TYPE	    (STREAM_ERROR + 10)
+#define STREAM_ERROR_SOCKET_ERROR	    (STREAM_ERROR + 20)
+#define STREAM_ERROR_NO_CHUNK_SIZE	  (STREAM_ERROR + 30)
+#define STREAM_ERROR_WRONG_CHUNK_SIZE	(STREAM_ERROR + 40)
 /*@}*/
 
 /** Transfer types supported while sending/receiving data. */

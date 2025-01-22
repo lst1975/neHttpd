@@ -129,28 +129,28 @@
 /**@{*/
 #define H_OK				0 /**< Success flag */
 
-#define GENERAL_ERROR                1400
-#define GENERAL_INVALID_PARAM       (GENERAL_ERROR + 1)
-#define GENERAL_HEADER_PARSE_ERROR  (GENERAL_ERROR + 2)
-#define GENERAL_ERROR_MALLOC        (GENERAL_ERROR + 3)
-#define GENERAL_ERROR_INVAL         (GENERAL_ERROR + 4)
-#define GENERAL_ERROR_SYSTEM        (GENERAL_ERROR + 5)
+#define GENERAL_ERROR               (1400              )
+#define GENERAL_INVALID_PARAM       (GENERAL_ERROR + 10)
+#define GENERAL_HEADER_PARSE_ERROR  (GENERAL_ERROR + 20)
+#define GENERAL_ERROR_MALLOC        (GENERAL_ERROR + 30)
+#define GENERAL_ERROR_INVAL         (GENERAL_ERROR + 40)
+#define GENERAL_ERROR_SYSTEM        (GENERAL_ERROR + 50)
 /**@}*/
 
 /** @defgroup NANOHTTP_THREAD_ERRORS Thread errors
  */
 /**@{*/
-#define THREAD_ERROR			1500
+#define THREAD_ERROR			    (1500        )
 #define THREAD_BEGIN_ERROR		(THREAD_ERROR)
 /**@}*/
 
 /** @defgroup NANOHTTP_FILE_ERRORS File errors
  */
 /**@{*/
-#define FILE_ERROR			8000
-#define FILE_ERROR_OPEN			(FILE_ERROR + 1)
-#define FILE_ERROR_READ			(FILE_ERROR + 2)
-#define FILE_ERROR_WRITE		(FILE_ERROR + 3)
+#define FILE_ERROR			      (8000           )
+#define FILE_ERROR_OPEN			  (FILE_ERROR + 10)
+#define FILE_ERROR_READ			  (FILE_ERROR + 20)
+#define FILE_ERROR_WRITE		  (FILE_ERROR + 30)
 /**@}*/
 
 /**@}*/
@@ -168,7 +168,8 @@ typedef void * herror_t;
 extern "C" {
 #endif
 
-extern void herror_log(herror_t err);
+extern void 
+herror_log(herror_t err);
 
 /**
  *
@@ -177,28 +178,35 @@ extern void herror_log(herror_t err);
  * @see printf
  *
  */
-extern herror_t herror_new(const char *func, int errcode, const char *format, ...);
+extern herror_t 
+herror_new(const char *func, 
+  int errcode, 
+  const char *format, 
+  ...);
 
 /**
  *
  * Returns the code of the error.
  *
  */
-extern int herror_code(herror_t err);
+extern int 
+herror_code(herror_t err);
 
 /**
  *
  * @return The name of the function, where the error was produced.
  *
  */
-extern const char *herror_func(herror_t err);
+extern const char *
+herror_func(herror_t err);
 
 /**
  *
  * Returns the error message.
  *
  */
-extern const char *herror_message(herror_t err);
+extern const char *
+herror_message(herror_t err);
 
 /**
  *

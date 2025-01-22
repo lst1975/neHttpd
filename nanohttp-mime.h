@@ -163,12 +163,12 @@
 /** @defgroup NANOHTTP_MIME_ERRORS MIME errors
  */
 /**@{*/
-#define MIME_ERROR                      (1300          )
-#define MIME_ERROR_NO_BOUNDARY_PARAM    (MIME_ERROR + 1)
-#define MIME_ERROR_NO_START_PARAM       (MIME_ERROR + 2)
-#define MIME_ERROR_PARSE_ERROR          (MIME_ERROR + 3)
-#define MIME_ERROR_NO_ROOT_PART	        (MIME_ERROR + 4)
-#define MIME_ERROR_NOT_MIME_MESSAGE     (MIME_ERROR + 5)
+#define MIME_ERROR                      (1300           )
+#define MIME_ERROR_NO_BOUNDARY_PARAM    (MIME_ERROR + 10)
+#define MIME_ERROR_NO_START_PARAM       (MIME_ERROR + 20)
+#define MIME_ERROR_PARSE_ERROR          (MIME_ERROR + 30)
+#define MIME_ERROR_NO_ROOT_PART	        (MIME_ERROR + 40)
+#define MIME_ERROR_NOT_MIME_MESSAGE     (MIME_ERROR + 50)
 /**@}*/
 
 #define HTTP_BOUNDARY_FMT "------=.Part_NH_%016p_%07u"

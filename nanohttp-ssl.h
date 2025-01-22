@@ -305,7 +305,7 @@
  */
 /**@{*/
 
-#define HSSL_ERROR               1700
+#define HSSL_ERROR              (1700           )
 #define HSSL_ERROR_CA_LIST      (HSSL_ERROR + 10)
 #define HSSL_ERROR_CONTEXT      (HSSL_ERROR + 20)
 #define HSSL_ERROR_CERTIFICATE  (HSSL_ERROR + 30)

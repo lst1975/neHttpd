@@ -91,20 +91,20 @@ extern const unsigned char __ng_hex_digit[];
 
 #define __ng_ismask(x) (__ng_ctype[(int)(unsigned char)(x)])
 
-#define __ng_isalnum(c)	((__ng_ismask(c)&(ngctype_U|ngctype_L|ngctype_D)) != 0)
-#define __ng_isalpha(c)	((__ng_ismask(c)&(ngctype_U|ngctype_L)) != 0)
-#define __ng_iscntrl(c)	((__ng_ismask(c)&(ngctype_C)) != 0)
-#define __ng_isgraph(c)	((__ng_ismask(c)&(ngctype_P|ngctype_U|ngctype_L|ngctype_D)) != 0)
-#define __ng_islower(c)	((__ng_ismask(c)&(ngctype_L)) != 0)
-#define __ng_isprint(c)	((__ng_ismask(c)&(ngctype_P|ngctype_U|ngctype_L|ngctype_D|ngctype_SP)) != 0)
-#define __ng_ispunct(c)	((__ng_ismask(c)&(ngctype_P)) != 0)
+#define __ng_isalnum(c)	 ((__ng_ismask(c)&(ngctype_U|ngctype_L|ngctype_D)) != 0)
+#define __ng_isalpha(c)	 ((__ng_ismask(c)&(ngctype_U|ngctype_L)) != 0)
+#define __ng_iscntrl(c)	 ((__ng_ismask(c)&(ngctype_C)) != 0)
+#define __ng_isgraph(c)	 ((__ng_ismask(c)&(ngctype_P|ngctype_U|ngctype_L|ngctype_D)) != 0)
+#define __ng_islower(c)	 ((__ng_ismask(c)&(ngctype_L)) != 0)
+#define __ng_isprint(c)	 ((__ng_ismask(c)&(ngctype_P|ngctype_U|ngctype_L|ngctype_D|ngctype_SP)) != 0)
+#define __ng_ispunct(c)	 ((__ng_ismask(c)&(ngctype_P)) != 0)
 /* Note: isspace() must return false for %NUL-terminator */
-#define __ng_isspace(c)	((__ng_ismask(c)&(ngctype_S)) != 0)
-#define __ng_isupper(c)	((__ng_ismask(c)&(ngctype_U)) != 0)
-#define __ng_isxdigit(c)	((__ng_ismask(c)&(ngctype_D|ngctype_X)) != 0)
+#define __ng_isspace(c)	 ((__ng_ismask(c)&(ngctype_S)) != 0)
+#define __ng_isupper(c)	 ((__ng_ismask(c)&(ngctype_U)) != 0)
+#define __ng_isxdigit(c) ((__ng_ismask(c)&(ngctype_D|ngctype_X)) != 0)
 
-#define __ng_isascii(c) (((unsigned char)(c))<=0x7f)
-#define __ng_toascii(c) (((unsigned char)(c))&0x7f)
+#define __ng_isascii(c)  (((unsigned char)(c))<=0x7f)
+#define __ng_toascii(c)  (((unsigned char)(c))&0x7f)
 
 static inline int __ng_isdigit(int c)
 {

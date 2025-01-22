@@ -232,18 +232,16 @@
 /** @defgroup NANOHTTP_SERVER_CMDLINE_FLAGS Server command line flags
  */
 /**@{*/
-#define NHTTPD_ARG_PORT	   "-NHTTPport"     /**< Port the server is
-					         listening on */
-#define NHTTPD_ARG_TERMSIG "-NHTTPtsig"     /**< Signal which may used
-					         to terminate the server */
-#define NHTTPD_ARG_MAXCONN  "-NHTTPmaxconn" /**< Maximum number of
-					         simultanous connections */
-#define NHTTPD_ARG_MAXCONN_PEND  "-NHTTPmaxconnPend" /**< Maximum number of
-					         pending connections for listen*/
-#define NHTTPD_ARG_TIMEOUT   "-NHTTPtimeout" /**< Timeout on reads */
-#define NHTTPD_ARG_DAEMONIZE "-NHTTPDaemon" /**< Run as a daemon */
-#define NHTTPD_ARG_LOGLEVEL  "-NHTTPLoglevel" /**< log level */
-#define NHTTPD_ARG_HELP "--help" /**< Run as a daemon */
+
+
+#define NHTTPD_ARG_PORT	         "-NHTTPport"        /**< Port the server is listening on */
+#define NHTTPD_ARG_TERMSIG       "-NHTTPtsig"        /**< Signal which may used to terminate the server */
+#define NHTTPD_ARG_MAXCONN       "-NHTTPmaxconn"     /**< Maximum number of simultanous connections */
+#define NHTTPD_ARG_MAXCONN_PEND  "-NHTTPmaxconnPend" /**< Maximum number of pending connections for listen*/
+#define NHTTPD_ARG_TIMEOUT       "-NHTTPtimeout"     /**< Timeout on reads */
+#define NHTTPD_ARG_DAEMONIZE     "-NHTTPDaemon"      /**< Run as a daemon */
+#define NHTTPD_ARG_LOGLEVEL      "-NHTTPLoglevel"    /**< log level */
+#define NHTTPD_ARG_HELP          "--help"            /**< Run as a daemon */
 
 #define HTTP_INIT_PARSE_RESULT_OK     0
 #define HTTP_INIT_PARSE_RESULT_DAEMON 1

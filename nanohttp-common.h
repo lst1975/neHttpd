@@ -108,14 +108,14 @@ extern "C" {
 #define NHTTP_ARG_CA        "-NHTTPCA"
 
 #ifndef SAVE_STR
-#define SAVE_STR(str) ((str==0)?("(null)"):(str))
+#define SAVE_STR(str)     ((str==0)?("(null)"):(str))
 #define SAVE_STR_LEN(str) ((str==0)?("(null)"):(str))
 #endif
 
-#define BOUNDARY_LENGTH 18
+#define BOUNDARY_LENGTH        18
 
-#define MAX_HEADER_SIZE 4256
-#define MAX_FILE_BUFFER_SIZE 4256
+#define MAX_HEADER_SIZE        4256
+#define MAX_FILE_BUFFER_SIZE   4256
 
 #define REQUEST_MAX_PATH_SIZE  1024
 #define RESPONSE_MAX_DESC_SIZE 1024
