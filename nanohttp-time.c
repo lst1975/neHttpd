@@ -326,9 +326,6 @@ rte_delay_us_block(unsigned int us)
 		rte_pause();
 }
 
-static ng_uint64_t startime;  
-static ng_uint64_t starcycles;  
-
 // Function to round a double value to the nearest ng_int64_t value
 static inline ng_int64_t round_to_int64(double num) {
   // Check if the number is within the range of ng_int64_t
@@ -370,26 +367,35 @@ static inline ng_uint64_t round_to_uint64(double num) {
   return rounded;
 }
 
+static ng_tmv_s startime        = NG_TMV_INIT;
+static ng_tmv_s startime_offset = NG_TMV_INIT;
+static ng_uint64_t starcycles;  
+#define TMV2SEC(tv) (tv)->tv_sec + (tv)->tv_usec/1000000
+
 ng_uint64_t ng_get_time(void)
 {
-  ng_uint64_t endcycles, elapsed, result;
+  ng_uint64_t endcycles, elapsed;
   endcycles = rte_get_timer_cycles();
   elapsed = round_to_uint64(ng_cycles2sec(ng_difftime(endcycles, starcycles), 0));
-  result = startime+elapsed;
-  if (endcycles <= starcycles)
-  {
-    startime   = result;
-    starcycles = endcycles;
-  }
-  return result;
+  return TMV2SEC(&startime)+elapsed+TMV2SEC(&startime_offset);
 }
 
 void ng_update_time(void)
 {
   ng_tmv_s tv;
+  
   ng_gettimeofday(&tv);
-  starcycles = rte_get_timer_cycles();
-  startime   = tv.tv_sec+tv.tv_usec/1000000;
+  
+  if (!ng_timerisset(&startime_offset))
+  {
+    starcycles = rte_get_timer_cycles();
+    startime   = tv; 
+  }
+  else
+  {
+    ng_timersub(&tv, &startime, &startime_offset);
+    starcycles = rte_get_timer_cycles();
+  }
 }
 
 #define __ng_YEARS_N  251
@@ -1093,7 +1099,7 @@ void ng_date_print(void)
   BUF_SET(&b, date, sizeof(date));
   __ng_http_date(b.buf, b.len, 0, NULL);
   log_print("\nSystem is already running %"PRIu64" seconds\n", 
-    ng_get_time() - (ng_uint64_t)startime);
+    ng_get_time() - (ng_uint64_t)TMV2SEC(&startime));
   log_print("Date   : %.*s\n\n", (int)b.len, b.cptr);
   
 }

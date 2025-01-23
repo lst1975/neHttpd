@@ -401,6 +401,9 @@ struct __ng_tv {
   ng_uint64_t tv_usec;
   int_t    gmtoff;
 };
+
+#define NG_TMV_INIT { .tv_sec = 0, .tv_usec = 0, .gmtoff = 0}
+
 /*
  * Similar to the struct tm in userspace <time.h>, but it needs to be here so
  * that the kernel source is self contained.
