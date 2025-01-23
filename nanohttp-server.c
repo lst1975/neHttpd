@@ -2354,7 +2354,7 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
 
   total_len = 0;
   postdata[content_length] = '\0';
-  while(1) 
+  while (1) 
   {
     rcved = http_input_stream_read(req->in, postdata + total_len, 
       content_length - total_len);
