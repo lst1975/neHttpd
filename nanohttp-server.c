@@ -2335,7 +2335,8 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
   if (content_length == 0)
   {
     *received = 0;
-    if (!(postdata = (unsigned char *)ng_malloc(1)))
+    postdata = (unsigned char *)ng_malloc(1);
+    if (postdata == NULL)
     {
       log_error("ng_malloc failed %m.", ng_errno);
       return NULL;
@@ -2343,7 +2344,9 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
     postdata[0] = '\0';
     return postdata;
   }
-  if (!(postdata = (unsigned char *) ng_malloc(content_length + 1)))
+
+  postdata = (unsigned char *)ng_malloc(content_length + 1);
+  if (postdata == NULL)
   {
     log_error("ng_malloc failed %m.", ng_errno);
     return NULL;
@@ -2351,7 +2354,8 @@ httpd_get_postdata(httpd_conn_s *conn, hrequest_s *req,
 
   total_len = 0;
   postdata[content_length] = '\0';
-  while(1) {
+  while(1) 
+  {
     rcved = http_input_stream_read(req->in, postdata + total_len, 
       content_length - total_len);
     if (rcved < 0)
