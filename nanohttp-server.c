@@ -2053,6 +2053,7 @@ clean1:
 clean0:  
   return err;
 }
+
 void httpd_destroy_cond(COND_T *cond)
 {
 #ifdef WIN32
@@ -2085,6 +2086,7 @@ void httpd_wait_cond(COND_T *cond)
 #endif
   log_debug("Httpd returned from WAIT.");
 }
+
 void httpd_signal_cond(COND_T *cond)
 {
   int already_set = ng_atomic_read(cond->set);
@@ -2203,6 +2205,7 @@ static conndata_t httpd_thread_ipv6={
   .name="EPoll-IPv4&IPv6"
 #endif
 };
+
 herror_t httpd_run(void)
 {
 #if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
@@ -2217,7 +2220,7 @@ herror_t httpd_run(void)
   {
     log_error("httpd_create_cond failed.");
     status = herror_new("httpd_run",  THREAD_BEGIN_ERROR,
-                             "Failed to create condition!");
+               "Failed to create condition!");
     goto clean0;
   }
   
