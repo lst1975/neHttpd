@@ -76,10 +76,8 @@ int utf8_char_lenth(const unsigned char *data, int len);
 ng_size_t calculate_buffer_size(const char *utf8, ng_size_t len);
 void convert_utf8_to_unicode_escape(const char *utf8, ng_size_t len, ng_buffer_s *buffer);
 
-#if __NHTTP_DEBUG
-void test_encode_url(void);
-void test_decode_url(void);
-#endif
+int test_encode_url(void);
+int test_decode_url(void);
 
 #ifdef __cplusplus
 }

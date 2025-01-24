@@ -371,7 +371,7 @@ static ng_tmv_s startime        = NG_TMV_INIT;
 static ng_tmv_s startime_offset = NG_TMV_INIT;
 static ng_uint64_t starcycles;  
 #define TMV2SEC(tv) (tv)->tv_sec + (tv)->tv_usec/1000000
-
+rte_atomic32_t startime_set = RTE_ATOMIC32_INIT(0);
 ng_uint64_t ng_get_time(void)
 {
   ng_uint64_t endcycles, elapsed;
@@ -385,7 +385,14 @@ void ng_update_time(void)
   ng_tmv_s tv;
   
   ng_gettimeofday(&tv);
+
+  if (rte_atomic32_read(&startime_set))
+    return;
   
+  rte_smp_mb();
+  rte_atomic32_set(&startime_set,1);
+  rte_smp_mb();
+
   if (!ng_timerisset(&startime_offset))
   {
     starcycles = rte_get_timer_cycles();
@@ -396,6 +403,10 @@ void ng_update_time(void)
     ng_timersub(&tv, &startime, &startime_offset);
     starcycles = rte_get_timer_cycles();
   }
+  
+  rte_smp_mb();
+  rte_atomic32_set(&startime_set,0);
+  rte_smp_mb();
 }
 
 #define __ng_YEARS_N  251
@@ -1101,5 +1112,4 @@ void ng_date_print(void)
   log_print("\nSystem is already running %"PRIu64" seconds\n", 
     ng_get_time() - (ng_uint64_t)TMV2SEC(&startime));
   log_print("Date   : %.*s\n\n", (int)b.len, b.cptr);
-  
 }

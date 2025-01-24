@@ -159,9 +159,7 @@ int __ng_snprintf_cb(ng_vsout_f out, void *arg, char const * format, ...);
 int __ng_vsnprintf_cb(ng_vsout_f out, void *arg, char const * format, va_list args);
 
 /* set of small tests for ng_snprintf() */
-#if __NHTTP_VSNPRINTF_DEBUG
-int snprintf_test(void);
-#endif
+int test_snprintf(void);
 
 
 #ifdef __cplusplus

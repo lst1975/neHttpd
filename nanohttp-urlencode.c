@@ -953,7 +953,7 @@ void convert_utf8_to_unicode_escape(const char *utf8,
   buffer->len = buf_ptr - (char *)buffer->ptr;
 }
 
-#if __NHTTP_DEBUG
+#if __NHTTP_TEST_URLENCODE
 
 #define _TE_INPUT  "c\x01\xff\xfe\xfd"
 #define _TE_OUTPUT "c%01%C3%BF%C3%BE%C3%BD"
@@ -1047,17 +1047,29 @@ static void test_decode_url3(void)
   }
 }
 
-void test_encode_url(void)
+int test_encode_url(void)
 {
   test_encode_url1();
   test_encode_url2();
   test_encode_url3();
+  return 0;
 }
 
-void test_decode_url(void)
+int test_decode_url(void)
 {
   test_decode_url1();
   test_decode_url2();
   test_decode_url3();
+  return 0;
+}
+#else
+int test_encode_url(void)
+{
+  return 0;
+}
+
+int test_decode_url(void)
+{
+  return 0;
 }
 #endif

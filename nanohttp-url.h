@@ -187,7 +187,7 @@ extern void ng_url_dump(const ng_url_s *url);
 extern void ng_url_free(ng_url_s *url);
 extern int ng_url_init(ng_url_s *url);
 
-extern void ng_url_test(void);
+extern int ng_url_test(void);
 
 #ifdef __cplusplus
 }

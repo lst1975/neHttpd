@@ -112,7 +112,6 @@
 
 #define __NHTTP_TEST 1
 #define __NHTTP_NO_LOGGING 0
-#define __NHTTP_URL_TEST 0
 
 #undef HAVE_SSL
 
@@ -128,12 +127,15 @@
 
 #define _nanoConfig_NG_HTTP_PARSER_STRICT 1
 
+#define __NHTTP_TEST_URLENCODE  0
+#define __NHTTP_TEST_JSON       0
+#define __NHTTP_TEST_RING       0
+#define __NHTTP_TEST_VSNPRINTF  0
+#define __NHTTP_TEST_URL        0
+
 #define DEBUG_MULTIPART
-#define __NHTTP_DEBUG 0
 #define __NHTTP_MEM_DEBUG 1
-#define __NG_RING_DEBUG 0
 #define __HTTP_SMALL_SIZE 0
-#define __NHTTP_VSNPRINTF_DEBUG 0
 
 #if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) 
 #define __NHTTP_USE_EPOLL 0

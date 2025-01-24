@@ -96,11 +96,9 @@
 #define ng_atomic_set(x,n)  atomic_set(x,n) 
 typedef u32 NG_U32;
 #define ng_assert(x) BUG_ON(!(x))
-#define NG_ATOMIC_T(x) atomic_t
-#define __rte_atomic atomic_t
+#define NG_ATOMIC_T(t) atomic_t
 #else
-#define __rte_atomic
-#define NG_ATOMIC_T(x) x
+#define NG_ATOMIC_T(t) std_RTE_ATOMIC(t)
 #define ng_assert(x) NG_ASSERT(x)
 #define ng_srw_malloc(x) ng_malloc(x)
 #define ng_srw_free(x) ng_free(x)
@@ -757,138 +755,6 @@ __rte_ring_move_cons_head(ng_ring_s *r, int is_sc,
   return n;
 }
 #else
-
-/**
- * The atomic counter structure.
- */
-typedef struct {
-	volatile ng_int32_t cnt; /**< An internal counter value. */
-} rte_atomic32_t;
-
-/**
- * Static initializer for an atomic counter.
- */
-#define RTE_ATOMIC32_INIT(val) { (val) }
-
-/**
- * Initialize an atomic counter.
- *
- * @param v
- *   A pointer to the atomic counter.
- */
-static inline void
-rte_atomic32_init(rte_atomic32_t *v)
-{
-	v->cnt = 0;
-}
-
-/**
- * Atomically read a 32-bit value from a counter.
- *
- * @param v
- *   A pointer to the atomic counter.
- * @return
- *   The value of the counter.
- */
-static inline ng_int32_t
-rte_atomic32_read(const rte_atomic32_t *v)
-{
-	return v->cnt;
-}
-
-/**
- * Atomically set a counter to a 32-bit value.
- *
- * @param v
- *   A pointer to the atomic counter.
- * @param new_value
- *   The new value for the counter.
- */
-static inline void
-rte_atomic32_set(rte_atomic32_t *v, ng_int32_t new_value)
-{
-	v->cnt = new_value;
-}
-
-/**
- * Atomically add a 32-bit value to an atomic counter.
- *
- * @param v
- *   A pointer to the atomic counter.
- * @param inc
- *   The value to be added to the counter.
- */
-static inline void
-rte_atomic32_add(rte_atomic32_t *v, ng_int32_t inc)
-{
-	rte_atomic_fetch_add_explicit((volatile __rte_atomic ng_int32_t *)&v->cnt, inc,
-		rte_memory_order_seq_cst);
-}
-
-/**
- * Atomically subtract a 32-bit value from an atomic counter.
- *
- * @param v
- *   A pointer to the atomic counter.
- * @param dec
- *   The value to be subtracted from the counter.
- */
-static inline void
-rte_atomic32_sub(rte_atomic32_t *v, ng_int32_t dec)
-{
-	rte_atomic_fetch_sub_explicit((volatile __rte_atomic ng_int32_t *)&v->cnt, dec,
-		rte_memory_order_seq_cst);
-}
-
-/**
- * Atomically increment a counter by one.
- *
- * @param v
- *   A pointer to the atomic counter.
- */
-static inline void
-rte_atomic32_inc(rte_atomic32_t *v)
-{
-	rte_atomic32_add(v, 1);
-}
-
-/**
- * Atomically decrement a counter by one.
- *
- * @param v
- *   A pointer to the atomic counter.
- */
-static inline void
-rte_atomic32_dec(rte_atomic32_t *v)
-{
-	rte_atomic32_sub(v,1);
-}
-
-static inline int
-rte_atomic32_cmpset(volatile ng_uint32_t *dst, ng_uint32_t exp, ng_uint32_t src)
-{
-  return __sync_bool_compare_and_swap(dst, exp, src);
-}
-
-/**
- * Atomically add a 32-bit value to a counter and return the result.
- *
- * Atomically adds the 32-bits value (inc) to the atomic counter (v) and
- * returns the value of v after addition.
- *
- * @param v
- *   A pointer to the atomic counter.
- * @param inc
- *   The value to be added to the counter.
- * @return
- *   The value of v after the addition.
- */
-static inline ng_int32_t
-rte_atomic32_add_return(rte_atomic32_t *v, ng_int32_t inc)
-{
-	return rte_atomic_fetch_add_explicit((volatile __rte_atomic ng_int32_t *)&v->cnt, inc,
-		rte_memory_order_seq_cst) + inc;
-}
 
 static __rte_always_inline void
 __rte_ring_update_tail(struct rte_ring_headtail *ht, ng_uint32_t old_val,
@@ -2553,9 +2419,7 @@ rte_ring_dequeue_burst(ng_ring_s *r, void **obj_table,
       n, available);
 }
 
-#if __NG_RING_DEBUG
-void test_ring(void);
-#endif
+int test_ring(void);
 
 #endif
 

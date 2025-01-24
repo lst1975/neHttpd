@@ -1013,7 +1013,7 @@ void json_show( const char * json,
   }
 }
 
-#if __NHTTP_DEBUG
+#if __NHTTP_TEST_JSON
 static int json_test(void)
 {
   // Variables used in this example.
@@ -1076,6 +1076,11 @@ static int json_test(void)
 
   return 0;
 }
+#else
+static int json_test(void)
+{
+  return 0;
+}
 #endif
 
 void main_print_license(int daemonize)
@@ -1124,6 +1129,9 @@ static const ng_block_s __NH_SRV_PATH_ERROR  = DECL_CONST_STR("/error");
 int
 main(int argc, char **argv)
 {
+  int daemonize = 0, result; 
+  herror_t status;
+
   RTE_BUILD_BUG_ON(sizeof(ng_uint64_t) != 8);
   RTE_BUILD_BUG_ON(sizeof(ng_uint32_t) != 4);
   RTE_BUILD_BUG_ON(sizeof(ng_uint16_t) != 2);
@@ -1134,9 +1142,6 @@ main(int argc, char **argv)
   RTE_BUILD_BUG_ON(sizeof( ng_int16_t) != 2);
   RTE_BUILD_BUG_ON(sizeof( ng_int8_t)  != 1);
   
-  int daemonize = 0, result; 
-  herror_t status;
-
   nanohttp_log_set_loglevel(_nanoConfig_HTTPD_LOG_LEVEL);
     
   if (memchr_test()  < 0)
@@ -1147,7 +1152,31 @@ main(int argc, char **argv)
   {
     goto error0;
   }
-  
+  if (test_snprintf()  < 0)
+  {
+    goto error0;
+  }
+  if (ng_url_test() < 0)
+  {
+    goto error0;
+  }
+  if (test_ring() < 0)
+  {
+    goto error0;
+  }
+  if (test_encode_url() < 0)
+  {
+    goto error0;
+  }
+  if (test_decode_url() < 0)
+  {
+    goto error0;
+  }
+  if (json_test() < 0)
+  {
+    goto error0;
+  }
+
   result = httpd_parse_arguments(argc, argv);
   if (result == HTTP_INIT_PARSE_RESULT_DAEMON)
   {
@@ -1176,24 +1205,6 @@ main(int argc, char **argv)
     log_stderr("Cannot init httpd\n");
     goto error1;
   }
-
-#if __NHTTP_VSNPRINTF_DEBUG
-  snprintf_test();
-#endif
-
-#if __NHTTP_URL_TEST
-  ng_url_test();
-#endif
-
-#if __NG_RING_DEBUG
-  test_ring();
-#endif
-
-#if __NHTTP_DEBUG
-  test_encode_url();
-  test_decode_url();
-  json_test();
-#endif
 
   status = httpd_register_secure(&__NH_SRV_PATH_ROOT, 
     root_service, simple_authenticator, 

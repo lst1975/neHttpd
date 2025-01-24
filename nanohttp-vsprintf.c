@@ -1876,12 +1876,12 @@ __ng_snprintf_cb(ng_vsout_f out, void *arg, char const * format, ...)
 #pragma GCC diagnostic pop
 #endif
 
-#if __NHTTP_VSNPRINTF_DEBUG
+#if __NHTTP_TEST_VSNPRINTF
 
 #include <stdio.h>
 
 /* set of small tests for ng_snprintf() */
-int snprintf_test(void)
+int test_snprintf(void)
 {
   char holder[100];
   int i;
@@ -2043,4 +2043,12 @@ int snprintf_test(void)
 
   return 0;
 }
+
+#else
+
+int test_snprintf(void)
+{
+  return 0;
+}
+
 #endif /* !DRIVER */

@@ -367,7 +367,7 @@ rte_ring_dump(const ng_ring_s *r)
 }
 
 
-#if __NG_RING_DEBUG
+#if __NHTTP_TEST_RING
 #include <pthread.h>
 
 static NG_ATOMIC_T(NG_U32) malloc_count;
@@ -764,7 +764,7 @@ cleanup0:
   return;
 }
 
-void test_ring(void)
+int test_ring(void)
 {
   void *data;
   NG_U32 count;
@@ -806,7 +806,15 @@ void test_ring(void)
   rte_ring_free(__test_rte_ring);
 
   http_memcache_free();
-  return;
+  
+  return 0;
+}
+
+#else
+
+int test_ring(void)
+{
+  return 0;
 }
 
 #endif

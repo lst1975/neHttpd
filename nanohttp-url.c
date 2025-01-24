@@ -556,7 +556,8 @@ ng_url_init(ng_url_s *url)
   return 0;
 }
 
-void ng_url_test(void)
+#if __NHTTP_TEST_URL
+int ng_url_test(void)
 {
 #define TEST1 "http://user:password@[::1]:8192/test"
 #define TEST2 "http://user:password@127.0.0.1:8192/test"
@@ -577,4 +578,13 @@ void ng_url_test(void)
 
   __ng_url_parse(&url, TEST4, sizeof(TEST4)-1);
   ng_url_free(&url);
+
+  return 0;
 }
+
+#else
+int ng_url_test(void)
+{
+  return 0;
+}
+#endif

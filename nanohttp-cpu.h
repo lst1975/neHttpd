@@ -81,14 +81,6 @@
 #define ng_barrier() HTTPD_UNUSED(0)
 #endif
 
-#define rte_memory_order_relaxed __ATOMIC_RELAXED
-#define rte_memory_order_consume __ATOMIC_CONSUME
-#define rte_memory_order_acquire __ATOMIC_ACQUIRE
-#define rte_memory_order_release __ATOMIC_RELEASE
-#define rte_memory_order_acq_rel __ATOMIC_ACQ_REL
-#define rte_memory_order_seq_cst __ATOMIC_SEQ_CST
-#define rte_atomic_thread_fence(x) __atomic_thread_fence(x)
-
 /**
  * Compiler barrier.
  *
@@ -102,11 +94,6 @@
 	asm volatile ("" : : : "memory");	\
 } while(0)
 #endif
-
-/* The memory order is an integer type in GCC built-ins,
- * not an enumerated type like in C11.
- */
-typedef int rte_memory_order;
 
 /*/////////////////////////////////////////////////////////////////////////////////
                                       aarch64
@@ -143,6 +130,51 @@ static inline void rte_pause(void)
 #define  rte_mb() _mm_mfence()
 #define  rte_wmb() _mm_sfence()
 #define  rte_rmb() _mm_lfence()
+/*
+ * From Intel Software Development Manual; Vol 3;
+ * 8.2.2 Memory Ordering in P6 and More Recent Processor Families:
+ * ...
+ * . Reads are not reordered with other reads.
+ * . Writes are not reordered with older reads.
+ * . Writes to memory are not reordered with other writes,
+ *   with the following exceptions:
+ *   . streaming stores (writes) executed with the non-temporal move
+ *     instructions (MOVNTI, MOVNTQ, MOVNTDQ, MOVNTPS, and MOVNTPD); and
+ *   . string operations (see Section 8.2.4.1).
+ *  ...
+ * . Reads may be reordered with older writes to different locations but not
+ * with older writes to the same location.
+ * . Reads or writes cannot be reordered with I/O instructions,
+ * locked instructions, or serializing instructions.
+ * . Reads cannot pass earlier LFENCE and MFENCE instructions.
+ * . Writes ... cannot pass earlier LFENCE, SFENCE, and MFENCE instructions.
+ * . LFENCE instructions cannot pass earlier reads.
+ * . SFENCE instructions cannot pass earlier writes ...
+ * . MFENCE instructions cannot pass earlier reads, writes ...
+ *
+ * As pointed by Java guys, that makes possible to use lock-prefixed
+ * instructions to get the same effect as mfence and on most modern HW
+ * that gives a better performance then using mfence:
+ * https://shipilev.net/blog/2014/on-the-fence-with-dependencies/
+ * Basic idea is to use lock prefixed add with some dummy memory location
+ * as the destination. From their experiments 128B(2 cache lines) below
+ * current stack pointer looks like a good candidate.
+ * So below we use that technique for rte_smp_mb() implementation.
+ */
+
+static __rte_always_inline void
+rte_smp_mb(void)
+{
+#ifdef RTE_TOOLCHAIN_MSVC
+	_mm_mfence();
+#else
+#if defined(__i686__)
+	asm volatile("lock addl $0, -128(%%esp); " ::: "memory");
+#else
+	asm volatile("lock addl $0, -128(%%rsp); " ::: "memory");
+#endif
+#endif
+}
 #define rte_smp_wmb() rte_compiler_barrier()
 #define rte_smp_rmb() rte_compiler_barrier()
 static inline void rte_pause(void)
@@ -199,7 +231,7 @@ static inline void rte_pause(void)
 {
 }
 /*/////////////////////////////////////////////////////////////////////////////////
-                                        Â¿
+                                        ¿
 /////////////////////////////////////////////////////////////////////////////////*/
 #else
 #define rte_smp_mb()  ng_smp_mb()
