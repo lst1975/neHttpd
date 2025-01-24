@@ -83,29 +83,29 @@ static ng_uint64_t
 estimate_tsc_freq(void)
 {
 #define CYC_PER_10MHZ 1E7
-	log_warn("WARNING: TSC frequency estimated roughly"
-		" - clock timings may be less accurate.");
-	/* assume that the rte_delay_us_sleep() will sleep for 1 second */
-	ng_uint64_t start = rte_rdtsc();
-	rte_delay_us_sleep(US_PER_S);
-	/* Round up to 10Mhz. 1E7 ~ 10Mhz */
-	return RTE_ALIGN_MUL_NEAR(rte_rdtsc() - start, CYC_PER_10MHZ);
+  log_warn("WARNING: TSC frequency estimated roughly"
+    " - clock timings may be less accurate.");
+  /* assume that the rte_delay_us_sleep() will sleep for 1 second */
+  ng_uint64_t start = rte_rdtsc();
+  rte_delay_us_sleep(US_PER_S);
+  /* Round up to 10Mhz. 1E7 ~ 10Mhz */
+  return RTE_ALIGN_MUL_NEAR(rte_rdtsc() - start, CYC_PER_10MHZ);
 }
 
 void
 set_tsc_freq(void)
 {
-	ng_uint64_t freq;
+  ng_uint64_t freq;
 
-	freq = get_tsc_freq_arch();
-	if (!freq)
-		freq = get_tsc_freq();
-	if (!freq)
-		freq = estimate_tsc_freq();
+  freq = get_tsc_freq_arch();
+  if (!freq)
+    freq = get_tsc_freq();
+  if (!freq)
+    freq = estimate_tsc_freq();
 
   ng_print_cpufreq("TSC frequency", freq / 1000000.0);
-	eal_tsc_resolution_hz = freq;
-	ng_os_info.tsc_hz = freq;
+  eal_tsc_resolution_hz = freq;
+  ng_os_info.tsc_hz = freq;
 }
 
 #if RTE_TOOLCHAIN_MSVC || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
@@ -124,9 +124,9 @@ rte_delay_us_sleep(unsigned int us)
   timer = CreateWaitableTimer(NULL, TRUE, NULL);
   if (!timer) 
   {
-  	log_error("CreateWaitableTimer() failed. %m.", ng_errno);
-  	ng_set_errno(ERROR_NOT_ENOUGH_MEMORY);
-  	goto clean0;
+    log_error("CreateWaitableTimer() failed. %m.", ng_errno);
+    ng_set_errno(ERROR_NOT_ENOUGH_MEMORY);
+    goto clean0;
   }
 
   /*
@@ -143,15 +143,15 @@ rte_delay_us_sleep(unsigned int us)
   /* start wait for timer for us microseconds */
   if (WaitForSingleObject(timer, INFINITE) == WAIT_FAILED) 
   {
-  	log_error("WaitForSingleObject() failed. %m.", ng_errno);
-  	ng_set_errno(WSAEINVAL);
-  	goto clean1;
+    log_error("WaitForSingleObject() failed. %m.", ng_errno);
+    ng_set_errno(WSAEINVAL);
+    goto clean1;
   }
 
   err = 0;
   
 clean1:
-	CloseHandle(timer);
+  CloseHandle(timer);
 clean0:
   return err;
 }
@@ -159,18 +159,18 @@ clean0:
 ng_uint64_t
 get_tsc_freq(void)
 {
-	LARGE_INTEGER t_start, t_end, elapsed_us;
-	LARGE_INTEGER frequency;
-	ng_uint64_t tsc_hz;
+  LARGE_INTEGER t_start, t_end, elapsed_us;
+  LARGE_INTEGER frequency;
+  ng_uint64_t tsc_hz;
   ng_uint64_t end, start;
 
   if (!QueryPerformanceFrequency(&frequency))
   {
-  	log_error("QueryPerformanceFrequency() failed. %m.", ng_errno);
+    log_error("QueryPerformanceFrequency() failed. %m.", ng_errno);
     return 0;
   }
 
-	if (!QueryPerformanceCounter(&t_start))
+  if (!QueryPerformanceCounter(&t_start))
   {
     log_error("QueryPerformanceCounter() failed. %m.", ng_errno);
     return 0;
@@ -183,56 +183,56 @@ get_tsc_freq(void)
     log_error("rte_delay_us_sleep() failed. %m.", ng_errno);
     return 0;
   }
-	if (!QueryPerformanceCounter(&t_end))
+  if (!QueryPerformanceCounter(&t_end))
   {
     log_error("QueryPerformanceCounter() failed. %m.", ng_errno);
     return 0;
   }
-	end = rte_get_tsc_cycles();
+  end = rte_get_tsc_cycles();
 
-	elapsed_us.QuadPart = t_end.QuadPart - t_start.QuadPart;
+  elapsed_us.QuadPart = t_end.QuadPart - t_start.QuadPart;
 
-	/*
-	 * To guard against loss-of-precision, convert to microseconds
-	 * *before* dividing by ticks-per-second.
-	 */
-	elapsed_us.QuadPart *= US_PER_SEC;
-	elapsed_us.QuadPart /= frequency.QuadPart;
+  /*
+   * To guard against loss-of-precision, convert to microseconds
+   * *before* dividing by ticks-per-second.
+   */
+  elapsed_us.QuadPart *= US_PER_SEC;
+  elapsed_us.QuadPart /= frequency.QuadPart;
 
-	double secs = ((double)elapsed_us.QuadPart)/US_PER_SEC;
-	tsc_hz = (ng_uint64_t)((end - start)/secs);
+  double secs = ((double)elapsed_us.QuadPart)/US_PER_SEC;
+  tsc_hz = (ng_uint64_t)((end - start)/secs);
 
-	/* Round up to 10Mhz. 1E7 ~ 10Mhz */
-	return RTE_ALIGN_MUL_NEAR(tsc_hz, CYC_PER_10MHZ);
+  /* Round up to 10Mhz. 1E7 ~ 10Mhz */
+  return RTE_ALIGN_MUL_NEAR(tsc_hz, CYC_PER_10MHZ);
 }
 
 int
 rte_eal_timer_init(void)
 {
-	set_tsc_freq();
-	return 0;
+  set_tsc_freq();
+  return 0;
 }
 #else
 int
 rte_delay_us_sleep(unsigned int us)
 {
-	struct timespec wait[2];
-	int ind = 0;
+  struct timespec wait[2];
+  int ind = 0;
 
-	wait[0].tv_sec = 0;
-	if (us >= US_PER_S) {
-		wait[0].tv_sec = us / US_PER_S;
-		us -= wait[0].tv_sec * US_PER_S;
-	}
-	wait[0].tv_nsec = 1000 * us;
+  wait[0].tv_sec = 0;
+  if (us >= US_PER_S) {
+    wait[0].tv_sec = us / US_PER_S;
+    us -= wait[0].tv_sec * US_PER_S;
+  }
+  wait[0].tv_nsec = 1000 * us;
 
-	while (nanosleep(&wait[ind], &wait[1 - ind]) && ng_errno == EINTR) {
-		/*
-		 * Sleep was interrupted. Flip the index, so the 'remainder'
-		 * will become the 'request' for a next call.
-		 */
-		ind = 1 - ind;
-	}
+  while (nanosleep(&wait[ind], &wait[1 - ind]) && ng_errno == EINTR) {
+    /*
+     * Sleep was interrupted. Flip the index, so the 'remainder'
+     * will become the 'request' for a next call.
+     */
+    ind = 1 - ind;
+  }
 
   return 0;
 }
@@ -240,39 +240,39 @@ rte_delay_us_sleep(unsigned int us)
 ng_uint64_t
 get_tsc_freq(void)
 {
-	ng_size_t sz;
-	int tmp;
-	ng_uint64_t tsc_hz;
+  ng_size_t sz;
+  int tmp;
+  ng_uint64_t tsc_hz;
 
-	sz = sizeof(tmp);
-	tmp = 0;
+  sz = sizeof(tmp);
+  tmp = 0;
 
-	if (sysctlbyname("kern.timecounter.smp_tsc", &tmp, &sz, NULL, 0))
-		log_warn("get_tsc_freq: %m.", ng_errno);
-	else if (tmp != 1)
-		log_warn("TSC is not safe to use in SMP mode");
+  if (sysctlbyname("kern.timecounter.smp_tsc", &tmp, &sz, NULL, 0))
+    log_warn("get_tsc_freq: %m.", ng_errno);
+  else if (tmp != 1)
+    log_warn("TSC is not safe to use in SMP mode");
 
-	tmp = 0;
+  tmp = 0;
 
-	if (sysctlbyname("kern.timecounter.invariant_tsc", &tmp, &sz, NULL, 0))
-		log_warn("get_tsc_freq: %m.", ng_errno);
-	else if (tmp != 1)
-		log_warn("TSC is not invariant.");
+  if (sysctlbyname("kern.timecounter.invariant_tsc", &tmp, &sz, NULL, 0))
+    log_warn("get_tsc_freq: %m.", ng_errno);
+  else if (tmp != 1)
+    log_warn("TSC is not invariant.");
 
-	sz = sizeof(tsc_hz);
-	if (sysctlbyname("machdep.tsc_freq", &tsc_hz, &sz, NULL, 0)) {
-		log_warn("get_tsc_freq: %m.", ng_errno);
-		return 0;
-	}
+  sz = sizeof(tsc_hz);
+  if (sysctlbyname("machdep.tsc_freq", &tsc_hz, &sz, NULL, 0)) {
+    log_warn("get_tsc_freq: %m.", ng_errno);
+    return 0;
+  }
 
-	return tsc_hz;
+  return tsc_hz;
 }
 
 int
 rte_eal_timer_init(void)
 {
-	set_tsc_freq();
-	return 0;
+  set_tsc_freq();
+  return 0;
 }
 
 #else
@@ -417,19 +417,15 @@ void __ng_update_time(void)
 {
   ng_tmv_s tv;
   
-  ng_gettimeofday(&tv);
-
-  rte_smp_mb();
-  if (!rte_atomic32_cmpset((volatile ng_uint32_t *)&startime_set.cnt, 0, 1))
+  if (!rte_atomic32_test_and_set(&startime_set))
     return;
-  rte_smp_mb();
   
+  ng_gettimeofday(&tv);
   ng_timersub(&tv, &startime, &startime_offset);
   starcycles = rte_get_timer_cycles();
   
-  rte_smp_mb();
+  rte_compiler_barrier();
   rte_atomic32_set(&startime_set, 0);
-  rte_smp_mb();
 }
 
 #define __ng_YEARS_N  251
