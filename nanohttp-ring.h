@@ -67,8 +67,6 @@
 #include "nanohttp-defs.h"
 #include "nanohttp-logging.h"
 
-#define RTE_USE_C11_MEM_MODEL 0
-
 #ifdef __KERNEL__
 #define __LN "\n"
 #define NG_RING_DEBUG(x,...) kprintf(x,__VA_ARGS__)
@@ -96,9 +94,8 @@
 #define ng_atomic_set(x,n)  atomic_set(x,n) 
 typedef u32 NG_U32;
 #define ng_assert(x) BUG_ON(!(x))
-#define NG_ATOMIC_T(t) atomic_t
+#define RTE_ATOMIC(t) atomic_t
 #else
-#define NG_ATOMIC_T(t) std_RTE_ATOMIC(t)
 #define ng_assert(x) NG_ASSERT(x)
 #define ng_srw_malloc(x) ng_malloc(x)
 #define ng_srw_free(x) ng_free(x)
@@ -111,6 +108,8 @@ typedef ng_uint32_t NG_U32;
 #define ng_atomic_read(x)   __atomic_load_n(&(x), __ATOMIC_RELAXED)
 #define ng_atomic_set(x,n)  __atomic_store_n(&(x), n, __ATOMIC_RELAXED)
 #endif
+
+#define NG_ATOMIC_T(t) RTE_ATOMIC(t)
 
 struct ng_singleRW_ring
 {
@@ -183,7 +182,6 @@ ng_singlerw_ring_dump(ng_singlerw_ring_s *ring)
 #define RTE_SET_USED(x) HTTPD_UNUSED(x)
 #define __rte_always_inline inline __attribute__((always_inline))
 #define RTE_MEMZONE_NAMESIZE 64
-#define RTE_ATOMIC(t) NG_ATOMIC_T(t)
 #define RTE_TAILQ_RING_NAME "RTE_RING"
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
 typedef ng_uint64_t unaligned_uint64_t __rte_aligned(1);
@@ -294,14 +292,15 @@ typedef struct _rte_ring ng_ring_s;
 /**
  * 128-bit integer structure.
  */
-typedef struct __rte_aligned(16) {
+struct __rte_aligned(16) _rte_int128{
   union {
     ng_uint64_t val[2];
 #if defined(__LP64__) || defined(_LP64)
     __extension__ __int128 int128;
 #endif
   };
-} rte_int128_t;
+};
+typedef struct _rte_int128 rte_int128_t;
 
 static __rte_always_inline void
 __rte_ring_enqueue_elems_32(ng_ring_s *r, const ng_uint32_t size,
@@ -576,186 +575,6 @@ __rte_ring_dequeue_elems(ng_ring_s *r, ng_uint32_t cons_head,
   }
 }
 
-#if RTE_USE_C11_MEM_MODEL
-/* Between load and load. there might be cpu reorder in weak model
- * (powerpc/arm).
- * There are 2 choices for the users
- * 1.use rmb() memory barrier
- * 2.use one-direction load_acquire/store_release barrier
- * It depends on performance test results.
- */
-
-static __rte_always_inline void
-__rte_ring_update_tail(struct rte_ring_headtail *ht, ng_uint32_t old_val,
-    ng_uint32_t new_val, ng_uint32_t single, ng_uint32_t enqueue)
-{
-  RTE_SET_USED(enqueue);
-
-  /*
-   * If there are other enqueues/dequeues in progress that preceded us,
-   * we need to wait for them to complete
-   */
-  if (!single)
-    rte_wait_until_equal_32((ng_uint32_t *)(ng_uintptr_t)&ht->tail, old_val,
-      rte_memory_order_relaxed);
-
-  rte_atomic_store_explicit(&ht->tail, new_val, rte_memory_order_release);
-}
-
-/**
- * @internal This function updates the producer head for enqueue
- *
- * @param r
- *   A pointer to the ring structure
- * @param is_sp
- *   Indicates whether multi-producer path is needed or not
- * @param n
- *   The number of elements we will want to enqueue, i.e. how far should the
- *   head be moved
- * @param behavior
- *   RTE_RING_QUEUE_FIXED:    Enqueue a fixed number of items from a ring
- *   RTE_RING_QUEUE_VARIABLE: Enqueue as many items as possible from ring
- * @param old_head
- *   Returns head value as it was before the move, i.e. where enqueue starts
- * @param new_head
- *   Returns the current/new head value i.e. where enqueue finishes
- * @param free_entries
- *   Returns the amount of ng_free space in the ring BEFORE head was moved
- * @return
- *   Actual number of objects enqueued.
- *   If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
- */
-static __rte_always_inline unsigned int
-__rte_ring_move_prod_head(ng_ring_s *r, unsigned int is_sp,
-    unsigned int n, enum rte_ring_queue_behavior behavior,
-    ng_uint32_t *old_head, ng_uint32_t *new_head,
-    ng_uint32_t *free_entries)
-{
-  const ng_uint32_t capacity = r->capacity;
-  ng_uint32_t cons_tail;
-  unsigned int max = n;
-  int success;
-
-  *old_head = rte_atomic_load_explicit(&r->prod.head, rte_memory_order_relaxed);
-  do {
-    /* Reset n to the initial burst count */
-    n = max;
-
-    /* Ensure the head is read before tail */
-    rte_atomic_thread_fence(rte_memory_order_acquire);
-
-    /* load-acquire synchronize with store-release of ht->tail
-     * in update_tail.
-     */
-    cons_tail = rte_atomic_load_explicit(&r->cons.tail,
-          rte_memory_order_acquire);
-
-    /* The subtraction is done between two unsigned 32bits value
-     * (the result is always modulo 32 bits even if we have
-     * *old_head > cons_tail). So 'free_entries' is always between 0
-     * and capacity (which is < size).
-     */
-    *free_entries = (capacity + cons_tail - *old_head);
-
-    /* check that we have enough room in ring */
-    if (unlikely(n > *free_entries))
-      n = (behavior == RTE_RING_QUEUE_FIXED) ?
-          0 : *free_entries;
-
-    if (n == 0)
-      return 0;
-
-    *new_head = *old_head + n;
-    if (is_sp) {
-      r->prod.head = *new_head;
-      success = 1;
-    } else
-      /* on failure, *old_head is updated */
-      success = rte_atomic_compare_exchange_strong_explicit(&r->prod.head,
-          old_head, *new_head,
-          rte_memory_order_relaxed,
-          rte_memory_order_relaxed);
-  } while (unlikely(success == 0));
-  return n;
-}
-
-/**
- * @internal This function updates the consumer head for dequeue
- *
- * @param r
- *   A pointer to the ring structure
- * @param is_sc
- *   Indicates whether multi-consumer path is needed or not
- * @param n
- *   The number of elements we will want to dequeue, i.e. how far should the
- *   head be moved
- * @param behavior
- *   RTE_RING_QUEUE_FIXED:    Dequeue a fixed number of items from a ring
- *   RTE_RING_QUEUE_VARIABLE: Dequeue as many items as possible from ring
- * @param old_head
- *   Returns head value as it was before the move, i.e. where dequeue starts
- * @param new_head
- *   Returns the current/new head value i.e. where dequeue finishes
- * @param entries
- *   Returns the number of entries in the ring BEFORE head was moved
- * @return
- *   - Actual number of objects dequeued.
- *     If behavior == RTE_RING_QUEUE_FIXED, this will be 0 or n only.
- */
-static __rte_always_inline unsigned int
-__rte_ring_move_cons_head(ng_ring_s *r, int is_sc,
-    unsigned int n, enum rte_ring_queue_behavior behavior,
-    ng_uint32_t *old_head, ng_uint32_t *new_head,
-    ng_uint32_t *entries)
-{
-  unsigned int max = n;
-  ng_uint32_t prod_tail;
-  int success;
-
-  /* move cons.head atomically */
-  *old_head = rte_atomic_load_explicit(&r->cons.head, rte_memory_order_relaxed);
-  do {
-    /* Restore n as it may change every loop */
-    n = max;
-
-    /* Ensure the head is read before tail */
-    rte_atomic_thread_fence(rte_memory_order_acquire);
-
-    /* this load-acquire synchronize with store-release of ht->tail
-     * in update_tail.
-     */
-    prod_tail = rte_atomic_load_explicit(&r->prod.tail,
-          rte_memory_order_acquire);
-
-    /* The subtraction is done between two unsigned 32bits value
-     * (the result is always modulo 32 bits even if we have
-     * cons_head > prod_tail). So 'entries' is always between 0
-     * and size(ring)-1.
-     */
-    *entries = (prod_tail - *old_head);
-
-    /* Set the actual entries for dequeue */
-    if (n > *entries)
-      n = (behavior == RTE_RING_QUEUE_FIXED) ? 0 : *entries;
-
-    if (unlikely(n == 0))
-      return 0;
-
-    *new_head = *old_head + n;
-    if (is_sc) {
-      r->cons.head = *new_head;
-      success = 1;
-    } else
-      /* on failure, *old_head will be updated */
-      success = rte_atomic_compare_exchange_strong_explicit(&r->cons.head,
-              old_head, *new_head,
-              rte_memory_order_relaxed,
-              rte_memory_order_relaxed);
-  } while (unlikely(success == 0));
-  return n;
-}
-#else
-
 static __rte_always_inline void
 __rte_ring_update_tail(struct rte_ring_headtail *ht, ng_uint32_t old_val,
     ng_uint32_t new_val, ng_uint32_t single, ng_uint32_t enqueue)
@@ -916,7 +735,6 @@ __rte_ring_move_cons_head(ng_ring_s *r, unsigned int is_sc,
   } while (unlikely(success == 0));
   return n;
 }
-#endif
 
 /**
  * @internal Enqueue several objects on the ring

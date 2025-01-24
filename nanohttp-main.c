@@ -337,12 +337,6 @@ secure_service(httpd_conn_s *conn, hrequest_s *req)
     }
     while (0);
   }
-  else
-  {
-    r = http_output_stream_write(conn->out,
-                (const unsigned char *)__nanohttp_secure_html,
-                sizeof(__nanohttp_secure_html)-1);
-  }
 
   herror_release(r);
   return;

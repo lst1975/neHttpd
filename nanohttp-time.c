@@ -113,9 +113,10 @@ set_tsc_freq(void)
 #define US_PER_SEC 1E6
 #define CYC_PER_10MHZ 1E7
 
-void
+int
 rte_delay_us_sleep(unsigned int us)
 {
+  int err = -1;
   HANDLE timer;
   LARGE_INTEGER due_time;
 
@@ -147,10 +148,12 @@ rte_delay_us_sleep(unsigned int us)
   	goto clean1;
   }
 
+  err = 0;
+  
 clean1:
 	CloseHandle(timer);
 clean0:
-  return;
+  return err;
 }
 
 ng_uint64_t
@@ -159,19 +162,32 @@ get_tsc_freq(void)
 	LARGE_INTEGER t_start, t_end, elapsed_us;
 	LARGE_INTEGER frequency;
 	ng_uint64_t tsc_hz;
-	ng_uint64_t end, start;
+  ng_uint64_t end, start;
 
-	QueryPerformanceFrequency(&frequency);
+  if (!QueryPerformanceFrequency(&frequency))
+  {
+  	log_error("QueryPerformanceFrequency() failed. %m.", ng_errno);
+    return 0;
+  }
 
-	QueryPerformanceCounter(&t_start);
-	start = rte_get_tsc_cycles();
-
-	rte_delay_us_sleep(US_PER_SEC / 10); /* 1/10 second */
-
-	if (ng_errno != 0)
-		return 0;
-
-	QueryPerformanceCounter(&t_end);
+	if (!QueryPerformanceCounter(&t_start))
+  {
+    log_error("QueryPerformanceCounter() failed. %m.", ng_errno);
+    return 0;
+  }
+    
+  start = rte_get_tsc_cycles();
+  /* 1/10 second */
+  if (0 > rte_delay_us_sleep(US_PER_SEC / 10))
+  {
+    log_error("rte_delay_us_sleep() failed. %m.", ng_errno);
+    return 0;
+  }
+	if (!QueryPerformanceCounter(&t_end))
+  {
+    log_error("QueryPerformanceCounter() failed. %m.", ng_errno);
+    return 0;
+  }
 	end = rte_get_tsc_cycles();
 
 	elapsed_us.QuadPart = t_end.QuadPart - t_start.QuadPart;
@@ -197,7 +213,7 @@ rte_eal_timer_init(void)
 	return 0;
 }
 #else
-void
+int
 rte_delay_us_sleep(unsigned int us)
 {
 	struct timespec wait[2];
@@ -210,13 +226,15 @@ rte_delay_us_sleep(unsigned int us)
 	}
 	wait[0].tv_nsec = 1000 * us;
 
-	while (nanosleep(&wait[ind], &wait[1 - ind]) && errno == EINTR) {
+	while (nanosleep(&wait[ind], &wait[1 - ind]) && ng_errno == EINTR) {
 		/*
 		 * Sleep was interrupted. Flip the index, so the 'remainder'
 		 * will become the 'request' for a next call.
 		 */
 		ind = 1 - ind;
 	}
+
+  return 0;
 }
 #if defined(__FreeBSD__)
 ng_uint64_t
@@ -266,32 +284,32 @@ get_tsc_freq(void)
 #define NS_PER_SEC 1E9
 #define CYC_PER_10MHZ 1E7
 
-	struct timespec sleeptime = {.tv_nsec = NS_PER_SEC / 10 }; /* 1/10 second */
+  struct timespec sleeptime = {.tv_nsec = NS_PER_SEC / 10 }; /* 1/10 second */
 
-	struct timespec t_start, t_end;
-	ng_uint64_t tsc_hz;
+  struct timespec t_start, t_end;
+  ng_uint64_t tsc_hz;
 
-	if (clock_gettime(CLOCK_MONOTONIC_RAW, &t_start) == 0) {
-		ng_uint64_t ns, end, start = rte_rdtsc();
-		nanosleep(&sleeptime,NULL);
-		clock_gettime(CLOCK_MONOTONIC_RAW, &t_end);
-		end = rte_rdtsc();
-		ns = ((t_end.tv_sec - t_start.tv_sec) * NS_PER_SEC);
-		ns += (t_end.tv_nsec - t_start.tv_nsec);
+  if (clock_gettime(CLOCK_MONOTONIC_RAW, &t_start) == 0) {
+    ng_uint64_t ns, end, start = rte_rdtsc();
+    nanosleep(&sleeptime,NULL);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &t_end);
+    end = rte_rdtsc();
+    ns = ((t_end.tv_sec - t_start.tv_sec) * NS_PER_SEC);
+    ns += (t_end.tv_nsec - t_start.tv_nsec);
 
-		double secs = (double)ns/NS_PER_SEC;
-		tsc_hz = (ng_uint64_t)((end - start)/secs);
-		/* Round up to 10Mhz. 1E7 ~ 10Mhz */
-		return RTE_ALIGN_MUL_NEAR(tsc_hz, CYC_PER_10MHZ);
-	}
+    double secs = (double)ns/NS_PER_SEC;
+    tsc_hz = (ng_uint64_t)((end - start)/secs);
+    /* Round up to 10Mhz. 1E7 ~ 10Mhz */
+    return RTE_ALIGN_MUL_NEAR(tsc_hz, CYC_PER_10MHZ);
+  }
 #endif
-	return 0;
+  return 0;
 }
 int
 rte_eal_timer_init(void)
 {
-	set_tsc_freq();
-	return 0;
+  set_tsc_freq();
+  return 0;
 }
 #endif
 
@@ -300,7 +318,7 @@ rte_eal_timer_init(void)
 ng_uint64_t
 rte_get_tsc_hz(void)
 {
-	return eal_tsc_resolution_hz;
+  return eal_tsc_resolution_hz;
 }
 
 /**
@@ -312,7 +330,7 @@ rte_get_tsc_hz(void)
 ng_uint64_t
 rte_get_timer_hz(void)
 {
-	ng_uint64_t freq = rte_get_tsc_hz();
+  ng_uint64_t freq = rte_get_tsc_hz();
   if (!freq) freq = ng_os_info.freq;
   return freq;
 }
@@ -320,10 +338,10 @@ rte_get_timer_hz(void)
 void
 rte_delay_us_block(unsigned int us)
 {
-	const ng_uint64_t start = rte_get_timer_cycles();
-	const ng_uint64_t ticks = (ng_uint64_t)us * rte_get_timer_hz() / 1E6;
-	while ((rte_get_timer_cycles() - start) < ticks)
-		rte_pause();
+  const ng_uint64_t start = rte_get_timer_cycles();
+  const ng_uint64_t ticks = (ng_uint64_t)us * rte_get_timer_hz() / 1E6;
+  while ((rte_get_timer_cycles() - start) < ticks)
+    rte_pause();
 }
 
 // Function to round a double value to the nearest ng_int64_t value
@@ -369,44 +387,50 @@ static inline ng_uint64_t round_to_uint64(double num) {
 
 static ng_tmv_s startime        = NG_TMV_INIT;
 static ng_tmv_s startime_offset = NG_TMV_INIT;
-static ng_uint64_t starcycles;  
+static ng_uint64_t starcycles   = 0;  
+static rte_atomic32_t startime_set = RTE_ATOMIC32_INIT(0);
+
 #define TMV2SEC(tv) (tv)->tv_sec + (tv)->tv_usec/1000000
-rte_atomic32_t startime_set = RTE_ATOMIC32_INIT(0);
-ng_uint64_t ng_get_time(void)
+
+static ng_uint64_t __ng_get_time_pasted(void)
 {
   ng_uint64_t endcycles, elapsed;
   endcycles = rte_get_timer_cycles();
   elapsed = round_to_uint64(ng_cycles2sec(ng_difftime(endcycles, starcycles), 0));
-  return TMV2SEC(&startime)+elapsed+TMV2SEC(&startime_offset);
+  return elapsed + TMV2SEC(&startime_offset);
+}
+
+ng_uint64_t ng_get_time(void)
+{
+  return TMV2SEC(&startime) + __ng_get_time_pasted();
 }
 
 void ng_update_time(void)
 {
   ng_tmv_s tv;
   
-  ng_gettimeofday(&tv);
-
-  if (rte_atomic32_read(&startime_set))
-    return;
-  
-  rte_smp_mb();
-  rte_atomic32_set(&startime_set,1);
-  rte_smp_mb();
-
-  if (!ng_timerisset(&startime_offset))
+  if (!starcycles)
   {
+    ng_gettimeofday(&tv);
     starcycles = rte_get_timer_cycles();
     startime   = tv; 
   }
   else
   {
+    ng_gettimeofday(&tv);
+
+    rte_smp_mb();
+    if (!rte_atomic32_cmpset((volatile ng_uint32_t *)&startime_set.cnt, 0, 1))
+      return;
+    rte_smp_mb();
+    
     ng_timersub(&tv, &startime, &startime_offset);
     starcycles = rte_get_timer_cycles();
+    
+    rte_smp_mb();
+    rte_atomic32_set(&startime_set, 0);
+    rte_smp_mb();
   }
-  
-  rte_smp_mb();
-  rte_atomic32_set(&startime_set,0);
-  rte_smp_mb();
 }
 
 #define __ng_YEARS_N  251
@@ -926,32 +950,32 @@ ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
 }
 
 static const char *____year_name[] = {
-	"1970","1971","1972","1973","1974","1975","1976","1977","1978","1979",
-	"1980","1981","1982","1983","1984","1985","1986","1987","1988","1989",
-	"1990","1991","1992","1993","1994","1995","1996","1997","1998","1999",
-	"2000","2001","2002","2003","2004","2005","2006","2007","2008","2009",
-	"2010","2011","2012","2013","2014","2015","2016","2017","2018","2019",
-	"2020","2021","2022","2023","2024","2025","2026","2027","2028","2029",
-	"2030","2031","2032","2033","2034","2035","2036","2037","2038","2039",
-	"2040","2041","2042","2043","2044","2045","2046","2047","2048","2049",
-	"2050","2051","2052","2053","2054","2055","2056","2057","2058","2059",
-	"2060","2061","2062","2063","2064","2065","2066","2067","2068","2069",
-	"2070","2071","2072","2073","2074","2075","2076","2077","2078","2079",
-	"2080","2081","2082","2083","2084","2085","2086","2087","2088","2089",
-	"2090","2091","2092","2093","2094","2095","2096","2097","2098","2099",
-	"2100","2101","2102","2103","2104","2105","2106","2107","2108","2109",
-	"2110","2111","2112","2113","2114","2115","2116","2117","2118","2119",
-	"2120","2121","2122","2123","2124","2125","2126","2127","2128","2129",
-	"2130","2131","2132","2133","2134","2135","2136","2137","2138","2139",
-	"2140","2141","2142","2143","2144","2145","2146","2147","2148","2149",
-	"2150","2151","2152","2153","2154","2155","2156","2157","2158","2159",
-	"2160","2161","2162","2163","2164","2165","2166","2167","2168","2169",
-	"2170","2171","2172","2173","2174","2175","2176","2177","2178","2179",
-	"2180","2181","2182","2183","2184","2185","2186","2187","2188","2189",
-	"2190","2191","2192","2193","2194","2195","2196","2197","2198","2199",
-	"2200","2201","2202","2203","2204","2205","2206","2207","2208","2209",
-	"2210","2211","2212","2213","2214","2215","2216","2217","2218","2219",
-	"2220","2221","2222","2223","2224","2225"
+  "1970","1971","1972","1973","1974","1975","1976","1977","1978","1979",
+  "1980","1981","1982","1983","1984","1985","1986","1987","1988","1989",
+  "1990","1991","1992","1993","1994","1995","1996","1997","1998","1999",
+  "2000","2001","2002","2003","2004","2005","2006","2007","2008","2009",
+  "2010","2011","2012","2013","2014","2015","2016","2017","2018","2019",
+  "2020","2021","2022","2023","2024","2025","2026","2027","2028","2029",
+  "2030","2031","2032","2033","2034","2035","2036","2037","2038","2039",
+  "2040","2041","2042","2043","2044","2045","2046","2047","2048","2049",
+  "2050","2051","2052","2053","2054","2055","2056","2057","2058","2059",
+  "2060","2061","2062","2063","2064","2065","2066","2067","2068","2069",
+  "2070","2071","2072","2073","2074","2075","2076","2077","2078","2079",
+  "2080","2081","2082","2083","2084","2085","2086","2087","2088","2089",
+  "2090","2091","2092","2093","2094","2095","2096","2097","2098","2099",
+  "2100","2101","2102","2103","2104","2105","2106","2107","2108","2109",
+  "2110","2111","2112","2113","2114","2115","2116","2117","2118","2119",
+  "2120","2121","2122","2123","2124","2125","2126","2127","2128","2129",
+  "2130","2131","2132","2133","2134","2135","2136","2137","2138","2139",
+  "2140","2141","2142","2143","2144","2145","2146","2147","2148","2149",
+  "2150","2151","2152","2153","2154","2155","2156","2157","2158","2159",
+  "2160","2161","2162","2163","2164","2165","2166","2167","2168","2169",
+  "2170","2171","2172","2173","2174","2175","2176","2177","2178","2179",
+  "2180","2181","2182","2183","2184","2185","2186","2187","2188","2189",
+  "2190","2191","2192","2193","2194","2195","2196","2197","2198","2199",
+  "2200","2201","2202","2203","2204","2205","2206","2207","2208","2209",
+  "2210","2211","2212","2213","2214","2215","2216","2217","2218","2219",
+  "2220","2221","2222","2223","2224","2225"
 };
 
 static const char *____month_name[] = {
@@ -1110,6 +1134,6 @@ void ng_date_print(void)
   BUF_SET(&b, date, sizeof(date));
   __ng_http_date(b.buf, b.len, 0, NULL);
   log_print("\nSystem is already running %"PRIu64" seconds\n", 
-    ng_get_time() - (ng_uint64_t)TMV2SEC(&startime));
+    __ng_get_time_pasted());
   log_print("Date   : %.*s\n\n", (int)b.len, b.cptr);
 }

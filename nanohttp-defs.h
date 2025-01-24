@@ -412,7 +412,6 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 #include "nanohttp-atomic.h"
 #include "nanohttp-prefetch.h"
 #include "nanohttp-utils.h"
-#include "nanohttp-lfq.h"
 #include "nanohttp-lcore.h"
 #include "nanohttp-vsprintf.h"
 #include "nanohttp-ctype.h"

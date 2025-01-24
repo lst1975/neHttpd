@@ -155,7 +155,6 @@
 #include <syslog.h>
 #include <stdarg.h>
 #include <stdalign.h>
-#include <stdatomic.h>
 
 #ifdef HAVE_STDIO_H
 #include <stdio.h>

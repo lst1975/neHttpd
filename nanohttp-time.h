@@ -371,7 +371,7 @@ void ng_update_time(void);
 ng_uint64_t ng_get_time(void);
 ng_uint64_t rte_get_tsc_hz(void);
 ng_uint64_t rte_get_timer_hz(void);
-void rte_delay_us_sleep(unsigned int us);
+int rte_delay_us_sleep(unsigned int us);
 ng_uint64_t get_tsc_freq(void);
     
 /*
