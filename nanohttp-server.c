@@ -1684,7 +1684,7 @@ __httpd_run(hsocket_s *sock, const char *name)
         }
 		
         /* timeout */
-        ng_update_time();
+        __ng_update_time();
         __httpd_log_poll_timeout(sock->sock, sock->ep, 
           ng_difftime(ng_get_time(), start));
         continue;
@@ -1801,7 +1801,7 @@ __httpd_run(hsocket_s *sock, const char *name)
         }
         
         /* timeout */
-        ng_update_time();
+        __ng_update_time();
         __httpd_log_poll_timeout(sock->sock, INVALID_SOCKET, 
           ng_difftime(ng_get_time(), start));
         continue;
@@ -1929,7 +1929,7 @@ __httpd_run(hsocket_s *sock, const char *name)
         }
 
         /* timeout */
-        ng_update_time();
+        __ng_update_time();
         __httpd_log_poll_timeout(sock->sock, INVALID_SOCKET, 
           ng_difftime(ng_get_time(), start));
         continue;

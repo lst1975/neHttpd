@@ -408,29 +408,28 @@ ng_uint64_t ng_get_time(void)
 void ng_update_time(void)
 {
   ng_tmv_s tv;
-  
-  if (!starcycles)
-  {
-    ng_gettimeofday(&tv);
-    starcycles = rte_get_timer_cycles();
-    startime   = tv; 
-  }
-  else
-  {
-    ng_gettimeofday(&tv);
+  ng_gettimeofday(&tv);
+  starcycles = rte_get_timer_cycles();
+  startime   = tv; 
+}
 
-    rte_smp_mb();
-    if (!rte_atomic32_cmpset((volatile ng_uint32_t *)&startime_set.cnt, 0, 1))
-      return;
-    rte_smp_mb();
-    
-    ng_timersub(&tv, &startime, &startime_offset);
-    starcycles = rte_get_timer_cycles();
-    
-    rte_smp_mb();
-    rte_atomic32_set(&startime_set, 0);
-    rte_smp_mb();
-  }
+void __ng_update_time(void)
+{
+  ng_tmv_s tv;
+  
+  ng_gettimeofday(&tv);
+
+  rte_smp_mb();
+  if (!rte_atomic32_cmpset((volatile ng_uint32_t *)&startime_set.cnt, 0, 1))
+    return;
+  rte_smp_mb();
+  
+  ng_timersub(&tv, &startime, &startime_offset);
+  starcycles = rte_get_timer_cycles();
+  
+  rte_smp_mb();
+  rte_atomic32_set(&startime_set, 0);
+  rte_smp_mb();
 }
 
 #define __ng_YEARS_N  251

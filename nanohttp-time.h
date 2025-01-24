@@ -368,6 +368,7 @@ rte_get_timer_cycles(void)
 }
 
 void ng_update_time(void);
+void __ng_update_time(void);
 ng_uint64_t ng_get_time(void);
 ng_uint64_t rte_get_tsc_hz(void);
 ng_uint64_t rte_get_timer_hz(void);
