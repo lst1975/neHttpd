@@ -386,9 +386,7 @@ static inline ng_uint64_t round_to_uint64(double num) {
 }
 
 static ng_tmv_s startime        = NG_TMV_INIT;
-static ng_tmv_s startime_offset = NG_TMV_INIT;
 static ng_uint64_t starcycles   = 0;  
-static rte_atomic32_t startime_set = RTE_ATOMIC32_INIT(0);
 
 #define TMV2SEC(tv) (tv)->tv_sec + (tv)->tv_usec/1000000
 
@@ -397,7 +395,7 @@ static ng_uint64_t __ng_get_time_pasted(void)
   ng_uint64_t endcycles, elapsed;
   endcycles = rte_get_timer_cycles();
   elapsed = round_to_uint64(ng_cycles2sec(ng_difftime(endcycles, starcycles), 0));
-  return elapsed + TMV2SEC(&startime_offset);
+  return elapsed;
 }
 
 ng_uint64_t ng_get_time(void)
@@ -415,23 +413,12 @@ void ng_update_time(void)
 
 void __ng_update_time(void)
 {
-  ng_tmv_s tv;
-  
-  if (!rte_atomic32_test_and_set(&startime_set))
-    return;
-  
-  ng_gettimeofday(&tv);
-  ng_timersub(&tv, &startime, &startime_offset);
-  starcycles = rte_get_timer_cycles();
-  
-  rte_compiler_barrier();
-  rte_atomic32_set(&startime_set, 0);
 }
 
-#define __ng_YEARS_N  251
-#define __ng_MONTHS_N 11
-#define __ng_DAYS_N   31
-#define __ng_HOURS_N  23
+#define __ng_N_YEARS  251
+#define __ng_N_MONTHS 11
+#define __ng_N_DAYS   31
+#define __ng_N_HOURS  23
 
 static const ng_uint64_t __ng_YEARS[256] = {
   UINT64_C(         0),
@@ -680,7 +667,7 @@ ng_unix2tm_time(ng_rtc_time_s *tm, ng_tmv_s *tv, int tz_offset)
   tm->tm_wday = (day_in_epoch + JAN11900DOW) % 7;
 
   i = t / SECSPERYEAR;
-  if (i > __ng_YEARS_N)
+  if (i > __ng_N_YEARS)
     return ng_ERR_EINVAL;
   
   __ng_div_find(t, __ng_YEARS, i);
@@ -699,7 +686,7 @@ ng_unix2tm_time(ng_rtc_time_s *tm, ng_tmv_s *tv, int tz_offset)
   leap = ___IS_LEAP(tm->tm_year + 1900);
 
   i = t / SECSPERMONTH-1;
-  if (i > __ng_MONTHS_N)
+  if (i > __ng_N_MONTHS)
     return ng_ERR_EINVAL;
   m = leap ? __ng_MONTHS_leap : __ng_MONTHS;
   __ng_div_find(t, m, i);
@@ -917,7 +904,7 @@ ng_http_date2gm(const char *buf, int len, ng_rtc_time_s *tm)
      + __ng_hex2int(p[1])*100
      + __ng_hex2int(p[2])*10
      + __ng_hex2int(p[3]);
-  if (tm->tm_year - 1900 > __ng_YEARS_N)
+  if (tm->tm_year - 1900 > __ng_N_YEARS)
     return -1;
   tm->tm_year -= 1900;
 
