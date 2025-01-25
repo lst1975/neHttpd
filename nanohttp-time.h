@@ -398,8 +398,8 @@ static inline ng_uint64_t ng_cycles2sec(ng_uint64_t cycles, ng_uint64_t freq)
 
 typedef struct __ng_tv ng_tmv_s;
 struct __ng_tv {
-  ng_uint64_t tv_sec;
-  ng_uint64_t tv_usec;
+  ng_int64_t tv_sec;
+  ng_int64_t tv_usec;
   int_t    gmtoff;
 };
 

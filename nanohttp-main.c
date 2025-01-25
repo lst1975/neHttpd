@@ -271,11 +271,14 @@ __send_menu_js(httpd_conn_s *conn, hrequest_s *req)
   do
   {
     if (req->userLevel == _N_http_user_type_ADMIN)
-      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_JS_MENU_ADMIN);
+      r = http_output_stream_write_buffer(conn->out, 
+            nanohttp_index_html_head_JS_MENU_ADMIN);
     else if (req->userLevel == _N_http_user_type_SUPER)
-      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_JS_MENU_SUPER);
+      r = http_output_stream_write_buffer(conn->out, 
+            nanohttp_index_html_head_JS_MENU_SUPER);
     else
-      r = http_output_stream_write_buffer(conn->out, nanohttp_index_html_head_JS_MENU_GUEST);
+      r = http_output_stream_write_buffer(conn->out, 
+            nanohttp_index_html_head_JS_MENU_GUEST);
     if (r != H_OK) break;
   } 
   while(0);

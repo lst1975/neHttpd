@@ -344,12 +344,13 @@ ng_size_t multipartparser_execute(mime_parser_s *parser,
 
   //printf("%.*s\n", (int)size, data);
   
-  for (p = data; p < end; ++p) {
+  for (p = data; p < end; ++p) 
+  {
     c = *p;
 
 reexecute:
-    switch (parser->state) {
-
+    switch (parser->state) 
+    {
       case s_preamble:
         if (c == HYPHEN)
           parser->state = s_preamble_hy_hy;
@@ -374,13 +375,15 @@ reexecute:
           p += parser->boundary.len - 1;
           break;
         }
-        if (parser->index == parser->boundary.len) {
+        if (parser->index == parser->boundary.len) 
+        {
           if (c != CR)
             goto error;
           parser->index++;
           break;
         }
-        if (parser->index == parser->boundary.len + 1) {
+        if (parser->index == parser->boundary.len + 1) 
+        {
           if (c != LF)
             goto error;
           CALLBACK_NOTIFY(body_begin);
@@ -389,14 +392,16 @@ reexecute:
           parser->state = s_header_field_start;
           break;
         }
-        if (c == parser->boundary.cptr[parser->index]) {
+        if (c == parser->boundary.cptr[parser->index]) 
+        {
           parser->index++;
           break;
         }
         goto error;
 
       case s_header_field_start:
-        if (c == CR) {
+        if (c == CR) 
+        {
           parser->state = s_headers_done;
           break;
         }
@@ -420,7 +425,8 @@ reexecute:
         mark = ng_memchr(p, ':', end - p);
         if (unlikely(mark != NULL))
         {
-          if (mark > p) {
+          if (mark > p) 
+          {
             CALLBACK_DATA(header_field, p, mark - p);
             p = mark;
           }
@@ -430,7 +436,8 @@ reexecute:
         mark = ng_memchr(p, CR, end - p);
         if (mark != NULL)
         {
-          if (mark > p) {
+          if (mark > p) 
+          {
             CALLBACK_DATA(header_field, p, mark - p);
             p = mark;
           }
@@ -439,14 +446,16 @@ reexecute:
           break;
         }
         
-        if (end > p) {
+        if (end > p) 
+        {
           CALLBACK_DATA(header_field, p, end - p);
           p = end;
         }
         break;
 
       case s_header_value_start:
-        if (c == SP || c == HT) {
+        if (c == SP || c == HT) 
+        {
           break;
         }
         parser->state = s_header_value;
@@ -474,28 +483,32 @@ reexecute:
         mark = ng_memchr(p, CR, end - p);
         if (mark != NULL)
         {
-          if (mark > p) {
+          if (mark > p) 
+          {
             CALLBACK_DATA(header_value, p, mark - p);
           }
           p = mark;
           parser->state = s_header_value_cr;
           break;
         }
-        if (end > p) {
+        if (end > p) 
+        {
           CALLBACK_DATA(header_value, p, end - p);
           p = end;
         }
         break;
 
       case s_header_value_cr:
-        if (c == LF) {
+        if (c == LF) 
+        {
           parser->state = s_header_field_start;
           break;
         }
         goto error;
 
       case s_headers_done:
-        if (c == LF) {
+        if (c == LF) 
+        {
           CALLBACK_NOTIFY(headers_complete);
           parser->state = s_data;
           break;
@@ -522,7 +535,8 @@ reexecute:
         break;
 
       case s_data_cr:
-        if (c == LF) {
+        if (c == LF) 
+        {
           parser->state = s_data_cr_lf;
           break;
         }
@@ -531,7 +545,8 @@ reexecute:
         goto reexecute;
 
       case s_data_cr_lf:
-        if (c == HYPHEN) {
+        if (c == HYPHEN) 
+        {
           parser->state = s_data_cr_lf_hy;
           break;
         }
@@ -540,7 +555,8 @@ reexecute:
         goto reexecute;
 
       case s_data_cr_lf_hy:
-        if (c == HYPHEN) {
+        if (c == HYPHEN) 
+        {
           parser->state = s_data_boundary_start;
           break;
         }
@@ -564,12 +580,14 @@ reexecute:
             break;
           }
         }
-        if (parser->index == parser->boundary.len) {
+        if (parser->index == parser->boundary.len) 
+        {
           parser->index = 0;
           parser->state = s_data_boundary_done;
           goto reexecute;
         }
-        if (c == parser->boundary.cptr[parser->index]) {
+        if (c == parser->boundary.cptr[parser->index]) 
+        {
           parser->index++;
           break;
         }
@@ -1064,7 +1082,8 @@ attachments_new(ng_list_head_s *attachments_list)
 }
 
 void
-attachments_add_part(mime_attachment_s *attachments, mime_part_s *part)
+attachments_add_part(mime_attachment_s *attachments, 
+  mime_part_s *part)
 {
   if (!attachments)
     return;
@@ -1098,7 +1117,8 @@ attachments_free(mime_attachment_s *message)
 
 #define _HTTPC_MIME_BOUNDARY_SIZE_MAX 75
 
-static herror_t _mime_toolarge(const char *func, ng_size_t size)
+static herror_t 
+_mime_toolarge(const char *func, ng_size_t size)
 {
   return herror_new(func, 
                     MIME_ERROR,
@@ -1107,8 +1127,9 @@ static herror_t _mime_toolarge(const char *func, ng_size_t size)
 }
 
 static inline herror_t
-_mime_copy3(char *buffer, ng_size_t blen, const char *d1, ng_size_t d1len, 
-  const char *d2, ng_size_t d2len, const char *d3, ng_size_t d3len)
+_mime_copy3(char *buffer, ng_size_t blen, const char *d1, 
+  ng_size_t d1len, const char *d2, ng_size_t d2len, 
+  const char *d3, ng_size_t d3len)
 {
   if (blen < d1len+d2len+d3len)
   {
@@ -1167,28 +1188,51 @@ mime_add_content_type_header(ng_list_head_s *header,
 
   if (related_type)
   {
-    status = _mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
-      " type=\"", 7, related_type->cptr, related_type->len, "\";", 2);
+    status = _mime_copy3(
+      BUF_CUR_PTR(&b), 
+      BUF_REMAIN(&b),
+      " type=\"", 
+      7, 
+      related_type->cptr, 
+      related_type->len, 
+      "\";", 
+      2);
     if (status != H_OK) goto clean1;
   }
 
   if (related_start)
   {
-    status = _mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
-      " start=\"", 8, related_start->cptr, related_start->len, "\";", 2);
+    status = _mime_copy3(
+      BUF_CUR_PTR(&b), 
+      BUF_REMAIN(&b),
+      " start=\"", 
+      8, 
+      related_start->cptr, 
+      related_start->len, "\";", 
+      2);
     if (status != H_OK) goto clean1;
   }
 
   if (related_start_info)
   {
-    status = _mime_copy3(BUF_CUR_PTR(&b), BUF_REMAIN(&b),
-      " start-info=\"", 13, related_start_info->cptr, 
-      related_start_info->len, "\";", 2);
+    status = _mime_copy3(
+      BUF_CUR_PTR(&b), 
+      BUF_REMAIN(&b),
+      " start-info=\"", 
+      13, 
+      related_start_info->cptr, 
+      related_start_info->len, 
+      "\";", 
+      2);
     if (status != H_OK) goto clean1;
   }
 
-  n = ng_snprintf(BUF_CUR_PTR(&b), BUF_REMAIN(&b), 
-    " boundary=\""HTTP_BOUNDARY_FMT"\"", conn_ptr, conn_id);
+  n = ng_snprintf(
+    BUF_CUR_PTR(&b), 
+    BUF_REMAIN(&b), 
+    " boundary=\""HTTP_BOUNDARY_FMT"\"", 
+    conn_ptr, 
+    conn_id);
   BUF_GO(&b, n);
   if (n != HTTP_BOUNDARY_LEN)
   {
@@ -1196,7 +1240,8 @@ mime_add_content_type_header(ng_list_head_s *header,
     goto clean1;
   }
   
-  if (hpairnode_set_header(header, &__HDR_BUF__(HEADER_CONTENT_TYPE), &b.b) < 0)
+  if (hpairnode_set_header(header, 
+    &__HDR_BUF__(HEADER_CONTENT_TYPE), &b.b) < 0)
   {
     status = herror_new("mime_add_content_type_header", 
                       GENERAL_ERROR,
@@ -1294,21 +1339,23 @@ mime_part_new(ng_list_head_s *part_list, const ng_block_s *params)
   }
   part->ContentType = &pair->val;
 
-  n = ng_snprintf(BUF_CUR_PTR(&disposition), BUF_REMAIN(&disposition),
-    "%pS", type);
-  ng_block_set(&part->type, BUF_CUR_PTR(&disposition), type->len);
+  n = ng_snprintf(BUF_CUR_PTR(&disposition), 
+    BUF_REMAIN(&disposition), "%pS", type);
+  ng_block_set(&part->type, 
+    BUF_CUR_PTR(&disposition), type->len);
   BUF_GO(&disposition, n);
   if (name != NULL)
   {
-    n = ng_snprintf(BUF_CUR_PTR(&disposition), BUF_REMAIN(&disposition),
-      "; name=\"%pS\"", name);
+    n = ng_snprintf(BUF_CUR_PTR(&disposition), 
+      BUF_REMAIN(&disposition), "; name=\"%pS\"", name);
     BUF_GO(&disposition, n);
   }
   if (filename != NULL)
   {
-    n = ng_snprintf(BUF_CUR_PTR(&disposition), BUF_REMAIN(&disposition),
-      "; filename=\"%pS\"", filename);
-    ng_block_set(&part->filename, BUF_CUR_PTR(&disposition)+12, filename->len);
+    n = ng_snprintf(BUF_CUR_PTR(&disposition), 
+      BUF_REMAIN(&disposition), "; filename=\"%pS\"", filename);
+    ng_block_set(&part->filename, 
+      BUF_CUR_PTR(&disposition)+12, filename->len);
     BUF_GO(&disposition, n);
   }
 
@@ -1379,13 +1426,17 @@ struct _mime_send_param{
 static herror_t 
 __file_send(void *arg, const char *buf, ng_size_t length) 
 {
-  struct _mime_send_param *param = (struct _mime_send_param *)arg;
+  herror_t status;
+  struct _mime_send_param *param;
+
+  param = (struct _mime_send_param *)arg;
   
-  herror_t status = mime_write_next(param->conn, param->id, param->out);
+  status = mime_write_next(param->conn, param->id, param->out);
   if (status != H_OK)
     return status;
 
-  return http_output_stream_write(param->out, (unsigned char *)buf, length);
+  return http_output_stream_write(param->out, 
+    (unsigned char *)buf, length);
 }
 
 /**
@@ -1407,7 +1458,8 @@ mime_send_file(void *conn, unsigned int id,
   if (status != H_OK)
     return status;
 
-  status = nanohttp_file_read_all(file->cptr, file->len, __file_send, &param);
+  status = nanohttp_file_read_all(file->cptr, file->len, 
+    __file_send, &param);
   if (status != H_OK)
   {
     herror_log(status);

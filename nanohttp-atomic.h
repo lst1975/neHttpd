@@ -127,7 +127,6 @@ typedef int rte_memory_order;
    */
 #define __rte_atomic_thread_fence(memorder) \
     __atomic_thread_fence(memorder)
-  
 
 /*------------------------- 16 bit atomic operations -------------------------*/
 

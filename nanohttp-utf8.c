@@ -113,7 +113,8 @@ int ng_utf8_charlen(const unsigned char *data, int len)
   {
     return 2;
   } 
-  else if (len >= 3) {
+  else if (len >= 3) 
+  {
     const unsigned char byte2 = data[1];
 
     /* Is byte2, byte3 between 0x80 ~ 0xBF */

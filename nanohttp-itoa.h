@@ -68,9 +68,9 @@
 #endif
 
 ng_size_t u32toa_jeaiii(ng_uint32_t u, char* b, ng_size_t len);
-ng_size_t i32toa_jeaiii(ng_int32_t i, char* b, ng_size_t len);
+ng_size_t i32toa_jeaiii( ng_int32_t i, char* b, ng_size_t len);
 ng_size_t u64toa_jeaiii(ng_uint64_t n, char* b, ng_size_t len);
-ng_size_t i64toa_jeaiii(ng_int64_t i, char* b, ng_size_t len);
+ng_size_t i64toa_jeaiii( ng_int64_t i, char* b, ng_size_t len);
 
 static __ng_inline__ ng_size_t __u32toa_jeaiii(ng_uint32_t u, char* b)
 {

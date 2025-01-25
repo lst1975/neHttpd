@@ -1597,17 +1597,20 @@ _httpd_start_thread(conndata_t *conn)
 }
 
 #define __NHTTP_EPOLL_WAIT_TIMEOUT 1000
-#define __NHTTP_EPOLL_WAIT_LOG 5
+#define __NHTTP_EPOLL_WAIT_LOG 10
+static rte_atomic64_t log_counter = RTE_ATOMIC64_INIT(0);
 
 static void 
 __httpd_log_poll_timeout(SOCKET_T sock, SOCKET_T ep, 
   ng_uint64_t rt)
 {
-  static rte_atomic64_t last_log = RTE_ATOMIC64_INIT(0);
-  ng_uint64_t last_rt = rte_atomic64_read(&last_log);
-  if (ng_difftime(rt, last_rt) < __NHTTP_EPOLL_WAIT_LOG)
+  ng_uint64_t t;
+
+  t = rte_atomic64_add_return(&log_counter, 1);
+  if (t != __NHTTP_EPOLL_WAIT_LOG)
     return;
-  rte_atomic64_set(&last_log, rt);
+  rte_atomic64_clear(&log_counter);
+
   if (ep != INVALID_SOCKET)
   {
     log_debug("Epoll [%lu:%lu]"

@@ -386,7 +386,9 @@ static inline ng_uint64_t round_to_uint64(double num) {
 }
 
 static ng_tmv_s startime        = NG_TMV_INIT;
+static ng_tmv_s startime_offset = NG_TMV_INIT;
 static ng_uint64_t starcycles   = 0;  
+static rte_atomic64_t _tm_atom  = RTE_ATOMIC64_INIT(0);  
 
 #define TMV2SEC(tv) (tv)->tv_sec + (tv)->tv_usec/1000000
 
@@ -395,24 +397,43 @@ static ng_uint64_t __ng_get_time_pasted(void)
   ng_uint64_t endcycles, elapsed;
   endcycles = rte_get_timer_cycles();
   elapsed = round_to_uint64(ng_cycles2sec(ng_difftime(endcycles, starcycles), 0));
-  return elapsed;
+  return elapsed + TMV2SEC(&startime_offset);
 }
 
 ng_uint64_t ng_get_time(void)
 {
-  return TMV2SEC(&startime) + __ng_get_time_pasted();
+  ng_uint64_t t;
+
+  while (!rte_atomic64_test_and_set(&_tm_atom)){};
+  rte_smp_mb();
+
+  t = TMV2SEC(&startime) + __ng_get_time_pasted();
+  
+  rte_smp_mb();
+  rte_atomic64_clear(&_tm_atom);
+  return t;
 }
 
 void ng_update_time(void)
 {
-  ng_tmv_s tv;
-  ng_gettimeofday(&tv);
+  ng_gettimeofday(&startime);
   starcycles = rte_get_timer_cycles();
-  startime   = tv; 
 }
 
 void __ng_update_time(void)
 {
+  ng_tmv_s tv;
+
+  if (!rte_atomic64_test_and_set(&_tm_atom))
+    return;
+  rte_smp_mb();
+  
+  starcycles = rte_get_timer_cycles();
+  ng_gettimeofday(&tv);
+  ng_timersub(&tv, &startime, &startime_offset);
+  
+  rte_smp_mb();
+  rte_atomic64_clear(&_tm_atom);
 }
 
 #define __ng_N_YEARS  251
