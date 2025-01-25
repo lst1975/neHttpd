@@ -1567,37 +1567,48 @@ _httpd_release_finished_conn(conndata_t *conn)
 }
       
 static int
-_httpd_start_thread(conndata_t *conn)
+_httpd_start_thread(conndata_t *conn, 
+  HTTP_THREAD_EXEFUNC_T exefunc, ng_bool_t detached)
 {
   int err = 0;
 
 #ifdef WIN32
-  conn->tid = CreateThread(NULL, 65535, httpd_session_main, conn, 0, NULL);
+  conn->tid = CreateThread(NULL, 65535, exefunc, conn, 0, NULL);
   if (conn->tid == NULL)
   {
     log_error("CreateThread failed %m.", ng_errno);
     err = -1;
   }
   log_debug("###########Create Thread Handle=%p.", conn->tid);
+  NG_UNUSED(detached);
 #else
 
+  if (detached)
+  {
 #ifdef PTHREAD_CREATE_DETACHED
-  pthread_attr_setdetachstate(&(conn->attr), PTHREAD_CREATE_DETACHED);
+    pthread_attr_setdetachstate(&conn->attr, PTHREAD_CREATE_DETACHED);
 #endif
-
-  if ((err =
-       pthread_create(&(conn->tid), &(conn->attr), httpd_session_main, conn)))
+  }
+  else
+  {
+    pthread_attr_init(&conn->attr);
+  }
+  
+  err = pthread_create(&conn->tid, &conn->attr, 
+    exefunc, conn);
+  if (err != 0)
   {
     log_error("pthread_create failed %m.", ng_errno);
     err = -1;
   }
+  
 #endif
 
   return err;
 }
 
 #define __NHTTP_EPOLL_WAIT_TIMEOUT 1000
-#define __NHTTP_EPOLL_WAIT_LOG 10
+#define __NHTTP_EPOLL_WAIT_LOG     10
 static rte_atomic64_t log_counter = RTE_ATOMIC64_INIT(0);
 
 static void 
@@ -1747,7 +1758,7 @@ __httpd_run(hsocket_s *sock, const char *name)
       continue;
     }
     
-    if (_httpd_start_thread(conn) < 0)
+    if (_httpd_start_thread(conn, httpd_session_main, ng_TRUE) < 0)
     {
       log_error("_httpd_start_thread failed.");
       _httpd_release_finished_conn(conn);
@@ -1865,7 +1876,7 @@ __httpd_run(hsocket_s *sock, const char *name)
       continue;
     }
     
-    if (_httpd_start_thread(conn) < 0)
+    if (_httpd_start_thread(conn, httpd_session_main, ng_TRUE) < 0)
     {
       log_error("_httpd_start_thread failed.");
       _httpd_release_finished_conn(conn);
@@ -1988,7 +1999,7 @@ __httpd_run(hsocket_s *sock, const char *name)
       continue;
     }
 
-    if (_httpd_start_thread(conn) < 0)
+    if (_httpd_start_thread(conn, httpd_session_main, ng_TRUE) < 0)
     {
       _httpd_release_finished_conn(conn);
     }
@@ -2150,34 +2161,6 @@ static void *thread_function_ipv6(void* arg)
   return 0;
 }
 
-static herror_t
-__start_thread(conndata_t *conn, HTTP_THREAD_EXEFUNC_T exefunc)
-{
-  int err = 0;
-  herror_t status = H_OK;
-#ifdef WIN32
-  conn->tid = CreateThread(NULL, 65535, exefunc, conn, 0, NULL);
-  if (conn->tid == NULL)
-  {
-    err = GetLastError();
-    log_error("pthread_create failed %m.", err);
-  }
-#else
-  pthread_attr_init(&conn->attr);
-  err = pthread_create(&conn->tid, &conn->attr, exefunc, conn);
-  if (err)
-  {
-    err = ng_errno;
-    log_error("pthread_create failed %m.", err);
-  }
-#endif
-
-  if (err)
-    status = herror_new("__start_thread",  THREAD_BEGIN_ERROR,
-                             "Failed to create pthread!");
-  return status;
-}
-
 #define USE_PTHREAD_WAIT 1
 
 #if USE_PTHREAD_WAIT
@@ -2234,16 +2217,19 @@ herror_t httpd_run(void)
   c4 = &httpd_thread_ipv4;
   hsocket_init(&c4->sock);
   httpd_thread_init(c4);
-  status = __start_thread(c4, thread_function_ipv4);
-  if (status != H_OK)
+  if (0 > _httpd_start_thread(c4, thread_function_ipv4, ng_FALSE))
+  {
+    status = herror_new("_httpd_start_thread",  
+                THREAD_BEGIN_ERROR,
+                "Failed to _httpd_start_thread!");
     goto clean1;
+  }
 #endif
 
   c6 = &httpd_thread_ipv6;
   hsocket_init(&c6->sock);
   httpd_thread_init(c6);
-  status = __start_thread(c6, thread_function_ipv6);
-  if (status != H_OK)
+  if (0 > _httpd_start_thread(c6, thread_function_ipv6, ng_FALSE))
   {
   	nanohttpd_stop_running();
 #if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
@@ -2253,14 +2239,19 @@ herror_t httpd_run(void)
     httpd_thread_cancel(c4);
     c4->flag = CONNECTION_FREE;
 #endif
+    status = herror_new("_httpd_start_thread",  
+                THREAD_BEGIN_ERROR,
+                "Failed to _httpd_start_thread!");
     goto clean1;
   }
 
 #if USE_PTHREAD_WAIT
   conndata_t main_conn = { .name="Main" };
-  status = __start_thread(&main_conn, httpd_run_thread);
-  if (status != H_OK)
+  if (0 > _httpd_start_thread(&main_conn, httpd_run_thread, ng_FALSE))
   {
+    status = herror_new("_httpd_start_thread",  
+                THREAD_BEGIN_ERROR,
+                "Failed to _httpd_start_thread!");
     goto clean2;
   }  
   httpd_thread_join(&main_conn.tid);
