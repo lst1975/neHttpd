@@ -118,12 +118,6 @@
 static inline int hssl_enabled(void) { return 0; }
 #endif
 
-#ifndef WIN32
-#define __NHTTP_LISTEN_DUAL_STACK 0
-#else
-#define __NHTTP_LISTEN_DUAL_STACK 0
-#endif
-
 #ifndef ng_timeradd
 #define ng_timeradd(tvp, uvp, vvp)						\
 	do {								\
@@ -172,8 +166,12 @@ conndata_t;
  *
  */
 static volatile int _httpd_run             = ng_TRUE;
+#if __NHTTP_USE_IPV4
 static hsocket_s _httpd_socket4            = {.sock = HSOCKET_FREE, .ssl = NULL};
+#endif
+#if __NHTTP_USE_IPV6
 static hsocket_s _httpd_socket6            = {.sock = HSOCKET_FREE, .ssl = NULL};
+#endif
 static int _httpd_port                     = _nanoConfig_HTTPD_PORT;
 static int _httpd_max_connections          = _nanoConfig_HTTPD_MAX_CONNECTIONS;
 static int _httpd_max_pending_connections  = _nanoConfig_HTTPD_MAX_PENDING_CONNECTIONS;
@@ -687,6 +685,7 @@ httpd_init(int argc, char **argv)
     return status;
   }
 
+#if __NHTTP_USE_IPV4
   status = hsocket_init(&_httpd_socket4);
   if (status != H_OK)
   {
@@ -694,7 +693,9 @@ httpd_init(int argc, char **argv)
       herror_message(status));
     return status;
   }
+#endif
 
+#if __NHTTP_USE_IPV6
   status = hsocket_init(&_httpd_socket6);
   if (status != H_OK)
   {
@@ -702,8 +703,9 @@ httpd_init(int argc, char **argv)
       herror_message(status));
     return status;
   }
+#endif
 
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+#if __NHTTP_USE_IPV4
   status = hsocket_bind(AF_INET, &_httpd_socket4, 
     _httpd_port);
   if (status != H_OK)
@@ -714,6 +716,7 @@ httpd_init(int argc, char **argv)
   }
 #endif
 
+#if __NHTTP_USE_IPV6
   status = hsocket_bind(AF_INET6, &_httpd_socket6, 
       _httpd_port);
   if (status != H_OK)
@@ -722,6 +725,7 @@ httpd_init(int argc, char **argv)
       herror_message(status));
     return status;
   }
+#endif
 
   log_verbose("socket bind to port '%d'.", _httpd_port);
 
@@ -1777,7 +1781,8 @@ __httpd_run(hsocket_s *sock, const char *name)
   
   log_verbose("starting run routine: %s.", name);
 
-  if ((err = hsocket_listen(sock, _httpd_max_pending_connections)) != H_OK)
+  err = hsocket_listen(sock, _httpd_max_pending_connections);
+  if (err != H_OK)
   {
     herror_log(err);
     log_error("hsocket_listen failed.");
@@ -2128,7 +2133,7 @@ void httpd_signal_cond(COND_T *cond)
   log_debug("httpd_signal_cond.");
 }
 
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+#if __NHTTP_USE_IPV4
 #ifdef WIN32
 DWORD WINAPI thread_function_ipv4(LPVOID arg) 
 #else
@@ -2143,23 +2148,20 @@ static void *thread_function_ipv4(void* arg)
 }
 #endif
 
+#if __NHTTP_USE_IPV6
 #ifdef WIN32
 DWORD WINAPI thread_function_ipv6(LPVOID arg) 
 #else
 static void *thread_function_ipv6(void* arg) 
 #endif
 {
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
   __httpd_run(&_httpd_socket6, "ipv6");
   log_debug("thread function ipv6 finished.");
-#else
-  __httpd_run(&_httpd_socket6, "ipv4 and ipv6");
-  log_debug("thread function ipv4 and ipv6 finished.");
-#endif
   ng_smp_mb();
   httpd_signal_cond(&main_cond);
   return 0;
 }
+#endif
 
 #define USE_PTHREAD_WAIT 1
 
@@ -2179,28 +2181,28 @@ static void *httpd_run_thread(void* arg)
 }
 #endif
 
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+#if __NHTTP_USE_IPV4
 static conndata_t httpd_thread_ipv4={
   .flag=CONNECTION_IN_USE, 
   .index=0, 
   .name="EPoll-IPv4"};
 #endif
+#if __NHTTP_USE_IPV6
 static conndata_t httpd_thread_ipv6={
   .flag=CONNECTION_IN_USE, 
   .index=1, 
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
   .name="EPoll-IPv6"
-#else
-  .name="EPoll-IPv4&IPv6"
-#endif
 };
+#endif
 
 herror_t httpd_run(void)
 {
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+#if __NHTTP_USE_IPV4
   conndata_t *c4;
 #endif
+#if __NHTTP_USE_IPV6
   conndata_t *c6;
+#endif
   herror_t status = H_OK;
 
   httpd_register_signal_handler();
@@ -2213,7 +2215,7 @@ herror_t httpd_run(void)
     goto clean0;
   }
   
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+#if __NHTTP_USE_IPV4
   c4 = &httpd_thread_ipv4;
   hsocket_init(&c4->sock);
   httpd_thread_init(c4);
@@ -2226,13 +2228,14 @@ herror_t httpd_run(void)
   }
 #endif
 
+#if __NHTTP_USE_IPV6
   c6 = &httpd_thread_ipv6;
   hsocket_init(&c6->sock);
   httpd_thread_init(c6);
   if (0 > _httpd_start_thread(c6, thread_function_ipv6, ng_FALSE))
   {
   	nanohttpd_stop_running();
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+#if __NHTTP_USE_IPV4
     ng_smp_mb();
     httpd_thread_kill(&c4->tid);
     httpd_thread_join(&c4->tid);
@@ -2244,6 +2247,7 @@ herror_t httpd_run(void)
                 "Failed to _httpd_start_thread!");
     goto clean1;
   }
+#endif
 
 #if USE_PTHREAD_WAIT
   conndata_t main_conn = { .name="Main" };
@@ -2263,16 +2267,18 @@ herror_t httpd_run(void)
 #if USE_PTHREAD_WAIT
 clean2:  
 #endif
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+#if __NHTTP_USE_IPV4
   httpd_thread_join(&c4->tid);
   ng_smp_mb();
   httpd_thread_cancel(c4);
   c4->flag = CONNECTION_FREE;
 #endif
+#if __NHTTP_USE_IPV6
   httpd_thread_join(&c6->tid);
   ng_smp_mb();
   httpd_thread_cancel(c6);
   c6->flag = CONNECTION_FREE;
+#endif
   
 clean1:
   httpd_destroy_cond(&main_cond);
@@ -2283,12 +2289,14 @@ clean0:
 void
 httpd_destroy(void)
 {
-#if !__NHTTP_LISTEN_DUAL_STACK || !defined(IPV6_V6ONLY)
+#if __NHTTP_USE_IPV4
   hsocket_close(&_httpd_socket4);
   log_debug("_httpd_socket4 closed.");
 #endif
+#if __NHTTP_USE_IPV6
   hsocket_close(&_httpd_socket6);
   log_debug("_httpd_socket6 closed.");
+#endif
 
   _httpd_unregister_services();
   hsocket_module_destroy();

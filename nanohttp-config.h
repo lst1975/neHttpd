@@ -149,6 +149,15 @@
 #define __NHTTP_USE_WSAPOLL 0
 #endif
 
+#define __NHTTP_USE_IPV4 1
+#define __NHTTP_USE_IPV6 1
+#if !__NHTTP_USE_IPV4 && !__NHTTP_USE_IPV6
+#error "neither __NHTTP_USE_IPV4 nor __NHTTP_USE_IPV6"
+#elif __NHTTP_USE_IPV4 && __NHTTP_USE_IPV6
+#undef __NHTTP_USE_IPV4
+#define __NHTTP_USE_IPV4 0
+#endif
+
 #define __NHTTP_USE_NATIVE_MEM 0
 
 #include <assert.h>

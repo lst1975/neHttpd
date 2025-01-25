@@ -392,7 +392,7 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
                       err);
   }
 
-#if __NHTTP_LISTEN_DUAL_STACK && defined(IPV6_V6ONLY)
+#if !__NHTTP_USE_IPV4 && defined(IPV6_V6ONLY)
   if (setsockopt(sock.sock, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, sizeof(opt)) < 0) {
     int err = errno;
     log_error("Socket IPPROTO_IPV6 IPV6_V6ONLY %m.", err);
@@ -415,25 +415,36 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
 #endif
 
   /* bind socket */
-  if (fam == AF_INET)
+  switch (fam)
   {
-    addr = (struct sockaddr *)&dsock->addr;
-    ng_memset(addr, 0, sizeof(dsock->addr));
-    dsock->addr.sin_family = AF_INET;
-    dsock->addr.sin_port = htons(port);
-    dsock->addr.sin_addr.s_addr = INADDR_ANY;
-    dsock->salen = sizeof(dsock->addr);
-  }
-  else
-  {
-    addr = (struct sockaddr *)&dsock->addr6;
-    ng_memset(addr, 0, sizeof(dsock->addr6));
-    dsock->addr6.sin6_family = AF_INET6;
-    dsock->addr6.sin6_port = htons(port);
-    dsock->addr6.sin6_addr = in6addr_any;
-    dsock->salen = sizeof(dsock->addr6);
-  }
+#if __NHTTP_USE_IPV4
+    case AF_INET:
+      addr = (struct sockaddr *)&dsock->addr;
+      ng_memset(addr, 0, sizeof(dsock->addr));
+      dsock->addr.sin_family = AF_INET;
+      dsock->addr.sin_port = htons(port);
+      dsock->addr.sin_addr.s_addr = INADDR_ANY;
+      dsock->salen = sizeof(dsock->addr);
+      break;
+#endif
 
+#if __NHTTP_USE_IPV6
+    case AF_INET6:
+      addr = (struct sockaddr *)&dsock->addr6;
+      ng_memset(addr, 0, sizeof(dsock->addr6));
+      dsock->addr6.sin6_family = AF_INET6;
+      dsock->addr6.sin6_port = htons(port);
+      dsock->addr6.sin6_addr = in6addr_any;
+      dsock->salen = sizeof(dsock->addr6);
+      break;
+#endif
+      
+    default:
+      log_error("Unknown family %d.", fam);
+      return herror_new("hsocket_bind", HSOCKET_ERROR_BIND, 
+                "Unknown family %d.", fam);
+  }
+  
   if (bind(sock.sock, (struct sockaddr *)addr, dsock->salen) == -1)
   {
     int err = errno;
