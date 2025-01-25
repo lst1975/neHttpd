@@ -608,7 +608,8 @@ _httpd_register_builtin_services(int argc, char **argv)
 {
   herror_t status;
 
-  if ((status = httpd_admin_init_args(argc, argv)) != H_OK)
+  status = httpd_admin_init_args(argc, argv);
+  if (status != H_OK)
   {
     herror_log(status);
     log_error("httpd_admin_init_args failed.");
