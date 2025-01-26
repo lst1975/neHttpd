@@ -141,6 +141,7 @@
 #include "nanohttp-file.h"
 #include "nanohttp-error.h"
 #include "nanohttp-system.h"
+#include "nanohttp-inet.h"
 
 #if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
 #pragma GCC diagnostic push
@@ -887,9 +888,6 @@ __ip4_string(char *p, const ng_uint8_t *addr, const char *fmt)
   return p;
 }
 
-#define ng_s6_addr32(a, i) ((ng_uint32_t *)(a))[i]
-#define ng_s6_addr16(a, i) ((ng_uint16_t *)(a))[i]
-#define ng_s6_addr8(a, i)  ((ng_uint8_t  *)(a))[i]
 /*
  * Note that we must __force cast these to unsigned long to make sparse happy,
  * since all of the endian-annotated types are fixed size regardless of arch.
@@ -906,15 +904,7 @@ __ip4_string(char *p, const ng_uint8_t *addr, const char *fmt)
 static inline ng_bool_t 
 ipv6_addr_v4mapped(const struct in6_addr *a)
 {
-#if __NG_BITS_PER_LONG == 64
-  return (*(ng_uint64_t *)a 
-    | ((ng_uint64_t)(ng_s6_addr32(a, 2) ^ rte_cpu_to_be_32(0x0000ffff)))) 
-    == 0UL;
-#else
-  return (((ng_uint32_t)(ng_s6_addr32(a, 0) | ng_s6_addr32(a, 1))) 
-    | ((ng_uint32_t)(ng_s6_addr32(a, 2) ^ rte_cpu_to_be_32(0x0000ffff))))
-    == 0UL;
-#endif
+  return __ipv6_addr_v4mapped(a);
 }
 
 /*
@@ -939,8 +929,7 @@ ipv6_addr_v4mapped(const struct in6_addr *a)
 static inline ng_bool_t 
 ipv6_addr_is_isatap(const struct in6_addr *a)
 {
-  return (ng_s6_addr32(a, 2) | rte_cpu_to_be_32(0x02000000)) 
-    == rte_cpu_to_be_32(0x02005EFE);
+  return __ipv6_addr_is_isatap(a);
 }
 
 static char *
@@ -1033,9 +1022,6 @@ ip6_compressed_string(char *p, const ng_uint8_t *addr)
 #undef __IN6_ADDR
   return p;
 }
-#undef ng_s6_addr32
-#undef ng_s6_addr16
-#undef ng_s6_addr8
 
 static char *
 ip6_string(char *p, const ng_uint8_t *addr, const char *fmt)
