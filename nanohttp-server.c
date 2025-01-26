@@ -2164,24 +2164,6 @@ static void *thread_function_ipv6(void* arg)
 }
 #endif
 
-#define USE_PTHREAD_WAIT 1
-
-#if USE_PTHREAD_WAIT
-#ifdef WIN32
-DWORD WINAPI httpd_run_thread(LPVOID arg) 
-#else
-static void *httpd_run_thread(void* arg) 
-#endif
-{
-  httpd_wait_cond(&main_cond);
-#ifdef WIN32
-  return 0;
-#else
-  return NULL;
-#endif
-}
-#endif
-
 #if __NHTTP_USE_IPV4
 static conndata_t httpd_thread_ipv4={
   .flag=CONNECTION_IN_USE, 
@@ -2250,24 +2232,8 @@ herror_t httpd_run(void)
   }
 #endif
 
-#if USE_PTHREAD_WAIT
-  conndata_t main_conn = { .name="Main" };
-  if (0 > _httpd_start_thread(&main_conn, httpd_run_thread, ng_FALSE))
-  {
-    status = herror_new("_httpd_start_thread",  
-                THREAD_BEGIN_ERROR,
-                "Failed to _httpd_start_thread!");
-    goto clean2;
-  }  
-  httpd_thread_join(&main_conn.tid);
-  httpd_thread_cancel(&main_conn);
-#else
   httpd_wait_cond(&main_cond);
-#endif
 
-#if USE_PTHREAD_WAIT
-clean2:  
-#endif
 #if __NHTTP_USE_IPV4
   httpd_thread_join(&c4->tid);
   ng_smp_mb();
