@@ -63,7 +63,8 @@
 #ifndef __NanoHttpConfig_H_
 #define __NanoHttpConfig_H_
 
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) || defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) \
+  || defined(__CYGWIN__) || defined(_WIN32) || defined(_WIN64)
 #ifndef WIN32
 #define WIN32
 #endif
@@ -137,16 +138,12 @@
 #define __NHTTP_MEM_DEBUG 1
 #define __HTTP_SMALL_SIZE 0
 
-#if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) 
-#define __NHTTP_USE_EPOLL 0
-#else
-#define __NHTTP_USE_EPOLL 1
-#endif
-
 #ifdef WIN32
 #define __NHTTP_USE_WSAPOLL 1
+#define __NHTTP_USE_EPOLL 0
 #else
 #define __NHTTP_USE_WSAPOLL 0
+#define __NHTTP_USE_EPOLL 1
 #endif
 
 #define __NHTTP_USE_IPV4 1
