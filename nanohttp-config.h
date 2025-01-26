@@ -63,7 +63,7 @@
 #ifndef __NanoHttpConfig_H_
 #define __NanoHttpConfig_H_
 
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) 
+#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__) || defined(__CYGWIN__) || defined(_WIN32) || defined(_WIN64)
 #ifndef WIN32
 #define WIN32
 #endif

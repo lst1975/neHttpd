@@ -104,8 +104,6 @@
 #ifdef WIN32
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
-#undef errno
-#define errno WSAGetLastError()
 #endif
 
 #if __NHTTP_USE_EPOLL || __NHTTP_USE_WSAPOLL
@@ -385,7 +383,7 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
   
   if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0)
   {
-    int err = ng_errno;
+    int err = ng_socket_errno;
     log_error("Socket SOL_SOCKET SO_REUSEADDR %m.", err);
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
                       "Socket SOL_SOCKET SO_REUSEADDR %m.", 
@@ -394,7 +392,7 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
 
 #if !__NHTTP_USE_IPV4 && defined(IPV6_V6ONLY)
   if (setsockopt(sock.sock, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, sizeof(opt)) < 0) {
-    int err = errno;
+    int err = ng_socket_errno;
     log_error("Socket IPPROTO_IPV6 IPV6_V6ONLY %m.", err);
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
                       "Socket IPPROTO_IPV6 IPV6_V6ONLY %m.", 
@@ -405,7 +403,7 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
 #ifdef SO_REUSEPORT  
   if (setsockopt(sock.sock, SOL_SOCKET, SO_REUSEPORT, (char *)&opt, sizeof(opt)) < 0)
   {
-    int err = ng_errno;
+    int err = ng_socket_errno;
     log_error("Socket SOL_SOCKET SO_REUSEPORT %m.", 
                       err);
     return herror_new("hsocket_open", HSOCKET_ERROR_CREATE,
@@ -447,7 +445,7 @@ hsocket_bind(ng_uint8_t fam, hsocket_s *dsock, unsigned short port)
   
   if (bind(sock.sock, (struct sockaddr *)addr, dsock->salen) == -1)
   {
-    int err = errno;
+    int err = ng_socket_errno;
     log_error("Cannot bind socket %m.", err);
     return herror_new("hsocket_bind", HSOCKET_ERROR_BIND, 
               "Socket error %m.", err);
@@ -478,7 +476,7 @@ hsocket_epoll_ctl(int ep, int sock, struct epoll_event *event,
   event->data.fd = sock;
   if (epoll_ctl(ep, op, sock, event) == -1) 
   {
-    if (errno != EEXIST)
+    if (ng_socket_errno != EEXIST)
     {
       log_verbose("epoll_ctl %d failed.", sock);
       return herror_new("__httpd_run", HSOCKET_ERROR_RECEIVE,
