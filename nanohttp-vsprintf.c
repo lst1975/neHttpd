@@ -933,11 +933,9 @@ ip6_compressed_string(char *p, const ng_uint8_t *addr)
   ng_uint8_t hi, lo;
   ng_int8_t needcolon = ngrtos_FALSE;
   ng_int8_t useIPv4;
-  struct in6_addr in6;
 
-  ng_memcpy(&in6, addr, sizeof(struct in6_addr));
-
-  useIPv4 = ipv6_addr_v4mapped(&in6) || ipv6_addr_is_isatap(&in6);
+#define __IN6_ADDR ((struct in6_addr*)addr)
+  useIPv4 = ipv6_addr_v4mapped(__IN6_ADDR) || ipv6_addr_is_isatap(__IN6_ADDR);
   *(ng_uint64_t *)zerolength = 0;
 
   if (useIPv4)
@@ -950,7 +948,7 @@ ip6_compressed_string(char *p, const ng_uint8_t *addr)
   {
     for (j = i; j < range; j++) 
     {
-      if (ng_s6_addr16(&in6, j) != 0)
+      if (ng_s6_addr16(__IN6_ADDR, j) != 0)
         break;
       zerolength[i]++;
     }
@@ -984,7 +982,7 @@ ip6_compressed_string(char *p, const ng_uint8_t *addr)
       needcolon = ngrtos_FALSE;
     }
     /* hex ng_uint16_t without leading 0s */
-    word = ng_ntohs(ng_s6_addr8(&in6, i));
+    word = ng_ntohs(ng_s6_addr16(__IN6_ADDR, i));
     hi = word >> 8;
     lo = word & 0xff;
     if (hi) 
@@ -1006,10 +1004,10 @@ ip6_compressed_string(char *p, const ng_uint8_t *addr)
   {
     if (needcolon)
       *p++ = ':';
-    p = __ip4_string(p, (const ng_uint8_t *)&ng_s6_addr8(&in6, 12), "I4");
+    p = __ip4_string(p, (const ng_uint8_t *)&ng_s6_addr8(__IN6_ADDR, 12), "I4");
   }
   *p = '\0';
-
+#undef __IN6_ADDR
   return p;
 }
 #ifdef WIN32

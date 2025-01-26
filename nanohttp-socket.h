@@ -141,20 +141,29 @@ struct _hsocket_t
 #if __NHTTP_USE_EPOLL 
   SOCKET ep;
 #endif
+
 #else
+
   int sock;
 #if __NHTTP_USE_EPOLL 
   int ep;
-  struct epoll_event event;
+  alignas(8) struct epoll_event event;
 #endif
 #endif
+
+  alignas(8) int salen;
+
   union{
+#if __NHTTP_USE_IPV4
     struct sockaddr_in addr;
+#endif
+#if __NHTTP_USE_IPV6
     struct sockaddr_in6 addr6;
+#endif
   };
-  ng_size_t bytes_transmitted;
+  
   ng_size_t bytes_received;
-  int salen;
+  ng_size_t bytes_transmitted;
   void *ssl;
   herror_t status;
   ng_buffer_s data;
