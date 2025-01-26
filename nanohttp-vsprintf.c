@@ -887,33 +887,56 @@ __ip4_string(char *p, const ng_uint8_t *addr, const char *fmt)
   return p;
 }
 
-#ifdef WIN32
-  #define ng_s6_addr32(a, i) ((ng_uint32_t *)(a))[i]
-  #define ng_s6_addr16(a, i) ((ng_uint16_t *)(a))[i]
-  #define ng_s6_addr8(a, i)  ((ng_uint8_t  *)(a))[i]
-#else
-  #define ng_s6_addr32(a, i) (a)->s6_addr32[i]
-  #define ng_s6_addr16(a, i) (a)->s6_addr16[i]
-  #define ng_s6_addr8(a, i)  (a)->s6_addr[i]
-#endif
+#define ng_s6_addr32(a, i) ((ng_uint32_t *)(a))[i]
+#define ng_s6_addr16(a, i) ((ng_uint16_t *)(a))[i]
+#define ng_s6_addr8(a, i)  ((ng_uint8_t  *)(a))[i]
 /*
  * Note that we must __force cast these to unsigned long to make sparse happy,
  * since all of the endian-annotated types are fixed size regardless of arch.
+ *
+ * The ipv6_addr_v4mapped function in the Linux kernel is designed to facilitate 
+ * the handling of IPv4-mapped IPv6 addresses. These addresses allow IPv4 
+ * addresses to be represented within the IPv6 address space, enabling seamless 
+ * communication between IPv4 and IPv6 networks. Specifically, an IPv4-mapped 
+ * IPv6 address is represented in the format 
+ *                   ::ffff:IPv4_address, 
+ * where the first 80 bits are zero, the next 16 bits are set to one, and the 
+ * last 32 bits represent the IPv4 address.
  */
-static inline int 
+static inline ng_bool_t 
 ipv6_addr_v4mapped(const struct in6_addr *a)
 {
-  return (
 #if __NG_BITS_PER_LONG == 64
-    *(unsigned long *)a |
+  return (*(ng_uint64_t *)a 
+    | ((ng_uint64_t)(ng_s6_addr32(a, 2) ^ rte_cpu_to_be_32(0x0000ffff)))) 
+    == 0UL;
 #else
-    (unsigned long)(ng_s6_addr32(a, 0) | ng_s6_addr32(a, 1)) |
+  return (((ng_uint32_t)(ng_s6_addr32(a, 0) | ng_s6_addr32(a, 1))) 
+    | ((ng_uint32_t)(ng_s6_addr32(a, 2) ^ rte_cpu_to_be_32(0x0000ffff))))
+    == 0UL;
 #endif
-    (unsigned long)(ng_s6_addr32(a, 2) ^
-          rte_cpu_to_be_32(0x0000ffff))) == 0UL;
 }
 
-static inline int 
+/*
+ * ISATAP addresses are a specific type of IPv6 address designed to enable IPv6 
+ * communication over an IPv4 network. The format of an ISATAP address is as follows:
+ *
+ *    2001:0:5ef5:xxxx:xxxx:xxxx:xxxx:xxxx
+ *
+ * In this format, the first 64 bits (2001:0:5ef5::/64) represent the ISATAP prefix, 
+ * while the last 64 bits are derived from the IPv4 address of the host. The IPv4 
+ * address is embedded in the last 32 bits of the address, typically represented in 
+ * hexadecimal format.
+ *
+ * For example, if the IPv4 address is 192.168.1.1, the corresponding ISATAP address
+ * would be:
+ *
+ *    2001:0:5ef5::c0a8:0101
+ *
+ * This structure allows seamless integration of IPv6 into existing IPv4 infrastructures, 
+ * facilitating a smoother transition to the newer protocol.
+ */
+static inline ng_bool_t 
 ipv6_addr_is_isatap(const struct in6_addr *a)
 {
   return (ng_s6_addr32(a, 2) | rte_cpu_to_be_32(0x02000000)) 
@@ -1010,10 +1033,9 @@ ip6_compressed_string(char *p, const ng_uint8_t *addr)
 #undef __IN6_ADDR
   return p;
 }
-#ifdef WIN32
 #undef ng_s6_addr32
 #undef ng_s6_addr16
-#endif
+#undef ng_s6_addr8
 
 static char *
 ip6_string(char *p, const ng_uint8_t *addr, const char *fmt)
